@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 13: Contrastive Embeddings, Search, and RAG — Stanford Frontier AI</title>
+<meta name="description" content="Learn embeddings without labels via contrastive learning, then use them for semantic search and retrieval-augmented generation.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229-l13" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13" class="active">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229: Machine Learning</a> / Lecture 13: Contrastive Embeddings, Search, and RAG</nav>
+      <h1>Lecture 13: Contrastive Embeddings, Search, and RAG</h1>
+      <p class="meta-line">2026-05-18 · Instructor: Tengyu Ma · 1:00:34 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="lNTajqxxOn4"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/lNTajqxxOn4" title="Lecture 13: Representation Learning in Practice" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=lNTajqxxOn4" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=lNTajqxxOn4" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tengyu Ma covers contrastive learning, semantic search, and retrieval-augmented generation. [uncertain] The YouTube title for this video is mislabeled; the title here follows the transcript.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> contains what you need to
+understand everything that follows in CS229 and the courses that build on
+it. <strong>Level 2 (Deep)</strong> contains what you need for correct, interview-grade
+understanding. Read Level 1 straight through. Return to Level 2 when you
+want depth.</p>
+<p>No prerequisites are assumed. Every term is defined at first use.
+Embeddings and representation learning were defined in <a href="l12-foundation-models.html">lecture
+12</a>; they are reused, not re-explained.</p>
+<h2 id="level-1-learning-embeddings-without-labels">Level 1: Learning embeddings without labels</h2>
+<p>Lecture 12 wanted similar inputs near each other in vector space. How do
+you learn that mapping with no labels? <strong>Contrastive learning</strong>
+<a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=413s" target="_blank" rel="noopener">06:53 <span class="ts">⏱06:53</span></a>. The trick: manufacture supervision from the data
+itself.</p>
+<p>Take an image x. Apply <strong>augmentation</strong> twice: random crop, flip, blur,
+noise <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=444s" target="_blank" rel="noopener">07:24 <span class="ts">⏱07:24</span></a>. Cropping matters most. Two random crops of the
+same photo show different corners, maybe the top-right and the
+bottom-left. They are a <strong>positive pair</strong>: different views, same source.
+Any two crops from different images are a <strong>negative pair</strong>.</p>
+<figure><img alt="Contrastive learning" src="assets/svg/l13-contrastive.svg"><figcaption>Pull positives together, push negatives apart. No labels. Original plate.</figcaption></figure>
+<p>The loss pulls positives together and pushes negatives apart. In matrix
+terms: make the diagonal big and the off-diagonals small
+<a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=1712s" target="_blank" rel="noopener">28:32 <span class="ts">⏱28:32</span></a>. Each row is one image&rsquo;s similarities to everything in
+the batch. The diagonal holds its positive pair. Everything else should
+score low. No human ever labeled anything. The augmentations are the
+supervision.</p>
+<div class="qa"><div class="q">Where do the labels come from in contrastive learning?</div><div class="a"><p>Nowhere. They are manufactured. Two augmentations of the same image are declared similar by construction. Everything else in the batch is declared dissimilar. The model learns embeddings that respect those declarations. This is called self-supervised learning: the data provides its own training signal through the augmentation design.
+Because it forces the model to match different parts of the same scene. Two crops may share no pixels, yet the model must place them nearby. That demands real understanding of content, not pixel matching. Weaker augmentations let the model cheat with low-level statistics. The crop is the hardest task that is still fair.</p><div class="followup"><strong>Follow-up:</strong> Why is the random crop the most important augmentation?</div></div></div>
+<h2 id="level-1-hard-negatives">Level 1: Hard negatives</h2>
+<p>Most negatives are easy: a cat photo versus an airplane is no contest.
+Easy negatives teach little. <strong>Hard negatives</strong> <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=2514s" target="_blank" rel="noopener">41:54 <span class="ts">⏱41:54</span></a> are the
+pairs the model currently confuses: two similar-but-different images it
+cannot yet tell apart. Mining them, finding the informative negatives,
+drives learning.</p>
+<p>There is a curriculum logic. Early in training everything is hard, so
+random negatives suffice. Late in training, only hard negatives move the
+needle. Systems that ignore this waste compute on solved comparisons.
+The lecture treats hard-negative mining as a first-class design
+decision, not a trick.</p>
+<div class="qa"><div class="q">What makes a negative &quot;hard&quot;?</div><div class="a"><p>The model&rsquo;s current confusion. A hard negative is a dissimilar pair the model scores as similar: it looks alike but is not. These pairs carry the most gradient signal because the loss is largest on them. Easy negatives contribute near-zero loss and near-zero learning. Training efficiency is mostly about spending compute on the informative pairs.
+Yes, through false negatives. A mined &ldquo;negative&rdquo; might actually be a positive: two photos of the same cat from different batches, declared dissimilar. The loss then punishes a correct similarity. Hard-negative mining needs safeguards against label noise, or it teaches the model to separate things that belong together.</p><div class="followup"><strong>Follow-up:</strong> Can hard negatives hurt?</div></div></div>
+<h2 id="level-1-semantic-search">Level 1: Semantic search</h2>
+<p>Embeddings turn search into geometry. Embed every document once. Embed
+the query. Return the nearest vectors. That is <strong>semantic search</strong>:
+matching by meaning, not by keywords.</p>
+<p>The lecture&rsquo;s framing is the LLM era. Frontier labs train generic
+models on public data. Your documents are private: bank statements, the
+CEO&rsquo;s memo, your laptop. You cannot leak them into the lab&rsquo;s training
+set, and you do not want to. Semantic search over your own corpus keeps
+the private data on your side while still making it searchable.</p>
+<figure><img alt="RAG pipeline" src="assets/svg/l13-rag.svg"><figcaption>Query, retrieve private docs, answer with context. Nothing is trained. Original plate.</figcaption></figure>
+<h2 id="level-1-retrieval-augmented-generation">Level 1: Retrieval-augmented generation</h2>
+<p><strong>Retrieval-augmented generation</strong> (RAG) <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=3221s" target="_blank" rel="noopener">53:41 <span class="ts">⏱53:41</span></a> answers
+questions with private data and no training. The recipe: the user asks a
+question. A retriever finds the most relevant documents in the private
+corpus, typically five to ten <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=3382s" target="_blank" rel="noopener">56:22 <span class="ts">⏱56:22</span></a>. Those documents plus the
+question go into the LLM&rsquo;s context. The LLM answers from both.</p>
+<p>Compare with the alternative: fine-tune the model on your private data.
+Fine-tuning is expensive, needs enough data to matter, and forces you to
+host a massive model <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=3304s" target="_blank" rel="noopener">55:04 <span class="ts">⏱55:04</span></a>. RAG needs no training and no
+hosting. The model never sees your data during training. It sees only
+the retrieved snippets, at query time.</p>
+<p>RAG has four advantages the lecture names. <strong>Modularity</strong>: retrieval and
+generation are separate systems, improved independently. <strong>Governance</strong>:
+permissions apply at retrieval <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=3438s" target="_blank" rel="noopener">57:18 <span class="ts">⏱57:18</span></a>. Deny a user access to
+the earnings projection and the retriever simply never returns it.
+<strong>Forgetting</strong>: delete a document from the corpus and it is never
+retrieved again <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=3470s" target="_blank" rel="noopener">57:50 <span class="ts">⏱57:50</span></a>. Forgetting trained-in data is an open
+research problem; forgetting retrieved data is a delete key. <strong>Cost</strong>:
+retrieval is far cheaper than training or hosting.</p>
+<div class="qa"><div class="q">RAG or fine-tuning for private data?</div><div class="a"><p>RAG when the data changes, when permissions matter, when data is scarce, or when you cannot afford training and hosting. Fine-tuning when the task needs deep behavioral change, like a new language or a new skill, that retrieved context cannot supply. Many systems use both: RAG for knowledge, fine-tuning for behavior. The lecture&rsquo;s framing is that RAG is the default for knowledge and fine-tuning the tool for capabilities.
+Retrieval quality. If the retriever misses the needed document, the LLM answers from ignorance, confidently. Chunking decisions, embedding quality, and the number of retrieved documents all move results. RAG also inherits the LLM&rsquo;s context limits: too many documents crowd out the question. The failure mode is silent: wrong answers with no warning.</p><div class="followup"><strong>Follow-up:</strong> What breaks in RAG?</div></div></div>
+<h2 id="level-2-the-contrastive-loss-precisely">Level 2: The contrastive loss, precisely</h2>
+<p>For a batch of N images, make 2N augmented views. For view i with
+positive partner j, the loss is:</p>
+<p>loss_i = -log( exp(sim(i,j)/t) / sum_k exp(sim(i,k)/t) )</p>
+<p>Similarity is usually cosine. Temperature t sharpens the distribution.
+The numerator rewards the positive pair. The denominator sums over all
+2N-1 others, pushing every negative down. This is the InfoNCE form: the
+diagonal-big, off-diagonal-small objective in one formula.</p>
+<p>Temperature matters more than it looks. Low temperature makes the loss
+focus on the hardest negatives. High temperature spreads attention. It
+is a hyperparameter with real effects, tuned like a learning rate.</p>
+<h2 id="level-2-rag-as-a-systems-pattern">Level 2: RAG as a systems pattern</h2>
+<p>Step back and RAG is a pattern, not a product. Separate the knowledge
+store from the reasoning engine. The store is cheap, editable,
+permissioned. The engine is expensive, frozen, general. The interface is
+retrieval: the engine asks, the store answers.</p>
+<p>The pattern recurs. Tool-using agents retrieve API results into context.
+Coding assistants retrieve repository snippets. The lecture&rsquo;s governance
+and forgetting arguments apply to all of them: anything the model should
+not permanently know belongs in the store, not the weights. Weights are
+write-once. Stores are editable. Design accordingly.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<p>Eight ideas carry this lecture. Read each card. Say the core sentence out
+loud. If you can, you own the lesson.</p>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/svg/l13-contrastive.svg" alt="Contrastive learning">
+<div class="rc-body">
+<strong>1. Contrastive: manufacture supervision</strong>
+<p>Two augmentations of one image are a positive pair. Everything else
+is negative. Pull positives, push negatives. No labels.</p>
+<p class="rc-num">Key: augmentations are the labels</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l13-contrastive.svg" alt="Positive and negative pairs">
+<div class="rc-body">
+<strong>2. Diagonal big, off-diagonal small</strong>
+<p>Each row scores one view against the batch. The positive pair sits
+on the diagonal. Everything else should score low.</p>
+<p class="rc-num">Key: the batch is the world</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l13-contrastive.svg" alt="Augmentations">
+<div class="rc-body">
+<strong>3. Cropping matters most</strong>
+<p>Random crops force matching different parts of one scene. The model
+must understand content, not pixels. Hard-but-fair tasks teach.</p>
+<p class="rc-num">Key: crop, flip, blur, noise</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l13-contrastive.svg" alt="Hard negatives">
+<div class="rc-body">
+<strong>4. Hard negatives carry the signal</strong>
+<p>Confused pairs teach. Easy pairs contribute nothing. Mine the hard
+ones, but guard against false negatives.</p>
+<p class="rc-num">Key: spend compute on confusion</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l13-rag.svg" alt="Semantic search">
+<div class="rc-body">
+<strong>5. Search becomes geometry</strong>
+<p>Embed the corpus once. Embed the query. Nearest vectors win.
+Meaning, not keywords. Private data stays private.</p>
+<p class="rc-num">Key: near means relevant</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l13-rag.svg" alt="RAG pipeline">
+<div class="rc-body">
+<strong>6. RAG: retrieve, then generate</strong>
+<p>Question plus 5-10 retrieved docs into the LLM. No training, no
+hosting. Knowledge without the training bill.</p>
+<p class="rc-num">Key: context, not weights</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l13-rag.svg" alt="RAG advantages">
+<div class="rc-body">
+<strong>7. RAG's four wins</strong>
+<p>Modular. Governed by permissions. Forgetting is a delete key. Cheap.
+Fine-tuning is for behavior, RAG for knowledge.</p>
+<p class="rc-num">Key: editable beats trained-in</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l13-rag.svg" alt="RAG failure mode">
+<div class="rc-body">
+<strong>8. RAG fails silently</strong>
+<p>Missed retrieval means confident ignorance. Chunking, embedding
+quality, and doc count decide results. No warning on failure.</p>
+<p class="rc-num">Key: retrieval is the bottleneck</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 13 video: contrastive learning <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=413s" target="_blank" rel="noopener">06:53 <span class="ts">⏱06:53</span></a>, augmentations <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=444s" target="_blank" rel="noopener">07:24 <span class="ts">⏱07:24</span></a>, diagonal structure <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=1712s" target="_blank" rel="noopener">28:32 <span class="ts">⏱28:32</span></a>, hard negatives <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=2514s" target="_blank" rel="noopener">41:54 <span class="ts">⏱41:54</span></a>, RAG <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=3221s" target="_blank" rel="noopener">53:41 <span class="ts">⏱53:41</span></a>, fine-tuning cost <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=3304s" target="_blank" rel="noopener">55:04 <span class="ts">⏱55:04</span></a>, retrieved count <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=3382s" target="_blank" rel="noopener">56:22 <span class="ts">⏱56:22</span></a>, governance <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=3438s" target="_blank" rel="noopener">57:18 <span class="ts">⏱57:18</span></a>, forgetting <a href="https://www.youtube.com/watch?v=lNTajqxxOn4&amp;t=3470s" target="_blank" rel="noopener">57:50 <span class="ts">⏱57:50</span></a>.
+- CS229 Spring 2026 official course notes: representation learning chapter.</p>
+<p><strong>Further reading:</strong>
+- Chen et al. (2020), &ldquo;A Simple Framework for Contrastive Learning of Visual Representations&rdquo; (SimCLR): the canonical method.
+- Lewis et al. (2020), &ldquo;Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks&rdquo;: the RAG paper.</p>
+<p><strong>Caveats from these sources.</strong> The lecture&rsquo;s contrastive presentation
+follows the SimCLR shape; other variants (MoCo, CLIP) differ in the
+negative handling. The &ldquo;five to ten documents&rdquo; count is typical, not
+optimal; it varies by task. The forgetting argument assumes the corpus
+is the only copy; cached embeddings need their own deletion.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336:</strong> retrieval augments language models at scale; the course covers RAG systems in depth.</li>
+<li><strong>CS224N:</strong> sentence embeddings and dense retrieval are the text versions of this lecture.</li>
+<li><strong>CS329H:</strong> tool use generalizes RAG: retrieve anything, not just documents, into context.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Contrastive and RAG cheatsheet.</strong> Contrastive: positive = two augmentations of one image; negatives = rest of batch; loss pulls positives, pushes negatives; diagonal big, off-diagonal small. Hard negatives: confused pairs teach; beware false negatives. Crop is the key augmentation. Semantic search: embed corpus, embed query, nearest wins. RAG: retrieve 5-10 docs, add to context, generate; no training. Wins: modular, governed, forgettable, cheap. Fails: silently, at retrieval.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Weights are write-once.</strong> Anything editable, permissioned, or deletable belongs in a store, not in parameters. RAG is the pattern: cheap store, frozen engine, retrieval between them.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=lNTajqxxOn4" target="_blank" rel="noopener">Lecture 13 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <nav class="pager"><a href="../cs229/l12-foundation-models.html"><span class="lbl">← Previous</span>Lecture 12: Foundation Models and Representation Learning</a><a href="../cs229/l14-transformers.html"><span class="lbl">Next →</span>Lecture 14: Transformers and Autoregressive Language Models</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
