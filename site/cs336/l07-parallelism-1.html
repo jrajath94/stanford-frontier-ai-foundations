@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lecture 7: Parallelism (Part 1) — Stanford Frontier AI</title>
+<meta name="description" content="Multi-GPU training from scratch: collective operations, interconnect hardware, NCCL and torch.distributed, then bare-bones data, tensor, and pipeline parallelis">
+<link rel="stylesheet" href="assets/vendor/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="cs336-l07">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Home</h3><ul>
+<li><a href="index.html" data-page="foundations-home">Home</a></li>
+</ul>
+<h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="cs336/l01-overview-tokenization.html" data-page="cs336-l01">L01 · Overview, Tokenization</a></li>
+<li><a href="cs336/l02-pytorch-resource-accounting.html" data-page="cs336-l02">L02 · PyTorch, Resource Accounting</a></li>
+<li><a href="cs336/l03-architectures-hyperparameters.html" data-page="cs336-l03">L03 · Architectures, Hyperparameters</a></li>
+<li><a href="cs336/l04-attention-alternatives-moe.html" data-page="cs336-l04">L04 · Attention Alternatives, MoE</a></li>
+<li><a href="cs336/l05-gpus-tpus.html" data-page="cs336-l05">L05 · GPUs, TPUs</a></li>
+<li><a href="cs336/l06-kernels-triton-xla.html" data-page="cs336-l06">L06 · Kernels, Triton, XLA</a></li>
+<li><a href="cs336/l07-parallelism-1.html" data-page="cs336-l07" class="active">L07 · Parallelism I</a></li>
+<li><a href="cs336/l08-parallelism-2.html" data-page="cs336-l08">L08 · Parallelism II</a></li>
+<li><a href="cs336/l09-scaling-laws-1.html" data-page="cs336-l09">L09 · Scaling Laws I</a></li>
+<li><a href="cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="cs336/l11-scaling-laws-2.html" data-page="cs336-l11">L11 · Scaling Laws II</a></li>
+<li><a href="cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="cs336/l13-data-sources.html" data-page="cs336-l13">L13 · Data Sources</a></li>
+<li><a href="cs336/l14-data-processing.html" data-page="cs336-l14">L14 · Data Processing</a></li>
+<li><a href="cs336/l15-post-training-sft-rlhf.html" data-page="cs336-l15">L15 · SFT, RLHF</a></li>
+<li><a href="cs336/l16-post-training-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="cs336/l17-alignment-multimodality.html" data-page="cs336-l17">L17 · Alignment, Multimodality</a></li>
+<li><a href="cs336/l18-guest-dan-fu.html" data-page="cs336-l18">L18 · Guest: Dan Fu</a></li>
+<li><a href="cs336/labs-index.html" data-page="cs336-labs-index">CS336 · Labs</a></li>
+<li><a href="cs336/lab1-tokenizer-transformer.html" data-page="cs336-lab1">Lab 1 · Tokenizer, Transformer</a></li>
+<li><a href="cs336/lab2-systems.html" data-page="cs336-lab2">Lab 2 · Systems</a></li>
+<li><a href="cs336/lab3-scaling.html" data-page="cs336-lab3">Lab 3 · Scaling Laws</a></li>
+<li><a href="cs336/lab4-data.html" data-page="cs336-lab4">Lab 4 · Data</a></li>
+<li><a href="cs336/lab5-post-training.html" data-page="cs336-lab5">Lab 5 · Post-Training</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 7: Parallelism (Part 1)</nav>
+      <h1>Lecture 7: Parallelism (Part 1)</h1>
+      <p class="meta-line">2026-04-20 · Instructor: Percy Liang · 1:21:03 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/SzpOcwdIL0Y" title="Stanford CS336 Spring 2026 Lecture 7: Parallelism (Part 1)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div><p class="video-cap">Original lecture. Timestamps link to exact moments.</p><h2 id="why-more-than-one-gpu">Why more than one GPU</h2>
+<p>Last week made one GPU fast. This week uses many GPUs to go faster <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=10s" target="_blank" rel="noopener">00:00:10 <span class="ts">⏱00:00:10</span></a>. Two reasons, and they are different <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=197s" target="_blank" rel="noopener">00:03:17 <span class="ts">⏱00:03:17</span></a>:</p>
+<ol>
+<li><strong>The model does not fit.</strong> Parameters, gradients, optimizer state, and activations exceed one GPU&rsquo;s HBM. A B200 holds 192 GB. A 1-trillion-parameter model does not fit.</li>
+<li><strong>More FLOPs.</strong> Even if the model fits, splitting the work across GPUs trains faster. But spreading out costs communication bandwidth, so you compute the tradeoff.</li>
+</ol>
+<p>The unifying theme across both weeks: compute (tensor cores, ALUs) sits far from data. On one GPU, &ldquo;far&rdquo; means HBM. On many GPUs, &ldquo;far&rdquo; can mean a different GPU. The game is orchestrating computation to avoid data-transfer bottlenecks <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=72s" target="_blank" rel="noopener">00:01:12 <span class="ts">⏱00:01:12</span></a>.</p>
+<p>The memory hierarchy generalizes:</p>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Interconnect</th>
+<th>Relative speed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single GPU: L1 / shared memory</td>
+<td>on-chip</td>
+<td>fastest</td>
+</tr>
+<tr>
+<td>Single GPU: HBM</td>
+<td>on-chip</td>
+<td>fast (lamented last week, fast this week)</td>
+</tr>
+<tr>
+<td>Single node, multi-GPU</td>
+<td>NVLink / NVSwitch</td>
+<td>slower</td>
+</tr>
+<tr>
+<td>Multi-node, multi-GPU</td>
+<td>InfiniBand / Ethernet</td>
+<td>slowest</td>
+</tr>
+</tbody>
+</table>
+<p>Last week&rsquo;s trick: reduce memory accesses with fusion and tiling. This week&rsquo;s trick: reduce communication across GPUs with replication and sharding <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=170s" target="_blank" rel="noopener">00:02:50 <span class="ts">⏱00:02:50</span></a>.</p>
+<p>The lecture has two parts. Part 1: the building blocks of distributed communication (collectives, hardware, torch.distributed, bandwidth measurement). Part 2: bare-bones data, tensor, and pipeline parallelism on deep MLPs. MLPs are the compute bottleneck in Transformers, so the examples carry over <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=320s" target="_blank" rel="noopener">00:05:20 <span class="ts">⏱00:05:20</span></a>.</p>
+<h2 id="collective-operations">Collective operations</h2>
+<p>Collective operations are the primitives of distributed programming, dating to the 1980s. &ldquo;Collective&rdquo; means you specify one communication pattern across many devices instead of managing point-to-point messages yourself <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=350s" target="_blank" rel="noopener">00:05:50 <span class="ts">⏱00:05:50</span></a>.</p>
+<p>Setup vocabulary <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=415s" target="_blank" rel="noopener">00:06:55 <span class="ts">⏱00:06:55</span></a>: a <strong>rank</strong> is one device (GPUs here: rank 0, 1, 2, 3). The <strong>world size</strong> is the number of devices (4 in the examples). For this class, rank = GPU <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=2528s" target="_blank" rel="noopener">00:42:08 <span class="ts">⏱00:42:08</span></a>.</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Input (4 ranks)</th>
+<th>Output</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Broadcast</td>
+<td>rank 0: [0,1,2,3]</td>
+<td>every rank: [0,1,2,3]</td>
+<td>Warmup. Real use: rank 0 loads a checkpoint, broadcasts once at init.</td>
+</tr>
+<tr>
+<td>Scatter</td>
+<td>rank 0: [0,1,2,3]</td>
+<td>ranks hold 0, 1, 2, 3</td>
+<td>Warmup. Stepping stone to reduce-scatter.</td>
+</tr>
+<tr>
+<td>Gather</td>
+<td>ranks hold 0, 1, 2, 3</td>
+<td>rank 0: [0,1,2,3]</td>
+<td>Warmup. Stepping stone to all-gather.</td>
+</tr>
+<tr>
+<td>Reduce (sum)</td>
+<td>ranks hold 0, 1, 2, 3</td>
+<td>rank 0: 6</td>
+<td>Warmup. Stepping stone to all-reduce.</td>
+</tr>
+<tr>
+<td>All-gather</td>
+<td>ranks hold 0, 1, 2, 3</td>
+<td>every rank: [0,1,2,3]</td>
+<td>Workhorse. Each rank holds a parameter shard. All-gather rebuilds full parameters for the forward pass.</td>
+</tr>
+<tr>
+<td>Reduce-scatter (sum)</td>
+<td>rank i holds [i,i+1,i+2,i+3]</td>
+<td>rank 0: 6, rank 1: 10, rank 2: 14, rank 3: 18</td>
+<td>Workhorse. After backward: sum gradients, distribute storage.</td>
+</tr>
+<tr>
+<td>All-reduce (sum)</td>
+<td>rank i holds [i,i+1,i+2,i+3]</td>
+<td>every rank: [6,10,14,18]</td>
+<td>Workhorse. After backward: sum gradients, replicate everywhere. Equals reduce-scatter + all-gather.</td>
+</tr>
+<tr>
+<td>All-to-all</td>
+<td>rank i sends element j to rank j</td>
+<td>rank j collects column j (a transpose)</td>
+<td>Most general. MoE expert routing: each rank holds data split + expert subset, routes activations to experts.</td>
+</tr>
+</tbody>
+</table>
+<p>Terminology memory aids <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1183s" target="_blank" rel="noopener">00:19:43 <span class="ts">⏱00:19:43</span></a>: <strong>reduce</strong> applies an associative, commutative op (sum, min, max). <strong>Scatter</strong> is the inverse of <strong>gather</strong>: scatter distributes, gather centralizes. <strong>All</strong> means the destination is all devices.</p>
+<p>Broadcast, scatter, gather, reduce are warmups. All-gather, reduce-scatter, and all-reduce drive training. All-to-all matters for MoEs, where the balanced case is exactly a matrix transpose. Unbalanced splits are allowed, but you want balance for load <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1096s" target="_blank" rel="noopener">00:18:16 <span class="ts">⏱00:18:16</span></a>.</p>
+<p>A student asked about the NumPy analogy for broadcast. Conceptually the same one-to-many idea, but these are communication operations across devices, not shape rules <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=725s" target="_blank" rel="noopener">00:12:05 <span class="ts">⏱00:12:05</span></a>.</p>
+<div class="mermaid">flowchart LR
+    subgraph warmups["Warmups"]
+        B[broadcast] --> S[scatter] --> G[gather] --> R[reduce]
+    end
+    subgraph workhorses["Workhorses"]
+        AG[all-gather] --> RS[reduce-scatter] --> AR[all-reduce]
+    end
+    R -.->|stepping stone| AR
+    G -.->|stepping stone| AG
+    S -.->|stepping stone| RS
+</div>
+<h2 id="the-interconnect-hardware">The interconnect hardware</h2>
+<p>Classic setup (your gaming GPU plus a friend&rsquo;s): GPUs on one node talk over PCIe. GPUs on different nodes go through Ethernet <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1324s" target="_blank" rel="noopener">00:22:04 <span class="ts">⏱00:22:04</span></a>.</p>
+<p>Serious training looks different <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1411s" target="_blank" rel="noopener">00:23:31 <span class="ts">⏱00:23:31</span></a>:</p>
+<ul>
+<li><strong>8 GPUs per node</strong>, connected by NVLink to an NVSwitch. NVLink 5 moves 1.8 TB/s total, against 8 TB/s HBM on a B200. About 4x slower than HBM, still fast for device-to-device traffic. From the programmer&rsquo;s view, any GPU reaches any other GPU. The switch routes <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1469s" target="_blank" rel="noopener">00:24:29 <span class="ts">⏱00:24:29</span></a>.</li>
+<li><strong>Nodes into pods</strong> over InfiniBand (~0.05 TB/s). The GPU path goes PCIe → host channel adapter → InfiniBand cable.</li>
+<li><strong>Pods into clusters</strong> over Ethernet, through PCIe and the CPU. Slowest.</li>
+</ul>
+<p>The CPU is the enemy of latency. Traditional Ethernet forces the GPU to copy data to a kernel socket buffer, build TCP packets, and copy to the NIC ring buffer. <strong>RDMA</strong> (remote direct memory access) lets one GPU read or write another GPU&rsquo;s memory with no CPU involvement <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1625s" target="_blank" rel="noopener">00:27:05 <span class="ts">⏱00:27:05</span></a>. NVLink/NVSwitch and InfiniBand support RDMA. Standard Ethernet does not.</p>
+<p>A student asked how RDMA relates to the hardware names. NVLink, NVSwitch, and InfiniBand are hardware: cables and switches. RDMA is operational: what happens during communication. <strong>RoCE</strong> (RDMA over Converged Ethernet) is another way to do RDMA on Ethernet hardware, cheaper and weaker than InfiniBand. Meta explored it, and Llama may have trained on it <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1727s" target="_blank" rel="noopener">00:28:47 <span class="ts">⏱00:28:47</span></a>.</p>
+<p>Scale-up hardware keeps pushing the fast domain outward. GB200/GB300 <strong>NVL72</strong>: trays of 8 GPUs, 9 trays per rack, 72 GPUs in one NVLink domain. (G = Grace CPU. Each tray holds 2 CPUs and 8 GPUs.) <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1675s" target="_blank" rel="noopener">00:27:55 <span class="ts">⏱00:27:55</span></a>.</p>
+<p>Two systems translate collectives into packets. <strong>NCCL</strong> (NVIDIA Collective Communications Library) takes an all-reduce or broadcast, detects the hardware topology, picks paths between GPUs, and launches the actual send/receive kernels. Communication kernels are GPU kernels. Everything on the GPU is a kernel <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1803s" target="_blank" rel="noopener">00:30:03 <span class="ts">⏱00:30:03</span></a>. <strong>torch.distributed</strong> is the clean Python interface on top: NCCL backend for GPUs, gloo for CPUs. It also offers higher-level algorithms like FSDP, which this course skips on purpose: the course builds from scratch so you see the mechanics <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=2173s" target="_blank" rel="noopener">00:36:13 <span class="ts">⏱00:36:13</span></a>.</p>
+<h2 id="collectives-in-code">Collectives in code</h2>
+<p>The lecture traces single-process for readability. Running <code>lecture_07.py</code> directly uses real multiprocessing. The <code>spawn</code> wrapper launches world-size processes, each running the same function with its own rank <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=2239s" target="_blank" rel="noopener">00:37:19 <span class="ts">⏱00:37:19</span></a>.</p>
+<p>Setup and teardown:</p>
+<pre><code class="language-python">def setup(rank, world_size):
+    os.environ[&quot;MASTER_ADDR&quot;] = &quot;localhost&quot;   # Coordination metadata only
+    os.environ[&quot;MASTER_PORT&quot;] = &quot;15623&quot;       # Data itself goes through NCCL
+    backend = &quot;nccl&quot; if torch.cuda.is_available() else &quot;gloo&quot;
+    dist.init_process_group(backend, rank=rank, world_size=world_size)
+</code></pre>
+<p><code>dist.barrier()</code> waits for all processes to reach that line. Barriers order execution across processes, but each extra barrier risks unnecessary waiting <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=2352s" target="_blank" rel="noopener">00:39:12 <span class="ts">⏱00:39:12</span></a>.</p>
+<p>The three workhorses, demonstrated:</p>
+<pre><code class="language-python"># All-reduce: sum in place, result on every rank
+data = torch.tensor([0., 1, 2, 3]) + rank
+dist.all_reduce(tensor=data, op=dist.ReduceOp.SUM, async_op=False)
+
+# Reduce-scatter: sum, then scatter one piece per rank
+dist.reduce_scatter_tensor(output=output, input=input, op=dist.ReduceOp.SUM)
+
+# All-gather: collect every rank's piece onto every rank
+dist.all_gather_into_tensor(output_tensor=output, input_tensor=input)
+</code></pre>
+<p>Run in sequence, the outputs prove that all-reduce = reduce-scatter + all-gather <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=2762s" target="_blank" rel="noopener">00:46:02 <span class="ts">⏱00:46:02</span></a>.</p>
+<p>Two subtleties worth keeping. First, <code>async_op</code>: CUDA is already async within a process, and now processes are async too. Async collectives return immediately so you can overlap computation with communication (load the next batch while the all-reduce flies). Call <code>wait()</code> or hit a barrier when you need the result <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=2630s" target="_blank" rel="noopener">00:43:50 <span class="ts">⏱00:43:50</span></a>. Second, barrier versus <code>cuda.synchronize()</code>: a barrier only aligns process arrival. If CUDA kernels are still running, the processes arrive, pass the barrier, and stay unsynchronized. Synchronize CUDA first, then barrier <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3220s" target="_blank" rel="noopener">00:53:40 <span class="ts">⏱00:53:40</span></a>.</p>
+<h2 id="how-fast-is-communication">How fast is communication</h2>
+<p>Benchmark: all-reduce 100M elements across 4 ranks, warm up, synchronize plus barrier (both forms of asynchrony), average the per-rank times. It took about 1.6 ms <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=2925s" target="_blank" rel="noopener">00:48:45 <span class="ts">⏱00:48:45</span></a>. Is that good? Compute the effective bandwidth.</p>
+<p>Bytes moved in an all-reduce: each of the (world_size − 1) reduction steps both sends and receives the payload, so sent bytes = size × 2 × (world_size − 1). Total duration = world_size × duration. Bandwidth = sent bytes / total duration.</p>
+<div class="mermaid">flowchart LR
+    A["sent = size × 2 × (ws − 1)"] --> C["bandwidth = sent / (ws × duration)"]
+    B["measured: ~1.6 ms for 100M elements"] --> C
+    C --> D["≈ 400 GB/s"]
+</div>
+<p>As world size grows, (ws−1)/ws → 1, leaving 2 × size / duration: independent of world size. It is also independent of topology (ring or tree). NCCL figures that out <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3042s" target="_blank" rel="noopener">00:50:42 <span class="ts">⏱00:50:42</span></a>. Reduce-scatter has no 2x factor and lands in the same ~400 GB/s range. All-reduce moves twice the data in twice the time, so the bandwidth matches. This mirrors the MFU reasoning from the systems lectures: turn a raw time into a rate, then judge the rate.</p>
+<h2 id="data-parallelism-split-the-batch">Data parallelism: split the batch</h2>
+<p>Cut along the batch dimension. Batch 128, 4 ranks → each rank gets 32 rows <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3418s" target="_blank" rel="noopener">00:56:58 <span class="ts">⏱00:56:58</span></a>. Every rank holds all parameters. The only difference from standard training is one step: after backward, all-reduce the gradients, average them, then update <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3555s" target="_blank" rel="noopener">00:59:15 <span class="ts">⏱00:59:15</span></a>.</p>
+<pre><code class="language-python">batch_size, num_dim = 128, 1024
+local_batch_size = batch_size // world_size          # 32 rows per rank
+data = data[rank*local_batch_size:(rank+1)*local_batch_size]
+
+params = [init(num_dim, num_dim) for _ in range(num_layers)]
+optimizer = torch.optim.AdamW(params, lr=1e-3)       # Each rank keeps its own optimizer state
+
+for step in range(num_steps):
+    x = data
+    for param in params:
+        x = x @ param
+        x = F.gelu(x)
+    loss = x.square().mean()
+    loss.backward()
+    for param in params:
+        dist.all_reduce(tensor=param.grad, op=dist.ReduceOp.AVG)  # The one new line
+    optimizer.step()
+</code></pre>
+<p>Losses differ across ranks (different data), gradients start different, the all-reduce makes them identical, so parameters stay identical everywhere <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3730s" target="_blank" rel="noopener">01:02:10 <span class="ts">⏱01:02:10</span></a>. DDP treats the model as a black box, so the same code works for a Transformer <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3704s" target="_blank" rel="noopener">01:01:44 <span class="ts">⏱01:01:44</span></a>. Batch size must be at least the world size, ideally a clean multiple. Pad if it is not <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3652s" target="_blank" rel="noopener">01:00:52 <span class="ts">⏱01:00:52</span></a>.</p>
+<p>The limitation: DDP holds all parameters on every GPU. When parameters do not fit, you need FSDP/ZeRO, which splits the monolithic all-reduce into reduce-scatter + all-gather so storage distributes too. That is next lecture, with Tatsu <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3751s" target="_blank" rel="noopener">01:02:31 <span class="ts">⏱01:02:31</span></a>.</p>
+<div class="callout"><span class="co-label">Key idea</span><p>Data parallelism is one line on top of standard training: average the gradients across ranks after the backward pass. Everything else is identical.</p></div>
+<h2 id="tensor-parallelism-split-the-width">Tensor parallelism: split the width</h2>
+<p>Cut along the width. Do not touch the data. Split each layer&rsquo;s columns. num_dim 1024, 4 ranks → each rank owns 256 columns of every weight matrix (column tensor parallelism. Row splitting exists, but the lecture skips it) <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3783s" target="_blank" rel="noopener">01:03:03 <span class="ts">⏱01:03:03</span></a>.</p>
+<pre><code class="language-python">local_num_dim = num_dim // world_size                # 256 columns per rank
+params = [init(num_dim, local_num_dim) for _ in range(num_layers)]
+
+x = data                                             # Every rank holds all the data
+for layer in range(num_layers):
+    x = x @ params[layer]                            # batch x local_num_dim
+    x = F.gelu(x)                                    # Elementwise: no communication needed
+    activations = [torch.empty(batch_size, local_num_dim) for _ in range(world_size)]
+    dist.all_gather(tensor_list=activations, tensor=x)
+    x = torch.cat(activations, dim=1)                # Rebuild batch x num_dim
+</code></pre>
+<p>Unlike DDP, you change the model itself. The trick that makes it work: a matmul splits into smaller matmuls whose results you gather <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4042s" target="_blank" rel="noopener">01:07:22 <span class="ts">⏱01:07:22</span></a>. Forward uses all-gather every layer. The backward pass uses reduce-scatter, the dual operation. The lecture implements forward only. Backward is the homework exercise. and you must call the collective yourself because plain autograd knows nothing about your sharding <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4116s" target="_blank" rel="noopener">01:08:36 <span class="ts">⏱01:08:36</span></a>.</p>
+<div class="callout"><span class="co-label">Warning</span><p>Forward all-gather implies backward reduce-scatter. Learn the duality. It appears in every tensor-parallel implementation.</p></div>
+<h2 id="pipeline-parallelism-split-the-depth">Pipeline parallelism: split the depth</h2>
+<p>Cut along the depth. Each rank owns a subset of layers (4 layers, 2 ranks → 2 layers each), full width, and sees all the data in some form <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4182s" target="_blank" rel="noopener">01:09:42 <span class="ts">⏱01:09:42</span></a>. Communication is point-to-point: <code>dist.send</code> / <code>dist.recv</code> between neighboring ranks, the collectives from part 1 not needed here.</p>
+<p>The naive version has pipeline bubbles: rank 1 idles while rank 0 works through the whole batch, then rank 0 idles while rank 1 works. The fix is micro-batches: split the batch into 4 micro-batches so a rank hands off work quickly and the pipe stays full <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4400s" target="_blank" rel="noopener">01:13:20 <span class="ts">⏱01:13:20</span></a>.</p>
+<pre><code class="language-python">local_num_layers = num_layers // world_size
+local_params = [init(num_dim, num_dim) for _ in range(local_num_layers)]
+micro_batches = data.chunk(chunks=4, dim=0) if rank == 0 else [torch.empty(32, num_dim) for _ in range(4)]
+
+for x in micro_batches:
+    if rank - 1 &gt;= 0:
+        dist.recv(tensor=x, src=rank - 1)      # Activations from the previous stage
+    for param in local_params:
+        x = x @ param
+        x = F.gelu(x)
+    if rank + 1 &lt; world_size:
+        dist.send(tensor=x, dst=rank + 1)      # Hand off to the next stage
+</code></pre>
+<p>Not handled here: overlapping communication with computation (async send/recv), which is what actually kills the remaining bubbles. That overlap is also missing from the DDP section above: gradients could stream out during the backward pass instead of waiting for it to finish. Assignment 2 explores both <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4499s" target="_blank" rel="noopener">01:14:59 <span class="ts">⏱01:14:59</span></a>.</p>
+<h2 id="which-parallelism-where">Which parallelism, where</h2>
+<p>The choice is hardware-driven <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4633s" target="_blank" rel="noopener">01:17:13 <span class="ts">⏱01:17:13</span></a>:</p>
+<ul>
+<li><strong>Tensor parallelism</strong> moves activations every layer: heavy communication. Keep it inside a node on NVLink-class bandwidth.</li>
+<li><strong>Pipeline parallelism</strong> moves activations only at stage boundaries: tolerates slow interconnects. Decentralized training across the world uses it.</li>
+<li><strong>Data parallelism</strong> scales until the critical batch size: past it, bigger batches stop helping and you waste compute. Then add tensor parallelism.</li>
+</ul>
+<p>In practice you combine them: tensor parallel within a node, data parallel (or FSDP) across nodes, pipeline if the model still does not fit <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4682s" target="_blank" rel="noopener">01:18:02 <span class="ts">⏱01:18:02</span></a>. Two more axes exist beyond this lecture: <strong>sequence parallelism</strong> (split the sequence length, for attention) and <strong>expert parallelism</strong> (split MoE experts, the all-to-all from part 1). Both appear in Assignment 2.</p>
+<p>The closing pattern to internalize <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4784s" target="_blank" rel="noopener">01:19:44 <span class="ts">⏱01:19:44</span></a>: at every level of the hierarchy you choose between recomputing, storing in memory, or storing on another device and communicating. Activation checkpointing was recompute-vs-memory on one GPU. Data parallelism is redundant work (every rank updates all parameters) to avoid moving optimizer state. The hierarchy never goes away because models keep outgrowing hardware.</p>
+<p>One more note: in JAX/TPU land (the course links the Levanter project), you declare the model and the sharding strategy and the compiler inserts the communication. Appealing, but it takes the from-scratch joy out of the exercise <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4740s" target="_blank" rel="noopener">01:19:00 <span class="ts">⏱01:19:00</span></a>.</p>
+<h2 id="assignment-connection">Assignment connection</h2>
+<p>Assignment 2 is the systems assignment. This lecture is its part-1 foundation: collectives, DDP, tensor and pipeline parallelism on MLPs. The assignment pushes further: overlap communication with computation, sequence and expert parallelism, and combinations of the strategies. Next lecture (Tatsu) goes deeper on parallelism techniques including FSDP/ZeRO.</p>
+<div class="callout"><span class="co-label">Interview signal</span><p>Know the three cuts cold: data = batch, tensor = width, pipeline = depth. Know the collective each one needs. DDP needs all-reduce on gradients. Tensor parallel needs all-gather forward and reduce-scatter backward. Pipeline needs point-to-point plus micro-batches. Know the hardware mapping: tensor parallel inside the fast domain, pipeline across the slow one.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y" target="_blank" rel="noopener">Lecture 7 video, Stanford Online YouTube</a></li><li><span class="src-tag">CODE</span><a href="https://github.com/stanford-cs336/lectures/blob/main/lecture_07.py" target="_blank" rel="noopener">lecture_07.py — executable lecture code</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-orig)</li><li><span class="src-tag">SUPPLEMENT</span><a href="https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md#allreduce" target="_blank" rel="noopener">NCCL performance notes (referenced in lecture code)</a></li></ul></section>
+      <nav class="pager"><a href="cs336/l06-kernels-triton-xla.html"><span class="lbl">← Previous</span>Lecture 6: Kernels, Triton, XLA</a><a href="cs336/l08-parallelism-2.html"><span class="lbl">Next →</span>Lecture 8: Parallelism, Part 2</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="assets/vendor/katex.min.js"></script>
+<script src="assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "";</script>
+<script src="assets/app.js"></script>
+</body>
+</html>
