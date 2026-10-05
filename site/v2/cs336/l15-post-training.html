@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 15: Post-training — Stanford Frontier AI</title>
+<meta name="description" content="From GPT-3 to ChatGPT: SFT data and its pitfalls, safety, mid-training, RLHF, annotators, model-based feedback, PPO, and DPO.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-l15" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15" class="active">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 15: Post-training</nav>
+      <h1>Lecture 15: Post-training</h1>
+      <p class="meta-line">2026-05-18 · Instructor: Tatsunori Hashimoto · 1:19:45 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="2oH6PWPrYFo"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/2oH6PWPrYFo" title="Stanford CS336 Spring 2026 Lecture 15: Post-training" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=2oH6PWPrYFo" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tatsunori Hashimoto on SFT, RLHF, annotators, and DPO.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>Pre-training builds the primordial soup. Post-training extracts the
+behaviors you want: artisanal, messy, data-driven. <strong>Level 1 (Core):</strong>
+the SFT story, pitfalls, safety, mid-training. <strong>Level 2 (Deep):</strong>
+RLHF concept, annotators, model-based feedback, PPO, DPO, failure
+modes.</p>
+<h2 id="level-1-from-gpt-3-to-chatgpt">Level 1: From GPT-3 to ChatGPT</h2>
+<p>A strong base model has limited utility. GPT-3 could do copywriting.
+ChatGPT followed long programmatic prompts. The gap is post-training:
+SFT demonstrations plus RL on preferences <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=51s" target="_blank" rel="noopener">00:51 <span class="ts">⏱00:51</span></a>. Pre-training
+is the indispensable base, but instruction following must be
+extracted explicitly <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=150s" target="_blank" rel="noopener">02:30 <span class="ts">⏱02:30</span></a>.</p>
+<pre class="ascii">pre-train : the base, indispensable, limited utility
+SFT       : demonstrations, teaches instruction following
+RLHF      : preferences, aligns to what users want
+</pre>
+<h2 id="level-1-sft-data-a-short-history">Level 1: SFT data, a short history</h2>
+<figure><img alt="SFT history" src="assets/l15-sft-data-history.svg"><figcaption>FLAN to agentic data: the SFT timeline.</figcaption></figure>
+<p>FLAN: all NLP benchmarks as tasks. Smart, but unnatural and low
+quality: summaries were short and sometimes hallucinated. Self-instruct:
+models generate their own data. Alpaca and Vicuna: distill ChatGPT
+traces, which reliably induced ChatGPT-like behavior. Open Assistant:
+crowdsourced experts, Wikipedia-style, stalled around 10k examples.
+WizardLM and Tulu3: clever synthetic generation. Now: agentic SFT
+with tool calls and to-do lists as supervised targets (Nemotron)
+<a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=451s" target="_blank" rel="noopener">07:31 <span class="ts">⏱07:31</span></a>. Three shifts: chattiness, expert annotators, tool
+use <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=1084s" target="_blank" rel="noopener">18:04 <span class="ts">⏱18:04</span></a>.</p>
+<p>Correctness is subtle: bad responses teach bad behavior, but
+pre-training generalization lets models learn instruction following
+from surprisingly strange data <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=627s" target="_blank" rel="noopener">10:27 <span class="ts">⏱10:27</span></a>.</p>
+<h2 id="level-1-sft-pitfalls">Level 1: SFT pitfalls</h2>
+<figure><img alt="SFT pitfalls" src="assets/l15-sft-pitfalls.svg"><figcaption>Style is not capability. Tail knowledge teaches hallucination.</figcaption></figure>
+<p>Style versus capability: bullet lists and long answers win AlpacaEval
+while changing no benchmark. Engagement signals shift without
+capabilities shifting. Control style separately <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=1183s" target="_blank" rel="noopener">19:43 <span class="ts">⏱19:43</span></a>.</p>
+<p>Tail knowledge: an Open Assistant response teaches two things at
+once, the citation format and the fact. The model generalizes the
+format and hallucinates references. Training on facts the model does
+not know teaches it to emit unknown knowledge. John Schulman&rsquo;s
+argument: RL fixes this because calibration must be policy-dependent
+<a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=1350s" target="_blank" rel="noopener">22:30 <span class="ts">⏱22:30</span></a>.</p>
+<h2 id="level-1-safety">Level 1: Safety</h2>
+<figure><img alt="Safety" src="assets/l15-safety.svg"><figcaption>Violation rate vs false refusals. 500 examples is surgical.</figcaption></figure>
+<p>Post-training is the last line of defense against misuse
+<a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=1696s" target="_blank" rel="noopener">28:16 <span class="ts">⏱28:16</span></a>. The tradeoff: violation rate (bad queries getting
+through) versus false refusal (&ldquo;how do I kill a Python process&rdquo;).
+Llama 2 used a few thousand safety examples. OLMo mined WildChat
+interactions for 50k. Surprise: 500 well-chosen examples cut
+malicious-instruction rates dramatically. The model already has a
+safe/unsafe axis from pre-training. SFT just pulls it out
+<a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=2023s" target="_blank" rel="noopener">33:43 <span class="ts">⏱33:43</span></a>.</p>
+<div class="qa"><div class="q">How can 500 examples change a model&#x27;s safety behavior?</div><div class="a"><p>Because SFT is extraction, not installation. Pre-training already built the concepts of safe and unsafe behavior. The 500 examples just steer the model onto the safe axis. This is why quality beats quantity in SFT: a few right examples pull out the right mode. The catch: this only works for behaviors pre-training already contains. Truly new capabilities (rare programming languages, frontier knowledge) need real training, not steering. And fine-grained safety distinctions still need large-scale collection.
+Safety is adversarial and product-specific. Capabilities data can be synthetic or distilled. Safety data must anticipate real attacks (jailbreaks from WildChat), balance refusals precisely, and match the company&rsquo;s policy. Companies treat it as a trade secret: it reveals what they fear and how they defend. The public references (Llama 2&rsquo;s brief description, OLMo&rsquo;s pipeline) are the exceptions.</p><div class="followup"><strong>Follow-up:</strong> Why is safety data even scarcer than capability data?</div></div></div>
+<h2 id="level-1-mid-training">Level 1: Mid-training</h2>
+<p>The pre/post boundary is dissolving. High-quality and instruction
+data now mix into the decay phase of pre-training: lowest learning
+rate, closest to deployment, highest quality data <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=2171s" target="_blank" rel="noopener">36:11 <span class="ts">⏱36:11</span></a>.
+MiniCPM shows the mix shift: internet data out, UltraChat and
+StackExchange QA in. Pet peeve, stated plainly: &ldquo;base model&rdquo; is now a
+lie, since base models trained on chat data <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=2233s" target="_blank" rel="noopener">37:13 <span class="ts">⏱37:13</span></a>. Data
+mixtures remain trial and error. Decay-phase ablations are cheap
+enough to guide the pre-training mix <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=2405s" target="_blank" rel="noopener">40:05 <span class="ts">⏱40:05</span></a>.</p>
+<figure><img alt="Mid-training" src="assets/l15-midtraining.svg"><figcaption>Instruction data in the decay phase. The base-model label no longer means what it says.</figcaption></figure>
+<h2 id="level-2-rlhf-the-concept">Level 2: RLHF, the concept</h2>
+<figure><img alt="RLHF concept" src="assets/l15-rlhf-concept.svg"><figcaption>Fitting a distribution vs maximizing a reward.</figcaption></figure>
+<p>SFT and pre-training fit a distribution. RLHF maximizes a reward:
+find a policy that scores well, even if it collapses to one answer
+per prompt <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=2549s" target="_blank" rel="noopener">42:29 <span class="ts">⏱42:29</span></a>. Two reasons to bother. First, raters
+and demonstrators differ: freelance writers preferred Instruct
+Davinci&rsquo;s summaries over their own. What people rate well is not
+what they write <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=2649s" target="_blank" rel="noopener">44:09 <span class="ts">⏱44:09</span></a>. Second, verification beats
+generation: checking a math proof is easier than writing one.</p>
+<p>The pipeline: sample outputs at temperature 1, get pairwise
+rankings, train a reward model, hill-climb with PPO plus a KL
+penalty to stay near the reference <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=2783s" target="_blank" rel="noopener">46:23 <span class="ts">⏱46:23</span></a>.</p>
+<h2 id="level-2-annotators">Level 2: Annotators</h2>
+<figure><img alt="Annotation" src="assets/l15-annotation.svg"><figcaption>Who annotates decides the model's values, biases, and blind spots.</figcaption></figure>
+<p>InstructGPT&rsquo;s rubric: helpful, truthful, harmless. The Bard leak
+showed a similar Likert-scale setup. The workforce shifted up:
+bachelor and master holders, median age 35, $50+/hr, experts over
+$100/hr for doctors and lawyers <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=2955s" target="_blank" rel="noopener">49:15 <span class="ts">⏱49:15</span></a>. Annotators shape
+values: InstructGPT&rsquo;s annotators (Southeast Asian, US West Coast)
+moved model opinions toward Buddhist, Hindu, and atheist
+demographics <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=3207s" target="_blank" rel="noopener">53:27 <span class="ts">⏱53:27</span></a>. Subliminal transfer is real: train
+on &ldquo;I like owls&rdquo; data and the model inherits owl preference
+<a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=3286s" target="_blank" rel="noopener">54:46 <span class="ts">⏱54:46</span></a>. Experts check factuality. Crowdworkers over-index
+formatting (Hosking et al.) <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=3337s" target="_blank" rel="noopener">55:37 <span class="ts">⏱55:37</span></a>. And verification is in
+crisis: annotators use ChatGPT, and Bard raters had under a minute
+per long response <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=3091s" target="_blank" rel="noopener">51:31 <span class="ts">⏱51:31</span></a>.</p>
+<h2 id="level-2-model-based-annotation">Level 2: Model-based annotation</h2>
+<p>For catching up to the frontier, there is no room left for human
+data. GPT-4&rsquo;s annotations matched careful human rankings at a tenth
+the cost. Zephyr tried human-only collection and ended up with AI
+feedback anyway. UltraChat and UltraFeedback are now standard. Tulu3
+uses model-based annotation for its whole pipeline <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=3608s" target="_blank" rel="noopener">60:08 <span class="ts">⏱60:08</span></a>.
+The catch: models share human biases and amplify them. Length
+hacking: longer answers keep winning model judges, and RLHF on
+length alone does well on benchmarks <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=3882s" target="_blank" rel="noopener">64:42 <span class="ts">⏱64:42</span></a>.</p>
+<figure><img alt="Model annotation" src="assets/l15-model-annotation.svg"><figcaption>AI feedback won for catch-up. Watch the length bias.</figcaption></figure>
+<h2 id="level-2-ppo-and-dpo">Level 2: PPO and DPO</h2>
+<p>PPO, briefly: policy gradients need fresh samples every step, and
+sampling is expensive. Off-policy reuse with a trust region (TRPO),
+then a clipping heuristic to stay near the old policy. Details next
+lecture <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=4034s" target="_blank" rel="noopener">67:14 <span class="ts">⏱67:14</span></a>.</p>
+<p>DPO asks: can we skip PPO? Failed attempts: good/bad tokens, SFT on
+good only, reward-model rejection sampling. DPO works, and the
+derivation needs one assumption <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=4149s" target="_blank" rel="noopener">69:09 <span class="ts">⏱69:09</span></a>.</p>
+<figure><img alt="DPO" src="assets/l15-dpo.svg"><figcaption>Up on good, down on bad, scaled by surprise.</figcaption></figure>
+<p>Assume the policy can be anything (nonparametric). Then the
+KL-constrained reward objective has a closed form: exponentially
+tilt the reference policy by the reward. Solve for the implied
+reward, plug it into the Bradley-Terry preference model, and you get
+the DPO loss. The gradient intuition: increase the winner&rsquo;s
+likelihood, decrease the loser&rsquo;s, with step sizes scaled by how
+wrong the implied reward was <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=4402s" target="_blank" rel="noopener">73:22 <span class="ts">⏱73:22</span></a>. No reward model, no
+sampling. Llama used DPO in an outer loop with rejection sampling.
+DPO versus PPO results are fragile and setup-dependent. Variants
+(SimPO, length-normalized) barely matter <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=4542s" target="_blank" rel="noopener">75:42 <span class="ts">⏱75:42</span></a>.</p>
+<h2 id="level-2-rlhf-failure-modes">Level 2: RLHF failure modes</h2>
+<p>Over-optimization: push hard and you overfit the learned reward
+model. The KL regularizer is critical <a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=4599s" target="_blank" rel="noopener">76:39 <span class="ts">⏱76:39</span></a>. Mode
+collapse: RL policies concentrate on a few outputs. Diversity dies
+<a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=4647s" target="_blank" rel="noopener">77:27 <span class="ts">⏱77:27</span></a>. Miscalibration: GPT-4-era plots showed RLHF
+models are uncalibrated, and nobody has fully solved it
+<a href="https://www.youtube.com/watch?v=2oH6PWPrYFo&amp;t=4690s" target="_blank" rel="noopener">78:10 <span class="ts">⏱78:10</span></a>. Next lecture: RLVR, where rewards do not over-optimize.</p>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>over-optimization</td>
+<td>reward model overfit, KL regularizer is critical</td>
+</tr>
+<tr>
+<td>mode collapse</td>
+<td>policy concentrates on a few outputs, diversity dies</td>
+</tr>
+<tr>
+<td>miscalibration</td>
+<td>RLHF models uncalibrated, unsolved</td>
+</tr>
+</tbody>
+</table>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/l15-sft-data-history.svg" alt="SFT history">
+<div class="rc-body">
+<strong>1. SFT data history</strong>
+<p>FLAN to self-instruct to Alpaca to Open Assistant to synthetic
+to agentic. Chattier, more expert, more tool use.</p>
+<p class="rc-num">Key: natural chat won</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l15-sft-pitfalls.svg" alt="SFT pitfalls">
+<div class="rc-body">
+<strong>2. SFT traps</strong>
+<p>Style is not capability. Tail knowledge teaches hallucination.
+RL recalibrates what the model knows.</p>
+<p class="rc-num">Key: teach format, not fiction</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l15-safety.svg" alt="Safety">
+<div class="rc-body">
+<strong>3. Safety is last-line</strong>
+<p>Violation vs false refusal. 500 examples is surgical.
+Fine-grained safety still needs scale.</p>
+<p class="rc-num">Key: extract, do not install</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l15-midtraining.svg" alt="Mid-training">
+<div class="rc-body">
+<strong>4. The blur</strong>
+<p>Instruction data in the decay phase. Base model is a lie.
+Mixtures are trial and error.</p>
+<p class="rc-num">Key: decay is deployment-adjacent</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l15-rlhf-concept.svg" alt="RLHF concept">
+<div class="rc-body">
+<strong>5. Fit vs maximize</strong>
+<p>SFT fits a distribution. RLHF maximizes a reward and may
+collapse. Raters differ from writers.</p>
+<p class="rc-num">Key: different games</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l15-annotation.svg" alt="Annotation">
+<div class="rc-body">
+<strong>6. Annotators decide</strong>
+<p>Experts at $100+/hr. Demographics transfer. Owls transfer.
+Formatting is not factuality.</p>
+<p class="rc-num">Key: who rates, rules</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l15-model-annotation.svg" alt="Model annotation">
+<div class="rc-body">
+<strong>7. AI feedback won</strong>
+<p>GPT-4 annotates like humans, 10x cheaper. Zephyr gave up on
+human-only. Watch length hacking.</p>
+<p class="rc-num">Key: catch-up is synthetic</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l15-dpo.svg" alt="DPO">
+<div class="rc-body">
+<strong>8. DPO</strong>
+<p>Up on good, down on bad, scaled by surprise. No reward model.
+DPO vs PPO is fragile.</p>
+<p class="rc-num">Key: tilt the reference</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 15 video.
+- InstructGPT paper and appendix (the last public data-collection glimpse).
+- Anthropic HH paper (2022). Constitutional AI.</p>
+<p><strong>Further reading:</strong>
+- FLAN, Alpaca, Open Assistant, Tulu3 papers.
+- DPO paper and variants (SimPO). PPO paper.
+- Hosking et al. on annotator expertise. Emergent misalignment work.</p>
+<p><strong>Caveats from these sources.</strong> Frontier post-training is a trade
+secret. The public record is old (2022-2023) plus open-source
+recipes. Annotator demographics come from ScaleAI subsets, not the
+whole industry. DPO-vs-PPO claims are setup-fragile.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 Lecture 14:</strong> synthetic data pipelines continue here.</li>
+<li><strong>CS336 Lecture 16:</strong> RLVR, the next step beyond RLHF.</li>
+<li><strong>CS329H:</strong> preference learning and choice theory behind RLHF.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Post-training cheatsheet.</strong> GPT-3 to ChatGPT = SFT + RL. SFT data: FLAN (unnatural), self-instruct, Alpaca/Vicuna (distillation), Open Assistant (experts), WizardLM/Tulu3 (synthetic), agentic (tool calls). Shifts: chatty, expert, tools. Pitfalls: style vs capability, tail knowledge hallucinates, RL recalibrates. Safety: violation vs false refusal, 500 examples surgical, Llama 2 few thousand, OLMo 50k from WildChat. Mid-training: decay phase, base model is a lie. RLHF: maximize reward, may collapse. Raters differ from writers. Pipeline: sample, rank, reward model, PPO + KL. Annotators: experts $100+/hr, demographics transfer, owls transfer, formatting vs factuality. Model annotation: 10x cheaper, Zephyr gave up, length hacking. PPO: policy gradient, off-policy, clip. DPO: tilt reference by reward, up good down bad, surprise-scaled. Failures: over-optimization, mode collapse, miscalibration.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Extract, do not install.</strong> SFT pulls behaviors from pre-training. RLHF maximizes rewards. Annotators decide values.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=2oH6PWPrYFo" target="_blank" rel="noopener">Lecture 15 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li></ul></section>
+      <nav class="pager"><a href="../cs336/l14-data-pipeline.html"><span class="lbl">← Previous</span>Lecture 14: The Data Pipeline</a><a href="../cs336/l16-rlvr.html"><span class="lbl">Next →</span>Lecture 16: RLVR</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
