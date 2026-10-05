@@ -1,0 +1,1249 @@
+[00:05] So originally, the plan was to talk more
+[00:08] about reinforcement learning.
+[00:09] But I thought since I only had one lecture to give,
+[00:12] I think this class would be a little bit
+[00:14] incomplete without saying something about multimodality,
+[00:17] which is so pervasive if you look at all the major models.
+[00:21] So this will be an overview of multimodal models.
+[00:27] Of course, this could be a whole class in itself,
+[00:29] and I'll try to do what I can in one lecture.
+[00:32] OK, so let's dive into multimodal models.
+[00:35] So far in this class, we have exclusively
+[00:38] focused on language models.
+[00:40] And language models are already pretty general.
+[00:43] They give you the ability to go from any piece of text
+[00:45] to any text.
+[00:47] So this could be any language, code, poetry, anything you like,
+[00:53] even, let's say, DNA, for example.
+[00:57] But the world is multi-modal.
+[01:00] You have text, you have images, audio, video.
+[01:05] And if you think about a North Star of where we want to be
+[01:09] is what people call omni model, which
+[01:12] is ability to take any combination of these modalities
+[01:17] and output any combination of any of these modalities.
+[01:20] So, for example, I can give you an image and a video
+[01:24] and I can ask a question about the image and the video.
+[01:29] I can generate images.
+[01:31] I can convert the audio into an image.
+[01:34] You can imagine all sorts of different applications
+[01:37] by having an omni model.
+[01:39] So in this class, I'm not going to build up
+[01:41] to a whole omni model.
+[01:42] But I'll give you some of the pieces that at least to allow
+[01:47] you to ingest a little bit of images, which we'll mostly
+[01:52] focus on today.
+[01:55] So how do you build such a thing?
+[01:57] Well, this is a weird way to motivate this,
+[02:02] but the reality is that transformers work really well.
+[02:06] And despite the best efforts of people to try other things,
+[02:10] those are across all of these modalities still at scale
+[02:14] the best thing we have.
+[02:15] So we have to figure out how to use them.
+[02:17] And now, transformers were designed for text.
+[02:21] So they have this property that they speak tokens.
+[02:24] So they take as input a bunch of tokens
+[02:27] and then output some tokens.
+[02:30] And here, I'm expanding the notion
+[02:34] of tokenization to be not just a discrete token that we've
+[02:36] seen in text but also potentially continuous tokens.
+[02:40] You can think about these as embedding of tokens.
+[02:44] And the key thing is that a token
+[02:46] should represent some semantic unit of information.
+[02:51] For example, in natural language, tokens are subwords.
+[02:55] And these are somewhat meaningful.
+[02:58] Whereas, for example, a pixel is certainly not
+[03:02] meaningful by itself.
+[03:04] So somehow we must convert everything,
+[03:07] including audio and images, into either discrete or continuous
+[03:13] tokens.
+[03:15] Now, notice that we've already had to do this even with text.
+[03:18] In the first lecture, we talked about tokenization.
+[03:21] And there, it was not too bad.
+[03:24] I mean, we had a BP tokenizer.
+[03:26] You guys implemented it.
+[03:30] It's fine.
+[03:31] One could wish for a better tokenizer or something that
+[03:37] doesn't have tokenizers at all.
+[03:39] But it's not the worst thing in the world.
+[03:43] Now, for non-text modalities, we have
+[03:46] to scratch our heads a lot more and figure out
+[03:49] what is the equivalent of the BP tokenizer that
+[03:51] will take an image and produce things
+[03:54] that a transformer can digest?
+[03:57] OK, so you have to answer two questions here.
+[04:01] One is, for non-text data, for example, images or videos
+[04:04] or audio, how do you input these into the transformer?
+[04:09] And then how do you generate them out?
+[04:12] And this lecture will mostly focus on question number one.
+[04:17] OK, so let's start back and rewind the clock back to 21.
+[04:25] So the CLIP model, which some of you might be familiar with,
+[04:28] is a lot of the foundation of modern VLMs.
+[04:34] And so we can go through this a bit in more detail.
+[04:39] So CLIP stands for Contrastive Language Image Pre-Training.
+[04:43] And a bit of historical context is around
+[04:46] that time GPT-3 had already happened.
+[04:52] GPT-2. All the language models had already
+[04:55] gone into this foundation model era.
+[04:59] Neovision was still-- there were some efforts,
+[05:03] but traditionally had been based on large annotated data
+[05:08] sets, such as ImageNet, and training models,
+[05:12] such as the ResNet, on these data sets
+[05:15] and doing a bunch of other things, like data augmentation,
+[05:19] and getting really good performance.
+[05:21] And so the researchers at OpenAI were wondering,
+[05:25] is it possible to leverage the large amount of image
+[05:29] and textual captions out there?
+[05:32] So inspired by this idea in language where you could just
+[05:35] scrape the internet, you have all this text, it's very noisy.
+[05:39] But somehow if you train a large enough model,
+[05:42] you can make sense out of this and generate something useful.
+[05:45] So what was the equivalent of that for images?
+[05:49] So as a result, CLIP was born.
+[05:53] And the idea of CLIP is fairly simple and straightforward.
+[05:58] So the idea here is that suppose I give you
+[06:02] a bunch of image-text pairs.
+[06:05] So let's say I give you 32,000 of these.
+[06:09] OK, so what I'm going to do is for each image
+[06:13] I'm going to encode it using an image encoder, which I'll
+[06:16] explain later, into a vector.
+[06:20] So I'm going to have 32,000 of these image encodings.
+[06:26] I'm going to also do the same thing
+[06:27] with the corresponding text.
+[06:30] So that will give me T1 through TN.
+[06:33] So these are the embeddings of the text.
+[06:36] These are embedding of the images.
+[06:39] Now, the objective I want to set up
+[06:41] is that I want the image-- let's take I1.
+[06:48] So I1 is aligned with T1.
+[06:52] So I want this alignment, the dot product between these two
+[06:57] embeddings to be much larger than the dot product between I1
+[07:01] and all the other texts, OK.
+[07:04] And conversely, I also want for this text
+[07:08] to say that this dot product is larger
+[07:11] than the dot product between T1 and all the other images.
+[07:14] So that, in a nutshell, is the CLIP objective.
+[07:18] And you can imagine doing-- there's basically
+[07:22] 2 times N different softmax classification problems.
+[07:30] So here's the code.
+[07:33] So you get a n by d matrix for the image encodings
+[07:40] and n by d times for the textual embeddings.
+[07:43] You normalize and you take this dot stop product
+[07:48] with some temperature.
+[07:50] And then you compute the cross entropy, OK.
+[07:56] So it's basically a multi-class classification problem,
+[08:00] where the examples are structured in this m
+[08:05] by n matrix form.
+[08:09] OK, any questions about that?
+[08:15] All right, so some more details about how CLIP was built.
+[08:24] So where does the data come from?
+[08:26] There are not too many details in the paper about the data.
+[08:32] Roughly, you take a bunch of queries from somewhere
+[08:39] and then you go search online for these
+[08:43] and you mine a bunch of image and text pairs.
+[08:47] And this resulted in 400 million image-text pairs.
+[08:53] The data set wasn't released, but there
+[08:55] was an effort by this paper called
+[09:00] OpenCLIP, which replicated and further extended the CLIP ideas.
+[09:09] So there was a data set called LAION-5B,
+[09:12] which was released 5 billion images
+[09:14] with textual descriptions.
+[09:16] And there was a bunch of processing that happened.
+[09:19] Interestingly, they actually used CLIP for the data filtering
+[09:22] and then train OpenCLIP.
+[09:24] So there's some bootstrapping happening.
+[09:26] But at least this is a model where
+[09:28] you can point to the data set that it was trained
+[09:31] on and the code as well.
+[09:36] So a few other details.
+[09:41] So images come in all sorts of resolutions.
+[09:45] If you find an internet image, it
+[09:47] might be long and skinny or tall--
+[09:52] sorry. Long and skinny or the other way.
+[09:55] So arbitrary dimensions.
+[09:57] And one thing that you learn about neural nets
+[10:01] is that they don't like things to be dynamic.
+[10:03] They want things to be fixed size.
+[10:06] So there is a somewhat heuristic processing
+[10:11] that happens is they resize the image so that the shorter side
+[10:16] is 336 or whatever target size.
+[10:20] It could be 224 as well.
+[10:23] And then they center crop to get a square.
+[10:27] OK, this is obviously for convenience.
+[10:29] Later, we'll see that you can do better than this.
+[10:32] But this is just for expediency.
+[10:35] And also at this time the CLIP authors
+[10:39] were thinking about ImageNet and classification.
+[10:42] So usually, the object is in the middle
+[10:46] and you're just trimming off some background.
+[10:48] So it doesn't matter too much.
+[10:55] So what is the vision encoder?
+[10:57] So this is the general algorithm.
+[10:59] But I haven't specified what the image and text encoders are.
+[11:05] Yeah.
+[11:24] So the question I think is why they train on image-text pairs
+[11:28] as opposed to images.
+[11:33] So there is a line of work that tries
+[11:36] to encode images into representations
+[11:41] based on data augmentation.
+[11:43] So, for example, if you take an image-- and I think
+[11:46] this idea called SimCLR.
+[11:48] You augment it.
+[11:49] You crop it.
+[11:50] You randomly perturb it.
+[11:52] Rotate it.
+[11:53] And you want to say that that is the same image.
+[11:56] They should have similar embeddings.
+[12:01] And that's useful for low level details.
+[12:05] But the problem is that you won't data
+[12:09] augment your way from one type of dog to another dog.
+[12:14] So by using the text, it gives you
+[12:16] a higher level semantic representations of images.
+[12:23] And, yeah, that's a good question.
+[12:25] And later, we'll see how these semantic representations are
+[12:29] useful if you look at the types of tasks
+[12:31] that people are trying to solve.
+[12:36] OK, so what is the vision encoder that CLIP uses?
+[12:41] They actually experimented with a bunch of different ones,
+[12:44] ResNets and vision transformers, which had just come out.
+[12:49] They found out that vision transformers performed the best.
+[12:51] So when people say CLIP, they usually mean the VIT version.
+[12:56] And so a vision transformer does the following.
+[13:03] So you take an image and you break it up into these patches.
+[13:10] I think the original paper was 16 by 16
+[13:15] and the CLIP used 14 by 14.
+[13:18] But anyway, you have these little patches,
+[13:21] which are basically vectors.
+[13:24] So each patches in some sense a--
+[13:27] well, a token for this vision transformer.
+[13:31] You add the positional embeddings
+[13:33] just like you would if you were training a language model,
+[13:36] and then you just put it through a standard transformer.
+[13:42] And if you want to classify, then you would--
+[13:50] well, you would usually want to--
+[13:53] OK, sorry.
+[13:55] The transformer encoder produces a sequence of vectors.
+[14:03] And the CLIP paper does something a little bit
+[14:07] different. You can average all these vectors.
+[14:08] That gives you a single vector.
+[14:10] But they thought it was better to do attention pooling, which
+[14:14] means that you take the global average of all the activations,
+[14:17] but then you also do another round of attention
+[14:22] with that query against the key and values of each position.
+[14:27] And that gives you another vector,
+[14:29] which is maybe a little bit more informed
+[14:32] rather than just a straight up average.
+[14:37] OK, so that's the VIT.
+[14:40] And the CLIP paper found that the best model is what is called
+[14:45] VIT-L/14.
+[14:49] So to decipher, this is a large VIT.
+[14:54] I think it has 24 layers or so.
+[14:58] Not quite sure about that.
+[15:00] And 14 by 14 patches.
+[15:03] Each patch is RGB, so it has three channels.
+[15:07] And they trained on 336 by 336 resolution images.
+[15:13] Actually, they trained on a lower res
+[15:19] I guess for speed because high resolution images take longer.
+[15:23] And then for the latter part of training,
+[15:25] they train on higher res.
+[15:27] Yeah.
+[15:29] For the position embedding, would it
+[15:31] be more complicated than the task?
+[15:33] For example, task only has .
+[15:40] Yeah, so the question is, can you
+[15:44] be smarter about the positional embeddings
+[15:46] because this is just linear 0 through 9?
+[15:51] I think in this paper, they actually-- in the CLIP paper,
+[15:54] I believe they tried some 2D version of this.
+[15:57] And the one DNA found that it doesn't really matter that much.
+[16:02] I think it's also--
+[16:05] I always have to take these results with the idea
+[16:09] that they're interested in classification in mind.
+[16:11] So for classification, maybe it doesn't matter.
+[16:13] Later, we'll see a fancier positional embeddings
+[16:16] that do take into account the spatial structure.
+[16:24] OK, so the text encoder is a standard transformer.
+[16:30] It's a GPT-2 style transformer since that
+[16:33] was from the same group that developed GPT-2.
+[16:37] And in order to get a single vector out of a sequence,
+[16:42] they prepended BOS and appended EOS.
+[16:47] And then they took EOS, the activation at the highest layer
+[16:51] as the representation of that whole sequence.
+[16:57] OK, so you have the vision encoder.
+[16:59] You have the text encoder.
+[17:00] And then you can do this process to train.
+[17:06] You pick a batch.
+[17:07] You encode all the text.
+[17:08] You decode all the images.
+[17:10] And then you form these two end cross-entropy losses.
+[17:14] And then you go from there.
+[17:18] OK, so the headline result, which
+[17:21] got a lot of people excited about CLIP back in 2021,
+[17:25] is that on the ImageNet benchmark,
+[17:28] 0 shot CLIP outperform a ResNet that was trained
+[17:32] on 1.2 million ImageNet images.
+[17:36] So if you think about this, 1.2 ImageNet images,
+[17:39] this was many, many hours of Amazon Mechanical Turk worker
+[17:44] time to do this annotation.
+[17:48] And now you have CLIP that was trained on more organic web
+[17:52] data.
+[17:54] Of course, this was the labor of a bunch of people on the web.
+[17:57] But if you're able to leverage that or existing data already,
+[18:01] then you can just zero shot it.
+[18:04] And the zero shot technique is basically
+[18:07] to explain I don't have slide support here.
+[18:10] But you take an image and then you have a bunch of text.
+[18:14] And then you basically take the dot product
+[18:16] with the various labels and see which one's the highest.
+[18:23] Oh, yeah.
+[18:24] It is. Sorry.
+[18:25] It is on this part of the slide.
+[18:26] OK, good point.
+[18:28] So this is a zero shot prediction,
+[18:32] where you take an image and then you-- yeah, what I said.
+[18:40] Cool.
+[18:41] Any questions?
+[18:43] Yeah.
+[19:00] Yeah, so the question is if you have a dog
+[19:02] and there's maybe other captions that also have dogs,
+[19:05] would that confuse the model?
+[19:08] In general, this process is going to be noisy.
+[19:13] It's OK if there's another dog because, on average, it's
+[19:18] unlikely that there's always going to be a dog.
+[19:20] Sometimes it's going to be an apple or a cat or something.
+[19:23] But also another point is that these images are basically
+[19:29] scraped from images on the web with textual text next to them
+[19:34] or in the alt image.
+[19:36] And so they're extremely noisy.
+[19:38] There's been studies that look at when
+[19:41] you have a caption of an image, it doesn't necessarily just
+[19:45] verbatim say what's in the image.
+[19:48] Because if you have an image and it's a dog,
+[19:50] you don't need to say a dog.
+[19:52] So this process is very noisy.
+[19:55] So it's maybe somewhat surprising but also interesting
+[20:02] that it works.
+[20:03] I mean, there was a lot of data filtering that is needed.
+[20:06] So if you take arbitrary images on and text on that web,
+[20:09] it's probably going to be too way too noisy.
+[20:12] One other thing to note, which relates
+[20:15] to a point I'll come back to at the very end,
+[20:18] is they also try this alternative where
+[20:21] instead of doing this ranking, they can
+[20:24] predict a text from the images.
+[20:26] So they can set an objective where
+[20:28] they try to take the images and predict
+[20:30] the text, either as a bag of words or as a language model.
+[20:38] And they show that maybe, I don't know, somewhat
+[20:43] surprisingly, that if you use a stronger model,
+[20:47] it actually does worse or at least
+[20:49] is less efficient compared to using bag of words, CLIP.
+[20:55] So this is saying that--
+[21:00] I think saying that for actually the representations
+[21:05] that you're trying to learn-- or, again, this
+[21:08] is ImageNet accuracy.
+[21:09] So it's classification.
+[21:10] Actually modeling the exact token sequences of the caption
+[21:15] isn't so important for getting the rough representation
+[21:20] of the image.
+[21:24] OK, we'll come back to this point at the end.
+[21:29] So what did we learned so far?
+[21:32] So we've encoded images using CLIP.
+[21:35] And it captures the semantics of the image
+[21:38] because it's paired with text.
+[21:40] And generally, text talks about the semantics.
+[21:44] It is important to note that the design decisions here are
+[21:48] based on image classification.
+[21:50] So it's not very fine-grained.
+[21:53] But yet, it's still, as we'll see, serves
+[21:56] as a robust starting point for everything
+[21:58] we're going to do later.
+[22:01] One technical downside of CLIP is that it does require large
+[22:07] batch sizes, like 30,000.
+[22:10] If you have a batch size of 1, clearly, it
+[22:12] doesn't work, or even 10, it doesn't work.
+[22:14] And furthermore, the softmax operation
+[22:17] operates over the full batch.
+[22:20] So it's not really very decomposable.
+[22:22] Whereas if you think about normal language model
+[22:25] training, a batch of examples, all the sequences parallelize
+[22:30] and you just do aggregation at the end.
+[22:37] So this point will be addressed by another paper from Google
+[22:42] that came out called SigLIP.
+[22:45] And so think about this as basically an improved version
+[22:49] of CLIP.
+[22:50] So it stands for Sigmoid Loss for Language Image Pre-training.
+[22:56] And here, the main difference is that CLIP does
+[23:00] multi-class classification.
+[23:02] It says, I have this aligned text and image.
+[23:05] And I'm going to say this is positive against all
+[23:09] the other alternative images or against all
+[23:11] the alternative text.
+[23:13] SigLIP, in some sense, is a lot simpler.
+[23:16] It basically says for any given image text pair,
+[23:21] are they aligned or not?
+[23:23] So if I reference this diagram up here,
+[23:27] it's basically binary classification
+[23:28] where the diagonals are positive examples
+[23:31] and the diagonal are negative examples.
+[23:33] That's it.
+[23:36] So here's the algorithm.
+[23:39] You take the embeddings.
+[23:40] You normalize.
+[23:41] You take the dot product as usual.
+[23:44] But now you're forming the labels which are minus 1
+[23:50] on the off-diagonal, and diagonals you have one.
+[23:53] And then you do log_sigmoid.
+[24:00] So the objective is very simple.
+[24:02] Yeah.
+[24:17] Yeah, so the question is, does this
+[24:19] require any sophisticated sampling strategies?
+[24:23] At least in the initial paper, they
+[24:26] were just operating on literally the same type of matrix.
+[24:31] You could imagine I think you're probably thinking in general
+[24:34] for these contrastive methods.
+[24:37] The negative examples need to be-- sometimes
+[24:40] you need to balance the positives and the negatives,
+[24:42] or the negatives need to be like tight negatives
+[24:45] so that you're not biased.
+[24:46] But at least in the initial version,
+[24:49] this was fairly straightforward.
+[24:54] So to speak about the data, this was done at Google.
+[25:01] This was the data set.
+[25:02] They used another paper, which was another language image
+[25:06] model around 2022, which got a WebLI data set with order
+[25:11] billion image text pairs.
+[25:14] They also did some extra work.
+[25:16] For example, images that have text in them.
+[25:18] They did OCR.
+[25:19] And that's another way to form text image pairs
+[25:23] and did some filtering.
+[25:24] This was multilingual.
+[25:26] The main point of this paper was that it was much more
+[25:33] efficient to train than CLIP.
+[25:36] So CLIP was trained 10 days on 256 TPUv3,
+[25:42] and CLIP was five days on 32v4s.
+[25:46] And you might think, oh, v4s actually
+[25:48] should be faster than v3.
+[25:49] In terms of flops per second, they're actually not.
+[25:53] They're better because you can put more of them in a pod
+[25:56] and the interconnect is better.
+[25:57] But at this scale, it's really actually not faster.
+[26:04] Actually, 60% slower or something.
+[26:09] So the way that this is faster-- and, of course,
+[26:15] I think CLIP probably did not try
+[26:17] to optimize the code for the maximum throughput.
+[26:21] It was just let's get this thing to work.
+[26:24] But the SigLIP paper showed that you can parallelize this
+[26:30] as follows.
+[26:31] So you have-- basically, if you recall your systems lecture,
+[26:36] so this is you can think about it as DDP if you like,
+[26:41] where each device stores a subset of the image text pairs.
+[26:51] However, there's interactions between the examples,
+[26:55] unlike in language model training, where everything just
+[26:58] factors.
+[26:59] So in the first pass, each device
+[27:02] just computes all the losses on whatever image text
+[27:09] pairs it has locally.
+[27:15] And then you send the text.
+[27:19] So basically, device 1 gets T5 through T8.
+[27:24] And now it's able to compute the negatives here.
+[27:27] And then it gets T9 through T12.
+[27:30] So you rotate around until you cover all the off-diagonal block
+[27:35] entries.
+[27:38] Another thing that was nice about SigLIP
+[27:42] is that you effectively decoupling batch size
+[27:45] from the loss.
+[27:48] Whereas in CLIP, the loss is tied to the batch size.
+[27:51] If you change the batch size, it's a different loss function.
+[27:54] So they were able to experiment with much smaller batch sizes
+[27:59] less than 16K.
+[28:00] And in that regime, it's much better than CLIP
+[28:03] because the loss function, if you
+[28:05] have too many too small a batch size, it just degrades.
+[28:10] Whereas for smaller batch size for CLIP, you have more variance
+[28:16] but it's the same in expectation.
+[28:18] It's the same loss.
+[28:21] They also say, well, you can go up to much larger batch sizes.
+[28:24] But that doesn't really help.
+[28:26] And we saw that critical batch sizes at some limit.
+[28:30] And 32K was essentially their critical batch size.
+[28:37] OK, so now we have CLIP and SigLIP.
+[28:40] These are image encoders that take an image, in this version,
+[28:44] just a fixed size image, 336 by 336, let's say, and maps it
+[28:49] into a vector, OK, which contains some semantics.
+[28:56] So now let's start building VLMs, Vision Language Models.
+[29:03] And I'm going to talk about two families of models, LLaVA
+[29:08] and Qwen.
+[29:09] The two are very similar in the broad template.
+[29:13] There are some details that are different,
+[29:15] which we'll go through, and the basic idea
+[29:18] is that we're going to take these embeddings
+[29:20] and then just inject them into our language model.
+[29:23] So this is going to be more of a flavor of mid-training
+[29:26] or post-training, where we take an existing image encoder.
+[29:30] We take an existing LLM, and then we're
+[29:33] going to stitch it together rather than training something
+[29:37] from scratch.
+[29:40] So LLaVA paper came out in 2023.
+[29:46] And this got people excited because around this time,
+[29:51] the closed models, like GPT, I think it was GPT-4,
+[29:55] was able to do visual reasoning.
+[29:58] And they were able to show that they could do
+[30:02] some visual reasoning as well.
+[30:03] It wasn't as good as GPT-4, of course,
+[30:07] but I think it was an open model and people
+[30:09] got to see what went under the hood.
+[30:12] So for VLMs, there's essentially a few pieces here.
+[30:19] There's the vision encoder.
+[30:21] They use CLIP here.
+[30:23] For the text decoder, they use a language model called Vicuna,
+[30:26] which is the first Llama model that was fine-tuned
+[30:30] on some shared GPT conversations.
+[30:33] So these are conversations that people have with ChatGPT
+[30:36] and share them on this website.
+[30:38] I don't think this is up anymore.
+[30:42] So the data that they used was based on MS COCO.
+[30:50] So this was an annotated data set
+[30:51] where they had Mechanical Turk workers go and annotate
+[30:55] a bunch of images with bounding boxes and captions describing
+[30:59] what was in the image.
+[31:01] So they basically synthesized a data set for their model.
+[31:07] So they prompted GPT-4 with the captions or the detected objects
+[31:11] and GPT-4 to generate questions or conversations.
+[31:15] For example, this is an image in the MS COCO data set.
+[31:20] This was an annotated caption done by a human.
+[31:24] And also here is also annotated by a human.
+[31:31] And then you ask GPT-4, generate me a conversation
+[31:37] and you might get a question and an answer.
+[31:41] You might ask GPT-4 generate me a detailed description.
+[31:44] It generates something, I guess, similar to the caption.
+[31:47] And then you can ask GPT-4 to generate complex reasoning.
+[31:50] And it does something like that.
+[31:54] OK, so those are synthesized data, 158,000 examples.
+[32:03] And then they trained a model on this.
+[32:06] So the model-- so they use CLIP, in particular,
+[32:12] the highest performing CLIP version, VITL/14.
+[32:18] So 14 by 14 patches.
+[32:21] And then they-- let's just look at this image.
+[32:25] So they take images.
+[32:28] They send it through this vision encoder CLIP.
+[32:30] That gives you a vector.
+[32:32] But this vector isn't really in the same space,
+[32:35] so to speak, as the text.
+[32:38] So then they multiply by a matrix W
+[32:43] to get another vector, which is in the same space as the text
+[32:47] embeddings.
+[32:49] And for text, you basically just use your standard embeddings
+[32:52] to get vectors.
+[32:54] So what's basically happening is that the text gets encoded
+[32:58] into these vectors and the image also gets
+[33:01] encoded into these vectors.
+[33:04] And then this whole sequence of vectors
+[33:06] just goes through a standard transformer and produces output.
+[33:11] OK, so we're in some sense converting these images
+[33:14] into textual tokens.
+[33:18] So I can leverage the pre-trained language model.
+[33:24] So to train this model, they do it in two stages.
+[33:30] The first stage is that they freeze the vision
+[33:33] encoder and the language model and only train this matrix W.
+[33:39] And this is what they call the alignment phase, which
+[33:42] is essentially making sure that the image gets
+[33:46] mapped into the same space.
+[33:50] Because if you just use a random W,
+[33:54] these images are not going to be--
+[33:58] I mean, certainly, they're not embeddings,
+[34:00] representing any natural language token.
+[34:03] So the goal of training W is that they
+[34:06] look like natural language token embeddings.
+[34:09] And the second stage is that they now
+[34:12] still freeze a vision encoder and then train
+[34:15] W and the language model.
+[34:16] So they're fine-tuning the language model on their data.
+[34:22] So remember, their data is basically here's an image
+[34:26] and here is a conversation or a description
+[34:28] or a complex reasoning example.
+[34:32] So this is all image plus text to text.
+[34:37] OK, so this is one example from their paper.
+[34:43] It's interesting.
+[34:44] So you have an input image and a conversation.
+[34:48] The user says what's unusual about this image.
+[34:50] And their model is able to tell you that you don't usually
+[34:54] iron on the back of a minivan.
+[34:57] And they also make a point that their model is pretty good
+[35:00] because even if your user prompt is not really
+[35:06] prompting the unusualness, it still talks about it, whereas--
+[35:12] GPT-4, obviously, is able to do this,
+[35:14] but other models at the time were not able to.
+[35:20] OK, any questions about LLaVA?
+[35:25] OK, so that was 2023.
+[35:29] And I'm going to skip forward to LLaVA OneVision, which is 2024.
+[35:35] There is a sequence of papers after the LLaVA paper came out
+[35:39] of LLaVA 1.5, LLaVA-Next.
+[35:44] But I'll capture all of these innovations, I think,
+[35:47] in what I'll describe next.
+[35:51] The main thing that they did is it's essentially
+[35:55] the same recipe, but they are trying
+[35:56] to be more ambitious in terms of the types
+[35:59] of multimodal applications they could do.
+[36:02] So they were able to handle multiple images and videos.
+[36:06] So here's the same diagram.
+[36:10] Now they can take a single image or multiple images
+[36:15] or a video, which is essentially a sequence of images
+[36:19] corresponding to a sampling of the frames.
+[36:23] And here are the vision encoder.
+[36:26] They upgrade it to SigLIP.
+[36:28] The text decoder, they use Qwen-2 now,
+[36:31] which was probably the best language model
+[36:36] that was out at that time.
+[36:38] And then for the projector or the adapter, which
+[36:42] is the thing that takes the output of the vision encoder
+[36:46] and turns it into the input of the language model
+[36:49] is a two-layer MLP instead of a linear projection.
+[36:55] OK, so it's like you have a system
+[36:58] and you're just upgrading the parts.
+[37:01] But it's the same rough system.
+[37:05] So let's talk a little bit about data processing.
+[37:10] So one thing that they wanted to do is to do OCR.
+[37:14] And the thing with OCR is that you
+[37:16] need to preserve very fine-grained information.
+[37:20] Otherwise, a J looks like an I, and that's not good.
+[37:24] So remember that CLIP resizes and crops to 336 by 336.
+[37:30] And clearly, if you have a document
+[37:32] and you crop to 336 by 336, you can't read it.
+[37:36] So their solution is this idea called
+[37:40] AnyRes, which was actually introduced in the LLaVA 1.5
+[37:45] paper.
+[37:46] And the idea is basically, I mean,
+[37:49] it's fairly straightforward.
+[37:51] You break up an image into multiple pieces.
+[37:56] And the idea is that each piece is the resolution of whatever
+[38:00] the vision encoder is going to take, 336 by 336, for example.
+[38:05] So you're going to code all the pieces into a bunch of vectors.
+[38:09] And then you concatenate the vectors.
+[38:12] OK, so you're basically noticing that your vision encoder
+[38:15] can't handle high resolution.
+[38:18] So rather than downsampling, you're
+[38:20] just going to crop and look at different parts of image.
+[38:25] And now if you have really super high resolution images or videos
+[38:29] then, you get too many tokens.
+[38:31] So then they downsample.
+[38:35] But the idea behind AnyRes is that it's adaptive.
+[38:38] And this is nice because the transformer is already adaptive.
+[38:43] Language can be-- your sentences can be any length
+[38:46] and the transformer already handles that pretty well.
+[38:48] So it turns out images can be any resolution.
+[38:51] So that's picking back on the same dynamic ability.
+[38:58] So here is what they actually do for images here.
+[39:02] So let's say you have this image of a paper.
+[39:07] They do downsample and have one path,
+[39:11] which is basically a downsampled encoding of the entire paper.
+[39:15] But then they break it up into these chunks,
+[39:17] where each chunk is the resolution
+[39:19] that the vision encoder expects, and then encodes each of these
+[39:23] separately.
+[39:24] And then you concatenate all these patches.
+[39:26] And if you have too many, then you
+[39:28] reduce that the number of patches by interpolation.
+[39:36] OK, so then they're able to handle images, multiple images,
+[39:42] and video.
+[39:43] So you think about, well, all of these
+[39:46] are technically all reducible to images,
+[39:49] but they put their thumb on the scale a little bit
+[39:52] because they want to make sure all the modalities are roughly
+[39:59] comparable.
+[40:00] Because videos can be very long, they
+[40:02] don't want their data set to be dominated
+[40:04] by a bunch of repetitive frames.
+[40:07] So here's what they do here.
+[40:09] So for a single image, they basically
+[40:11] have the full image downsampled and then
+[40:14] a bunch of crops up to N crops there, up to 9.
+[40:20] And if you are presented with multiple images,
+[40:23] then they just use the base resolution.
+[40:28] So if you have a single image, I get
+[40:30] to look at it more carefully.
+[40:31] If I have multiple images, I'm just
+[40:33] going to look at it from afar.
+[40:37] And for video, we're going to use even lower resolution
+[40:43] or fewer tokens to represent each frame because the idea is
+[40:46] that, well, videos can be-- they only use up to 32 frames,
+[40:54] but you start running into context length
+[40:58] problems for viewing.
+[41:01] And later, we'll see how a big part
+[41:04] of being able to handle multimodal
+[41:06] is to deal with longer context.
+[41:11] OK, so the data here that they use is, I would say,
+[41:22] the state of philosophy is they want to curate high quality data
+[41:26] and quantity.
+[41:27] Another way to interpret this is that it's very targeted data.
+[41:31] If you look at many of these, it's very task-based
+[41:34] whether you're doing visual question answering or answering
+[41:40] questions about tables.
+[41:41] So this is definitely post-training territory,
+[41:45] where you're trying to get your model to do these tasks,
+[41:49] and therefore, you create a bunch of these tasks.
+[41:52] And this work is also unabashedly, basically,
+[41:57] distilling GPT-4 models so that they
+[42:01] can get the best performance, which is, I guess, not ideal.
+[42:07] But this is what you do if you don't have an annotation budget.
+[42:14] And so they have single images, multiple images, and videos.
+[42:20] So there's a lot of different pieces.
+[42:24] Some of these are very specific.
+[42:26] You give two images and you're trying to spot the difference.
+[42:31] But one thing that--
+[42:33] OK, I'll come back to this at this point later.
+[42:36] So for training, it's roughly the same idea as before,
+[42:42] where the first stage is that you're focused on alignment.
+[42:48] So in particular, you only train the projector,
+[42:54] which is the adapter.
+[42:58] And then in the second stage and the third stages
+[43:02] you train the full model.
+[43:04] And before, we had two stages.
+[43:06] Now, we have three stages.
+[43:09] I'm not sure there's any particular principled reason
+[43:14] for this, except for this second stage is
+[43:16] trying to put high quality data but more focused on knowledge.
+[43:19] And the final stage is focusing on examples that look
+[43:24] like your downstream tasks.
+[43:30] OK, so one thing that they found in this paper, which
+[43:34] was interesting, is that you get transfer between modalities.
+[43:41] So even though they have only single image data
+[43:44] for diagrams and charts, but this actually
+[43:47] generalizes to multiple images.
+[43:49] So at training time, you never saw an example
+[43:54] where you have a table and a chart
+[43:56] and you're asking questions about it.
+[43:57] But at test time, you have two images, one for the table
+[44:04] and one for the chart.
+[44:05] And you're able to have some of conversation about it.
+[44:09] At training time, you only have OCR data on single image data,
+[44:14] and you only have relational reasoning from multiple images.
+[44:18] But you can generalize to these cases which
+[44:23] are useful for powering GUI agents,
+[44:25] where you show it a bunch of screenshots.
+[44:28] This is multiple images and it can generate a description
+[44:32] of the screenshots.
+[44:36] Another example is that they have
+[44:39] this idea of visual prompting, where
+[44:42] you have this circle, which is a part of the image,
+[44:45] but that's meant to highlight the part of the image
+[44:48] that you're supposed to do something about.
+[44:51] And this type of data only exists for single images.
+[44:54] And now it can generalize to videos
+[44:59] where the user says describe the player highlighted in the video.
+[45:02] And this player is across multiple frames.
+[45:06] So when you first look at this and say, oh, boy.
+[45:11] You're basically targeting each of these tasks.
+[45:14] It's supervised learning.
+[45:16] But if you have enough tasks, these models
+[45:19] seem to do some transfer, which is, I guess, reassuring.
+[45:29] OK, so again, this is a fairly standard VLM
+[45:33] template, vision encoder plus the projector into the language
+[45:37] model.
+[45:39] There's a lot of work that goes into the data curation.
+[45:43] They lean pretty heavily into synthesize task-specific data.
+[45:48] The nice thing about the LLaVA series
+[45:49] is that it's one of the few works that open sources.
+[45:53] They're not just the model weights, but also the data.
+[45:56] So you can really replicate and study this stuff.
+[46:01] OK, now let's talk about the Qwen Models.
+[46:06] So Qwen started also training in 2023 multimodal models.
+[46:11] So the first version was Qwen-VL.
+[46:14] And hopefully, I'll go through this
+[46:17] quickly because you hopefully see the pattern.
+[46:19] The vision encoder, they use Open-CLIP.
+[46:23] Remember, OpenCLIP was the open reproductions of the CLIP model.
+[46:27] So it's basically a CLIP encoder.
+[46:31] And for the adapter, they did one layer of cross-attention,
+[46:39] incorporate 2D positional embeddings and maps to a fixed
+[46:42] size of 256, which is a little bit--
+[46:51] I guess this will be changed later because this is definitely
+[46:54] not very dynamic, but neither is the vision encoder
+[46:56] at this point.
+[46:58] I guess this got cut off.
+[47:00] But the special tokens, they have
+[47:03] an image tag and a box tag for bounding box,
+[47:06] and a ref tag for descriptions.
+[47:10] This is what happens when your slides are in HTML.
+[47:14] So for training, they have three stages, just
+[47:18] like with the LLaVA models.
+[47:19] In the first stage, the idea is to--
+[47:23] I mean, they call it pre-training but you're not
+[47:26] pre-training from scratch.
+[47:29] This is generally large-scale, low quality data.
+[47:33] They freeze the language model and train
+[47:38] the vision encoder and adapter.
+[47:41] So this is a bit different from the LLaVA models, in
+[47:45] that, they train the vision encoder at this point.
+[47:51] And you can see some of the data sets that they are training on,
+[47:55] 1.4 billion examples.
+[47:58] Stage 2, they move to higher quality task-specific data.
+[48:02] And you can see some of the usual suspects of VQA data sets,
+[48:08] chart question answering, and so on.
+[48:11] And then they train all the parameters here.
+[48:13] And finally, stage 3 is instruction tuning data.
+[48:19] You freeze the visual encoder and you train the adapter
+[48:25] and the language model.
+[48:27] Here are some examples of the type of things
+[48:29] that they're able to do.
+[48:30] So, of course, this is Qwen.
+[48:33] So some of these examples are in Chinese.
+[48:37] Their interest is also making a model
+[48:40] that is supposed to be subsuming a language model.
+[48:44] So a language model can do code.
+[48:46] So we want the vision model to be good at code as well.
+[48:51] And you can have this example, if you can see it, is an image.
+[48:56] And can you find Spider-Man and the Hulk.
+[48:58] And it can output bounding boxes as well.
+[49:01] It doesn't actually output an image.
+[49:03] It just outputs a bounding box.
+[49:10] And then you can do OCR.
+[49:11] You can compare-- so usual stuff.
+[49:16] OK, so then Qwen-2 was, again, a upgrade.
+[49:22] There's some new ideas here, which I'll go through.
+[49:25] So use a larger vision encoder.
+[49:29] They also started doing dynamic resolution.
+[49:32] I think this was the main thing.
+[49:34] We remember when we went from LLaVA to LLaVA OneVision,
+[49:37] they realized, oh, we need to handle
+[49:39] images of different sizes.
+[49:42] And if you try to do video, it's clear
+[49:44] that you need some dynamic resolution.
+[49:47] So the model is basically-- so let's say you have this picture
+[49:54] here, that might be mapped to 11,000 tokens.
+[50:00] This tiny picture of an equation might be only mapped to 8 tokens
+[50:06] and so on and so forth.
+[50:09] So how do they do this?
+[50:13] Well, basically each-- it's the same idea AnyRes idea
+[50:18] from LLaVA, where each 224 by 224 patch is encoded with a VIT.
+[50:26] And remember the VIT that they started
+[50:30] with is the OpenCLIP bit.
+[50:32] But this gets fine-tuned.
+[50:36] And then trying to reduce the contact size,
+[50:40] they compress every 2 by 2 into 1
+[50:43] so that they ultimately edge every patch generates 66 tokens.
+[50:50] For eight videos, they sample 2 frames a second but max out
+[50:54] at 16,000 tokens.
+[50:59] OK, so one thing coming back to this question
+[51:01] about positional embeddings, so they did
+[51:05] do something different here with Qwen-2.
+[51:09] So they used this idea called multimodal rotary, multimodal
+[51:14] RoPE.
+[51:15] So remember, we saw RoPE before.
+[51:17] And the idea behind RoPE is that you have embedding such
+[51:22] that the inner product between the vectors
+[51:26] depends only on the distance.
+[51:29] So the distance is defined in 1D by just the number of tokens.
+[51:34] You're away from it.
+[51:36] So now, the multidimensional version
+[51:39] is essentially the same thing.
+[51:41] Except for now you have 3D.
+[51:44] So you have height.
+[51:45] You have width and you have time.
+[51:47] So each position, each patch now is a triple
+[51:53] defined by the coordinates.
+[51:56] And then to compute the M-RoPE, basically, for every dimension,
+[52:01] you compute the RoPE and then you concatenate.
+[52:04] So it's a fairly straightforward idea.
+[52:09] Although, later, with Qwen-3, we'll
+[52:11] see how this is actually a bit suboptimal.
+[52:17] So they initialize the language model with--
+[52:22] this is the Qwen-VL model.
+[52:23] So, of course, they're initializing with Gwen.
+[52:26] And then they have three stages of training,
+[52:30] which is very similar to what we did before.
+[52:34] And then they were able to show a bunch
+[52:37] of different capabilities, some video understanding.
+[52:41] It can do math and code, function calling,
+[52:46] and so on and so forth.
+[52:50] OK, so quickly, I'll talk about Gwen-3.
+[52:56] So again, there's a few changes here.
+[52:59] I wouldn't say these are structural big changes,
+[53:03] but they're probably changes that do impact
+[53:05] the quality of the model.
+[53:07] So this is from last year Gwen3-VL report.
+[53:11] And so it's roughly the same diagram here.
+[53:16] I'll point out maybe--
+[53:19] I'll come back to this diagram.
+[53:20] I'll go through some of the changes.
+[53:24] So one is that now they're using Qwen-3 models.
+[53:26] They have a series of dense and MoE models.
+[53:29] And the Qwen-3 models are really, really good,
+[53:32] and it really helps the quality of the final model.
+[53:35] One thing that they're vested in is long context understanding.
+[53:39] So their context length can go up to 256K,
+[53:42] which is really important if you're trying to do long video.
+[53:48] Let's talk about the vision encoder.
+[53:50] So they use SigLIP-2, which is basically
+[53:53] an improved version of SigLIP.
+[53:55] It's actually identical architecture,
+[53:56] is designed to be backward compatible.
+[54:00] And then they improved their RoPE.
+[54:04] And the way to explain this is, before, you
+[54:10] had the three dimensions, time, width, and height.
+[54:13] And basically, when to basically allocate
+[54:20] the first block of dimensions to the time,
+[54:24] then the next block to width and the next to height.
+[54:28] And the problem, if you remember RoPE
+[54:31] is that each component refers represents
+[54:34] a different frequency.
+[54:36] So this would mean that maybe all the temporal dimensions
+[54:39] are low frequency and all the high dimensions
+[54:42] are high frequency.
+[54:43] So they basically interleave them when they realize that.
+[54:48] And they now all the axes are exposed
+[54:55] to both low and high frequency.
+[54:59] Another thing they did was explicit video timestamps.
+[55:04] So if you look closely at this--
+[55:12] wait. OK, this is Qwen-3.
+[55:14] Oops.
+[55:16] So if you look--
+[55:17] this is probably a little bit too small.
+[55:19] But before, the time stamp was implicit
+[55:25] in the positional encodings.
+[55:28] Each frame in the video intrinsically
+[55:30] gets a different-- there's a notion of time
+[55:33] just because it's in a different position.
+[55:37] But here, they made the time explicit.
+[55:39] So these are actually tokens zero seconds,
+[55:42] is a token that is now you have a token that
+[55:45] represents the time.
+[55:47] And they found this to be helpful presumably because it's
+[55:51] something that you can directly refer to,
+[55:53] like what happened after two seconds.
+[55:59] So that is one of the main changes.
+[56:05] They also did this square root normalized per token loss.
+[56:10] So the idea is that some examples that
+[56:14] involve video are very long and some examples that involve
+[56:18] a single image are very short.
+[56:20] And the normal thing is that every token is treated the same.
+[56:24] And this would mean that the video examples
+[56:26] are going to dominate.
+[56:29] So they basically-- the details aren't too clear.
+[56:33] But I believe they normalized each example
+[56:35] by the square root of the length to basically downweight
+[56:41] the impact of really long examples.
+[56:46] The final thing that is worth noting, which is interesting,
+[56:49] is that they did something interesting with adapter.
+[56:51] So remember we started the adapter is
+[56:53] the thing that connects the vision encoder to the language
+[56:56] model. And LLaVA was the simplest.
+[56:58] It was just a linear projection.
+[56:59] And then we got an MLP.
+[57:01] And then we got some cross-attention.
+[57:03] And DeepStack, which is actually a paper from the DeepSeek team,
+[57:08] but when used here is more sophisticated.
+[57:14] They noticed that, well, the vision encoder already computes
+[57:18] a stack of vision embeddings.
+[57:23] And we're basically going to basically add
+[57:26] these directly into the residual stream of the language model.
+[57:34] OK, so this is a bit more of a deep fusion of the vision
+[57:42] encoder into the language model as opposed to the vision encoder
+[57:47] is a black box that just outputs a sequence of vectors.
+[57:54] OK, so training is--
+[57:57] so they have two phases.
+[58:00] Pre-training has actually four stages.
+[58:02] Post-training has three stages.
+[58:04] So you can see that this pipelines are
+[58:06] getting quite complicated now.
+[58:10] So they first train the adapter.
+[58:11] This is the same as all of these models.
+[58:14] And then they have three stages where they progressively train
+[58:18] on longer and longer sequences, from 8K, to 32K, to 256K.
+[58:25] Most of the tokens are in the stages 2 and 3.
+[58:32] And then for post-training, they do
+[58:34] SFT on long chain of thought data, knowledge distillation,
+[58:39] and then some reinforcement learning.
+[58:43] At this point, it's really a systems paper.
+[58:46] There's a bunch of--
+[58:48] I highlighted the core new ideas,
+[58:51] but there's a lot of details that are different.
+[58:54] And if you look at the final results,
+[58:56] this is a pretty good model.
+[58:59] I mean, if you look at these benchmarks as compared
+[59:01] to the closed models Gemini, GPT-5, and Opus 4.1,
+[59:09] these numbers are--
+[59:11] the bold means that it's the best number in that row.
+[59:15] So the Qwen models are actually quite strong.
+[59:21] OK, maybe the-- yeah, a question.
+[59:54] Yeah, so the question is what about video generation
+[59:59] and how do you know whether there should be a video or text?
+[60:02] So first of all, these models don't generate videos or images.
+[60:07] All the multimodal stuff is on the input side.
+[60:09] You're always generating text.
+[60:16] And then you're always in most of these stages, except for RL,
+[60:21] you're supervising every token.
+[60:24] So there's no LLM as a judge or quality on how well
+[60:31] the description is working.
+[60:32] It's just basically whatever is in your data set.
+[60:34] Now, with RL, you can play around with different rewards.
+[60:39] Yeah.
+[60:41] I'll ask is the training of multimodal models
+[60:45] harder than training a pure LLM from a system perspective?
+[61:16] Yeah, so the two questions are trained multimodal models harder
+[61:22] on the system side?
+[61:24] And, I mean, certainly, it's not easier.
+[61:27] I think you pointed out that the data sets are larger.
+[61:32] Video data is just-- even loading it can be a bottleneck.
+[61:36] Whereas generally, we have not really
+[61:38] focused on data loading for talking about language models
+[61:41] because it's very, very cheap.
+[61:44] So that needs to be taken into account.
+[61:47] And all the same principles of making sure
+[61:49] that your data loading is happening
+[61:51] async with actual computation needs to be taken into account.
+[61:56] And the second part was--
+[61:59] sorry, what was the second question?
+[62:02] Oh, yeah.
+[62:03] So the videos and images can have more-- especially
+[62:07] video have more tokens.
+[62:09] So that's one reason we saw this normalization
+[62:14] to make sure that we're not giving more weight to video.
+[62:19] I mean, you can always down weight.
+[62:20] So if you have more tokens, if you don't like that,
+[62:22] you can down weight.
+[62:24] We talked in the last or two weeks ago about data mixtures.
+[62:29] So you can always weight things according
+[62:31] to whatever makes sense.
+[62:35] But there's also a lot of text tokens out there.
+[62:38] So I think, in general, if you look at, yeah,
+[62:44] the models are trained on tens of trillions of tokens.
+[62:48] I think there's a-- yeah, I wouldn't
+[62:50] say that the number of multimodal tokens
+[62:52] vastly outnumbers text tokens.
+[62:56] Yeah, oh, I think you were first.
+[63:23] So the question is, when you do this alignment,
+[63:26] how does it know what the language-- is the model language
+[63:29] model pre-trained?
+[63:31] And it definitely has to be pre-trained because otherwise it
+[63:34] doesn't make sense to align it.
+[63:36] So the language model is frozen.
+[63:38] And you're just training the adapter
+[63:40] to connect the given vision encoder with a given language
+[63:47] model.
+[63:48] And the way you train it is, well,
+[63:50] you pick a token budget, 67 billion tokens
+[63:54] and you just train.
+[63:56] There's not an adaptive threshold here.
+[64:00] Yeah.
+[64:32] Yeah, so the question is, is the number
+[64:36] of parameters in the vision coder much smaller?
+[64:39] And the answer is yes, in general.
+[64:41] I'm trying to find--
+[64:43] where is the other place I--
+[64:48] not here.
+[64:49] OK, the reason is that the vision encoder
+[64:54] is in some sense doing a very local operation.
+[64:57] It's looking at a patch.
+[64:58] A patch is very small.
+[65:00] And it's just trying to understand the patches.
+[65:03] There's not much knowledge.
+[65:05] So the patch, we're not reasoning.
+[65:07] So most of the capabilities of the model
+[65:10] are still in the language model.
+[65:14] I'm trying to find the--
+[65:17] OK, where?
+[65:19] Maybe it was up here.
+[65:21] OK, I can't-- oh, yeah.
+[65:23] So if you look at the LLaVA model, so the full--
+[65:28] so 72 billion parameter language model.
+[65:35] Sorry.
+[65:36] What-- OK, I don't know why this number is so-- oh, sorry.
+[65:46] This is 72 million, OK.
+[65:47] So this is much smaller.
+[65:49] The projector is much smaller.
+[65:51] And the VIT is generally less than a billion, parameters.
+[65:58] Yeah, I guess mostly because it's fairly a local operation.
+[66:05] I guess that's the easy way to say it.
+[66:07] OK, I'm going to think some other questions.
+[66:09] I'm going to try to move on now.
+[66:13] So I Qwen-3 is the last vision language model.
+[66:18] I'll talk about this SOTA, Save Our Performance.
+[66:24] There's a lot of data work that happens.
+[66:28] Not too many details about the data
+[66:31] and the data mix in these later Qwen models.
+[66:35] So you'll have to look at the LLaVA paper or the--
+[66:41] AI2 has a  paper, which
+[66:43] I didn't get a chance to talk about that
+[66:45] has more details here.
+[66:49] And from Qwen to Qwen-2, Qwen-3, many of these changes were
+[66:56] mostly--
+[66:59] there's some changes there.
+[67:01] But the overall framework remains the same.
+[67:06] And mostly, it's scaling up, curating more data sets,
+[67:09] noticing that your context isn't-- you have to handle long
+[67:13] context and maybe sharpening your image processing and so on.
+[67:18] OK, so I'm going to now jump to something quite different.
+[67:26] So there's this paper called Chameleon from Meta in 2024.
+[67:32] So, so far, VLMs encode images into these vectors
+[67:37] and then they inject them into a language model.
+[67:40] And because it's a language model,
+[67:42] you can only generate text.
+[67:44] You can't generate images.
+[67:49] So there's many ways you can go about fixing this.
+[67:53] You can just take a VLM.
+[67:55] You can also attach a diffusion head.
+[67:57] And now you can generate images or--
+[68:00] but I want to talk about this idea here,
+[68:04] which is Chameleon says, what if we mapped everything
+[68:07] into discrete tokens?
+[68:10] And in some ways aesthetically this is--
+[68:14] well, maybe this reflects that I'm a language person.
+[68:16] This is appealing because now you can analyze and generate
+[68:22] images in the same way.
+[68:23] Everything is a discrete token.
+[68:25] If you want to do what--
+[68:30] let's say you want to generate images.
+[68:33] You can say, here's a text prompt.
+[68:37] And then you can just-- these are more just
+[68:40] tokens that you can generate.
+[68:42] Or you can flip the language and the text around as well.
+[68:49] They have these examples from the Chameleon paper
+[68:52] you can prompt in say I'm bored.
+[68:55] Can you show me some birds?
+[68:56] And then it would be text, and then it
+[68:58] would be images, and then some more text and some images.
+[69:01] So it's interleaved.
+[69:03] So in some sense, the vision of an omni model
+[69:06] is that text and images truly live in the same space.
+[69:10] And this is accomplished by making everything look
+[69:14] like text.
+[69:15] That's one way to do it.
+[69:16] OK, so I'll talk a little bit about how this is done.
+[69:20] So the thing you need to do now is to map images
+[69:28] into discrete tokens.
+[69:30] So there's this idea rather old from Oord 2017,
+[69:38] which is called vector quantized variational autoencoder.
+[69:41] And the basic idea here is to map an image
+[69:47] into a discrete code.
+[69:51] And what you learn is a mapping that maps this
+[69:54] into a continuous vector.
+[69:57] And this gets rounded to the nearest code.
+[70:00] So you have a codebook which has, let's say, 8,000 codes.
+[70:06] So these are prototypical vectors that correspond to what
+[70:11] patches.
+[70:12] And then so you pick one of these that's the closest.
+[70:16] And that would be your representation.
+[70:19] So that's your encoder.
+[70:20] It goes through a continuous phase
+[70:21] and then you round it to the nearest code.
+[70:25] And now the decoder is you take that code
+[70:27] and you try to reconstruct the image.
+[70:29] And then you train these VQ-VAEs by basically minimizing
+[70:36] the reconstruction loss.
+[70:38] There are some other terms that you
+[70:40] add because this is not differentiable, which
+[70:43] I won't have time to get into.
+[70:46] OK, but, at the end of the day, you have 512 by 512 images that
+[70:52] are converted into 1,024 tokens, and each token comes from
+[70:59] a vocabulary of 8,000.
+[71:03] OK, so now you have basically text.
+[71:06] You have your images, which are basically these codes.
+[71:12] They train a new tokenizer because now you
+[71:16] have different-- your data looks different than if it were
+[71:19] just normal natural language.
+[71:24] The training is now actually very straightforward.
+[71:29] This is just normal language model training.
+[71:31] There's no adapter.
+[71:32] There's no turn the vision encoder.
+[71:36] There's just a language model now.
+[71:39] So this is the part that's appealing.
+[71:44] So there's still two stages.
+[71:46] But even for language model training,
+[71:48] there's usually two or more stages,
+[71:51] where the first stage is the bulk of training.
+[71:53] It's largely unsupervised.
+[71:55] They have both text and text and image.
+[71:59] And then stage 2, they mix in high quality data.
+[72:04] OK, so this is really great and elegant.
+[72:09] There's a few problems with this.
+[72:11] One is that they found that the training was not stable.
+[72:16] And the reason is that text and images,
+[72:20] despite occupying the same space,
+[72:22] just behave very differently.
+[72:25] So just calling things discrete tokens
+[72:30] isn't hiding the fact that there's an image living there.
+[72:33] And in particular, text tokens, if you
+[72:36] think about predicting the next word,
+[72:38] this has relatively lower entropy.
+[72:40] Most words are predictable, whereas image tokens
+[72:45] have very high entropy.
+[72:46] I don't know what shade of blue this exact token is going to be.
+[72:50] And so as a result, they found that training with this mixture
+[72:55] led to a lot of the norms of the parameters
+[72:59] to grow and to generate loss instability.
+[73:05] They were able to mitigate or fix this
+[73:08] to some extent via QK norm and z-loss regularization, which
+[73:12] controls the norm growth.
+[73:16] So I'm not even going to show the results.
+[73:20] But I wanted to highlight this work because there's
+[73:24] a certain elegance here because it's just one model that treats
+[73:28] really all modalities the same.
+[73:31] But the downside is that it turned out
+[73:35] this model was not really as performant,
+[73:38] and the discretization does definitely lose its information.
+[73:42] So think about OCR.
+[73:46] Again, if you discretize very small print,
+[73:51] you're not going to be able to read it anymore.
+[73:54] And finally, training with multi modalities is also tricky.
+[73:57] We saw this a little bit with the Qwen models
+[73:59] and we had to play around with the weights.
+[74:02] But this is more exacerbated here.
+[74:05] So VQ-VAEs were popular for a while.
+[74:10] And in fact, many people were using this for image generation.
+[74:15] The main reason to do that is, well, you have a transformer.
+[74:19] How do you generate from a transformer?
+[74:21] Well, you have to generate discrete things
+[74:22] and you basically put all your data into this discrete form.
+[74:28] But then diffusion models came out
+[74:32] and became popular and viable for generation.
+[74:35] So this flavor of method is less popular than it used to be.
+[74:43] OK, so maybe just reflect and summarize here.
+[74:48] Frontier models these days are expected
+[74:50] to be multimodal or even more strongly natively multimodal
+[74:55] or omni models.
+[74:58] Unfortunately, I think when Gemini comes out
+[75:01] or GPT comes out, they tout or touted
+[75:04] as being natively multimodal and handle all these modalities.
+[75:07] And in fact, they do.
+[75:09] But of course, there's no details
+[75:10] about how these are built.
+[75:14] I think that it's probably combination
+[75:18] of having a continuous encoder because you don't want
+[75:22] to lose information and then diffusion for the generation
+[75:26] because-- but that's my speculation.
+[75:31] The fundamental challenge, I think,
+[75:32] when you're dealing with multimodality
+[75:34] is how do you handle non-text modalities?
+[75:39] It's also interesting that there's
+[75:40] a asymmetry between understanding the modality
+[75:44] and generation.
+[75:45] And there's no one universal encoder let's say.
+[75:49] For example, when we looked at CLIP,
+[75:53] you only cared for classification
+[75:55] to capture high level semantics.
+[75:57] So these vectors could be fairly small
+[75:59] and capture the high level semantics.
+[76:02] Whereas if you wanted to do OCR or whether you wanted
+[76:05] to generate an image, then you need really fine-grained detail.
+[76:09] You need to-- that's why diffusion is so good because it
+[76:12] can really micro optimize the low-high frequency information.
+[76:20] I think, in general, when you're dealing
+[76:22] with multiple modalities, you have to think carefully
+[76:26] about weighing them properly.
+[76:30] For example, video certainly has lower information density
+[76:34] than text.
+[76:35] So you don't want a video to overwhelm your text.
+[76:41] And like I said before, at least the current best thing
+[76:47] is having continuous encoders.
+[76:52] It seems even CLIP, even though it's five years old,
+[76:55] or similar ideas are still the go-to way
+[76:59] to capture semantics of images.
+[77:03] Transformers are still there.
+[77:05] And then diffusion models, which I didn't talk about,
+[77:08] are great for generation.
+[77:12] OK, so I will stop there.
+[77:16] That's it for the lecture on multimodality.
+[77:22] I guess we don't have any homework on doing this.
+[77:25] But if you're curious, I think I encourage
+[77:29] you to play around with training some of these models.
