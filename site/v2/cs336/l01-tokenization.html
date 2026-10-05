@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 1: The Language Modeling Pipeline and Tokenization — Stanford Frontier AI</title>
+<meta name="description" content="Definition of language modeling, the full pipeline from data to evaluation, and tokenization derived from first principles with interactive demonstrations.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-l01" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01" class="active">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 1: The Language Modeling Pipeline and Tokenization</nav>
+      <h1>Lecture 1: The Language Modeling Pipeline and Tokenization</h1>
+      <p class="meta-line">2026-03-30 · Instructor: Percy Liang · 1:19:22 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="JuoVZkPBiKk"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/JuoVZkPBiKk" title="Stanford CS336 Spring 2026 Lecture 1: Overview, Tokenization" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=JuoVZkPBiKk" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Percy Liang introduces the course, presents the language modeling pipeline, and derives tokenization.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> contains what you need to
+understand everything that follows in all 12 courses. <strong>Level 2 (Deep)</strong>
+contains what you need for correct, interview-grade understanding. Read
+Level 1 straight through. Return to Level 2 when you want depth.</p>
+<p>No prerequisites are assumed. Every term is defined at first use.</p>
+<h2 id="level-1-definition-of-language-modeling">Level 1: Definition of language modeling</h2>
+<p>A language model is a probability distribution over sequences of tokens.
+Given a sequence, it assigns a probability to each possible next token.</p>
+<p>Formally, for tokens x_1 through x_n, the model defines P(x_1, &hellip;, x_n).
+By the chain rule, this equals the product of P(x_t | x_1, &hellip;, x_{t-1})
+over all positions t. Training means learning these conditional
+distributions from data.</p>
+<p>The definition raises the first question of the course. What is a token?
+The answer is tokenization, derived below.</p>
+<h2 id="level-1-the-language-modeling-pipeline">Level 1: The language modeling pipeline</h2>
+<p>Building a language model requires five stages in order.</p>
+<figure><img alt="Language modeling pipeline" src="assets/media-generation-lm-pipeline-stages-0-06a4e821-a7ef-46b6-8cac-dc5c193b1d58.webp"><figcaption>The five stages. Data feeds tokenization, which feeds architecture, then training, then evaluation. Systems and scaling laws span all five.</figcaption></figure>
+<p><strong>Data.</strong> The training corpus determines model behavior. Data reflects
+the desired capabilities. Large datasets require active curation.</p>
+<p><strong>Tokenization.</strong> Raw text becomes integer sequences. Derived in full
+below.</p>
+<p><strong>Architecture.</strong> The transformer maps token sequences to predictions.</p>
+<p><strong>Training.</strong> Optimization over billions of parameters. Learning rate
+schedules and batch sizes determine stability.</p>
+<p><strong>Evaluation.</strong> Perplexity measures prediction quality on held-out text.
+Benchmarks test specific capabilities.</p>
+<p>Two concerns span all stages. <strong>Systems:</strong> data movement dominates GPU
+cost. <strong>Scaling laws:</strong> hyperparameters must adapt as compute grows.</p>
+<div class="qa"><div class="q">What are the five stages of building a language model?</div><div class="a"><p>Data collection, tokenization, architecture, training, and evaluation. Data determines the ceiling of model quality. Tokenization converts text to integers. Architecture is the transformer. Training optimizes billions of parameters. Evaluation uses perplexity and benchmarks. Systems engineering and scaling laws cut across all five stages.
+Data. The corpus sets the upper bound on what the model can learn. Architecture and training determine how close the model comes to that bound. A common interview trap is to overemphasize architecture. In practice, data quality moves results more than architectural tweaks. Frontier labs invest heavily in data pipelines for this reason.</p><div class="followup"><strong>Follow-up:</strong> Which stage matters most for final quality?</div></div></div>
+<h2 id="level-1-tokenization-the-problem">Level 1: Tokenization, the problem</h2>
+<p>The model operates on integers. Text is not integers. Tokenization is
+the deterministic mapping between the two.</p>
+<p>It performs encoding (text to integers) and decoding (integers to text).
+The mapping must be invertible: decoding an encoding returns the input
+exactly.</p>
+<figure><img alt="Text to tokens to IDs" src="assets/media-generation-tokenizer-pipeline-0-ed513c16-c002-405d-b42a-d5968da4a611.webp"><figcaption>Three stages. Raw text becomes token chunks, which become integer IDs. The model receives only the IDs.</figcaption></figure>
+<p>The design question: what should one integer represent? Try it yourself.</p>
+<div class="tok-lab">
+  <div class="tok-lab-head">Tokenization Lab: type text, click a scheme, click any token to inspect it</div>
+  <input class="tok-input" id="tokInput" type="text" value="the cat sat on the mat" maxlength="120" spellcheck="false">
+  <div class="tok-tabs">
+    <button class="tok-tab active" data-scheme="bpe">Subword (BPE)</button>
+    <button class="tok-tab" data-scheme="word">Word</button>
+    <button class="tok-tab" data-scheme="char">Character</button>
+  </div>
+  <div class="tok-out" id="tokOut"></div>
+  <div class="tok-stats" id="tokStats"></div>
+  <div class="tok-detail" id="tokDetail">Click any token to inspect it.</div>
+</div>
+<script>
+(function () {
+  var BPE = [" the"," cat"," sat"," on"," mat","he","at","on","th","s","a","e","t"," ","c","m","o","n","h","r","u","i"];
+  var ids = {}; var nxt = 1000;
+  function tokId(t) { if (!(t in ids)) ids[t] = nxt++; return ids[t]; }
+  function bpeSplit(s) {
+    var out = [], i = 0;
+    while (i < s.length) {
+      var best = null;
+      for (var k = 0; k < BPE.length; k++) {
+        var v = BPE[k];
+        if (s.substr(i, v.length) === v && (!best || v.length > best.length)) best = v;
+      }
+      if (!best) best = s[i];
+      out.push(best); i += best.length;
+    }
+    return out;
+  }
+  var input = document.getElementById('tokInput');
+  var outEl = document.getElementById('tokOut');
+  var statsEl = document.getElementById('tokStats');
+  var detailEl = document.getElementById('tokDetail');
+  var scheme = 'bpe';
+  function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  function render() {
+    var s = input.value || "";
+    var toks = scheme === 'char' ? s.split('') : scheme === 'word' ? s.split(/(\s+)/).filter(function(x){return x.length;}) : bpeSplit(s);
+    outEl.innerHTML = '';
+    toks.forEach(function (t) {
+      var b = document.createElement('button');
+      b.className = 'tok';
+      b.textContent = t === ' ' ? '\u2423' : t;
+      b.onclick = function () {
+        detailEl.innerHTML = '<strong>Token:</strong> ' + esc(JSON.stringify(t)) +
+          ' &nbsp; <strong>ID:</strong> ' + tokId(t) +
+          ' &nbsp; <strong>Characters:</strong> ' + t.length +
+          ' &nbsp; <strong>Scheme:</strong> ' + scheme;
+      };
+      outEl.appendChild(b);
+    });
+    var words = s.trim() ? s.trim().split(/\s+/).length : 0;
+    statsEl.textContent = toks.length + ' tokens | ' + words + ' words | fertility ' +
+      (words ? (toks.length / words).toFixed(2) : '0') + ' tokens per word';
+  }
+  document.querySelectorAll('.tok-tab').forEach(function (tab) {
+    tab.onclick = function () {
+      document.querySelectorAll('.tok-tab').forEach(function (t) { t.classList.remove('active'); });
+      tab.classList.add('active'); scheme = tab.dataset.scheme; render();
+    };
+  });
+  input.addEventListener('input', render);
+  render();
+})();
+</script>
+
+<h2 id="level-1-character-level-tokenization">Level 1: Character-level tokenization</h2>
+<p>Each character maps to one integer. Vocabulary: approximately 100 entries.
+The mapping is trivial.</p>
+<p>It fails on sequence length. &ldquo;the cat sat on the mat&rdquo; is 22 characters,
+hence 22 integers. A 4,096 integer window holds about 186 such sentences.
+Subword schemes fit four times more text in the same window.</p>
+<pre class="ascii">text :  t h e   c a t   s a t   o n   t h e   m a t
+ints :  20 8 5 0 3 1 20 0 19 1 20 0 15 14 0 20 8 5 0 13 1 20
+count:  22 integers for 6 words. Fertility 3.7.
+</pre>
+<p>The model must also learn spelling before meaning, which wastes capacity.</p>
+<div class="qa"><div class="q">Why not tokenize by character?</div><div class="a"><p>Sequences grow 4 to 5 times longer than subwords, which shrinks the effective context window proportionally. The model must learn orthography before semantics, wasting capacity on a solved problem. No frontier model uses character tokenization in production.
+When spelling is the signal: typo correction, rare scripts, or character-level adversarial robustness. Some research models use bytes for these tasks. In production, the context cost dominates, so subwords win.</p><div class="followup"><strong>Follow-up:</strong> When would characters be preferable?</div></div></div>
+<h2 id="level-1-word-level-tokenization">Level 1: Word-level tokenization</h2>
+<p>Each word maps to one integer. Sequences are short. Each integer carries
+meaning.</p>
+<p>It fails on vocabulary size. English plus names, typos, and code exceeds
+one million words. Each entry needs a learned representation. Rare words
+get no training signal.</p>
+<p>Related forms share nothing: &ldquo;run&rdquo; and &ldquo;running&rdquo; are unrelated integers.
+New words have no integer at all.</p>
+<figure><img alt="Word tokenization" src="assets/web/example_tokens.png"><figcaption>Word splitting on real text. Short sequences, unbounded vocabulary. Source: FloydHub.</figcaption></figure>
+<div class="qa"><div class="q">Why did the field abandon word tokenization?</div><div class="a"><p>Three failures. Vocabulary exceeds one million, which costs memory and starves rare words. Morphological variants share no representation, so learning does not transfer. Out-of-vocabulary words collapse to an unknown token, destroying information.
+A BPE vocabulary holds about 50,000 entries. A word vocabulary for English plus code exceeds 1,000,000, a 20 to 1 ratio. Most word entries would appear a handful of times in training, so their representations stay near random. The embedding matrix alone would dominate model memory.</p><div class="followup"><strong>Follow-up:</strong> How bad is the vocabulary problem in numbers?</div></div></div>
+<h2 id="level-1-subword-tokenization">Level 1: Subword tokenization</h2>
+<p>Split words into frequent chunks. &ldquo;running&rdquo; becomes [&ldquo;run&rdquo;, &ldquo;ning&rdquo;].
+Common words stay whole. Rare words split into known pieces.</p>
+<pre class="ascii">running  -&gt;  [run][ning]        rare word, two chunks
+the      -&gt;  [the]              frequent word, one chunk
+runningly -&gt; [run][ning][ly]    unknown word, still representable
+</pre>
+<p>Vocabulary stays near 50,000. Sequences stay short. Related forms share
+chunks, so learning transfers.</p>
+<p>The algorithm is byte pair encoding (BPE). It learns chunks by merging
+frequent pairs.</p>
+<div class="qa"><div class="q">What is a subword?</div><div class="a"><p>A character sequence between a character and a word, learned from corpus statistics. Frequent words remain whole. Rare words decompose into reusable pieces. Vocabulary lands near 50,000 entries.
+BPE training counts adjacent pairs across the corpus and merges the most frequent ones. Split points fall where pairs are rare. The procedure is deterministic given the corpus and merge count.</p><div class="followup"><strong>Follow-up:</strong> What decides the split points?</div></div></div>
+<h2 id="level-1-bpe-training">Level 1: BPE training</h2>
+<p>Start with 256 byte tokens. Repeat: find the most frequent adjacent pair,
+merge it into a new token. Stop at the target vocabulary size.</p>
+<p>Worked example on &ldquo;lower&rdquo;:</p>
+<p>Start: l, o, w, e, r. Merge (l,o) to &ldquo;lo&rdquo;. Merge (lo,w) to &ldquo;low&rdquo;. Merge
+(e,r) to &ldquo;er&rdquo;. Result: [low, er].</p>
+<div class="anim-wrap"><video controls preload="metadata" playsinline src="assets/anim/bpe-merges.mp4"></video><figcaption>The merge sequence. The highlighted pair merges at each step.</figcaption></div>
+
+<figure><img alt="BPE training corpus" src="assets/media-generation-bpe-training-corpus-0-17dca458-28c4-4e91-9d91-ce048d890047.webp"><figcaption>Training starts from the corpus. Frequent pairs are highlighted, then merged into the growing vocabulary.</figcaption></figure>
+<figure><img alt="BPE merges" src="assets/media-generation-bpe-merges-0-ddd1dc1d-fd76-46c8-8490-81be363d2dab.webp"><figcaption>The merge hierarchy. Each level adds one vocabulary entry.</figcaption></figure>
+<figure><img alt="BPE from Hugging Face" src="assets/web/hf-bpe-dark.svg"><figcaption>BPE subword segmentation from the Hugging Face LLM course. Source: huggingface.co/learn/llm-course.</figcaption></figure>
+<div class="mermaid">flowchart TD
+    A["Vocabulary = 256 bytes"] --> B["Count adjacent pairs in corpus"]
+    B --> C["Merge most frequent pair"]
+    C --> D["Vocabulary grows by 1"]
+    D --> E{"Target size?"}
+    E -- No --> B
+    E -- Yes --> F["Done"]
+</div><pre class="mermaid-fallback"><code>flowchart TD
+    A[&quot;Vocabulary = 256 bytes&quot;] --&gt; B[&quot;Count adjacent pairs in corpus&quot;]
+    B --&gt; C[&quot;Merge most frequent pair&quot;]
+    C --&gt; D[&quot;Vocabulary grows by 1&quot;]
+    D --&gt; E{&quot;Target size?&quot;}
+    E -- No --&gt; B
+    E -- Yes --&gt; F[&quot;Done&quot;]
+</code></pre>
+<h2 id="level-1-bpe-inference">Level 1: BPE inference</h2>
+<p>Training runs once. Inference applies the vocabulary to new text with
+greedy longest match: at each position, take the longest matching token.</p>
+<p>&ldquo;lowest&rdquo; with vocabulary containing &ldquo;low&rdquo; and &ldquo;er&rdquo; becomes [low, e, s, t].
+Deterministic: same input always gives same output.</p>
+<pre class="ascii">lowest :  [low][e][s][t]
+pos 0 : longest match at &quot;low...&quot; is &quot;low&quot; (3 chars), not &quot;lo&quot; (2)
+pos 3 : &quot;er&quot; is in vocab but &quot;est&quot; is not; greedy takes &quot;e&quot;
+</pre>
+<div class="qa"><div class="q">Distinguish BPE training from inference.</div><div class="a"><p>Training learns the vocabulary by merging frequent pairs over a corpus, once, offline. Inference segments new text with greedy longest match against the fixed vocabulary, on every input, online. Training is expensive. Inference is fast.
+The model was trained on specific segmentations. If inference produced different splits, the model would see token sequences it never trained on, and predictions would degrade. Determinism guarantees train-inference consistency.</p><div class="followup"><strong>Follow-up:</strong> Why must inference be deterministic?</div></div></div>
+<h2 id="level-2-byte-level-initialization">Level 2: Byte-level initialization</h2>
+<p>BPE starts from 256 bytes, not characters. Every Unicode string is a byte
+sequence, so any text is representable. No unknown token exists. The worst
+case falls back to single bytes.</p>
+<pre class="ascii">&quot;caf\u00e9&quot; as UTF-8 bytes: [99][97][102][195][169]
+</pre>
+<p>Cost: multi-byte characters split into 2 to 4 tokens. Non-English text
+has higher fertility: more tokens per word, higher cost, shorter effective
+context.</p>
+<figure><img alt="Fertility across languages" src="assets/media-generation-fertility-languages-0-a3e89ce1-79c2-45c3-9a21-5ae0cf780fde.webp"><figcaption>Tokens per word by language. English is cheapest. Languages with multi-byte scripts cost more per word.</figcaption></figure>
+<div class="qa"><div class="q">Why bytes instead of characters?</div><div class="a"><p>Bytes guarantee universal coverage with zero unknown tokens. Characters would need an unknown token for unseen scripts. The tradeoff is fertility: rare characters split into multiple byte tokens.
+Languages with multi-byte scripts consume 2 to 3 times more tokens per word than English. This triples inference cost and shrinks effective context for those languages. Fertility measurement is standard when selecting tokenizers. Some labs train language-specific tokenizers to reduce this gap.</p><div class="followup"><strong>Follow-up:</strong> How does this affect multilingual deployment?</div></div></div>
+<h2 id="level-2-the-embedding-interface">Level 2: The embedding interface</h2>
+<p>Each integer indexes a row of the embedding matrix. Token 1169 becomes a
+vector, for example 12,288 numbers. That vector enters the network.</p>
+<figure><img alt="Embedding lookup" src="assets/media-generation-embedding-lookup-0-fdaaaa89-95d1-4e7f-bec6-3696673243e8.webp"><figcaption>Integer IDs index rows of the embedding matrix. Each row is a learned vector.</figcaption></figure>
+<p>Two invariants. The mapping is lossless. The tokenizer is fixed before
+training. Replacing it invalidates the model.</p>
+<div class="qa"><div class="q">Why does tokenization matter in frontier-lab interviews?</div><div class="a"><p>It controls cost and context. Pricing is per token, so fertility sets inference expense. Context windows count tokens, so the tokenizer decides how much text fits. Multilingual quality, code handling, and prompt injection surfaces all run through tokenization.
+Three directions are active. Lower fertility for non-English languages. Better handling of code and math, where current tokenizers split numbers awkwardly. And tokenizer-aware training, where the model learns with knowledge of merge structure. Each is a research area with interview relevance.</p><div class="followup"><strong>Follow-up:</strong> What would you change about current tokenizers?</div></div></div>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<p>Eight ideas carry this lecture. Read each card. Say the core sentence out
+loud. If you can, you own the lesson.</p>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/media-generation-lm-pipeline-stages-0-06a4e821-a7ef-46b6-8cac-dc5c193b1d58.webp" alt="Language modeling pipeline stages">
+<div class="rc-body">
+<strong>1. Language modeling predicts the next token</strong>
+<p>A language model assigns a probability to every possible next token.
+The chain rule turns a whole sentence into a product of these small
+predictions.</p>
+<p class="rc-num">Key: p(x1..xn) = product of p(xi | x1..xi-1)</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/media-generation-tokenizer-pipeline-0-ed513c16-c002-405d-b42a-d5968da4a611.webp" alt="Tokenizer pipeline">
+<div class="rc-body">
+<strong>2. The pipeline has four stages</strong>
+<p>Raw text becomes integer IDs. IDs become vectors. The model scores the
+next token. The winner decodes back to text. Tokenization is the first
+stage, and every later stage depends on it.</p>
+<p class="rc-num">Key: text to IDs to vectors to scores to text</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/web/example_tokens.png" alt="Word-level tokenization example">
+<div class="rc-body">
+<strong>3. Characters are too fine, words are too coarse</strong>
+<p>Character tokens make sequences very long. Word tokens make the
+vocabulary huge and break on new words. Both extremes cost you something
+real: speed or coverage.</p>
+<p class="rc-num">Key: 26 letters vs 170,000+ English words</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/media-generation-bpe-merges-0-ddd1dc1d-fd76-46c8-8490-81be363d2dab.webp" alt="BPE merge operations">
+<div class="rc-body">
+<strong>4. BPE merges frequent pairs</strong>
+<p>Byte-pair encoding starts from single characters. It counts which pairs
+sit together most often and merges the winner into one token. Repeat.
+Common words become single tokens. Rare words stay split.</p>
+<p class="rc-num">Key: GPT models use about 50,000 merges</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/media-generation-bpe-training-corpus-0-17dca458-28c4-4e91-9d91-ce048d890047.webp" alt="BPE training corpus">
+<div class="rc-body">
+<strong>5. The vocabulary comes from data, not from a dictionary</strong>
+<p>Training counts pairs across a large corpus. The most frequent pairs
+become tokens. The corpus decides the vocabulary, so a mostly-English
+corpus gives English-friendly tokens and punishes other languages.</p>
+<p class="rc-num">Key: dominant language in data wins the vocabulary</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/web/hf-bpe-dark.svg" alt="BPE segmentation diagram">
+<div class="rc-body">
+<strong>6. Inference is greedy longest-match</strong>
+<p>At inference time the tokenizer walks the text and takes the longest
+vocabulary entry that matches. It is fast and simple. It is not optimal:
+a global optimizer would sometimes split words differently.</p>
+<p class="rc-num">Key: greedy, not optimal</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/media-generation-fertility-languages-0-a3e89ce1-79c2-45c3-9a21-5ae0cf780fde.webp" alt="Fertility across languages">
+<div class="rc-body">
+<strong>7. Fertility sets cost and context</strong>
+<p>Fertility is tokens per word. English sits near 1.3. Some languages
+need 3 or more. You pay per token and your context window counts tokens,
+so fertility decides both your bill and how much text fits.</p>
+<p class="rc-num">Key: tokens per word. English ~1.3</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/media-generation-embedding-lookup-0-fdaaaa89-95d1-4e7f-bec6-3696673243e8.webp" alt="Embedding lookup">
+<div class="rc-body">
+<strong>8. Token IDs index the embedding matrix</strong>
+<p>Each integer ID picks one row of a learned matrix. That row is a vector,
+thousands of numbers wide. The mapping is lossless: the same text always
+gives the same IDs.</p>
+<p class="rc-num">Key: 50k vocab x 12k dims is a huge matrix</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Hugging Face LLM Course, Chapter 2: the canonical visual introduction.
+- Karpathy, &ldquo;Let&rsquo;s build the GPT Tokenizer&rdquo;: builds BPE from scratch in code.
+- Sennrich et al. (2016): the original subword paper for translation.
+- tiktoken repository: OpenAI&rsquo;s production tokenizer.</p>
+<p><strong>Further reading:</strong>
+- Hugging Face tokenizers documentation: implementation details and speed benchmarks.
+- &ldquo;Tokenizers: How machines read&rdquo; (FloydHub): the word-level visual used above.</p>
+<p><strong>Caveats from these sources.</strong> BPE is greedy, not optimal: longest match
+can split words in ways a global optimizer would avoid. Tokenizer training
+data biases the vocabulary toward the dominant language of the corpus.
+Numbers tokenize inconsistently: &ldquo;123&rdquo; may split differently from &ldquo;124&rdquo;,
+which hurts arithmetic. These are known limitations, not bugs.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS224N:</strong> word vectors assumed word tokens. Subwords changed the input representation.</li>
+<li><strong>CS336 later lectures:</strong> the embedding matrix size depends on vocabulary. Inference cost scales with fertility.</li>
+<li><strong>CS329A:</strong> test-time compute counts tokens. Verification granularity interacts with token splits.</li>
+<li><strong>Math foundations (new):</strong> probability distributions in the definition require measure theory. The chain rule is proved there.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Tokenization cheatsheet.</strong> Definition: probability distribution over token sequences, chain rule factorization. Pipeline: data, tokenization, architecture, training, evaluation. Granularities: characters (vocab 100, 5x too long), words (vocab 1M+, no sharing), subwords (vocab 50K, best of both). BPE: 256 bytes, merge frequent pairs, 50K target. Inference: greedy longest match, deterministic. Bytes: universal coverage, fertility cost for non-English. Invariants: lossless, fixed before training.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>BPE as compression.</strong> Frequent patterns earn short codes. Merge order is a frequency ranking. Count pairs, merge the winner, repeat 50,000 times.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=JuoVZkPBiKk" target="_blank" rel="noopener">Lecture 1 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">CODE</span><a href="https://cs336.stanford.edu/lectures/?trace=lecture_01" target="_blank" rel="noopener">lecture_01.py, executable lecture code</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://huggingface.co/learn/llm-course/en/chapter2/4" target="_blank" rel="noopener">Hugging Face LLM Course, Chapter 2: Tokenization</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://www.youtube.com/watch?v=zduSFxRajkE" target="_blank" rel="noopener">Karpathy: Let&#x27;s build the GPT Tokenizer (video)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1508.07909" target="_blank" rel="noopener">Sennrich et al., Neural Machine Translation of Rare Words with Subword Units (2016)</a></li></ul></section>
+      <nav class="pager"><a href="../cs336/index.html"><span class="lbl">← Previous</span>CS336: Language Modeling from Scratch</a><a href="../cs336/l02-resource-accounting.html"><span class="lbl">Next →</span>Lecture 2: Resource Accounting</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
