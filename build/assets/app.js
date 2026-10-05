@@ -4,7 +4,7 @@
   var root = window.SITE_ROOT || "./";
 
   /* Theme */
-  var theme = localStorage.getItem("sfai-theme") || "light";
+  var theme = localStorage.getItem("sfai-theme") || "dark";
   document.documentElement.setAttribute("data-theme", theme);
   document.getElementById("themeToggle").addEventListener("click", function () {
     theme = theme === "light" ? "dark" : "light";
@@ -132,6 +132,58 @@
     if (!resultsBox.contains(e.target) && e.target !== searchBox) resultsBox.hidden = true;
   });
 
+
+  // video block detection: if iframe fails (adblocker/file://), show fallback
+  document.querySelectorAll('.video-block').forEach(function (vb) {
+    var frame = vb.querySelector('iframe');
+    var blocked = vb.querySelector('.video-blocked');
+    var shown = false;
+    function show() { if (!shown && blocked) { shown = true; blocked.hidden = false; frame.style.display = 'none'; } }
+    if (location.protocol === 'file:') { setTimeout(show, 2500); }
+    frame.addEventListener('error', show);
+    setTimeout(function () {
+      try {
+        // if iframe document inaccessible and no load, assume blocked
+        if (frame.contentWindow && frame.contentWindow.length === 0) { /* loaded */ }
+      } catch (e) { show(); }
+    }, 6000);
+  });
+
   renderMath();
   renderMermaid();
+
+  /* scroll reveal: rise-in on cards, sections, figures */
+  var revealEls = document.querySelectorAll('.recap-card, .crash-section, .cheat-block, .qa, figure, .anim-wrap');
+  revealEls.forEach(function (el) { el.classList.add('reveal'); });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add('revealed'); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.08 });
+    revealEls.forEach(function (el) { io.observe(el); });
+  } else {
+    revealEls.forEach(function (el) { el.classList.add('revealed'); });
+  }
+
+  /* parallax: gentle drift on figure images */
+  var pxImgs = document.querySelectorAll('figure img, .recap-card img, .crash-fig img');
+  var ticking = false;
+  function parallax() {
+    var vh = window.innerHeight;
+    pxImgs.forEach(function (img) {
+      var r = img.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > vh) return;
+      var center = r.top + r.height / 2 - vh / 2;
+      img.style.setProperty('--px', (center * -0.04).toFixed(1) + 'px');
+    });
+    ticking = false;
+  }
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    pxImgs.forEach(function (img) { img.closest('figure, .recap-card, .crash-fig').classList.add('parallax'); });
+    window.addEventListener('scroll', function () {
+      if (!ticking) { ticking = true; requestAnimationFrame(parallax); }
+    }, { passive: true });
+    parallax();
+  }
 })();
