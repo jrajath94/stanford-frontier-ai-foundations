@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 4: Linear Attention and Mixture of Experts — Stanford Frontier AI</title>
+<meta name="description" content="Two advanced architecture families: linear-time attention (associativity, Mamba-2, gated delta net, DSA) and mixture of experts (routing, load balancing, DeepSe">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-l04" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04" class="active">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 4: Linear Attention and Mixture of Experts</nav>
+      <h1>Lecture 4: Linear Attention and Mixture of Experts</h1>
+      <p class="meta-line">2026-04-08 · Instructor: Tatsunori Hashimoto · 1:26:13 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="cKSwj_qZ8Jg"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/cKSwj_qZ8Jg" title="Stanford CS336 Spring 2026 Lecture 4: Advanced Architectures" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tatsu Hashimoto covers attention alternatives for long context and the full mixture-of-experts design space.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> covers linear-time
+attention: the one idea behind it, the RNN duality, and the three
+battle-tested variants. <strong>Level 2 (Deep)</strong> covers mixture of experts:
+the mental model, routing, training heuristics, and the DeepSeek
+evolution.</p>
+<p>Two halves, one theme: get more capability per unit of compute. Links
+back: <a href="l03-architecture.html">Lecture 3</a> for the transformer block,
+<a href="l02-resource-accounting.html">Lecture 2</a> for intensity.</p>
+<h2 id="level-1-the-long-context-problem">Level 1: The long-context problem</h2>
+<p>Context windows keep growing: vendors race to larger sizes on a log
+scale <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=97s" target="_blank" rel="noopener">01:37 <span class="ts">⏱01:37</span></a>. The feedforward cost grows linearly with
+sequence length. Attention grows quadratically. Past a point, attention
+dominates everything.</p>
+<pre class="ascii">feedforward : O(n)     linear in sequence length
+attention   : O(n^2)   quadratic, dominates past a point
+escapes     : linear attention, hybrids, FlashAttention (~2x)
+</pre>
+<p>The toolkit has two drawers. Hybrids: mix cheap local layers with rare
+full-attention layers (last lecture&rsquo;s sliding windows). Systems:
+FlashAttention rearranges attention to minimize memory traffic, a pure
+constant-factor win of ~2x that also avoids materializing the n x n
+matrix <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=198s" target="_blank" rel="noopener">03:18 <span class="ts">⏱03:18</span></a>. Constants matter enormously. But for 5-10M
+tokens, constants are not enough. That is where linear time comes in.</p>
+<h2 id="level-1-the-one-idea-associativity">Level 1: The one idea, associativity</h2>
+<p>Write attention as (QK^T)V. Drop the softmax for a moment. Matrix
+multiplication is associative: (QK^T)V = Q(K^TV)
+<a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=365s" target="_blank" rel="noopener">06:05 <span class="ts">⏱06:05</span></a>.</p>
+<figure><img alt="Associativity" src="assets/l04-associativity.svg"><figcaption>Left: build the n x n score matrix, then multiply by V. Right: build the d x d KV summary, then multiply by Q. Same result, linear in n.</figcaption></figure>
+<p>Left path: n x n scores first, cost n^2 x d. Right path: d x d summary
+first, cost n x d^2. Sequence lengths are millions. Hidden dims are
+thousands. The right path wins by orders of magnitude. Every linear
+attention method is an elaboration of this reorder.</p>
+<h2 id="level-1-the-rnn-duality">Level 1: The RNN duality</h2>
+<p>The right path has a second form. Sweep left to right, maintaining a
+fixed-size state S: S_t = S_{t-1} + k_t v_t^T, then output q_t S_t
+<a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=491s" target="_blank" rel="noopener">08:11 <span class="ts">⏱08:11</span></a>.</p>
+<figure><img alt="RNN duality" src="assets/l04-rnn-duality.svg"><figcaption>Dense: S = K^T V computed all at once, parallel, for training. Recurrent: S updated one token at a time, fixed state, for inference.</figcaption></figure>
+<p>Dense form: parallel, great for training. Recurrent form: fixed-size
+state, great for inference. RNNs were always good at inference and bad
+at training. Linear attention gets both. The dense-to-recurrent
+equivalence is exact. The lossy step was dropping the softmax at the
+start <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=1262s" target="_blank" rel="noopener">21:02 <span class="ts">⏱21:02</span></a>.</p>
+<div class="qa"><div class="q">Why is linear attention a big deal if it just drops the softmax?</div><div class="a"><p>Dropping the softmax is exactly what enables the reorder: without it, associativity moves the quadratic term from n^2 to d^2, and the recurrent form gives fixed-size-state inference. Softmax attention needs a KV cache that grows with context. Linear attention carries a fixed state instead. The price is expressiveness: the all-to-all softmax connection is genuinely powerful, which is why every deployed system is a hybrid, not pure linear.
+The equivalence is between the two forms of linear attention, not between linear and softmax attention. Dropping the softmax is the lossy step. As you replace more softmax layers with linear ones, you lose more of the all-to-all modeling power, and long-context QA degrades first.</p><div class="followup"><strong>Follow-up:</strong> If dense and recurrent forms are equivalent, why do hybrids lose quality at high ratios?</div></div></div>
+<h2 id="level-1-mamba-2-adds-a-forget-gate">Level 1: Mamba-2 adds a forget gate</h2>
+<p>Pure linear attention always carries the full state forward. The LSTM
+lesson: learn when to forget. Mamba-2 adds gamma(t), computed from the
+current input only <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=706s" target="_blank" rel="noopener">11:46 <span class="ts">⏱11:46</span></a>.</p>
+<figure><img alt="Mamba-2 gate" src="assets/l04-mamba-gate.svg"><figcaption>S_t = gamma(t) S_{t-1} + k_t v_t^T. gamma depends on the input, not the state, so train-parallel and infer-recurrent both still work.</figcaption></figure>
+<p>Because gamma depends on the input and not the state, the dense/recurrent
+duality survives. Nemotron-3 alternates Mamba-2 layers with full softmax
+attention and matches strong models with much better long-context
+throughput <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=808s" target="_blank" rel="noopener">13:28 <span class="ts">⏱13:28</span></a>.</p>
+<h2 id="level-1-gated-delta-net-erases-before-writing">Level 1: Gated delta net erases before writing</h2>
+<p>Push further: add a second gate beta(t) controlling how much of the
+current input enters the state, plus a projector (I - beta k k^T) that
+erases the old key direction before writing the new one
+<a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=902s" target="_blank" rel="noopener">15:02 <span class="ts">⏱15:02</span></a>.</p>
+<figure><img alt="Gated delta net" src="assets/l04-deltanet.svg"><figcaption>Forget gate gamma, input gate beta, and a projector that clears the old key direction before writing.</figcaption></figure>
+<p>The intuition: when writing key k_t, first remove what the state already
+stored along k_t, then add the new information. Same projector appears
+independently in meta-learning least squares and fast weight
+programming: different derivations, same solution. Qwen 3.5 and Qwen
+Next use a 3:1 gated-delta-net-to-attention hybrid with strong results
+and much higher decode throughput at long contexts
+<a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=1101s" target="_blank" rel="noopener">18:21 <span class="ts">⏱18:21</span></a>.</p>
+<p>Controlled ablations (ByteDance Seed + UC Santa Cruz) show the hybrid
+pattern clearly: at low ratios of linear layers, no quality hit. Past a
+threshold, long-context performance degrades steadily toward pure-RNN
+levels <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=1143s" target="_blank" rel="noopener">19:03 <span class="ts">⏱19:03</span></a>. Single-key retrieval is explicitly optimized by
+these architectures and hides the degradation. QA reveals it.</p>
+<h2 id="level-1-dsa-the-indexer-alternative">Level 1: DSA, the indexer alternative</h2>
+<p>DeepSeek Sparse Attention takes a different route. Keep softmax
+attention, but run it on a subset. A lightweight indexer scores tokens
+from qk inner products through ReLU and learned weights, takes the
+top-k positions, and full attention runs only on those
+<a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=1393s" target="_blank" rel="noopener">23:13 <span class="ts">⏱23:13</span></a>.</p>
+<figure><img alt="DSA" src="assets/l04-dsa.svg"><figcaption>Cheap indexer picks top-k tokens. Full attention runs on the subset. Bolted on during long-context extension, not pretraining.</figcaption></figure>
+<p>The indexer is cheap by design: low-dimensional, low-precision. The
+second stage is quadratic but on a short, bounded context. The clever
+deployment trick: train a normal transformer, then bolt the indexer on
+during the long-context extension phase you were running anyway
+<a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=1489s" target="_blank" rel="noopener">24:49 <span class="ts">⏱24:49</span></a>. DeepSeek v3.2 matches Claude 4.5 Sonnet and Gemini 3.
+GLM5&rsquo;s ablations show near-zero loss vs full attention even on hard
+retrieval <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=1560s" target="_blank" rel="noopener">26:00 <span class="ts">⏱26:00</span></a>. And note the pattern: top-k selection with
+an auxiliary loss is the same trick MoE routing uses below.</p>
+<div class="qa"><div class="q">Compare linear attention, DSA, and sliding windows for long context.</div><div class="a"><p>Linear attention changes the complexity class to O(n) via the associativity reorder, at the cost of dropping softmax expressiveness. It needs hybrid softmax layers to stay competitive. DSA keeps full softmax quality on a top-k subset chosen by a cheap indexer. The indexer itself is still quadratic but with tiny constants. Sliding windows keep exact softmax in a fixed local window plus periodic global layers. Simplest, but the window bound is rigid. All three ship as hybrids with full attention, never pure.
+Training with the indexer is complex and annoying, and you run long-context extension anyway. Bolting it on in that phase costs little extra training and works surprisingly well despite the non-differentiable top-k. Do the expensive thing once, add the cheap thing late.</p><div class="followup"><strong>Follow-up:</strong> Why bolt DSA on during extension instead of training with it from scratch?</div></div></div>
+<h2 id="level-2-moe-more-parameters-than-you-pay-for">Level 2: MoE, more parameters than you pay for</h2>
+<p>Replace the MLP with several smaller FFNs called experts. A router sends
+each token to one (or k) of them. Four experts of the original size: 4x
+the parameters, ~1x the FLOPs per token <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=2066s" target="_blank" rel="noopener">34:26 <span class="ts">⏱34:26</span></a>.</p>
+<figure><img alt="MoE" src="assets/l04-moe.svg"><figcaption>One FFN becomes four experts. The router picks one per token. Parameter count quadruples. Per-token FLOPs stay flat.</figcaption></figure>
+<p>The evidence: Switch Transformer (Fedus et al. 2022) shows test loss
+falling as expert count rises at fixed active parameters. OlMoE trains
+~2x faster than its dense counterpart. DeepSeek v2 showed far fewer
+active parameters matching or beating dense models. Past a certain
+size, nearly every released model is an MoE <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=2214s" target="_blank" rel="noopener">36:54 <span class="ts">⏱36:54</span></a>.</p>
+<p>MoE is also a parallelization axis: experts are natural chunks for
+different devices (expert parallelism), trading communication for the
+ability to scale further <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=2395s" target="_blank" rel="noopener">39:55 <span class="ts">⏱39:55</span></a>.</p>
+<div class="qa"><div class="q">Why is everyone shipping MoEs above a certain size?</div><div class="a"><p>Because parameters keep helping even when only a subset is active per token. At fixed training FLOPs, more experts means lower loss. At fixed inference FLOPs, fewer active parameters means cheaper serving at the same quality. The Switch and OlMoE results show this is not subtle: ~2x training speedups and strictly better loss at matched compute. Above the size where infrastructure can handle routing, there is little reason to stay dense.
+Infrastructure complexity. Routing adds communication, experts must be sharded across devices, training needs balancing heuristics, the router softmax is a stability risk, and fine-tuning overfits badly. Small labs often stay dense because the operational cost exceeds the quality gain at their scale.</p><div class="followup"><strong>Follow-up:</strong> What is the catch?</div></div></div>
+<h2 id="level-2-token-choice-topk-routing">Level 2: Token-choice TopK routing</h2>
+<p>Three routing designs exist: token chooses experts, expert chooses
+tokens, or a global assignment solver. Nearly everything ships
+token-choice TopK: each token picks its k favorite experts
+<a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=2895s" target="_blank" rel="noopener">48:15 <span class="ts">⏱48:15</span></a>. OlMoE shows token choice beats expert choice on both
+loss and benchmarks.</p>
+<p>The router itself is embarrassingly simple: one matmul. Each expert owns
+a vector. Score = inner product with the token. Softmax. Take top-k
+<a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=3002s" target="_blank" rel="noopener">50:02 <span class="ts">⏱50:02</span></a>. Hash routing (no learning) works a little. RL routing
+works but nobody uses it: too much overhead and variance for what
+heuristics achieve. Global linear assignment is optimal and far too
+expensive.</p>
+<figure><img alt="TopK router" src="assets/l04-topk-router.svg"><figcaption>Router = one matmul + softmax + top-k. Output = weighted sum of chosen experts plus the shared expert.</figcaption></figure>
+<p>DeepSeek&rsquo;s widely copied refinement: fine-grained experts (many small
+ones instead of few big) plus shared experts that bypass the router and
+process every token <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=3267s" target="_blank" rel="noopener">54:27 <span class="ts">⏱54:27</span></a>. Common processing moves to the
+shared expert. Routed experts specialize. OlMoE disagrees slightly on
+shared experts helping, but agrees fine-grained helps.</p>
+<h2 id="level-2-training-moes-heuristics-beat-theory">Level 2: Training MoEs, heuristics beat theory</h2>
+<p>Sparsity during training is the hard part: only k experts are active, so
+gating is non-differentiable and you never see the counterfactual
+experts <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=3506s" target="_blank" rel="noopener">58:26 <span class="ts">⏱58:26</span></a>. RL and stochastic perturbations (noise
+injection from the early papers) were tried. Later ablations showed the
+noise was unnecessary and even harmful. What ships is heuristics.</p>
+<p>The core problem is rich-gets-richer: chosen experts get gradient
+signal, get stronger, get chosen more, and collapse to a few experts
+doing everything <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=3816s" target="_blank" rel="noopener">63:36 <span class="ts">⏱63:36</span></a>. The fix is the Switch auxiliary
+loss: L = F x P, where F is the fraction of tokens dispatched to expert
+i and P is the router&rsquo;s probability mass on expert i. The gradient of
+F*P with respect to P is F, so popular experts get pushed down in
+proportion to their popularity. Not derived from first principles.
+understood through its gradient action.</p>
+<figure><img alt="Load balancing" src="assets/l04-load-balance.svg"><figcaption>Without the F x P loss, two experts take nearly all tokens. With it, utilization evens out.</figcaption></figure>
+<p>DeepSeek v2 adds device-level balancing (balance machines, not just
+experts) as a second auxiliary loss <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=3991s" target="_blank" rel="noopener">66:31 <span class="ts">⏱66:31</span></a>. DeepSeek v3 moves
+toward aux-loss-free balancing with a per-expert bias term, though some
+auxiliary loss remains against extreme imbalance. The OlMoE ablation is
+stark: remove the balancing loss and nearly all tokens pile onto two
+experts. The rest of the parameters do nothing for most of training
+<a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=4083s" target="_blank" rel="noopener">68:03 <span class="ts">⏱68:03</span></a>.</p>
+<h2 id="level-2-moe-systems-and-stability-notes">Level 2: MoE systems and stability notes</h2>
+<p>Expert parallelism ships activations between devices, so communication
+is the tax. Nemotron-3 downprojects the residual stream before the
+all-to-all collective: smaller vectors to move, without shrinking the
+model&rsquo;s hidden dim <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=4298s" target="_blank" rel="noopener">71:38 <span class="ts">⏱71:38</span></a>.</p>
+<pre class="ascii">tax   : all-to-all communication between experts
+fix 1 : downproject before the collective (Nemotron-3)
+fix 2 : never silently drop tokens (MegaBlocks)
+fix 3 : guard the router softmax
+</pre>
+<p>Historical warning: early MoE inference silently dropped tokens when an
+expert&rsquo;s queue overflowed, making outputs depend on other users&rsquo;
+traffic. Modern frameworks (MegaBlocks and descendants) fixed this
+<a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=4512s" target="_blank" rel="noopener">75:12 <span class="ts">⏱75:12</span></a>.</p>
+<p>The router adds another softmax, another danger zone. Fixes that ship:
+run the router in fp32, and put z-loss on the router (OlMoE ablations
+show it calms spiky loss curves) <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=4595s" target="_blank" rel="noopener">76:35 <span class="ts">⏱76:35</span></a>.</p>
+<p>Fine-tuning MoEs overfits badly: huge train/val gaps vs dense models.
+Common workarounds: fine-tune attention only, fine-tune non-MoE layers,
+or just use far more data <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=4691s" target="_blank" rel="noopener">78:11 <span class="ts">⏱78:11</span></a>.</p>
+<p>Upcycling (copy a trained dense model&rsquo;s MLPs into experts, add a random
+router, keep training) gave real wins: miniCPM 2.4B to 13.4B, Qwen 1.8B
+to a strong 2.7B MoE. Nobody does it now: train the MoE from scratch
+instead <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=4780s" target="_blank" rel="noopener">79:40 <span class="ts">⏱79:40</span></a>.</p>
+<h2 id="level-2-deepseek-v1-to-v3">Level 2: DeepSeek v1 to v3</h2>
+<p>v1 is the platonic MoE: shared + fine-grained experts, TopK routing,
+auxiliary balancing <a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=4953s" target="_blank" rel="noopener">82:33 <span class="ts">⏱82:33</span></a>. v2 scales up with two shared
+experts and adds device-routing and communication-balancing losses:
+systems respect as architecture. v3 goes aux-loss-free-ish with
+per-expert bias, switches expert weighting to sigmoid+softmax, and adds
+two more ideas: MLA and MTP.</p>
+<pre class="ascii">v1 : platonic MoE, TopK routing, aux balancing
+v2 : two shared experts, routing and comm losses
+v3 : per-expert bias, sigmoid+softmax, MLA, MTP
+</pre>
+<p>Multi-head Latent Attention compresses Q/K/V into a low-dimensional
+latent c, and the KV cache stores c instead of K and V
+<a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=5036s" target="_blank" rel="noopener">83:56 <span class="ts">⏱83:56</span></a>. Care needed where MLA meets RoPE in the cache.
+Multi-Token Prediction predicts several future tokens at once: a
+statistical win that doubles as a built-in speculative decoder
+<a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg&amp;t=5106s" target="_blank" rel="noopener">85:06 <span class="ts">⏱85:06</span></a>.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/l04-associativity.svg" alt="Associativity">
+<div class="rc-body">
+<strong>1. Move the parentheses</strong>
+<p>(QK^T)V = Q(K^TV). Drop the softmax, reorder, and the quadratic term
+moves from n^2 to d^2. One idea, all of linear attention.</p>
+<p class="rc-num">Key: n^2 d becomes n d^2</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l04-rnn-duality.svg" alt="RNN duality">
+<div class="rc-body">
+<strong>2. Train dense, infer recurrent</strong>
+<p>The same math runs parallel over the sequence for training and as a
+fixed-size state update for inference. The dense-recurrent equivalence
+is exact.</p>
+<p class="rc-num">Key: S_t = S_{t-1} + k_t v_t^T</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l04-mamba-gate.svg" alt="Mamba-2 gate">
+<div class="rc-body">
+<strong>3. Mamba-2 learns to forget</strong>
+<p>gamma(t) gates how much state carries forward. Input-dependent only,
+so the train/infer duality survives. The LSTM lesson, relearned.</p>
+<p class="rc-num">Key: forget gate, no state dependence</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l04-deltanet.svg" alt="Gated delta net">
+<div class="rc-body">
+<strong>4. Erase before you write</strong>
+<p>(I - beta k k^T) projects out the old key direction before storing
+the new one. Qwen 3.5 uses a 3:1 hybrid with full attention.</p>
+<p class="rc-num">Key: projector + input gate</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l04-dsa.svg" alt="DSA indexer">
+<div class="rc-body">
+<strong>5. DSA indexes, then attends</strong>
+<p>A cheap indexer picks top-k tokens. Full attention runs on the
+subset. Bolted on during long-context extension. Matches frontier
+models.</p>
+<p class="rc-num">Key: cheap select, exact attend</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l04-moe.svg" alt="MoE">
+<div class="rc-body">
+<strong>6. MoE: params without FLOPs</strong>
+<p>Split the FFN into experts, route each token to one. 4x parameters,
+1x FLOPs. More experts at fixed active params means lower loss.</p>
+<p class="rc-num">Key: sparsity decouples params from FLOPs</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l04-topk-router.svg" alt="TopK router">
+<div class="rc-body">
+<strong>7. Routing is one matmul</strong>
+<p>Token-choice TopK is the consensus. Score experts by inner product,
+softmax, take top k. DeepSeek adds fine-grained + shared experts.</p>
+<p class="rc-num">Key: router = W_r x, top-k</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l04-load-balance.svg" alt="Load balancing">
+<div class="rc-body">
+<strong>8. Balance or collapse</strong>
+<p>Rich-gets-richer kills experts without the F x P auxiliary loss.
+Its gradient pushes probability mass off popular experts. Removing it
+is catastrophic.</p>
+<p class="rc-num">Key: L_aux = F x P</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 4 video and slides.
+- Fedus et al. (2022): Switch Transformer, expert scaling and the F x P
+  auxiliary loss.
+- Dao and Gu (2024): Mamba-2, the gated linear-attention view.
+- DeepSeekMoE (2024): fine-grained and shared experts.</p>
+<p><strong>Further reading:</strong>
+- OlMoE (Ai2): the careful open MoE study, token-vs-expert choice,
+  load-balancing and z-loss ablations.
+- Su et al. RoPE paper: background for the MLA/RoPE interaction note.</p>
+<p><strong>Caveats from these sources.</strong> Hybrid-ratio ablations are messy and
+from one study. Treat the degradation curves as directional. DSA
+frontier-matching claims come from DeepSeek&rsquo;s own report. Upcycling is
+documented but currently unfashionable: no 2026 examples. MoE
+fine-tuning overfitting numbers are from one GLUE-style task.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS224N:</strong> softmax attention is defined there. This lecture is the
+  linear-time diff.</li>
+<li><strong>CME295:</strong> the attention arrow symbol is reused in every variant
+  figure. Only the score computation changes.</li>
+<li><strong>CS336 later lectures:</strong> the KV cache from the inference lecture is
+  what DSA and MLA shrink. Expert parallelism returns in the systems
+  lectures. MTP&rsquo;s speculative decoder returns in inference.</li>
+<li><strong>CS329Z:</strong> the router is a tiny agent: observe token, pick expert,
+  get reward via gradient.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Linear attention + MoE cheatsheet.</strong> Long context: attention O(n^2), FFN O(n). FlashAttention: 2x constant factor, no materialized matrix. Linear attention: drop softmax, (QK^T)V = Q(K^TV), n^2d to nd^2. Duality: dense trains, recurrent infers, equivalence exact, softmax-drop lossy. Mamba-2: gamma(t) forget gate, input-dependent. Gated delta net: beta(t) input gate + (I - beta k k^T) projector. Hybrids: 7:1 (Minimax M1), 3:1 (Qwen 3.5). Low ratios free, high ratios degrade. DSA: cheap indexer, top-k, full attention on subset, bolted on at extension. MoE: split FFN, route tokens, params up FLOPs flat. Routing: token-choice TopK, one-matmul router, hash/RL/assignment rejected. DeepSeek: fine-grained + shared experts. Training: sparsity is non-differentiable, heuristics win, noise removed. Balance: L = F x P, gradient pushes down popular experts. Removal is catastrophic. v3: per-expert bias, MLA (cache latent c), MTP (built-in speculative decode). Systems: expert parallel comms, downproject before all-to-all, no silent token drops anymore. Upcycling: copy dense MLPs, now unfashionable.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Reorder, gate, route, balance.</strong> Associativity makes attention linear. Gates make the state smart. Routing makes parameters cheap. Balancing keeps experts alive.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=cKSwj_qZ8Jg" target="_blank" rel="noopener">Lecture 4 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">SLIDES</span>Lecture 4 slides (PDF)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2101.03961" target="_blank" rel="noopener">Fedus et al., Switch Transformers (2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2405.21060" target="_blank" rel="noopener">Dao and Gu, Mamba-2 (2024)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2401.06066" target="_blank" rel="noopener">DeepSeek-AI, DeepSeekMoE (2024)</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://arxiv.org/abs/2409.02060" target="_blank" rel="noopener">OlMoE: open mixture-of-experts study (Ai2)</a></li></ul></section>
+      <nav class="pager"><a href="../cs336/l03-architecture.html"><span class="lbl">← Previous</span>Lecture 3: The Modern Transformer Architecture</a><a href="../cs336/l05-gpus.html"><span class="lbl">Next →</span>Lecture 5: How GPUs Work</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
