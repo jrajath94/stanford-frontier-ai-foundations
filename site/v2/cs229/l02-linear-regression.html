@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 2: Supervised Learning and Linear Regression — Stanford Frontier AI</title>
+<meta name="description" content="The supervised setup, the loss chip J(theta), gradient descent, SGD, and the normal equations, all on the Ames housing data.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229-l02" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02" class="active">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229: Machine Learning</a> / Lecture 2: Supervised Learning and Linear Regression</nav>
+      <h1>Lecture 2: Supervised Learning and Linear Regression</h1>
+      <p class="meta-line">2026-04-08 · Instructor: Chris Ré · 1:18:04 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="cmNIMjPYdgM"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/cmNIMjPYdgM" title="Lecture 2: Supervised Learning Setup" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=cmNIMjPYdgM" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Chris Ré builds linear regression from the Ames housing data: loss, gradient descent, SGD, normal equations.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> contains what you need to
+understand everything that follows in CS229 and the courses that build on
+it. <strong>Level 2 (Deep)</strong> contains what you need for correct, interview-grade
+understanding. Read Level 1 straight through. Return to Level 2 when you
+want depth.</p>
+<p>No prerequisites are assumed. Every term is defined at first use.</p>
+<h2 id="level-1-the-supervised-setup">Level 1: The supervised setup</h2>
+<p>A <strong>hypothesis</strong> is a function h that maps inputs to predictions. Write it
+h: X -&gt; Y. X is the input space. Y is the output space. The <strong>training
+set</strong> is a list of pairs (x, y): inputs with their correct answers.
+Supervised learning means: find a hypothesis that predicts y well on new
+x, using only the training pairs.</p>
+<p>Two flavors. <strong>Regression</strong>: y is a number, like a house price.
+<strong>Classification</strong>: y is a category, like cat versus dog. This lecture is
+regression. Classification starts in lecture 3.</p>
+<p>The running example is the Ames housing dataset, real sale prices from
+Ames, Iowa <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=658s" target="_blank" rel="noopener">10:58 <span class="ts">⏱10:58</span></a>. Input x: lot area, living space, and similar
+features. Output y: the sale price. Before any mathematics, Chris Ré
+gives the first rule of the course: look at your data <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=688s" target="_blank" rel="noopener">11:28 <span class="ts">⏱11:28</span></a>.
+He says it twice. Plot it. Know its scale. Models built on unseen data
+fail in ways no theorem predicts.</p>
+<div class="qa"><div class="q">What makes learning supervised?</div><div class="a"><p>The training set. It contains the right answers as (x, y) pairs. The algorithm learns by comparing its predictions against those answers. Take the labels away and you are in unsupervised territory, no matter how obvious the pattern looks to a human.
+Regression. Temperature is a continuous number. Classification is for discrete choices. The boundary is the type of y, not the difficulty of the problem.</p><div class="followup"><strong>Follow-up:</strong> Regression or classification for predicting tomorrow&#x27;s temperature?</div></div></div>
+<h2 id="level-1-the-linear-hypothesis">Level 1: The linear hypothesis</h2>
+<p>Start with the simplest hypothesis that can work. A line.</p>
+<p>h(x) = theta_0 + theta_1 x <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=756s" target="_blank" rel="noopener">12:36 <span class="ts">⏱12:36</span></a></p>
+<p>Two numbers, theta_0 and theta_1, define the entire model. Theta_0 is the
+intercept: the prediction when x is zero. Theta_1 is the slope: how much
+the prediction rises per unit of x. Strictly, this is an affine function,
+not a linear one, but the field says &ldquo;linear&rdquo; by convention.</p>
+<p>This is a <strong>parametric</strong> model. Parametric means the hypothesis is fully
+described by a fixed set of parameters, no matter how much data arrives.
+Ten houses or ten million houses: still two numbers. That is a huge
+reduction. The space of all possible functions is uncountably large. We
+restrict to lines and search only two numbers.</p>
+<p>The <strong>parameters</strong> theta are what learning adjusts. The <strong>features</strong> x
+are what the data provides. Never confuse the two. Features come from the
+world. Parameters come from training.</p>
+<div class="qa"><div class="q">Why start with a line when the world is not linear?</div><div class="a"><p>Because a line is the simplest hypothesis with a closed-form solution and exact theory. It teaches the full machinery: loss, gradient, optimizer. Every later model reuses that machinery. Also, many problems are locally linear, and linear models on good features beat fancy models on bad features.
+Nothing structural. Theta gains one component per feature. The line becomes a plane, then a hyperplane. All the equations below generalize by replacing scalars with vectors.</p><div class="followup"><strong>Follow-up:</strong> What breaks when you add a second feature?</div></div></div>
+<h2 id="level-1-the-loss-chip">Level 1: The loss chip</h2>
+<p>How do you say one line is better than another? You need a score. The
+score is the <strong>loss function</strong>. It measures how wrong the hypothesis is
+on the training set. Training means choosing theta to make the loss as
+small as possible.</p>
+<figure><img alt="The loss chip" src="assets/svg/l02-loss-chip.svg"><figcaption>J(theta) = 1/2 sum of squared errors. Prediction minus truth, squared, averaged. Smaller is better. Original plate.</figcaption></figure>
+<p>For linear regression the loss is <strong>least squares</strong> <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=1455s" target="_blank" rel="noopener">24:15 <span class="ts">⏱24:15</span></a>:</p>
+<p>J(theta) = (1/2) * sum over i of (h_theta(x^i) - y^i)^2</p>
+<p>Read it inside out. For each house i, compute the prediction
+h_theta(x^i), subtract the true price y^i, and square the error. Add up
+over all houses. The 1/2 is pure convention: it cancels the 2 that appears
+when you differentiate a square. The argmin does not care about constant
+factors.</p>
+<p>Why square at all? Three reasons, in increasing order of depth. First, the
+squared loss is solvable: its gradient has a clean form and the optimum
+has a closed form. Second, history: Gauss used it because squares were
+computationally convenient before computers existed. Third, probability:
+squared loss is exactly what you get from Gaussian noise, proved in
+lecture 3. A student asks why not absolute value <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=1575s" target="_blank" rel="noopener">26:15 <span class="ts">⏱26:15</span></a>. You
+can. That is called value regression and it estimates the median, not the
+mean. Different loss, different statistic.</p>
+<p>This chip is the cross-course symbol for loss. CS336 and CS329H reuse
+this exact design. Wherever you see the chip, it means: a scalar score of
+wrongness, and training minimizes it.</p>
+<div class="qa"><div class="q">What does the 1/2 in J(theta) do?</div><div class="a"><p>Nothing to the answer. It cancels the factor of 2 from differentiating the square, keeping the gradient clean. Any positive constant gives the same minimizer. It is convention, and interviewers ask about it precisely because beginners think it matters.
+Risk is the expected error on new data. You cannot compute it, so you minimize the error on the data you have: the empirical risk <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=928s" target="_blank" rel="noopener">15:28 <span class="ts">⏱15:28</span></a>. The gap between the two is the subject of lecture 6.</p><div class="followup"><strong>Follow-up:</strong> Why is minimizing J(theta) called empirical risk minimization?</div></div></div>
+<h2 id="level-1-gradient-descent">Level 1: Gradient descent</h2>
+<p>J(theta) is a bowl in parameter space. The minimum sits at the bottom.
+<strong>Gradient descent</strong> walks downhill: start at a guess, compute the
+gradient (the direction of steepest increase), and step the opposite way.</p>
+<p>theta := theta - alpha * gradient of J(theta)</p>
+<p><strong>Alpha</strong> is the <strong>learning rate</strong>, also called the step size
+<a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=2253s" target="_blank" rel="noopener">37:33 <span class="ts">⏱37:33</span></a>. Chris Ré uses both names interchangeably. Too small and
+training crawls. Too large and you overshoot the bottom and diverge.</p>
+<figure><img alt="Gradient descent" src="assets/svg/l02-gd.svg"><figcaption>Theta steps opposite the gradient. Alpha is the step size. Too big overshoots. Original plate.</figcaption></figure>
+<p>For least squares the gradient has a memorable shape. Each component is a
+sum over houses of (prediction - truth) times the feature value. The
+error term (h - y) shows up multiplied by something. Watch for that
+pattern. It recurs in logistic regression, in neural networks, in
+everything. Error times input is the atomic update of machine learning.</p>
+<p>Starting point does not matter for least squares: the bowl has one
+bottom. Chris Ré warns that in modern models, where you start matters a
+great deal. Convexity is a luxury. Enjoy it while it lasts.</p>
+<div class="qa"><div class="q">How do you pick the learning rate?</div><div class="a"><p>Start with a standard value like 0.01 or 0.001 and watch the loss. If the loss explodes or oscillates, the rate is too big. If the loss barely moves, it is too small. Schedules that decay the rate during training are standard practice. There is no formula that works everywhere. Tuning it is empirical.
+By definition. The gradient is the direction of steepest increase of the function. Descent negates it. If you ever see a plus sign in a gradient descent update, someone is maximizing instead, usually a likelihood.</p><div class="followup"><strong>Follow-up:</strong> Why does the gradient point uphill, not downhill?</div></div></div>
+<h2 id="level-1-stochastic-gradient-descent">Level 1: Stochastic gradient descent</h2>
+<p>Batch gradient descent sums over every house before taking one step. On a
+dataset the size of the internet, one step takes forever. <strong>Stochastic
+gradient descent</strong> (SGD) estimates the gradient from a small random
+<strong>minibatch</strong> and steps immediately <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=2640s" target="_blank" rel="noopener">44:00 <span class="ts">⏱44:00</span></a>. Many noisy steps
+replace few exact ones.</p>
+<figure><img alt="Batch vs SGD" src="assets/svg/l02-sgd.svg"><figcaption>Batch: exact gradient, slow steps. SGD: noisy gradient, fast steps. Shuffle every epoch. Original plate.</figcaption></figure>
+<p>SGD rests on two statistical assumptions. One: the training set reflects
+the real world. Two: each minibatch reflects the training set. Break the
+second one and training breaks. Show the model all cats first, then all
+dogs, and it gets stuck predicting cats. The fix is a <strong>shuffle</strong>: random
+order, one full pass per <strong>epoch</strong>, every epoch.</p>
+<p>Batch size interacts with the learning rate. A common folklore: normalize
+by batch size, so larger batches pair with smaller steps. In production,
+batch size is picked for GPU efficiency first. Labs report <strong>MFU</strong>,
+model FLOPs utilization <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=3842s" target="_blank" rel="noopener">64:02 <span class="ts">⏱64:02</span></a>: the fraction of the GPU&rsquo;s
+theoretical speed actually achieved. Gigawatt training facilities must
+stay busy. Chris Ré&rsquo;s punchline: tweaking batch size matters far less
+than making the model bigger or training longer.</p>
+<div class="qa"><div class="q">Why does SGD work if each step uses the wrong gradient?</div><div class="a"><p>Each minibatch gradient is an unbiased estimate of the true gradient: right on average, noisy per step. The noise averages out over many steps, and it even helps by shaking the parameters out of sharp bad minima. What matters is the average direction over an epoch, not any single step.
+Both work and theory says they behave similarly. Shuffling guarantees each example is seen exactly once per epoch, which is slightly more efficient in practice. The non-negotiable part is randomness of order, not the sampling scheme.</p><div class="followup"><strong>Follow-up:</strong> Why shuffle instead of sampling with replacement?</div></div></div>
+<h2 id="level-2-the-normal-equations">Level 2: The normal equations</h2>
+<p>Least squares is one of the rare problems with a closed-form answer. Set
+the gradient to zero and solve. In matrix form:</p>
+<p>theta = (X^T X)^(-1) X^T y</p>
+<figure><img alt="Normal equations" src="assets/svg/l02-normaleq.svg"><figcaption>Closed form: theta = (X^T X)^-1 X^T y. Requires invertibility. Singular means infinite solutions. Original plate.</figcaption></figure>
+<p>No iterations. No learning rate. One shot. The catch is the inverse.
+X^T X must be invertible, which needs more data points than parameters
+<a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=287s" target="_blank" rel="noopener">04:47 <span class="ts">⏱04:47</span></a>. If it is singular, there is a <strong>null space</strong>: directions
+in parameter space that change nothing about the predictions
+<a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=4560s" target="_blank" rel="noopener">76:00 <span class="ts">⏱76:00</span></a>. Then infinitely many thetas are equally valid. X^T X is
+always positive semidefinite, so the bowl never curves downward, but flat
+directions are allowed.</p>
+<p>In practice, nobody inverts the matrix directly for large problems.
+Inversion costs cubic time in the number of parameters. Gradient descent
+wins past a few thousand features. The normal equations matter as theory:
+they prove the optimum exists, is unique when X^T X is invertible, and
+give the exact answer for small problems.</p>
+<div class="qa"><div class="q">When would you use the normal equations instead of gradient descent?</div><div class="a"><p>Small problems: thousands of examples, hundreds of features. One exact solve beats a thousand iterative steps. Large problems: gradient descent or SGD, because matrix inversion scales cubically. Interviewers want the tradeoff stated with the complexity, not just a preference.
+Redundancy. Some feature is a linear combination of the others, or you have fewer examples than features. The data cannot distinguish the redundant directions. Fix it by removing duplicate features or adding regularization, which is lecture 6.</p><div class="followup"><strong>Follow-up:</strong> What does a singular X^T X mean about your features?</div></div></div>
+<h2 id="level-2-two-asides-that-pay-off-later">Level 2: Two asides that pay off later</h2>
+<p><strong>Learning rate schedules.</strong> The step size need not stay constant.
+<strong>Cosine scaling</strong> decays alpha along a cosine curve: zoom into a minimum,
+then the schedule&rsquo;s shape kicks the parameters out to keep exploring
+<a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=3576s" target="_blank" rel="noopener">59:36 <span class="ts">⏱59:36</span></a>. It is popular for image models. Linear and exponential
+decay are older variants of the same idea. Schedules are refinements. The
+dominant terms are model size and training time.</p>
+<p><strong>Wrong loss, works anyway.</strong> Chris Ré notes something surprising: the
+squared loss sometimes works for classification, even though it makes no
+sense there. The machinery tolerates the wrong loss in ways
+theory does not fully explain. Keep this in mind when lecture 4 replaces
+it with cross-entropy. The replacement is principled. The surprise is
+that the unprincipled version often works anyway.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<p>Eight ideas carry this lecture. Read each card. Say the core sentence out
+loud. If you can, you own the lesson.</p>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/svg/l02-loss-chip.svg" alt="The loss chip">
+<div class="rc-body">
+<strong>1. Supervised learning predicts from labeled pairs</strong>
+<p>Training data is (x, y) pairs. Regression predicts numbers. Classification
+picks categories. The labels are the supervision.</p>
+<p class="rc-num">Key: h: X to Y, learned from (x, y)</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l02-loss-chip.svg" alt="The loss chip J(theta)">
+<div class="rc-body">
+<strong>2. The loss chip scores wrongness</strong>
+<p>J(theta) = (1/2) sum of squared errors. Smaller is better. Training is
+minimization. The 1/2 is convention. This chip reappears in every
+course.</p>
+<p class="rc-num">Key: J(theta) = 1/2 sum (h - y)^2</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l02-gd.svg" alt="Gradient descent">
+<div class="rc-body">
+<strong>3. Gradient descent walks downhill</strong>
+<p>Theta moves opposite the gradient, scaled by the learning rate alpha.
+Error times feature is the atomic update. Convex here, so start anywhere.</p>
+<p class="rc-num">Key: theta := theta - alpha * grad J</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l02-sgd.svg" alt="Batch vs SGD">
+<div class="rc-body">
+<strong>4. SGD trades exact steps for fast noisy ones</strong>
+<p>Minibatch gradients are unbiased estimates. Shuffle every epoch. Never
+show all of one class first. Batch size follows GPU efficiency.</p>
+<p class="rc-num">Key: shuffle, epoch, unbiased noise</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l02-normaleq.svg" alt="Normal equations">
+<div class="rc-body">
+<strong>5. The normal equations solve it in one shot</strong>
+<p>Theta = (X^T X)^-1 X^T y. Needs more points than parameters. Singular
+means a null space: infinite equally good thetas.</p>
+<p class="rc-num">Key: closed form, cubic cost, needs invertibility</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l02-gd.svg" alt="Learning rate">
+<div class="rc-body">
+<strong>6. The learning rate is the step size</strong>
+<p>Too big diverges. Too small crawls. Schedules like cosine decay refine
+it. Model size and training time dominate tuning.</p>
+<p class="rc-num">Key: alpha; watch the loss curve</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l02-sgd.svg" alt="MFU">
+<div class="rc-body">
+<strong>7. Production cares about MFU</strong>
+<p>Model FLOPs utilization: fraction of GPU speed actually used. Batch
+size is chosen for hardware first. Gigawatt facilities must stay
+busy.</p>
+<p class="rc-num">Key: MFU = achieved / theoretical FLOPs</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l02-loss-chip.svg" alt="Look at your data">
+<div class="rc-body">
+<strong>8. Look at your data</strong>
+<p>Ames housing, real prices. Plot before modeling. Said twice because
+unseen data fails in ways no theorem predicts.</p>
+<p class="rc-num">Key: plot first, model second</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 2 video: setup and Ames data <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=658s" target="_blank" rel="noopener">10:58 <span class="ts">⏱10:58</span></a>, least squares <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=1455s" target="_blank" rel="noopener">24:15 <span class="ts">⏱24:15</span></a>, SGD <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=2640s" target="_blank" rel="noopener">44:00 <span class="ts">⏱44:00</span></a>, MFU <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=3842s" target="_blank" rel="noopener">64:02 <span class="ts">⏱64:02</span></a>, null space <a href="https://www.youtube.com/watch?v=cmNIMjPYdgM&amp;t=4560s" target="_blank" rel="noopener">76:00 <span class="ts">⏱76:00</span></a>.
+- CS229 Spring 2026 official course notes: linear regression chapter, matrix identities appendix.</p>
+<p><strong>Further reading:</strong>
+- De Cock (2011), &ldquo;Ames, Iowa: Alternative to the Boston Housing Data&rdquo;: the dataset paper.
+- Boyd and Vandenberghe, Convex Optimization, Chapter 4: least squares as the canonical convex problem.</p>
+<p><strong>Caveats from these sources.</strong> The Ames dataset is small and clean; real
+housing data is messier and the lecture&rsquo;s plots flatter it. MFU numbers
+are hardware and kernel dependent; compare only within one setup. The
+normal equations are numerically unstable via explicit inverse; libraries
+use QR or Cholesky. These are known limitations, not bugs.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336:</strong> the loss chip defined here is reused verbatim; language modeling swaps in cross-entropy but the minimize-a-scalar machinery is identical.</li>
+<li><strong>CS224N:</strong> word vectors are trained with SGD on the same update pattern: error times input.</li>
+<li><strong>CS329H:</strong> preference optimization replays the loss-design questions of this lecture with human judgments as labels.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Linear regression cheatsheet.</strong> Setup: h: X to Y, training pairs (x, y). Hypothesis: h = theta_0 + theta_1 x, parametric. Loss chip: J(theta) = (1/2) sum (h - y)^2; 1/2 is convention; squares for solvability, history, Gaussian noise. GD: theta := theta - alpha grad J; alpha is step size. SGD: minibatch, unbiased noise, shuffle per epoch. Normal equations: theta = (X^T X)^-1 X^T y; needs n &gt; d; singular gives null space. Production: MFU, batch size for hardware. Rule zero: look at your data.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Error times input.</strong> The gradient of the squared loss is (h - y) times x. Almost every update rule in this course has this shape. When you see a gradient, look for the error term first.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=cmNIMjPYdgM" target="_blank" rel="noopener">Lecture 2 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li><li><span class="src-tag">SUPPLEMENT</span><a href="https://jse.amstat.org/v19n3/decock.pdf" target="_blank" rel="noopener">Ames Housing dataset documentation</a></li></ul></section>
+      <nav class="pager"><a href="../cs229/l01-introduction.html"><span class="lbl">← Previous</span>Lecture 1: What Machine Learning Is</a><a href="../cs229/l03-logistic-regression.html"><span class="lbl">Next →</span>Lecture 3: Maximum Likelihood and Logistic Regression</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
