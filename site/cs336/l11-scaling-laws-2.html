@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lecture 11: Scaling Laws (Part 2) — Stanford Frontier AI</title>
+<meta name="description" content="Scaling in practice. MiniCPM and DeepSeek as two strategies for hyperparameters at scale. WSD learning rates, MoE scaling laws, the StepFun hyperparameter study">
+<link rel="stylesheet" href="assets/vendor/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="cs336-l11">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Home</h3><ul>
+<li><a href="index.html" data-page="foundations-home">Home</a></li>
+</ul>
+<h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="cs336/l01-overview-tokenization.html" data-page="cs336-l01">L01 · Overview, Tokenization</a></li>
+<li><a href="cs336/l02-pytorch-resource-accounting.html" data-page="cs336-l02">L02 · PyTorch, Resource Accounting</a></li>
+<li><a href="cs336/l03-architectures-hyperparameters.html" data-page="cs336-l03">L03 · Architectures, Hyperparameters</a></li>
+<li><a href="cs336/l04-attention-alternatives-moe.html" data-page="cs336-l04">L04 · Attention Alternatives, MoE</a></li>
+<li><a href="cs336/l05-gpus-tpus.html" data-page="cs336-l05">L05 · GPUs, TPUs</a></li>
+<li><a href="cs336/l06-kernels-triton-xla.html" data-page="cs336-l06">L06 · Kernels, Triton, XLA</a></li>
+<li><a href="cs336/l07-parallelism-1.html" data-page="cs336-l07">L07 · Parallelism I</a></li>
+<li><a href="cs336/l08-parallelism-2.html" data-page="cs336-l08">L08 · Parallelism II</a></li>
+<li><a href="cs336/l09-scaling-laws-1.html" data-page="cs336-l09">L09 · Scaling Laws I</a></li>
+<li><a href="cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="cs336/l11-scaling-laws-2.html" data-page="cs336-l11" class="active">L11 · Scaling Laws II</a></li>
+<li><a href="cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="cs336/l13-data-sources.html" data-page="cs336-l13">L13 · Data Sources</a></li>
+<li><a href="cs336/l14-data-processing.html" data-page="cs336-l14">L14 · Data Processing</a></li>
+<li><a href="cs336/l15-post-training-sft-rlhf.html" data-page="cs336-l15">L15 · SFT, RLHF</a></li>
+<li><a href="cs336/l16-post-training-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="cs336/l17-alignment-multimodality.html" data-page="cs336-l17">L17 · Alignment, Multimodality</a></li>
+<li><a href="cs336/l18-guest-dan-fu.html" data-page="cs336-l18">L18 · Guest: Dan Fu</a></li>
+<li><a href="cs336/labs-index.html" data-page="cs336-labs-index">CS336 · Labs</a></li>
+<li><a href="cs336/lab1-tokenizer-transformer.html" data-page="cs336-lab1">Lab 1 · Tokenizer, Transformer</a></li>
+<li><a href="cs336/lab2-systems.html" data-page="cs336-lab2">Lab 2 · Systems</a></li>
+<li><a href="cs336/lab3-scaling.html" data-page="cs336-lab3">Lab 3 · Scaling Laws</a></li>
+<li><a href="cs336/lab4-data.html" data-page="cs336-lab4">Lab 4 · Data</a></li>
+<li><a href="cs336/lab5-post-training.html" data-page="cs336-lab5">Lab 5 · Post-Training</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 11: Scaling Laws (Part 2)</nav>
+      <h1>Lecture 11: Scaling Laws (Part 2)</h1>
+      <p class="meta-line">2026-05-04 · Instructor: Tatsunori Hashimoto · 1:17:04 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/vTfEyOyzV9E" title="Stanford CS336 Spring 2026 Lecture 11: Scaling Laws (Part 2)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div><p class="video-cap">Original lecture. Timestamps link to exact moments.</p><h2 id="the-question">The question</h2>
+<p>Two lectures ago we covered the classical scaling canon: Kaplan, Hoffmann, Chinchilla, up to about 2022. Since then, fewer scaling papers have appeared, and most come from the Chinese open-source community. This lecture speed-runs from Chinchilla to Kimi K2, the most recent release with scaling details <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=121s" target="_blank" rel="noopener">00:02:01 <span class="ts">⏱00:02:01</span></a>.</p>
+<p>The practical question: when you scale up, which hyperparameters stay put and which drift? Initializations, learning rates, batch sizes, and optimizer behavior are all scale-sensitive. Get them wrong and you waste a training run. Two serious groups answered this question in opposite ways. MiniCPM tried to make hyperparameters scale-invariant. DeepSeek fit the drift and extrapolated it <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=5s" target="_blank" rel="noopener">00:00:05 <span class="ts">⏱00:00:05</span></a>.</p>
+<h2 id="minicpm-stabilize-with-p">MiniCPM: stabilize with μP</h2>
+<p>MiniCPM (2024) is a high-performance small language model from the Chinese open-source community. At release it was state of the art in the 1-2B bracket and competitive with many 7B models. What matters for this course is not the model but the scaling discipline: extensive small-scale computation plus μP (maximal update parametrization) to stabilize tuning <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=241s" target="_blank" rel="noopener">00:04:01 <span class="ts">⏱00:04:01</span></a>.</p>
+<p>The goal of μP: make the optimal learning rate the same as you scale up and down. MiniCPM&rsquo;s recipe <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=301s" target="_blank" rel="noopener">00:05:01 <span class="ts">⏱00:05:01</span></a>:</p>
+<table>
+<thead>
+<tr>
+<th>Knob</th>
+<th>Setting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Embedding output scale</td>
+<td>12</td>
+</tr>
+<tr>
+<td>Residual connections</td>
+<td>scale by sqrt of number of layers (1.4)</td>
+</tr>
+<tr>
+<td>Matrix tensor initialization</td>
+<td>by fan-in/fan-out ratio (init std 0.1)</td>
+</tr>
+<tr>
+<td>Learning rates</td>
+<td>per-tensor, not global (lr 0.01)</td>
+</tr>
+<tr>
+<td>LM head</td>
+<td>scaled</td>
+</tr>
+</tbody>
+</table>
+<p>The derivation of these settings comes later in the lecture. What matters first is that they work. Sweeping the learning rate across model sizes, every size reaches its minimum loss at about 1e-2. The optimum barely moves. That removes learning-rate tuning from the scaling problem <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=422s" target="_blank" rel="noopener">00:07:02 <span class="ts">⏱00:07:02</span></a>.</p>
+<p>The rest of the strategy: fix the aspect ratio, train a ladder of small models, and read off the sensitive parameters once. The ladder tops out about 5X below the final model. You nail the optimal batch size, the learning rate, and the token-to-size ratio on cheap models, then commit to one big run <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=360s" target="_blank" rel="noopener">00:06:00 <span class="ts">⏱00:06:00</span></a>.</p>
+<p>Learning rate is now stable, but batch size is not. Across 9M, 30M, and 170M models, the optimal batch size follows a power law against target loss, in the style of Kaplan&rsquo;s critical batch size analysis. Lower loss target, larger batch <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=540s" target="_blank" rel="noopener">00:09:00 <span class="ts">⏱00:09:00</span></a>.</p>
+<h2 id="wsd-learning-rates">WSD learning rates</h2>
+<p>Chinchilla-style analysis has an annoying cost. To vary the data-vs-model tradeoff at fixed FLOPs, you retrain from scratch every time, because cosine schedules need the terminal budget fixed in advance. You cannot resume a 4M-sequence run to make an 8M-sequence run. The fitting cost goes from n to roughly n² <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=601s" target="_blank" rel="noopener">00:10:01 <span class="ts">⏱00:10:01</span></a>.</p>
+<p>The MiniCPM solution is the warmup-stable-decay schedule: a trapezoid <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=661s" target="_blank" rel="noopener">00:11:01 <span class="ts">⏱00:11:01</span></a>.</p>
+<div class="mermaid">flowchart LR
+    W["Warmup<br>constant step count,<br>independent of horizon"] --> S["Stable<br>hold max LR for<br>most of training"]
+    S --> D["Decay<br>last 10-20%,<br>down to ~10% of max"]
+</div>
+<p>Because the stable phase holds a constant learning rate, you can restart from the last stable checkpoint and re-decay to any horizon. Sweeping the data dimension costs one long run plus cheap decays, not a pile of full retrains <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=721s" target="_blank" rel="noopener">00:12:01 <span class="ts">⏱00:12:01</span></a>.</p>
+<p>WSD curves look bad during the stable phase, then reclaim everything in the decay. They match or sometimes beat a well-tuned cosine. Anecdotally cosine is slightly better in many cases, but WSD is the versatile default. The striking lesson: the decay phase does most of the final annealing work. Learning-rate decay matters enormously <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=781s" target="_blank" rel="noopener">00:13:01 <span class="ts">⏱00:13:01</span></a>.</p>
+<p>Equipped with WSD, MiniCPM replicates Chinchilla methods 1 (lower envelope) and 3 (joint fit). The curves look clean. But the fitted exponents differ from Chinchilla&rsquo;s, and the authors claim they need far more tokens than Chinchilla prescribes. Tatsu is openly skeptical: it is unclear whether that claim is real or the fit is strange <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=901s" target="_blank" rel="noopener">00:15:01 <span class="ts">⏱00:15:01</span></a>.</p>
+<div class="callout"><span class="co-label">Caveat</span><p>Treat Chinchilla exponents as contingent, not universal. Different data, tokenizers, and architectures move them. Refit for your own setup or treat published numbers as starting points <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=901s" target="_blank" rel="noopener">00:15:01 <span class="ts">⏱00:15:01</span></a>.</p></div>
+<h2 id="deepseek-fit-the-drift">DeepSeek: fit the drift</h2>
+<p>The original DeepSeek LLM paper takes the opposite strategy. No μP, no invariance tricks. Instead, directly fit scaling laws for the optimal batch size and learning rate, then extrapolate <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=961s" target="_blank" rel="noopener">00:16:01 <span class="ts">⏱00:16:01</span></a>.</p>
+<p>The method: grid-search learning rate and batch size at several compute scales, mark each optimum (the stars on their heatmaps), and fit lines against non-embedding FLOPs. Higher compute gets larger batches and smaller learning rates. The batch-size fit looks clean. The learning-rate fit is visibly noisier, partly because a coarse grid quantizes the optima <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=1080s" target="_blank" rel="noopener">00:18:00 <span class="ts">⏱00:18:00</span></a>.</p>
+<p>DeepSeek also uses a WSD-style schedule, with an odd variation: two decay phases of 10% each instead of one. That variant never caught on. Their Chinchilla replication uses isoFLOPs and looks cleaner than MiniCPM&rsquo;s. The punchline of the paper: the fitted laws predict the final trained models&rsquo; losses well. Small curated runs plus a power law extrapolate to reality <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=1201s" target="_blank" rel="noopener">00:20:01 <span class="ts">⏱00:20:01</span></a>.</p>
+<div class="callout"><span class="co-label">Key idea</span><p>Two strategies for scale-sensitive hyperparameters. Stabilize them (MiniCPM, μP) or fit their drift (DeepSeek, scaling laws). Both are live options in 2026 <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=1321s" target="_blank" rel="noopener">00:22:01 <span class="ts">⏱00:22:01</span></a>.</p></div>
+<h2 id="recent-recipes-in-the-wild">Recent recipes in the wild</h2>
+<p>A fast tour of what open-source labs actually publish now <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=1380s" target="_blank" rel="noopener">00:23:00 <span class="ts">⏱00:23:00</span></a>:</p>
+<table>
+<thead>
+<tr>
+<th>Release</th>
+<th>Scaling work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qwen 2.5</td>
+<td>LR and batch scaling fits, extended to MoEs</td>
+</tr>
+<tr>
+<td>Qwen 3</td>
+<td>Reuses the Qwen 2.5 recipe verbatim</td>
+</tr>
+<tr>
+<td>Chinchilla 2</td>
+<td>MoE sparsity scaling. More sparsity wins per FLOP, with diminishing returns. They pick sparsity 48.</td>
+</tr>
+<tr>
+<td>Hunyuan</td>
+<td>MoE isoFLOPs. Lands on a 96:1 data-to-active-parameter ratio at fixed sparsity.</td>
+</tr>
+<tr>
+<td>Llama 3</td>
+<td>IsoFLOPs, roughly 39:1 ratio. Most interesting plot: log loss maps to downstream accuracy through a sigmoid, with systematic deviations from the curve.</td>
+</tr>
+<tr>
+<td>MiniMax-01</td>
+<td>Architecture scaling: lightning attention vs full softmax vs hybrid. All comparable, all need similar model sizes. This justifies shipping the hybrid.</td>
+</tr>
+</tbody>
+</table>
+<p>The trend: Chinchilla and LR scaling are now assumed knowledge. Papers show fewer details because everyone is presumed to know the machinery. That is exactly why the older MiniCPM and DeepSeek papers remain worth reading <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=1740s" target="_blank" rel="noopener">00:29:00 <span class="ts">⏱00:29:00</span></a>.</p>
+<div class="callout"><span class="co-label">Professor note</span><p>Asked how post-training changes all this, Tatsu says it is a big open question. There is no good integrated scaling analysis that includes post-training, because post-training can change what pretraining you should have done. The closest work studies pretraining coverage and diversity as predictors of post-training outcomes. Nascent <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=1800s" target="_blank" rel="noopener">00:30:00 <span class="ts">⏱00:30:00</span></a>.</p></div>
+<h2 id="stepfun-mapping-the-hyperparameter-space">StepFun: mapping the hyperparameter space</h2>
+<p>The most careful recent study of LR and batch scaling comes from StepFun, who burned serious compute gridding the space <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=1860s" target="_blank" rel="noopener">00:31:00 <span class="ts">⏱00:31:00</span></a>.</p>
+<p>First, the published formulas do not even agree on inputs. Kaplan&rsquo;s critical batch size is a function of terminal loss. DeepSeek&rsquo;s is a power law in compute. StepFun&rsquo;s is a function of data. Treat no single formula as gospel. Learn the phenomena instead <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=1922s" target="_blank" rel="noopener">00:32:02 <span class="ts">⏱00:32:02</span></a>.</p>
+<p>The design mirrors DeepSeek: train many models, grid learning rate against batch size, find minima. With a high-resolution grid they can draw clean contour plots. The key observation: each slice is convex and smooth. Minima are identifiable, and the hyperparameter space is not jagged <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=2040s" target="_blank" rel="noopener">00:34:00 <span class="ts">⏱00:34:00</span></a>.</p>
+<p>Findings <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=2100s" target="_blank" rel="noopener">00:35:00 <span class="ts">⏱00:35:00</span></a>:</p>
+<ul>
+<li><strong>Batch size depends only on data.</strong> Different model sizes land on the same trend line against total training data. Expect a power law in D.</li>
+<li><strong>Learning rate is two-sided.</strong> Bigger models want smaller LRs. More data wants higher LRs, which is counterintuitive. The data dependence is fragile: other work (InternLM, Zhou et al. 2026) argues it reverses under WSD schedules.</li>
+<li><strong>Learning rates are forgiving in practice.</strong> The 1e-3 to 1e-4 range is a good starting point for most setups.</li>
+<li><strong>Transfer is conditional.</strong> The laws transfer to MoEs when you control for active parameters. But shifting the training data shifts the optima, so every constant in these laws is data-contingent.</li>
+</ul>
+<p>Distilled: batch size scales roughly as the square root of data times a constant. Learning rate rises with batch size and data, falls with model size. Under Chinchilla scaling, where model and data grow together with compute, the net effect is learning rate falling with compute, matching the DeepSeek law with different exponents <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=2343s" target="_blank" rel="noopener">00:39:03 <span class="ts">⏱00:39:03</span></a>.</p>
+<div class="callout"><span class="co-label">Professor note</span><p>Should you just use published laws instead of gridding? Depends on your regime. Near the study&rsquo;s compute range, a published law beats a guess. For your own big run, minor differences in architecture, data, and weight decay mean you will likely redo the key sweeps. Scaling laws are science-flavored, but transfer is still vibes: you cannot know the settings match until you check <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=2400s" target="_blank" rel="noopener">00:40:00 <span class="ts">⏱00:40:00</span></a>.</p></div>
+<h2 id="optimizers-are-scale-dependent">Optimizers are scale-dependent</h2>
+<p>Optimizers deserve their own section because they are the most scale-sensitive choice of all. The nanoGPT speedrun, which inspired this course&rsquo;s Assignment 1, is the small-scale benchmark. On it, Muon beats Adam by a wide margin at the same wall-clock cost. The question is whether that survives scale-up <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=2522s" target="_blank" rel="noopener">00:42:02 <span class="ts">⏱00:42:02</span></a>.</p>
+<p>A large study by Kai Yu, Tengyu Ma, Percy Liang, and David Hall compares optimizers across scales with careful tuning. Lessons <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=2580s" target="_blank" rel="noopener">00:43:00 <span class="ts">⏱00:43:00</span></a>:</p>
+<ul>
+<li>Tuning confounds everything. A badly tuned Adam looks terrible next to a tuned challenger. Fixing Adam&rsquo;s learning rate erases the gap. Weight decay tuning does the same.</li>
+<li>Muon&rsquo;s advantage over Adam shrinks as compute grows. Adam is normalized to 1.0, and the challengers&rsquo; relative speedups decay along the compute axis.</li>
+<li>Always check two axes: compute, and the Chinchilla ratio (data per parameter). Some algorithms win in the over-parameterized regime and lose when data is plentiful. The ratio is a major confounder that most scaling studies ignore <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=2760s" target="_blank" rel="noopener">00:46:00 <span class="ts">⏱00:46:00</span></a>.</li>
+</ul>
+<p>Establishing scaling is itself hard. The Moraine project (Will Held, Percy&rsquo;s open training effort) published its failed runs: a beautiful scaling line held for orders of magnitude to 1e20 FLOPs, then blew up. The fix was more careful μP-style parametrization and optimizer changes. Good-looking trends can betray you without warning <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=2882s" target="_blank" rel="noopener">00:48:02 <span class="ts">⏱00:48:02</span></a>.</p>
+<div class="callout"><span class="co-label">Warning</span><p>A small-scale optimizer win means little until you check it along both axes. Tune the baseline ruthlessly first. Most reported gains die at that step <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=2641s" target="_blank" rel="noopener">00:44:01 <span class="ts">⏱00:44:01</span></a>.</p></div>
+<h2 id="muon">Muon</h2>
+<p>Muon starts from a simple observation: not all parameters are the same. Vector parameters (RMSNorm gains) differ from matrix parameters (attention, MLP). For matrices, you can look at the spectrum <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=3001s" target="_blank" rel="noopener">00:50:01 <span class="ts">⏱00:50:01</span></a>.</p>
+<p>The update: take the momentum buffer B_t, and orthogonalize it. Write the SVD as B_t = USV^T, set all singular values to 1, and use UV^T as the update. In practice nobody runs an SVD on GPUs. Newton-Schulz iteration (5 steps) approximates the orthogonalization using only matrix multiplications <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=3060s" target="_blank" rel="noopener">00:51:00 <span class="ts">⏱00:51:00</span></a>.</p>
+<p>Intuition: Adam divides by gradient magnitude per coordinate, so every coordinate ends up roughly the same size. Muon normalizes the spectral norm instead, so every direction ends up unit size. This only makes sense for matrices. So Muon handles matrix parameters and AdamW keeps the vectors <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=3120s" target="_blank" rel="noopener">00:52:00 <span class="ts">⏱00:52:00</span></a>.</p>
+<p>The story arc is instructive. Muon looked great on nanoGPT. Scaling studies then showed the gains fading. The story seemed closed. Then Kimi K2 shipped, trained entirely with Muon plus stability fixes, and it is an outstanding model. Muon works at scale. Whether it beats AdamW there is still unanswered, because Kimi K2 has no such ablation <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=3181s" target="_blank" rel="noopener">00:53:01 <span class="ts">⏱00:53:01</span></a>.</p>
+<p>On hyperparameters: Muon&rsquo;s differ from Adam&rsquo;s. Jeremy Bernstein&rsquo;s μP-style program pushes this to the limit, arguing every layer should get its own learning rate, even its own optimizer. In practice, grid the sensitive parameters (learning rate first), then do univariate sweeps for the rest like weight decay. You cannot grid the full joint space <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=3300s" target="_blank" rel="noopener">00:55:00 <span class="ts">⏱00:55:00</span></a>.</p>
+<h2 id="p-in-depth">μP in depth</h2>
+<p>Return to the stabilize strategy with the full derivation. The game: as width grows, keep the optimal learning rate fixed. The knobs: per-layer initializations, per-parameter learning rates, and residual scaling <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=3421s" target="_blank" rel="noopener">00:57:01 <span class="ts">⏱00:57:01</span></a>.</p>
+<p>Evidence it works at scale: Cerebras-GPT (0.1B to 13B, run by Hoffmann of Chinchilla fame at Cerebras) trained a μP variant alongside the standard recipe. The μP scaling fits were more stable, and the projected trends landed on the actual models. The standard parametrization fluctuated <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=3541s" target="_blank" rel="noopener">00:59:01 <span class="ts">⏱00:59:01</span></a>.</p>
+<p>For reading, Tatsu recommends Jeremy Bernstein&rsquo;s review paper as the accessible entry (&ldquo;μP for babies&rdquo;). Greg Yang&rsquo;s tensor program papers originated the theory but are inscrutable. Several physicists&rsquo; expositions also exist <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=3602s" target="_blank" rel="noopener">01:00:02 <span class="ts">⏱01:00:02</span></a>.</p>
+<p>The theory asserts two invariants as width n_l grows <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=3661s" target="_blank" rel="noopener">01:01:01 <span class="ts">⏱01:01:01</span></a>:</p>
+<ul>
+<li><strong>A1.</strong> Activations at initialization stay Θ(1).</li>
+<li><strong>A2.</strong> After one gradient step, the change in activations is Θ(1). This is feature learning. Neural tangent kernels do the opposite: their changes vanish with width, which is what you do not want.</li>
+</ul>
+<p><strong>Deriving A1.</strong> Take a deep linear network with Gaussian weights of variance σ². Matrix concentration gives the spectral norm as σ(√n_{l-1} + √n_l). In high dimensions the layer output norm is roughly the input norm times the operator norm. Solve for the σ that keeps every layer&rsquo;s activation norm at Θ(√n_l), by induction from the previous layer. The answer is the μP initialization <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=3780s" target="_blank" rel="noopener">01:03:00 <span class="ts">⏱01:03:00</span></a>.</p>
+<p><strong>Deriving A2.</strong> For SGD on one example, the weight update is rank one: ΔW_l = -η_l ∇<em>{h_l}ℓ · h</em>{l-1}^T. The activation change splits into three terms: the propagated activation change, the weight change applied to old activations, and their cross term. Demand each term be Θ(√n_l). That forces the operator norm of the update to be Θ(√(n_l/n_{l-1})) <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=3961s" target="_blank" rel="noopener">01:06:01 <span class="ts">⏱01:06:01</span></a>.</p>
+<p>One more assumption, the least palatable: the loss change per step is O(1), meaning the model makes appreciable progress at every scale. Taylor-expand the loss change, use the rank-one structure to rewrite it with Frobenius and operator norms, and solve for the learning rate: η_l = Θ(n_l/n_{l-1}) for SGD. For Adam the derivation shifts, giving η_l = Θ(1/n_{l-1}): layers with big fan-in get smaller learning rates <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=4200s" target="_blank" rel="noopener">01:10:00 <span class="ts">⏱01:10:00</span></a>.</p>
+<p>The recipe, against the standard parametrization <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=4260s" target="_blank" rel="noopener">01:11:00 <span class="ts">⏱01:11:00</span></a>:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>μP</th>
+<th>Standard</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Init stdev</td>
+<td>Θ(√(min(1, n_l/n_{l-1})) / √n_{l-1})</td>
+<td>1/√n_{l-1}</td>
+</tr>
+<tr>
+<td>LR (SGD)</td>
+<td>n_l/n_{l-1}</td>
+<td>Θ(1)</td>
+</tr>
+<tr>
+<td>LR (Adam)</td>
+<td>1/n_{l-1} (per-layer)</td>
+<td>Θ(1) (global)</td>
+</tr>
+</tbody>
+</table>
+<p>When fan-out equals fan-in, μP matches the standard init. The differences appear exactly where width changes.</p>
+<p>The general principle is the real takeaway: assert invariants at the scaling limit, add explicit assumptions, and read off the constraints on your hyperparameters. It is a different kind of math from typical CS theory, closer to physics <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=4322s" target="_blank" rel="noopener">01:12:02 <span class="ts">⏱01:12:02</span></a>.</p>
+<h2 id="stress-testing-p">Stress-testing μP</h2>
+<p>An independent researcher stress-tested μP across the deviations real models contain: SwiGLU, squared ReLU, RMSNorm, init variations, batch sizes. The headline MiniCPM result replicates in controlled settings, and per-component scalings (embeddings, attention, MLPs, softmax linears) transfer <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=4381s" target="_blank" rel="noopener">01:13:01 <span class="ts">⏱01:13:01</span></a>.</p>
+<p>What breaks it:</p>
+<ul>
+<li><strong>Learnable RMSNorm gains.</strong> Breaks μP, but the gains are removable with little performance loss.</li>
+<li><strong>Exotic sign-based optimizers like Lion.</strong> Spiritually similar to Muon, and they break the transfer.</li>
+<li><strong>Strong decoupled weight decay (0.1).</strong> The one significant failure in the stress test.</li>
+</ul>
+<p>So μP is useful but not settled: one real tool for controlling hyperparameter drift, alongside fitting scaling laws. An active research area, not a closed one <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=4500s" target="_blank" rel="noopener">01:15:00 <span class="ts">⏱01:15:00</span></a>.</p>
+<h2 id="recap-scaling-in-the-wild">Recap: scaling in the wild</h2>
+<p>The lecture&rsquo;s closing frame <a href="https://www.youtube.com/watch?v=vTfEyOyzV9E&amp;t=4560s" target="_blank" rel="noopener">01:16:00 <span class="ts">⏱01:16:00</span></a>:</p>
+<table>
+<thead>
+<tr>
+<th>Challenge</th>
+<th>Solutions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Setting architecture hyperparameters (width, etc.)</td>
+<td>Assume stability, or use μP</td>
+</tr>
+<tr>
+<td>Setting optimizer hyperparameters (LR, batch)</td>
+<td>Search small, keep fixed or extrapolate</td>
+</tr>
+<tr>
+<td>Cost of the big Chinchilla sweep</td>
+<td>WSD-style schedules that restart cheaply</td>
+</tr>
+</tbody>
+</table>
+<p>Scaling laws look like science: fit the line, extrapolate, know the future. In practice they are messier. People use them to pick architectures, optimizers, and hyperparameters, but extrapolation is an art with no silver bullet yet.</p>
+<div class="callout"><span class="co-label">Interview signal</span><p>Expect questions on μP (what problem it solves, the A1/A2 invariants, the per-layer LR rule for Adam), WSD schedules (why they beat cosine logistically), and batch-size scaling (depends on data, not model size). The Muon story is a good &ldquo;tell me about a recent optimizer&rdquo; answer: mechanism, small-scale win, scale-up controversy, Kimi K2 resolution.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=vTfEyOyzV9E" target="_blank" rel="noopener">Lecture 11 video, Stanford Online YouTube</a></li><li><span class="src-tag">SLIDES</span><a href="https://github.com/stanford-cs336/lectures" target="_blank" rel="noopener">Official lecture materials repository (stanford-cs336/lectures)</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-orig)</li></ul></section>
+      <nav class="pager"><a href="cs336/l10-inference.html"><span class="lbl">← Previous</span>Lecture 10: Inference</a><a href="cs336/l12-evaluation.html"><span class="lbl">Next →</span>Lecture 12: Evaluation</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="assets/vendor/katex.min.js"></script>
+<script src="assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "";</script>
+<script src="assets/app.js"></script>
+</body>
+</html>
