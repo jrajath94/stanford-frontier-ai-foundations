@@ -9,12 +9,13 @@ Private study repo. Reconstructed from official Stanford course material (latest
 - `build/` — the static site generator, templates, and design system.
 - `assignments/` — official CS336 assignment PDFs.
 - `cs336-site.zip` — the built site as a single zip.
+- `cs229-site.zip` — the built site as a single zip (includes both courses).
 
 ## Courses in this repo
 
 1. **CS336: Language Modeling from Scratch** (Spring 2026, Liang/Hashimoto) — complete. 18 lessons, 5 labs, 4 AI-generated figures, 29 diagrams.
-2. **CS229: Machine Learning** — next.
-3. **CS229S: Systems for Machine Learning** — queued.
+2. **CS229: Machine Learning** (Spring 2026, Ma/Re) — complete. 17 lessons, 3 labs, 2 AI-generated figures. Note: three playlist video titles are wrong (verified against transcripts); lessons are organized by actual content with the mislabels flagged.
+3. **CS229S: Systems for Machine Learning** — next.
 
 ## Source fidelity
 
