@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 17: Multimodality — Stanford Frontier AI</title>
+<meta name="description" content="Beyond text: the omni-model North Star, CLIP and SigLIP, LLaVA stitching, AnyRes, Qwen-VL generations, and Chameleon&#x27;s discrete-token alternative.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-l17" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17" class="active">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 17: Multimodality</nav>
+      <h1>Lecture 17: Multimodality</h1>
+      <p class="meta-line">2026-05-25 · Instructor: Percy Liang · 1:17:29 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="26FtD08ZpOU"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/26FtD08ZpOU" title="Stanford CS336 Spring 2026 Lecture 17: Multimodality" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=26FtD08ZpOU" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=26FtD08ZpOU" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Percy Liang on CLIP, VLMs, and the path to omni models.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>One lecture, one new world: images into and out of transformers.
+<strong>Level 1 (Core):</strong> the omni goal, CLIP, SigLIP, LLaVA. <strong>Level 2
+(Deep):</strong> AnyRes, Qwen generations, Chameleon, the state of play.</p>
+<h2 id="level-1-the-omni-model">Level 1: The omni model</h2>
+<p>The North Star: any combination of modalities in, any combination
+out. Image plus video in, answer plus generated image out
+<a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=65s" target="_blank" rel="noopener">01:05 <span class="ts">⏱01:05</span></a>. Transformers speak tokens, so the whole problem
+is tokenization: what is the image equivalent of BPE? A pixel is not
+a semantic unit, so the answer takes work <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=117s" target="_blank" rel="noopener">01:57 <span class="ts">⏱01:57</span></a>.</p>
+<figure><img alt="Omni" src="assets/l17-omni.svg"><figcaption>Anything in, anything out. Everything must become tokens.</figcaption></figure>
+<p>This lecture covers inputs. Generation gets its sketch at the end.</p>
+<h2 id="level-1-clip">Level 1: CLIP</h2>
+<p>CLIP (2021) is the foundation of modern vision-language models.
+Take N image-text pairs (N=32,000). Encode each side. The objective:
+image I1 must be closer to its text T1 than to every other text,
+and vice versa. That is 2N softmax classification problems
+<a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=353s" target="_blank" rel="noopener">05:53 <span class="ts">⏱05:53</span></a>.</p>
+<figure><img alt="CLIP" src="assets/l17-clip.svg"><figcaption>Contrastive image-text learning. Text supplies the semantics.</figcaption></figure>
+<p>The vision encoder that won: ViT-L/14, 14x14 patches with positional
+embeddings through a standard transformer, attention pooling at the
+end <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=761s" target="_blank" rel="noopener">12:41 <span class="ts">⏱12:41</span></a>. The text encoder: GPT-2 style, EOS activation
+as the sequence vector <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=984s" target="_blank" rel="noopener">16:24 <span class="ts">⏱16:24</span></a>. Data: 400M web image-text
+pairs, noisy by nature (captions rarely describe the image
+literally) <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=504s" target="_blank" rel="noopener">08:24 <span class="ts">⏱08:24</span></a>. Headline: zero-shot ImageNet beat a
+ResNet trained on 1.2M labeled images <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=1041s" target="_blank" rel="noopener">17:21 <span class="ts">⏱17:21</span></a>. Why text and
+not augmentation (SimCLR)? Augmentation cannot turn one dog into
+another dog. Text supplies high-level semantics <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=684s" target="_blank" rel="noopener">11:24 <span class="ts">⏱11:24</span></a>.</p>
+<h2 id="level-1-siglip">Level 1: SigLIP</h2>
+<p>CLIP needs huge batches because the loss is the batch: the softmax
+runs over all N. SigLIP replaces it with binary classification:
+diagonal pairs positive, off-diagonals negative, sigmoid loss
+<a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=1417s" target="_blank" rel="noopener">23:37 <span class="ts">⏱23:37</span></a>.</p>
+<figure><img alt="SigLIP" src="assets/l17-siglip.svg"><figcaption>Binary loss, decoupled batches, chunked parallelism.</figcaption></figure>
+<p>The loss is now the same in expectation at any batch size, so small
+batches work (CLIP degrades) and 32K is the effective ceiling
+<a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=1658s" target="_blank" rel="noopener">27:38 <span class="ts">⏱27:38</span></a>. Systems win: devices compute local losses and
+rotate text embeddings to cover off-diagonal blocks, like DDP with
+interactions <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=1717s" target="_blank" rel="noopener">28:37 <span class="ts">⏱28:37</span></a>. Result: 5 days on 32 TPUv4 versus
+CLIP&rsquo;s 10 days on 256 TPUv3 <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=1533s" target="_blank" rel="noopener">25:33 <span class="ts">⏱25:33</span></a>.</p>
+<h2 id="level-1-llava">Level 1: LLaVA</h2>
+<p>The VLM template: take a vision encoder (CLIP), take an LLM
+(Vicuna), stitch them with a projector, train in stages
+<a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=1738s" target="_blank" rel="noopener">28:58 <span class="ts">⏱28:58</span></a>.</p>
+<figure><img alt="LLaVA" src="assets/l17-llava.svg"><figcaption>CLIP plus a projector plus Vicuna. Align, then fine-tune.</figcaption></figure>
+<p>Image through CLIP, through matrix W into text-embedding space,
+concatenated with text tokens through the transformer. Training:
+stage 1 freezes everything and trains only W (alignment). Stage 2
+freezes the vision encoder and trains W plus the LM
+<a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=2004s" target="_blank" rel="noopener">33:24 <span class="ts">⏱33:24</span></a>. Data: 158k GPT-4-synthesized conversations from
+COCO captions <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=1867s" target="_blank" rel="noopener">31:07 <span class="ts">⏱31:07</span></a>.</p>
+<div class="qa"><div class="q">Why not train the vision encoder and language model jointly from scratch?</div><div class="a"><p>Because you would throw away two excellent pre-trained components. CLIP already knows image semantics. The LLM already knows language and reasoning. The stitching approach (projector plus staged training) reuses both and needs only 158k examples to get visual reasoning working. Joint training from scratch would need billions of image-text pairs and enormous compute to relearn what each side already knows. The tradeoff: the vision encoder stays frozen and classification-flavored (CLIP was built for ImageNet), so fine-grained abilities like OCR need extra machinery (AnyRes) or encoder fine-tuning (Qwen&rsquo;s later choice).
+A mapping from CLIP&rsquo;s embedding space into the LLM&rsquo;s token embedding space. After stage 1, an image encoding should &ldquo;look like&rdquo; a sequence of token embeddings to the transformer: same dimensionality, same rough distribution. It is alignment, not understanding: the understanding was already in CLIP and in the LLM. The projector just introduces them.</p><div class="followup"><strong>Follow-up:</strong> What does the projector actually learn?</div></div></div>
+<h2 id="level-2-anyres-and-onevision">Level 2: AnyRes and OneVision</h2>
+<p>CLIP&rsquo;s 336x336 resize-and-crop cannot read documents. AnyRes splits
+the image into encoder-sized crops, encodes each, and concatenates,
+plus one downsampled overview <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=2256s" target="_blank" rel="noopener">37:36 <span class="ts">⏱37:36</span></a>. Adaptive: big images
+get more crops, videos get fewer tokens per frame (up to 32 frames)
+<a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=2409s" target="_blank" rel="noopener">40:09 <span class="ts">⏱40:09</span></a>.</p>
+<figure><img alt="AnyRes" src="assets/l17-anyres.svg"><figcaption>Crop, do not downsample. Modalities transfer.</figcaption></figure>
+<p>LLaVA OneVision (2024): SigLIP encoder, Qwen-2 decoder, 2-layer MLP
+projector, three training stages <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=2125s" target="_blank" rel="noopener">35:25 <span class="ts">⏱35:25</span></a>. The surprise:
+cross-modal transfer. Single-image OCR data plus multi-image
+relational data generalize to two-image table-plus-chart questions
+and video visual prompting, neither seen in training
+<a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=2610s" target="_blank" rel="noopener">43:30 <span class="ts">⏱43:30</span></a>.</p>
+<h2 id="level-2-qwen-vl-generations">Level 2: Qwen-VL generations</h2>
+<figure><img alt="Qwen" src="assets/l17-qwen.svg"><figcaption>Qwen-VL to Qwen3-VL: dynamic resolution, better positions, deeper fusion.</figcaption></figure>
+<p>Qwen-VL: OpenCLIP, cross-attention adapter to 256 tokens, three
+stages with 1.4B examples in stage 1, bounding-box outputs
+<a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=2766s" target="_blank" rel="noopener">46:06 <span class="ts">⏱46:06</span></a>. Qwen2-VL: dynamic resolution (11k tokens for a
+big image, 8 for a tiny equation), 2x2 token compression, M-RoPE:
+RoPE over height, width, and time concatenated <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=2956s" target="_blank" rel="noopener">49:16 <span class="ts">⏱49:16</span></a>.
+Qwen3-VL: SigLIP-2, interleaved M-RoPE frequencies (every axis sees
+high and low frequencies), explicit timestamp tokens, sqrt-length
+normalized loss so video does not dominate, and DeepStack: vision
+layers fused directly into the LM residual stream <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=3170s" target="_blank" rel="noopener">52:50 <span class="ts">⏱52:50</span></a>.
+Context to 256K for long video. Training runs 8K to 32K to 256K.</p>
+<h2 id="level-2-chameleon">Level 2: Chameleon</h2>
+<p>The elegant alternative: make everything discrete tokens. VQ-VAE
+maps a 512x512 image to 1,024 tokens from an 8,000-code codebook.
+Then it is just language-model training, no adapter <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=4038s" target="_blank" rel="noopener">67:18 <span class="ts">⏱67:18</span></a>.
+Interleaved text and images, true omni-style generation.</p>
+<figure><img alt="Chameleon" src="assets/l17-chameleon.svg"><figcaption>One token space for everything. Entropy fights back.</figcaption></figure>
+<p>The problems: image tokens are high-entropy (which exact blue?),
+so parameter norms grow and training destabilizes. QK-norm and
+z-loss mitigate <a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=4331s" target="_blank" rel="noopener">72:11 <span class="ts">⏱72:11</span></a>. Discretization loses fine detail,
+so OCR suffers. Diffusion later won generation. VQ-VAE faded
+<a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=4468s" target="_blank" rel="noopener">74:28 <span class="ts">⏱74:28</span></a>.</p>
+<h2 id="level-2-the-state-of-play">Level 2: The state of play</h2>
+<p>Frontier models are natively multimodal, details undisclosed. The
+best guess: continuous encoders for understanding (no information
+loss), diffusion for generation (micro-optimized detail)
+<a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=4483s" target="_blank" rel="noopener">74:43 <span class="ts">⏱74:43</span></a>. Persistent challenges: no universal encoder
+(classification wants semantics, OCR wants pixels), modality
+weighting (video is low-density, do not let it drown text), and
+systems (video loading alone can bottleneck training)
+<a href="https://www.youtube.com/watch?v=26FtD08ZpOU&amp;t=3676s" target="_blank" rel="noopener">61:16 <span class="ts">⏱61:16</span></a>.</p>
+<figure><img alt="Summary" src="assets/l17-multimodal-summary.svg"><figcaption>Encode continuously, generate with diffusion, weight carefully.</figcaption></figure>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/l17-omni.svg" alt="Omni">
+<div class="rc-body">
+<strong>1. The omni goal</strong>
+<p>Any modality in, any out. Transformers speak tokens: images must
+become tokens first.</p>
+<p class="rc-num">Key: tokenize everything</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l17-clip.svg" alt="CLIP">
+<div class="rc-body">
+<strong>2. CLIP</strong>
+<p>2N-way contrastive on 400M pairs. ViT-L/14. Zero-shot ImageNet
+beat supervised ResNet.</p>
+<p class="rc-num">Key: text gives semantics</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l17-siglip.svg" alt="SigLIP">
+<div class="rc-body">
+<strong>3. SigLIP</strong>
+<p>Binary sigmoid loss. Batch decoupled. Chunked rotation. 5 days
+vs 10 days.</p>
+<p class="rc-num">Key: simpler and parallel</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l17-llava.svg" alt="LLaVA">
+<div class="rc-body">
+<strong>4. LLaVA</strong>
+<p>CLIP plus projector plus Vicuna. Align W, then fine-tune.
+158k synthesized conversations.</p>
+<p class="rc-num">Key: stitch, do not rebuild</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l17-anyres.svg" alt="AnyRes">
+<div class="rc-body">
+<strong>5. AnyRes</strong>
+<p>Crop instead of downsample. Overview plus detail crops.
+Modalities transfer.</p>
+<p class="rc-num">Key: resolution matters</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l17-qwen.svg" alt="Qwen">
+<div class="rc-body">
+<strong>6. Qwen-VL lineage</strong>
+<p>Dynamic resolution, M-RoPE, interleaved frequencies,
+timestamps, DeepStack fusion.</p>
+<p class="rc-num">Key: sharper pieces</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l17-chameleon.svg" alt="Chameleon">
+<div class="rc-body">
+<strong>7. Chameleon</strong>
+<p>Everything discrete via VQ-VAE. Elegant, unstable,
+detail-losing. Diffusion won generation.</p>
+<p class="rc-num">Key: entropy fights back</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l17-multimodal-summary.svg" alt="Summary">
+<div class="rc-body">
+<strong>8. State of play</strong>
+<p>Continuous encode, diffusion generate. Weight modalities.
+No universal encoder.</p>
+<p class="rc-num">Key: match encoder to task</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 17 video.
+- CLIP, SigLIP, LLaVA, LLaVA-OneVision, Qwen-VL series, Chameleon papers.</p>
+<p><strong>Further reading:</strong>
+- LAION-5B / OpenCLIP (open replication).
+- VQ-VAE (Oord 2017). DeepStack adapter paper.
+- AI2&rsquo;s VLM report (data details the lecture skipped).</p>
+<p><strong>Caveats from these sources.</strong> Frontier omni models are
+undisclosed. The &ldquo;continuous plus diffusion&rdquo; picture is the
+lecturer&rsquo;s speculation, flagged as such. Compute comparisons
+(TPUv3 vs v4) are not flops-normalized. Chameleon results were not
+shown in lecture.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 Lecture 1:</strong> tokenization generalized beyond text.</li>
+<li><strong>CS336 Lecture 3:</strong> RoPE generalized to M-RoPE.</li>
+<li><strong>CS224N:</strong> vision-language models from the NLP side.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Multimodality cheatsheet.</strong> Omni: any in, any out. Tokenize everything. CLIP: 2N contrastive, 400M pairs, ViT-L/14, zero-shot beats ResNet. Text gives semantics. SigLIP: binary loss, batch decoupled, chunked rotation, 5 vs 10 days. LLaVA: CLIP + W + Vicuna, align then fine-tune, 158k synthetic. Projector = space alignment. AnyRes: crops not downsampling, overview + details, modality transfer. Qwen-VL: cross-attention, 1.4B stage 1. Qwen2: dynamic res, 2x2 compression, M-RoPE. Qwen3: SigLIP-2, interleaved frequencies, timestamps, sqrt loss, DeepStack, 256K context. Chameleon: VQ-VAE discrete, 1024 tokens per image, unstable (entropy), loses detail. State: continuous encode, diffusion generate, weight modalities.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Stitch, do not rebuild.</strong> Reuse encoders and LLMs. The projector aligns spaces. Resolution and weighting decide quality.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=26FtD08ZpOU" target="_blank" rel="noopener">Lecture 17 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li></ul></section>
+      <nav class="pager"><a href="../cs336/l16-rlvr.html"><span class="lbl">← Previous</span>Lecture 16: RLVR</a><a href="../cs336/l18-inference.html"><span class="lbl">Next →</span>Lecture 18: Serving Inference</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
