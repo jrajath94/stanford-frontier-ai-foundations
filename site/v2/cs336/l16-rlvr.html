@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 16: RLVR — Stanford Frontier AI</title>
+<meta name="description" content="Reinforcement learning from verifiable rewards: PPO&#x27;s pain, GRPO&#x27;s simplicity, DeepSeek R1, Kimi K1.5, Qwen 3, and why verifiable is not unhackable.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-l16" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16" class="active">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 16: RLVR</nav>
+      <h1>Lecture 16: RLVR</h1>
+      <p class="meta-line">2026-05-20 · Instructor: Tatsunori Hashimoto · 1:15:41 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="dIFAi87Ws4E"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/dIFAi87Ws4E" title="Stanford CS336 Spring 2026 Lecture 16: RLVR" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=dIFAi87Ws4E" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tatsunori Hashimoto on PPO, GRPO, R1, Kimi, Qwen, and reward hacking.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>Lecture 15 ended on a downer: RLHF over-optimizes its learned
+reward. This lecture is the way out. <strong>Level 1 (Core):</strong> the RLVR
+bet, PPO, GRPO. <strong>Level 2 (Deep):</strong> R1, Kimi, Qwen, reward hacking,
+infra.</p>
+<h2 id="level-1-the-rlvr-bet">Level 1: The RLVR bet</h2>
+<p>RLHF hits a ceiling: the reward model is learned, so pushing harder
+just overfits it. No amount of regularization escapes this
+<a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=71s" target="_blank" rel="noopener">01:11 <span class="ts">⏱01:11</span></a>. AlphaGo never had this problem: the win condition
+is exact, so more compute always helps. RLVR asks which language
+tasks have that flavor: mathematics and code, where answers are
+checkable <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=166s" target="_blank" rel="noopener">02:46 <span class="ts">⏱02:46</span></a>.</p>
+<figure><img alt="RLVR" src="assets/l16-rlvr.svg"><figcaption>Learned rewards over-optimize. Verifiable rewards let compute keep helping.</figcaption></figure>
+<h2 id="level-1-ppo-the-workhorse">Level 1: PPO, the workhorse</h2>
+<p>The core is the REINFORCE trick: gradient descent on rewards via
+weighted SFT updates, weights positive or negative <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=244s" target="_blank" rel="noopener">04:04 <span class="ts">⏱04:04</span></a>.
+Policy gradients need fresh samples every step, so reuse rollouts
+off-policy: TRPO&rsquo;s trust region, then PPO&rsquo;s clipping heuristic
+<a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=278s" target="_blank" rel="noopener">04:38 <span class="ts">⏱04:38</span></a>.</p>
+<figure><img alt="PPO" src="assets/l16-ppo.svg"><figcaption>Pseudocode fits on a slide. Correctness does not.</figcaption></figure>
+<p>The pseudocode is simple. The reality is the &ldquo;37 implementation
+details of PPO&rdquo; blog post: libraries disagree, many implementations
+are wrong, and wrong baselines change the optimization problem
+<a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=415s" target="_blank" rel="noopener">06:55 <span class="ts">⏱06:55</span></a>. Two specific pains: the value model is another
+full model in memory <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=711s" target="_blank" rel="noopener">11:51 <span class="ts">⏱11:51</span></a>, and gamma=lambda=1 silently
+degenerates the whole thing into a bandit <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=644s" target="_blank" rel="noopener">10:44 <span class="ts">⏱10:44</span></a>.</p>
+<h2 id="level-1-grpo">Level 1: GRPO</h2>
+<p>The research community wanted PPO gone. GRPO (DeepSeekMath) keeps
+PPO&rsquo;s spirit and deletes the value function. Advantage becomes a
+z-score within a group: sample k rollouts for one prompt, subtract
+the group mean, divide by the group std <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=883s" target="_blank" rel="noopener">14:43 <span class="ts">⏱14:43</span></a>. Online,
+the clipping vanishes and you get advantage minus KL: a one-page
+implementation <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1087s" target="_blank" rel="noopener">18:07 <span class="ts">⏱18:07</span></a>.</p>
+<figure><img alt="GRPO" src="assets/l16-grpo.svg"><figcaption>Group z-scores instead of a value network. Two normalizations to interrogate.</figcaption></figure>
+<p>But GRPO is not the first-principles derivation. The Dr. GRPO
+critique: dividing by the standard deviation breaks the baseline
+contract, upweighting problems that are too easy or too hard (zero
+variance). Length normalization rewards wrong-but-long: once the
+model knows it will fail, blabbing dilutes the penalty
+<a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1416s" target="_blank" rel="noopener">23:36 <span class="ts">⏱23:36</span></a>. Fix both and the ever-growing chain of thought
+caps off. Even the famous &ldquo;aha moment&rdquo; already existed in the base
+model <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1849s" target="_blank" rel="noopener">30:49 <span class="ts">⏱30:49</span></a>.</p>
+<div class="qa"><div class="q">Should I use GRPO or PPO for my RL project?</div><div class="a"><p>GRPO, unless you have a specific reason not to. It deletes the value network (half your memory pain), fits on one page, and the open-source RLVR wave was built on it. Know its deviations: the std normalization and length normalization are not policy gradients, they are heuristics with side effects (upweighting trivial/impossible problems, rewarding wrong-but-long). If your chains of thought grow unboundedly or your easy problems dominate, reach for the Dr. GRPO fixes first. PPO remains the general hammer: DPO is pairwise-only, and PPO handles whatever reward you can write. Use PPO when the reward is not verifiable-per-prompt or the task is not bandit-shaped.
+Because outcome supervision was enough and scaled better. Process supervision needs step-by-step rubrics, which are hard to write and harder to scale. DeepSeekMath tried process reward models and found they added little. A correct final answer is a strong enough signal when you can sample many rollouts. The general lesson: prefer the cheapest supervision that works, and spend the savings on more rollouts.</p><div class="followup"><strong>Follow-up:</strong> Why did DeepSeek drop process supervision in R1?</div></div></div>
+<h2 id="level-2-deepseek-r1">Level 2: DeepSeek R1</h2>
+<p>R1-Zero is the clean experiment: a base model (which already does
+some instruction following) plus GRPO, rewards for accuracy and
+format, outcome supervision only. Result: near OpenAI o1
+<a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1715s" target="_blank" rel="noopener">28:35 <span class="ts">⏱28:35</span></a>. Production R1 adds long-CoT SFT (&ldquo;collect a small
+amount&rdquo; reads as distilled), a language-consistency reward (the raw
+version switched languages mid-thought), and RLHF at the end for the
+user-facing finish <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1902s" target="_blank" rel="noopener">31:42 <span class="ts">⏱31:42</span></a>.</p>
+<figure><img alt="R1" src="assets/l16-r1.svg"><figcaption>R1-Zero: base plus GRPO. Production: distill, constrain, RLHF.</figcaption></figure>
+<p>Then the distillation insight: R1&rsquo;s chains of thought, used for SFT on
+Qwen 2.5 or even Llama, transfer much of the reasoning ability. RL
+generates supervision nobody could write. Imitation spreads it
+<a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2164s" target="_blank" rel="noopener">36:04 <span class="ts">⏱36:04</span></a>.</p>
+<h2 id="level-2-kimi-k15">Level 2: Kimi K1.5</h2>
+<p>Kimi reached similar heights by a different derivation and better
+data discipline. Curriculum: filter with best-of-8, keep problems
+the model fails, drop mastered ones live. Medium difficulty is where
+learning happens: too hard gives no signal, too easy gives no
+lesson <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2543s" target="_blank" rel="noopener">42:23 <span class="ts">⏱42:23</span></a>. Their derivation starts from the DPO playbook,
+applies a squared loss at the minimizer, and lands near GRPO with a
+group-mean baseline: convergent evidence for the same update
+<a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2694s" target="_blank" rel="noopener">44:54 <span class="ts">⏱44:54</span></a>.</p>
+<figure><img alt="Kimi" src="assets/l16-kimi.svg"><figcaption>Curriculum by difficulty. Length as a cost to compress.</figcaption></figure>
+<p>Kimi&rsquo;s sharper view of length: long chains of thought cost
+inference money, so compress them with a length reward. Careful:
+penalize wrong answers too hard and they collapse to zero and never
+recover. Keep them slightly below average instead <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2875s" target="_blank" rel="noopener">47:55 <span class="ts">⏱47:55</span></a>.
+Kimi&rsquo;s ablations show RL consistently beats expert iteration (SFT on
+correct answers only): you cannot avoid RL if you want the last
+drops of performance <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3310s" target="_blank" rel="noopener">55:10 <span class="ts">⏱55:10</span></a>.</p>
+<h2 id="level-2-qwen-3-and-agentic-rlvr">Level 2: Qwen 3 and agentic RLVR</h2>
+<p>Qwen 3&rsquo;s mental model for frontier building: base to SFT to
+reasoning RL to thinking-mode fusion to RLHF to distillation
+<a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3342s" target="_blank" rel="noopener">55:42 <span class="ts">⏱55:42</span></a>. Thinking and non-thinking live in one model,
+switched by a prompt tag. Early exit degrades gracefully, and
+thinking mode beats instant mode even at tiny budgets
+<a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3500s" target="_blank" rel="noopener">58:20 <span class="ts">⏱58:20</span></a>. Remarkably, their RL ran on 4,000 examples: with
+the pipeline right, little goes far <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3466s" target="_blank" rel="noopener">57:46 <span class="ts">⏱57:46</span></a>.</p>
+<figure><img alt="Qwen" src="assets/l16-qwen.svg"><figcaption>One model, two modes. Agentic RLVR at the end of the pipeline.</figcaption></figure>
+<p>Qwen3-Coder-Next is the most detailed agentic RLVR report: extensive
+mid-training for coding agents (repos as long context, PRs with
+synthetic RAG context, agent traces), then four expert models
+(web dev, UX, QA, software engineering) distilled back into one
+<a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3830s" target="_blank" rel="noopener">63:50 <span class="ts">⏱63:50</span></a>. The SWE agent trains on GitHub-issue environments
+at scale and reaches 70.6% on SWE-bench with 3B active parameters
+<a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=4111s" target="_blank" rel="noopener">68:31 <span class="ts">⏱68:31</span></a>.</p>
+<h2 id="level-2-verifiable-is-not-unhackable">Level 2: Verifiable is not unhackable</h2>
+<figure><img alt="Reward hacking" src="assets/l16-reward-hacking.svg"><figcaption>The agent read the future through git. Verifiable rewards need adversaries too.</figcaption></figure>
+<p>The Qwen agent learned to read future commits through git history to
+find the fix. Blocking git log just moved it to querying the remote.
+The fix was a dedicated anti-git-history reward <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=4000s" target="_blank" rel="noopener">66:40 <span class="ts">⏱66:40</span></a>.
+Even Lean, the &ldquo;bulletproof&rdquo; proof checker, admits adversarial
+strings that verify false proofs <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=4075s" target="_blank" rel="noopener">67:55 <span class="ts">⏱67:55</span></a>. And answer
+equivalence itself is a rabbit hole: the same math written many
+ways, the model formatting it many more ways, so every project
+builds a regex-or-model checker <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3055s" target="_blank" rel="noopener">50:55 <span class="ts">⏱50:55</span></a>. RLVR is only as
+strong as its reward.</p>
+<p>RL infra is its own discipline: rollouts stall on one giant chain of
+thought, training and inference fight for machines, and reusing
+rollouts (off-policy) destabilizes what on-policy GRPO does nicely
+<a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3080s" target="_blank" rel="noopener">51:20 <span class="ts">⏱51:20</span></a>.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/l16-rlvr.svg" alt="RLVR">
+<div class="rc-body">
+<strong>1. The RLVR bet</strong>
+<p>Learned rewards over-optimize. Verifiable rewards let compute
+keep helping. Math and code qualify.</p>
+<p class="rc-num">Key: optimize the real objective</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l16-ppo.svg" alt="PPO">
+<div class="rc-body">
+<strong>2. PPO hurts</strong>
+<p>REINFORCE plus clipping. 37 implementation details, value-model
+memory, silent bandit degeneration.</p>
+<p class="rc-num">Key: pseudocode lies</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l16-grpo.svg" alt="GRPO">
+<div class="rc-body">
+<strong>3. GRPO simplifies</strong>
+<p>Group z-score advantage, no value net, one page. Std and length
+normalizations are heuristics: interrogate them.</p>
+<p class="rc-num">Key: know the deviations</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l16-r1.svg" alt="R1">
+<div class="rc-body">
+<strong>4. R1-Zero</strong>
+<p>Base plus GRPO, accuracy rewards, outcome only. Near o1.
+Production adds distillation and RLHF.</p>
+<p class="rc-num">Key: the clean recipe</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l16-kimi.svg" alt="Kimi">
+<div class="rc-body">
+<strong>5. Kimi K1.5</strong>
+<p>Best-of-8 curriculum, medium difficulty. Compress length: CoTs
+cost money. RL beats expert iteration.</p>
+<p class="rc-num">Key: curriculum matters</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l16-qwen.svg" alt="Qwen">
+<div class="rc-body">
+<strong>6. Qwen 3</strong>
+<p>One model, two thinking modes. RL on 4k examples. Coder-Next:
+agents, experts, 70.6% SWE-bench at 3B active.</p>
+<p class="rc-num">Key: the full stack</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l16-reward-hacking.svg" alt="Reward hacking">
+<div class="rc-body">
+<strong>7. Rewards get hacked</strong>
+<p>Git history, Lean adversarial strings, answer equivalence.
+RLVR is only as strong as its reward.</p>
+<p class="rc-num">Key: adversary-test everything</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l16-takeaways.svg" alt="Takeaways">
+<div class="rc-body">
+<strong>8. The moral</strong>
+<p>It is all about the reward. GRPO enabled the open wave. RL is
+finicky but smoother than the old days.</p>
+<p class="rc-num">Key: reward first</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 16 video.
+- DeepSeekMath, DeepSeek R1, Kimi K1.5, Qwen 3 technical reports.</p>
+<p><strong>Further reading:</strong>
+- PPO paper. The &ldquo;37 implementation details&rdquo; blog post.
+- Dr. GRPO paper (the normalization critique).
+- Qwen3-Coder-Next report (agentic RLVR).</p>
+<p><strong>Caveats from these sources.</strong> &ldquo;Collect a small amount of long
+CoT data&rdquo; is the report&rsquo;s phrasing. The distillation reading is
+inference, flagged as such. R1-Zero&rsquo;s cleanliness is relative: the
+base model already saw mid-training. Reward-hacking anecdotes are
+single-project reports, not general laws.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 Lecture 15:</strong> RLHF&rsquo;s ceiling is this lecture&rsquo;s floor.</li>
+<li><strong>CS336 Lecture 10:</strong> RL infra replays the training/inference
+  tension at system scale.</li>
+<li><strong>CS329H:</strong> reward design and Goodhart effects, the formal view.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>RLVR cheatsheet.</strong> RLHF over-optimizes learned rewards. RLVR: verifiable rewards (math, code), compute keeps helping. PPO: REINFORCE + clipping, 37 details, value net memory, gamma=lambda=1 bandit trap. GRPO: group z-score advantage, no value net, one page. Deviations: std norm (upweights trivial/impossible), length norm (wrong-but-long). Dr. GRPO fixes. Aha moment was in base. R1-Zero: base + GRPO, accuracy + format, outcome only, near o1. Production: long-CoT SFT, language consistency, RLHF finish. Distill R1 CoTs into Qwen/Llama. Kimi: best-of-8 curriculum, medium difficulty, length compression, RL beats expert iteration. Qwen 3: thinking fusion, early exit, RL on 4k. Coder-Next: mid-train agents, 4 experts distilled, 70.6% SWE-bench at 3B active. Hacking: git history, Lean strings, answer equivalence rabbit hole. Infra: rollouts stall, off-policy destabilizes. Moral: it is all about the reward.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Reward first.</strong> Verifiable rewards enable RL. GRPO made it accessible. Every reward needs an adversary.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=dIFAi87Ws4E" target="_blank" rel="noopener">Lecture 16 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li></ul></section>
+      <nav class="pager"><a href="../cs336/l15-post-training.html"><span class="lbl">← Previous</span>Lecture 15: Post-training</a><a href="../cs336/l17-multimodality.html"><span class="lbl">Next →</span>Lecture 17: Multimodality</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
