@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 7: Neural Networks, Architecture — Stanford Frontier AI</title>
+<meta name="description" content="The loss vocabulary, ReLU from first principles, neurons, MLPs, the activation zoo, and residual connections.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229-l07" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07" class="active">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229: Machine Learning</a> / Lecture 7: Neural Networks, Architecture</nav>
+      <h1>Lecture 7: Neural Networks, Architecture</h1>
+      <p class="meta-line">2026-04-27 · Instructor: Tengyu Ma · 1:20:21 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="fRM41w9jzQo"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/fRM41w9jzQo" title="Lecture 7: Neural Networks 1 (Architecture)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=fRM41w9jzQo" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=fRM41w9jzQo" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tengyu Ma builds neural networks from the neuron up: activations, MLPs, residuals.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> contains what you need to
+understand everything that follows in CS229 and the courses that build on
+it. <strong>Level 2 (Deep)</strong> contains what you need for correct, interview-grade
+understanding. Read Level 1 straight through. Return to Level 2 when you
+want depth.</p>
+<p>No prerequisites are assumed. Every term is defined at first use. GLMs
+were the linear ceiling in <a href="l04-glms-softmax.html">lecture 4</a>; this lecture
+breaks through it.</p>
+<h2 id="level-1-one-word-for-three-words">Level 1: One word for three words</h2>
+<p>Error and loss and cost are the same <a href="https://www.youtube.com/watch?v=fRM41w9jzQo&amp;t=547s" target="_blank" rel="noopener">09:07 <span class="ts">⏱09:07</span></a>. The field uses all
+three for the scalar that training minimizes. The loss chip from lecture
+2 is the canonical picture. From here on, the lesson says loss.</p>
+<h2 id="level-1-the-neuron">Level 1: The neuron</h2>
+<p>A <strong>neuron</strong> takes numbers in, mixes them linearly, then bends the
+result. In symbols: a = sigma(w . x + b). The vector w holds the
+<strong>weights</strong>, b is the <strong>bias</strong> (a single number, unrelated to the bias of
+lecture 6; the field overloaded the word). Sigma is the <strong>activation
+function</strong>: the bend.</p>
+<figure><img alt="One neuron" src="assets/svg/l07-neuron.svg"><figcaption>Linear mix w.x + b, then bend with sigma. Original plate.</figcaption></figure>
+<p>Without sigma, a stack of neurons is still one linear map. Matrices
+compose into a matrix. The bend is the entire source of nonlinearity, and
+nonlinearity is the entire point. GLMs were linear in x. Neurons are not.</p>
+<h2 id="level-1-relu-from-first-principles">Level 1: ReLU from first principles</h2>
+<p>The lecture derives the activation from scratch instead of asserting it.
+Requirements: nonlinear, cheap to compute, friendly to gradients. The
+answer is <strong>ReLU</strong>, the rectified linear unit <a href="https://www.youtube.com/watch?v=fRM41w9jzQo&amp;t=2366s" target="_blank" rel="noopener">39:26 <span class="ts">⏱39:26</span></a>:</p>
+<p>ReLU(z) = max(0, z)</p>
+<p>Flat zero for negative inputs, the identity for positive ones. Its
+derivative is 1 for z &gt; 0 and 0 for z &lt; 0: no shrinkage on the active
+side. Compare the sigmoid, whose derivative peaks at 0.25 and multiplies
+toward zero across layers. That shrinkage is the <strong>vanishing gradient</strong>
+problem, and ReLU sidesteps it wherever the neuron is active.</p>
+<figure><img alt="Activation functions" src="assets/figs-notes/notes-activation-functions.png"><figcaption>The activation zoo from the Stanford notes: sigmoid, tanh, ReLU and variants. Source: Stanford notes.</figcaption></figure>
+<p>The zoo has more animals: tanh, leaky ReLU, GELU, Swish. Each keeps the
+same contract: bend the line, keep gradients alive. Modern transformers
+use GELU or Swish variants. The lecture&rsquo;s message is not which animal to
+pick. It is why the cage exists: linear compositions stay linear, so
+every layer needs a bend.</p>
+<div class="qa"><div class="q">Why is ReLU the default activation?</div><div class="a"><p>Three reasons. It is nonlinear, so networks can bend. It is cheap: a max and a comparison. Its derivative is 1 on the active side, so gradients pass through unchanged instead of shrinking like the sigmoid&rsquo;s 0.25 maximum. Dead neurons (stuck at zero) are the known failure mode, addressed by leaky variants.
+The sigmoid saturates: large inputs give outputs near 0 or 1 with near-zero derivative. In a deep stack, those tiny derivatives multiply across layers and the gradient vanishes. Training stalls. ReLU&rsquo;s active side never saturates, so deep stacks keep learning.</p><div class="followup"><strong>Follow-up:</strong> Why not just use the sigmoid everywhere like the old days?</div></div></div>
+<h2 id="level-1-the-mlp">Level 1: The MLP</h2>
+<p>Stack neurons in <strong>layers</strong>. Every neuron in one layer reads every neuron
+in the previous layer. That is a <strong>multilayer perceptron</strong> (MLP), also
+called a fully connected network.</p>
+<figure><img alt="MLP" src="assets/svg/l07-mlp.svg"><figcaption>Layers of neurons, each seeing all of the previous layer. Original plate.</figcaption></figure>
+<p>Notation: layer l computes u^l = sigma(W^l u^(l-1) + b^l). The superscript
+is the layer index, not a power. W^l is the weight matrix, b^l the bias
+vector. The first layer sees the input x. The last layer feeds the loss.</p>
+<p>Two facts make MLPs worth studying. First, <strong>universal approximation</strong>:
+with enough hidden neurons, an MLP can approximate any continuous
+function on a bounded region. The theorem says the capacity exists. It
+does not say gradient descent will find it. Second, depth beats width in
+practice: deep stacks of simple layers learn hierarchical features that
+shallow wide ones miss.</p>
+<div class="qa"><div class="q">What does universal approximation actually guarantee?</div><div class="a"><p>Existence, not learnability. It says some setting of the weights approximates the target function. It does not say gradient descent finds those weights, or how many neurons you need, or that the found solution generalizes. Interviewers use it as a trap: quoting the theorem as a reason MLPs always work is wrong. Capacity is not training.
+Depth composes features hierarchically: edges from pixels, parts from edges, objects from parts. A shallow wide network must learn each complex pattern directly. Depth reuses intermediate patterns, which is exponentially more parameter efficient for structured data. Practice and theory both favor depth.</p><div class="followup"><strong>Follow-up:</strong> Why go deep instead of wide?</div></div></div>
+<h2 id="level-1-residual-connections">Level 1: Residual connections</h2>
+<p>Very deep stacks hit a wall: adding layers stops helping, then hurts,
+even on training data. The problem is not overfitting. The optimizer
+cannot push identity-like transformations through many bent layers.</p>
+<p>The fix is the <strong>residual block</strong> (ResNet, 2015) <a href="https://www.youtube.com/watch?v=fRM41w9jzQo&amp;t=3930s" target="_blank" rel="noopener">65:30 <span class="ts">⏱65:30</span></a>.
+Instead of learning the full map, each block learns the change:</p>
+<p>output = x + F(x)</p>
+<figure><img alt="Residual block" src="assets/svg/l07-residual.svg"><figcaption>Learn the change F(x), add the input back. Deep stacks train. Original plate.</figcaption></figure>
+<p>The <strong>skip connection</strong> carries x past the block untouched. If the block
+is useless, the network sets F(x) to zero and keeps x: depth becomes
+harmless. Gradients flow back through the skip untouched, which cures the
+vanishing that killed plain deep stacks. ResNets made 100+ layer vision
+models trainable. Transformers use the same trick around every
+sub-layer, as lecture 14 shows.</p>
+<div class="qa"><div class="q">Why do skip connections help training?</div><div class="a"><p>Two reasons. Forward: the block only needs to learn the residual change, and learning near-zero is easy when the layer should be near-identity. Backward: the gradient has a direct path through the skip that no activation can shrink. Both effects compound with depth. Without skips, deep stacks degrade even on training data.
+Yes, and the argument is simple. A residual network can simulate a plain network by setting skips to carry what the plain layers need. The skip only adds representational options. It never removes any.</p><div class="followup"><strong>Follow-up:</strong> Is a residual block still a universal approximator?</div></div></div>
+<h2 id="level-2-counting-parameters">Level 2: Counting parameters</h2>
+<p>A layer from d_in to d_out has d_in * d_out weights plus d_out biases.
+An MLP with layers 784 -&gt; 256 -&gt; 128 -&gt; 10 holds about 235,000
+parameters. The count matters twice. It sets the memory footprint, and
+it sets the cost of the forward and backward passes, which lecture 8
+proves are both linear in it.</p>
+<p>Width and depth trade differently. Doubling width quadruples the
+matrix. Doubling depth doubles the parameter count but doubles the
+sequential steps. Hardware prefers wide parallel math; optimization
+prefers deep composition. Architecture search lives in this tension.</p>
+<h2 id="level-2-what-the-lecture-deliberately-skips">Level 2: What the lecture deliberately skips</h2>
+<p>Initialization, normalization placement, and the optimizer details are
+deferred. The lecture notes that where you start matters for non-convex
+models, unlike least squares. Proper initialization keeps activations
+and gradients at stable scales across layers. The full treatment belongs
+with the training lecture arc, not the architecture tour. Do not mistake
+the omission for unimportance: bad initialization breaks everything built
+here.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<p>Eight ideas carry this lecture. Read each card. Say the core sentence out
+loud. If you can, you own the lesson.</p>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/svg/l07-neuron.svg" alt="One neuron">
+<div class="rc-body">
+<strong>1. Loss, error, cost: one word</strong>
+<p>Three names for the minimized scalar. The course says loss. The chip
+from lecture 2 is the picture.</p>
+<p class="rc-num">Key: loss = error = cost</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l07-neuron.svg" alt="One neuron">
+<div class="rc-body">
+<strong>2. A neuron mixes, then bends</strong>
+<p>a = sigma(w.x + b). Weights w, bias b, activation sigma. Without the
+bend, stacks stay linear. The bend is the point.</p>
+<p class="rc-num">Key: linear part, then sigma</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/figs-notes/notes-activation-functions.png" alt="Activation functions, Stanford notes">
+<div class="rc-body">
+<strong>3. ReLU: max(0, z)</strong>
+<p>Nonlinear, cheap, derivative 1 when active. Sidesteps the sigmoid's
+vanishing gradients. The default bend.</p>
+<p class="rc-num">Key: max(0,z); grad 1 or 0</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/figs-notes/notes-activation-functions.png" alt="Activation zoo, Stanford notes">
+<div class="rc-body">
+<strong>4. The activation zoo</strong>
+<p>Tanh, leaky ReLU, GELU, Swish: same contract, different curves.
+Transformers use GELU/Swish variants. Pick by gradient behavior.</p>
+<p class="rc-num">Key: bend the line, keep gradients alive</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l07-mlp.svg" alt="MLP">
+<div class="rc-body">
+<strong>5. MLPs stack fully connected layers</strong>
+<p>Every neuron sees every previous neuron. Universal approximation
+promises capacity, not trainability. Depth beats width in
+practice.</p>
+<p class="rc-num">Key: u^l = sigma(W^l u^(l-1) + b^l)</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l07-residual.svg" alt="Residual block">
+<div class="rc-body">
+<strong>6. Residual: learn the change</strong>
+<p>Output = x + F(x). Skip carries x untouched. Useless blocks learn
+zero. Gradients flow back unshrunk. ResNet 2015.</p>
+<p class="rc-num">Key: x + F(x)</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l07-mlp.svg" alt="Parameter counting">
+<div class="rc-body">
+<strong>7. Count the parameters</strong>
+<p>Layer d_in to d_out: d_in*d_out weights + d_out biases. 784-256-128-10
+is ~235K. Count sets memory and compute.</p>
+<p class="rc-num">Key: width quadruples, depth doubles</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l07-neuron.svg" alt="Vanishing gradients">
+<div class="rc-body">
+<strong>8. Vanishing gradients kill deep stacks</strong>
+<p>Sigmoid derivatives peak at 0.25 and multiply toward zero. ReLU and
+skips keep gradients alive. Architecture is gradient plumbing.</p>
+<p class="rc-num">Key: derivatives multiply across layers</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 7 video: loss vocabulary <a href="https://www.youtube.com/watch?v=fRM41w9jzQo&amp;t=547s" target="_blank" rel="noopener">09:07 <span class="ts">⏱09:07</span></a>, ReLU <a href="https://www.youtube.com/watch?v=fRM41w9jzQo&amp;t=2366s" target="_blank" rel="noopener">39:26 <span class="ts">⏱39:26</span></a>, residual networks <a href="https://www.youtube.com/watch?v=fRM41w9jzQo&amp;t=3930s" target="_blank" rel="noopener">65:30 <span class="ts">⏱65:30</span></a>.
+- CS229 Spring 2026 official course notes: neural network chapter; the activation figure above is from it.</p>
+<p><strong>Further reading:</strong>
+- He et al. (2015), &ldquo;Deep Residual Learning for Image Recognition&rdquo;: the ResNet paper.
+- Cybenko (1989): the original universal approximation theorem.</p>
+<p><strong>Caveats from these sources.</strong> Universal approximation says nothing
+about learnability or generalization; do not cite it as a guarantee.
+ReLU&rsquo;s dead-neuron problem is real: large gradients can push neurons
+into permanent zero. The notes&rsquo; activation figure shows curves, not the
+gradient pathologies that motivate the choices.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336:</strong> every transformer block is an MLP with GELU/Swish plus residual skips; this lecture is its anatomy.</li>
+<li><strong>CS224N:</strong> word vectors feed MLPs for classification; the architecture pattern transfers directly.</li>
+<li><strong>CS329H:</strong> residual connections are the reason 100-layer policy networks can train at all.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Neural network architecture cheatsheet.</strong> Loss = error = cost. Neuron: a = sigma(w.x + b); bend is the point. ReLU = max(0,z); derivative 1 active, 0 dead; cures sigmoid&rsquo;s vanishing (max derivative 0.25). Zoo: tanh, leaky ReLU, GELU, Swish. MLP: u^l = sigma(W^l u^(l-1)+b^l); universal approximation = capacity, not training; depth beats width. Residual: x + F(x); skip carries gradient; ResNet 2015. Params: d_in*d_out + d_out per layer.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Bend every layer.</strong> A stack without activations is one linear map wearing a costume. The activation is the only nonlinearity. Everything deep learning can do that GLMs cannot lives in those bends.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=fRM41w9jzQo" target="_blank" rel="noopener">Lecture 7 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <nav class="pager"><a href="../cs229/l06-bias-variance.html"><span class="lbl">← Previous</span>Lecture 6: Bias, Variance, and Picking Models</a><a href="../cs229/l08-backpropagation.html"><span class="lbl">Next →</span>Lecture 8: Neural Networks, Backpropagation</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
