@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 3: Maximum Likelihood and Logistic Regression — Stanford Frontier AI</title>
+<meta name="description" content="MLE as the bedrock framework, Gaussian noise recovering least squares, the sigmoid, and Newton&#x27;s method becoming weighted least squares.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229-l03" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03" class="active">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229: Machine Learning</a> / Lecture 3: Maximum Likelihood and Logistic Regression</nav>
+      <h1>Lecture 3: Maximum Likelihood and Logistic Regression</h1>
+      <p class="meta-line">2026-04-13 · Instructor: Chris Ré · 1:02:06 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="uJF_gL3jhxI"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/uJF_gL3jhxI" title="Lecture 3: Weighted Least Squares" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=uJF_gL3jhxI" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=uJF_gL3jhxI" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Chris Ré builds the MLE framework, derives logistic regression, and shows Newton's method is iteratively reweighted least squares.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> contains what you need to
+understand everything that follows in CS229 and the courses that build on
+it. <strong>Level 2 (Deep)</strong> contains what you need for correct, interview-grade
+understanding. Read Level 1 straight through. Return to Level 2 when you
+want depth.</p>
+<p>No prerequisites are assumed. Every term is defined at first use. Loss
+functions were defined in <a href="l02-linear-regression.html">lecture 2</a>; the loss
+chip is reused, not re-explained.</p>
+<h2 id="level-1-maximum-likelihood-the-bedrock">Level 1: Maximum likelihood, the bedrock</h2>
+<p>Last lecture picked the squared loss by hand. This lecture derives it. The
+framework is <strong>maximum likelihood estimation</strong> (MLE). Chris Ré calls it
+the bedrock <a href="https://www.youtube.com/watch?v=uJF_gL3jhxI&amp;t=164s" target="_blank" rel="noopener">02:44 <span class="ts">⏱02:44</span></a>. The recipe: write a probabilistic story of
+how the data was generated, then choose the parameters that make the
+observed data most probable.</p>
+<p><strong>Likelihood</strong> L(theta) is the probability the model assigns to the actual
+training data. For independent examples, independence means product: the
+joint probability is the product of the per-example probabilities
+<a href="https://www.youtube.com/watch?v=uJF_gL3jhxI&amp;t=1511s" target="_blank" rel="noopener">25:11 <span class="ts">⏱25:11</span></a>, <a href="https://www.youtube.com/watch?v=uJF_gL3jhxI&amp;t=1560s" target="_blank" rel="noopener">26:00 <span class="ts">⏱26:00</span></a>. <strong>Log likelihood</strong> takes the log of
+that product. Logs turn products into sums, which are stable and easy to
+differentiate <a href="https://www.youtube.com/watch?v=uJF_gL3jhxI&amp;t=1659s" target="_blank" rel="noopener">27:39 <span class="ts">⏱27:39</span></a>. &ldquo;We love logarithms.&rdquo; Maximizing the log
+likelihood is the same as maximizing the likelihood, because log is
+monotone.</p>
+<p>The payoff is immediate. Assume the truth is linear plus Gaussian noise:
+y = theta^T x + epsilon, with epsilon drawn from a normal distribution.
+Write the likelihood, take the log, and maximize. The result is exactly
+least squares <a href="https://www.youtube.com/watch?v=uJF_gL3jhxI&amp;t=178s" target="_blank" rel="noopener">02:58 <span class="ts">⏱02:58</span></a>. The loss from lecture 2 was not a guess.
+It is what MLE produces under Gaussian noise.</p>
+<figure><img alt="MLE recovers least squares" src="assets/svg/l03-mle.svg"><figcaption>Model y = theta^T x + noise. Likelihood = product. Max log-likelihood = least squares. Original plate.</figcaption></figure>
+<div class="qa"><div class="q">What is maximum likelihood estimation?</div><div class="a"><p>Pick the parameters that make the observed data most probable. Write p(data; theta), take the log to turn the product into a sum, and maximize. It generalizes across continuous and discrete outputs and underlies modern AI training. The lecture calls it the bedrock because so many losses are MLE in disguise.
+Three reasons. Products of many small probabilities underflow to zero in floating point. Sums differentiate term by term. And log is monotone, so the maximizer is unchanged. You lose nothing and gain stability.</p><div class="followup"><strong>Follow-up:</strong> Why take the log instead of maximizing the product directly?</div></div></div>
+<h2 id="level-1-from-regression-to-classification">Level 1: From regression to classification</h2>
+<p>Regression predicts numbers. <strong>Classification</strong> predicts categories: spam
+or not, cat or dog. Fitting a line to category labels is crazy. A line
+predicts 7 or -40 for a 0-or-1 label, and then you need outside code to
+round the nonsense back into classes.</p>
+<p>Keep the linear score theta^T x, but pass it through a <strong>link function</strong>
+g that squeezes it into (0, 1). Requirements: monotone and smooth. A step
+function would give the right shape but it is not differentiable
+<a href="https://www.youtube.com/watch?v=uJF_gL3jhxI&amp;t=2361s" target="_blank" rel="noopener">39:21 <span class="ts">⏱39:21</span></a>, so gradient methods die on it. The smooth choice is the
+<strong>sigmoid</strong>:</p>
+<p>g(z) = 1 / (1 + e^(-z))</p>
+<figure><img alt="The sigmoid" src="assets/svg/l03-sigmoid.svg"><figcaption>S-shaped curve from 0 to 1. Predict 1 when theta^T x &gt;= 0. Original plate.</figcaption></figure>
+<p><strong>Logistic regression</strong> sets h_theta(x) = g(theta^T x) and reads the
+output as a probability: P(y=1 | x) <a href="https://www.youtube.com/watch?v=uJF_gL3jhxI&amp;t=2346s" target="_blank" rel="noopener">39:06 <span class="ts">⏱39:06</span></a>. Height is
+confidence. The model never says exactly 1; it says 0.999. Predict class
+1 when h &gt;= 0.5, which happens exactly when theta^T x &gt;= 0. The quantity
+theta^T x also has a name: <strong>logits</strong>, the raw scores before squashing.
+You will meet logits again in every neural network.</p>
+<p>The name is a historical accident. Logistic regression is classification,
+not regression. Remember that when an interviewer asks why it is called
+regression. The answer is history, not mathematics.</p>
+<div class="qa"><div class="q">Why not just fit a line and round the output for classification?</div><div class="a"><p>A line extrapolates past 0 and 1, so its outputs are not probabilities and cannot be trusted as confidences. Rounding needs an arbitrary threshold with no probabilistic meaning. The sigmoid keeps every output in (0, 1) with a clean reading: the height is P(y=1|x). You get decisions and calibrated confidence from one model.
+Everywhere. Chris Ré: logistic regression is the last layer of every model you have interacted with <a href="https://www.youtube.com/watch?v=uJF_gL3jhxI&amp;t=82s" target="_blank" rel="noopener">01:22 <span class="ts">⏱01:22</span></a>. ChatGPT&rsquo;s final layer is a softmax, which is logistic regression generalized to many classes. Lecture 4 proves that connection.</p><div class="followup"><strong>Follow-up:</strong> Where does logistic regression appear in modern models?</div></div></div>
+<h2 id="level-1-fitting-it-with-newton">Level 1: Fitting it with Newton</h2>
+<p>The log likelihood for logistic regression has no closed form. Two
+optimizers are on the table. <strong>Gradient ascent</strong> steps uphill on the log
+likelihood (ascent because we maximize now) <a href="https://www.youtube.com/watch?v=uJF_gL3jhxI&amp;t=2656s" target="_blank" rel="noopener">44:16 <span class="ts">⏱44:16</span></a>. <strong>Newton&rsquo;s
+method</strong> is faster and needs no step size.</p>
+<p>Newton&rsquo;s idea: approximate the function locally by its tangent line, then
+jump to where the tangent hits zero. In one dimension, theta := theta -
+f(theta)/f&rsquo;(theta). In many dimensions, division becomes inversion of the
+<strong>Hessian</strong>, the matrix of second derivatives. No alpha. The method reads
+the curvature and tells you exactly how far to go.</p>
+<figure><img alt="Newton vs gradient descent" src="assets/svg/l03-newton.svg"><figcaption>GD takes many small steps. Newton reads curvature and jumps. No step size. Original plate.</figcaption></figure>
+<p>Applied to the logistic log likelihood, Newton&rsquo;s method has a beautiful
+identity: each Newton step solves a <strong>weighted least squares</strong> problem.
+That is <strong>iteratively reweighted least squares</strong> (IRLS), and it is why
+the video is titled &ldquo;Weighted Least Squares.&rdquo; The weights change every
+iteration, emphasizing the examples the model currently gets wrong.</p>
+<div class="qa"><div class="q">Newton or gradient descent: which do you pick?</div><div class="a"><p>Newton converges quadratically once close: correct digits roughly double per step. But each step inverts the Hessian, which costs cubic time in the number of parameters. Small parameter counts: Newton wins. Millions of parameters: gradient methods win, because you cannot afford the Hessian. That tradeoff decides the optimizer for every model in this course.
+The second-order Taylor approximation already encodes how far to step. The curvature tells the method the distance to the bottom of the local quadratic. Gradient descent only knows the slope, so it needs alpha to guess the distance.</p><div class="followup"><strong>Follow-up:</strong> Why does Newton&#x27;s method need no learning rate?</div></div></div>
+<h2 id="level-2-the-probabilistic-story-carefully">Level 2: The probabilistic story, carefully</h2>
+<p>MLE has three moving parts. The <strong>forward model</strong> p(y | x; theta) says how
+data is generated given parameters. The <strong>iid assumption</strong> says examples
+are independent and identically distributed, which justifies the product.
+The <strong>estimator</strong> argmax_theta log L(theta) picks the winner.</p>
+<p>Each part can fail. If the forward model is wrong, MLE converges to the
+wrong answer confidently. If examples are not independent, the product
+overcounts evidence. If the likelihood has many local maxima, the
+optimizer may not find the global one. Lecture 2&rsquo;s SGD assumptions were a
+special case of this: the training set must reflect the world, and
+minibatches must reflect the training set.</p>
+<p>For logistic regression the forward model is the <strong>Bernoulli</strong>
+distribution: y is 1 with probability h_theta(x), 0 otherwise. The log
+likelihood becomes a sum over examples of y log h + (1-y) log (1-h).
+Negate it and you get the <strong>cross-entropy</strong> loss, derived properly in
+lecture 4. The loss chip from lecture 2 gets a new formula. Same chip,
+new contents.</p>
+<h2 id="level-2-why-the-sigmoid-and-not-something-else">Level 2: Why the sigmoid and not something else</h2>
+<p>The sigmoid is not arbitrary. It is the canonical link for binary
+outcomes, and lecture 4 shows it falls out of the exponential family
+automatically. For now, the lecture&rsquo;s justification is pragmatic:
+monotone, smooth, maps the real line to (0, 1), differentiable everywhere
+with a derivative that is easy to compute: g&rsquo;(z) = g(z)(1 - g(z)).</p>
+<p>That derivative matters. In backpropagation (lecture 8), every sigmoid in
+the network contributes this factor. Its maximum is 0.25, at z = 0.
+Products of many such factors shrink toward zero in deep networks. That
+shrinkage has a name, the vanishing gradient problem, and it is one
+reason lecture 7 prefers ReLU. The seed is planted here.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<p>Eight ideas carry this lecture. Read each card. Say the core sentence out
+loud. If you can, you own the lesson.</p>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/svg/l03-mle.svg" alt="MLE recovers least squares">
+<div class="rc-body">
+<strong>1. MLE is the bedrock</strong>
+<p>Write p(data; theta), take the log, maximize. Products become sums.
+Log is monotone, so the maximizer is unchanged. Generalizes across
+output types.</p>
+<p class="rc-num">Key: argmax log L(theta)</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l03-mle.svg" alt="Gaussian noise gives least squares">
+<div class="rc-body">
+<strong>2. Gaussian noise gives least squares</strong>
+<p>Assume y = theta^T x plus normal noise. MLE recovers exactly the
+squared loss of lecture 2. The loss was derived, not guessed.</p>
+<p class="rc-num">Key: Gaussian + MLE = squares</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l03-sigmoid.svg" alt="The sigmoid">
+<div class="rc-body">
+<strong>3. Classification needs a link function</strong>
+<p>Keep theta^T x, squash with g. Monotone and smooth. A step function is
+not differentiable, so gradients die on it.</p>
+<p class="rc-num">Key: squash (0,1), stay smooth</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l03-sigmoid.svg" alt="Logistic regression">
+<div class="rc-body">
+<strong>4. Logistic regression outputs probabilities</strong>
+<p>h = 1/(1+e^(-theta^T x)) = P(y=1|x). Predict 1 when theta^T x >= 0.
+The name is history. The last layer of every model you use.</p>
+<p class="rc-num">Key: height = confidence</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l03-newton.svg" alt="Newton vs GD">
+<div class="rc-body">
+<strong>5. Newton reads curvature</strong>
+<p>Theta := theta - f/f'. No step size. Quadratic convergence near the
+answer. Each step inverts the Hessian: cubic cost.</p>
+<p class="rc-num">Key: fast, needs the Hessian</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l03-newton.svg" alt="IRLS">
+<div class="rc-body">
+<strong>6. Newton on logistic loss is IRLS</strong>
+<p>Each Newton step solves a weighted least squares problem. Weights
+update each round, emphasizing current mistakes. Hence the video
+title.</p>
+<p class="rc-num">Key: iteratively reweighted least squares</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l03-mle.svg" alt="IID means product">
+<div class="rc-body">
+<strong>7. Independence means product</strong>
+<p>IID justifies multiplying per-example probabilities. Logs turn the
+product into a sum. Break independence and you overcount evidence.</p>
+<p class="rc-num">Key: iid -> product -> log -> sum</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l03-sigmoid.svg" alt="Logits">
+<div class="rc-body">
+<strong>8. Logits are the raw scores</strong>
+<p>Theta^T x before the sigmoid. Every neural network ends in logits.
+Sigmoid derivative g(1-g) peaks at 0.25: the seed of vanishing
+gradients.</p>
+<p class="rc-num">Key: logits in, probabilities out</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 3 video: MLE bedrock <a href="https://www.youtube.com/watch?v=uJF_gL3jhxI&amp;t=164s" target="_blank" rel="noopener">02:44 <span class="ts">⏱02:44</span></a>, product from independence <a href="https://www.youtube.com/watch?v=uJF_gL3jhxI&amp;t=1511s" target="_blank" rel="noopener">25:11 <span class="ts">⏱25:11</span></a>, sigmoid <a href="https://www.youtube.com/watch?v=uJF_gL3jhxI&amp;t=2346s" target="_blank" rel="noopener">39:06 <span class="ts">⏱39:06</span></a>, Newton <a href="https://www.youtube.com/watch?v=uJF_gL3jhxI&amp;t=116s" target="_blank" rel="noopener">01:56 <span class="ts">⏱01:56</span></a>.
+- CS229 Spring 2026 official course notes: the MLE and logistic regression chapters.</p>
+<p><strong>Further reading:</strong>
+- Murphy, Probabilistic Machine Learning: An Introduction, Chapter 2: MLE with worked Bernoulli and Gaussian examples.
+- Nelder and Wedderburn (1972): the original generalized linear models paper, for the historical arc into lecture 4.</p>
+<p><strong>Caveats from these sources.</strong> Newton&rsquo;s method can diverge far from the
+optimum; practical implementations add line search or trust regions. IRLS
+weights can blow up on perfectly separable data; that is a feature (the
+likelihood is unbounded) that needs regularization, covered in lecture 6.
+The &ldquo;last layer of every model&rdquo; claim is about the functional form, not a
+claim that every deployment literally runs logistic regression code.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336:</strong> the cross-entropy loss of language modeling is the multiclass MLE derived here; logits and softmax carry over unchanged.</li>
+<li><strong>CS224N:</strong> binary sentiment classifiers are logistic regression on word features.</li>
+<li><strong>CS329H:</strong> Bradley-Terry preference models are logistic regression on pairs.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>MLE and logistic regression cheatsheet.</strong> MLE: argmax log L(theta); iid gives product; log gives sum. Gaussian noise + MLE = least squares. Classification: keep theta^T x, squash with sigmoid g(z) = 1/(1+e^-z); h = P(y=1|x); predict 1 iff theta^T x &gt;= 0. Logits = raw scores. Fit: gradient ascent or Newton; Newton = IRLS = weighted least squares per step; no step size; cubic cost per step. Name is historical: it classifies.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Bedrock.</strong> Whenever a loss looks arbitrary, ask what probabilistic story makes it MLE. Squared loss is Gaussian noise. Cross-entropy is Bernoulli noise. The story tells you when the loss is the right one.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=uJF_gL3jhxI" target="_blank" rel="noopener">Lecture 3 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <nav class="pager"><a href="../cs229/l02-linear-regression.html"><span class="lbl">← Previous</span>Lecture 2: Supervised Learning and Linear Regression</a><a href="../cs229/l04-glms-softmax.html"><span class="lbl">Next →</span>Lecture 4: The Exponential Family and Generalized Linear Models</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
