@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lecture 1: Overview, Tokenization — Stanford Frontier AI</title>
+<meta name="description" content="Course philosophy and the full language-model pipeline. Then tokenization from first principles: character, byte, word, and BPE tokenizers, with working code.">
+<link rel="stylesheet" href="assets/vendor/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="cs336-l01">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Home</h3><ul>
+<li><a href="index.html" data-page="foundations-home">Home</a></li>
+</ul>
+<h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="cs336/l01-overview-tokenization.html" data-page="cs336-l01" class="active">L01 · Overview, Tokenization</a></li>
+<li><a href="cs336/l02-pytorch-resource-accounting.html" data-page="cs336-l02">L02 · PyTorch, Resource Accounting</a></li>
+<li><a href="cs336/l03-architectures-hyperparameters.html" data-page="cs336-l03">L03 · Architectures, Hyperparameters</a></li>
+<li><a href="cs336/l04-attention-alternatives-moe.html" data-page="cs336-l04">L04 · Attention Alternatives, MoE</a></li>
+<li><a href="cs336/l05-gpus-tpus.html" data-page="cs336-l05">L05 · GPUs, TPUs</a></li>
+<li><a href="cs336/l06-kernels-triton-xla.html" data-page="cs336-l06">L06 · Kernels, Triton, XLA</a></li>
+<li><a href="cs336/l07-parallelism-1.html" data-page="cs336-l07">L07 · Parallelism I</a></li>
+<li><a href="cs336/l08-parallelism-2.html" data-page="cs336-l08">L08 · Parallelism II</a></li>
+<li><a href="cs336/l09-scaling-laws-1.html" data-page="cs336-l09">L09 · Scaling Laws I</a></li>
+<li><a href="cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="cs336/l11-scaling-laws-2.html" data-page="cs336-l11">L11 · Scaling Laws II</a></li>
+<li><a href="cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="cs336/l13-data-sources.html" data-page="cs336-l13">L13 · Data Sources</a></li>
+<li><a href="cs336/l14-data-processing.html" data-page="cs336-l14">L14 · Data Processing</a></li>
+<li><a href="cs336/l15-post-training-sft-rlhf.html" data-page="cs336-l15">L15 · SFT, RLHF</a></li>
+<li><a href="cs336/l16-post-training-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="cs336/l17-alignment-multimodality.html" data-page="cs336-l17">L17 · Alignment, Multimodality</a></li>
+<li><a href="cs336/l18-guest-dan-fu.html" data-page="cs336-l18">L18 · Guest: Dan Fu</a></li>
+<li><a href="cs336/labs-index.html" data-page="cs336-labs-index">CS336 · Labs</a></li>
+<li><a href="cs336/lab1-tokenizer-transformer.html" data-page="cs336-lab1">Lab 1 · Tokenizer, Transformer</a></li>
+<li><a href="cs336/lab2-systems.html" data-page="cs336-lab2">Lab 2 · Systems</a></li>
+<li><a href="cs336/lab3-scaling.html" data-page="cs336-lab3">Lab 3 · Scaling Laws</a></li>
+<li><a href="cs336/lab4-data.html" data-page="cs336-lab4">Lab 4 · Data</a></li>
+<li><a href="cs336/lab5-post-training.html" data-page="cs336-lab5">Lab 5 · Post-Training</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 1: Overview, Tokenization</nav>
+      <h1>Lecture 1: Overview, Tokenization</h1>
+      <p class="meta-line">2026-03-30 · Instructor: Percy Liang · 1:19:22 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/JuoVZkPBiKk" title="Stanford CS336 Spring 2026 Lecture 1: Overview, Tokenization" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div><p class="video-cap">Original lecture. Timestamps link to exact moments.</p><h2 id="the-from-scratch-philosophy">The from-scratch philosophy</h2>
+<p>This is the third offering of CS336. The philosophy has not changed: you learn how language models work by building every piece yourself, from the ground up <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=155s" target="_blank" rel="noopener">00:02:35 <span class="ts">⏱00:02:35</span></a>.</p>
+<p>Percy Liang gives the honest motivation. Frontier models are industrialized now. Training one costs on the order of a billion dollars, and labs publish no details about how they build them <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=304s" target="_blank" rel="noopener">00:05:04 <span class="ts">⏱00:05:04</span></a>. The GPT-4 report states this explicitly: competitive and safety concerns mean no disclosure of the build process.</p>
+<p>So we build small models. But small models can mislead. Two examples from the lecture <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=365s" target="_blank" rel="noopener">00:06:05 <span class="ts">⏱00:06:05</span></a>:</p>
+<ul>
+<li>At small scale, MLP layers take about 44% of FLOPs. At 175B parameters, they take about 80%. What you optimize changes with scale.</li>
+<li>Capabilities emerge with scale. Few-shot learning looked broken at small scale, then appeared past a critical size.</li>
+</ul>
+<div class="callout"><span class="co-label">Key idea</span><p>Small-scale experiments teach mechanics and mindset, not all intuitions. What works at 100M parameters may not work at 100B.</p></div>
+<p>Liang splits transferable knowledge into three kinds <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=441s" target="_blank" rel="noopener">00:07:21 <span class="ts">⏱00:07:21</span></a>:</p>
+<ol>
+<li><strong>Mechanics.</strong> How things work: what a Transformer is, how parallelism works.</li>
+<li><strong>Mindset.</strong> How to approach building: profile everything, benchmark everything, optimize for efficiency.</li>
+<li><strong>Intuitions.</strong> Which modeling and data decisions yield good performance. These transfer least across scales.</li>
+</ol>
+<p>This course teaches the first two well. The third requires working at scale yourself.</p>
+<h2 id="the-framing-question">The framing question</h2>
+<p>The course frames everything as one optimization problem <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=661s" target="_blank" rel="noopener">00:11:01 <span class="ts">⏱00:11:01</span></a>:</p>
+<blockquote>
+<p>What is the best model one can build with a certain data and compute budget?</p>
+</blockquote>
+<p>For pretraining, the binding constraint is usually compute, not data. You have more data than you can afford to process. So the recurring theme is <strong>efficiency</strong>: squeeze the most out of your hardware and your FLOPs.</p>
+<h2 id="a-short-history-of-language-models">A short history of language models</h2>
+<p>Liang traces the lineage that matters for this course <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=709s" target="_blank" rel="noopener">00:11:49 <span class="ts">⏱00:11:49</span></a>:</p>
+<table>
+<thead>
+<tr>
+<th>Era</th>
+<th>Development</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1950s</td>
+<td>Shannon uses language models to measure the entropy of English</td>
+</tr>
+<tr>
+<td>1990s–2000s</td>
+<td>N-gram models power speech recognition and machine translation. They make generated text fluent</td>
+</tr>
+<tr>
+<td>1997</td>
+<td>LSTMs</td>
+</tr>
+<tr>
+<td>2003</td>
+<td>Bengio&rsquo;s neural language model: a feedforward network over a small context window</td>
+</tr>
+<tr>
+<td>2014</td>
+<td>Seq2seq: compress a whole sentence into a vector</td>
+</tr>
+<tr>
+<td>2014</td>
+<td>Adam optimizer</td>
+</tr>
+<tr>
+<td>2015</td>
+<td>Attention, developed for machine translation</td>
+</tr>
+<tr>
+<td>2017</td>
+<td>The Transformer</td>
+</tr>
+<tr>
+<td>2018–2019</td>
+<td>ELMo, BERT, GPT-2, T5</td>
+</tr>
+<tr>
+<td>2020</td>
+<td>Kaplan scaling laws, GPT-3</td>
+</tr>
+<tr>
+<td>2022–2026</td>
+<td>InstructGPT, LLaMA family, Mistral/Mixtral, DeepSeek V2/V3/R1, Qwen, Kimi, GLM, open-weight releases</td>
+</tr>
+</tbody>
+</table>
+<p>The 2026 picture also includes open efforts that publish weights, code, data, and papers together: EleutherAI, OLMo, Marin. These matter because they let you study real builds instead of guessing.</p>
+<h2 id="course-structure">Course structure</h2>
+<p>Five assignments, each intense. Assignment 1 alone is roughly equivalent to all five CS224N assignments combined, by student report <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=1232s" target="_blank" rel="noopener">00:20:32 <span class="ts">⏱00:20:32</span></a>. The assignments:</p>
+<ol>
+<li><strong>Basics.</strong> Tokenizer, Transformer, training loop.</li>
+<li><strong>Systems.</strong> GPU kernels, Triton, parallelism.</li>
+<li><strong>Scaling.</strong> Scaling laws, hyperparameter prediction.</li>
+<li><strong>Data.</strong> Data pipelines, filtering.</li>
+<li><strong>Alignment.</strong> SFT, RLHF-style alignment.</li>
+</ol>
+<div class="callout"><span class="co-label">Professor note</span><p>&ldquo;The lectures are great, but you learn really by doing the assignments.&rdquo; Plan your time around them, not around watching videos <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=1403s" target="_blank" rel="noopener">00:23:23 <span class="ts">⏱00:23:23</span></a>.</p></div>
+<p>Lectures alternate between Percy Liang and Tatsunori Hashimoto. This lecture is Percy. Guest lectures close the course: Daniel Selsam and Dan Fu.</p>
+<h2 id="tokenization">Tokenization</h2>
+<p>A language model places a probability distribution over sequences of <strong>tokens</strong>, represented as integer indices. Raw text is a Unicode string. So you need two procedures:</p>
+<ul>
+<li><strong>encode</strong>: string → list of integer token ids</li>
+<li><strong>decode</strong>: list of integer token ids → string</li>
+</ul>
+<p>A tokenizer implements both. The roundtrip must hold: <code>decode(encode(s)) == s</code>.</p>
+<h3 id="first-observations">First observations</h3>
+<p>Play with a real tokenizer and three patterns appear <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=2160s" target="_blank" rel="noopener">00:36:00 <span class="ts">⏱00:36:00</span></a>:</p>
+<ul>
+<li>A word and its preceding space form one token (<code>" world"</code>, not <code>"world"</code>).</li>
+<li>The same word tokenizes differently at the start vs. the middle of a string (<code>"hello hello"</code>).</li>
+<li>Numbers split into chunks of a few digits.</li>
+</ul>
+<p>The lecture uses the GPT-5 tokenizer (tiktoken <code>o200k_base</code>) for live demos.</p>
+<h3 id="compression-ratio">Compression ratio</h3>
+<p>The key metric: <strong>bytes per token</strong> <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=2280s" target="_blank" rel="noopener">00:38:00 <span class="ts">⏱00:38:00</span></a>.</p>
+<pre><code class="language-python">def get_compression_ratio(string: str, indices: list[int]) -&gt; float:
+    &quot;&quot;&quot;Bytes per token. Higher is better: shorter sequences.&quot;&quot;&quot;
+    num_bytes = len(bytes(string, encoding=&quot;utf-8&quot;))
+    num_tokens = len(indices)
+    return num_bytes / num_tokens
+</code></pre>
+<p>Higher compression means shorter sequences, and attention is quadratic in sequence length. You can raise compression by growing the vocabulary, but that spreads training signal thin across rare tokens. This tradeoff drives every tokenizer design.</p>
+<h3 id="character-tokenizer">Character tokenizer</h3>
+<p>Represent the string as Unicode code points. <code>ord("a")</code> is 97, <code>ord("🌍")</code> is 127757, and <code>chr</code> inverts it.</p>
+<pre><code class="language-python">class CharacterTokenizer(Tokenizer):
+    &quot;&quot;&quot;Represent a string as a sequence of Unicode code points.&quot;&quot;&quot;
+    def encode(self, string: str) -&gt; list[int]:
+        return list(map(ord, string))
+
+    def decode(self, indices: list[int]) -&gt; str:
+        return &quot;&quot;.join(map(chr, indices))
+</code></pre>
+<p>Two problems <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=2640s" target="_blank" rel="noopener">00:44:00 <span class="ts">⏱00:44:00</span></a>:</p>
+<ol>
+<li>The vocabulary is huge: roughly 150K Unicode characters.</li>
+<li>Most characters are rare. The model wastes capacity on tokens it barely sees.</li>
+</ol>
+<p>Worst of both worlds: large vocabulary, low compression ratio.</p>
+<h3 id="byte-tokenizer">Byte tokenizer</h3>
+<p>Represent the string as UTF-8 bytes. Every byte is an integer from 0 to 255.</p>
+<pre><code class="language-python">class ByteTokenizer(Tokenizer):
+    &quot;&quot;&quot;Represent a string as a sequence of bytes.&quot;&quot;&quot;
+    def encode(self, string: str) -&gt; list[int]:
+        return list(map(int, string.encode(&quot;utf-8&quot;)))
+
+    def decode(self, indices: list[int]) -&gt; str:
+        return bytes(indices).decode(&quot;utf-8&quot;)
+</code></pre>
+<p>The vocabulary is tiny (256). But the compression ratio is exactly 1 byte per token, the worst possible. Sequences get very long, and attention is quadratic. Not viable for Transformers.</p>
+<div class="mermaid">flowchart LR
+    A[Character tokenizer<br>vocab ~150K] --> C[Bad: huge vocab,<br>rare tokens]
+    B[Byte tokenizer<br>vocab 256] --> D[Bad: 1 byte/token,<br>sequences too long]
+    C --> E[Need: moderate vocab,<br>high compression]
+    D --> E
+</div>
+<h3 id="word-tokenizer">Word tokenizer</h3>
+<p>Split on words with a regex (<code>\w+|.</code> keeps alphanumeric runs together), then map each distinct chunk to an integer.</p>
+<p>Good: tokens are meaningful, compression is high. Bad <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=3000s" target="_blank" rel="noopener">00:50:00 <span class="ts">⏱00:50:00</span></a>:</p>
+<ul>
+<li>Vocabulary is unbounded. New words need a special UNK token.</li>
+<li>UNK tokens corrupt perplexity calculations and lose information.</li>
+<li>Rare words still starve for training data.</li>
+</ul>
+<h3 id="byte-pair-encoding">Byte Pair Encoding</h3>
+<p>BPE is the standard answer. Philip Gage introduced it in 1994 for data compression. Sennrich et al. adapted it for NLP in 2016. It is a data-driven heuristic that sits between bytes and words.</p>
+<p><strong>Training.</strong> Start with the byte vocabulary (256 tokens). Repeat:</p>
+<ol>
+<li>Count all adjacent token pairs in the training corpus.</li>
+<li>Merge the most frequent pair into a new token.</li>
+<li>Add the new token to the vocabulary.</li>
+</ol>
+<p>Stop after a fixed number of merges (the vocabulary size, e.g. 32K or 100K).</p>
+<p><strong>Encoding.</strong> Start from bytes. Apply the learned merges in order, earliest first:</p>
+<pre><code class="language-python">def merge(indices: list[int], pair: tuple[int, int], new_index: int) -&gt; list[int]:
+    &quot;&quot;&quot;Replace every occurrence of pair with new_index.&quot;&quot;&quot;
+    new_indices = []
+    i = 0
+    while i &lt; len(indices):
+        if i + 1 &lt; len(indices) and indices[i] == pair[0] and indices[i + 1] == pair[1]:
+            new_indices.append(new_index)
+            i += 2
+        else:
+            new_indices.append(indices[i])
+            i += 1
+    return new_indices
+
+class BPETokenizer(Tokenizer):
+    def __init__(self, params: BPETokenizerParams):
+        self.params = params  # vocab: id -&gt; bytes, merges: (id,id) -&gt; id
+
+    def encode(self, string: str) -&gt; list[int]:
+        indices = list(map(int, string.encode(&quot;utf-8&quot;)))
+        for pair, new_index in self.params.merges.items():
+            indices = merge(indices, pair, new_index)
+        return indices
+
+    def decode(self, indices: list[int]) -&gt; str:
+        return b&quot;&quot;.join(map(self.params.vocab.get, indices)).decode(&quot;utf-8&quot;)
+</code></pre>
+<div class="callout"><span class="co-label">Key idea</span><p>BPE allocates vocabulary to frequent byte sequences. Common words become single tokens (high compression). Rare strings fall back to bytes (no UNK token, always decodable).</p></div>
+<p>The lecture&rsquo;s summary of the design space <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=4200s" target="_blank" rel="noopener">01:10:00 <span class="ts">⏱01:10:00</span></a>:</p>
+<ul>
+<li>Character, byte, and word tokenizers are all highly suboptimal.</li>
+<li>BPE is an effective data-driven heuristic.</li>
+<li>Tokenization is still a separate preprocessing step. End-to-end byte-level models (ByT5, BLT, H-Net) are active research, covered later in the course.</li>
+</ul>
+<h3 id="the-two-requirements">The two requirements</h3>
+<p>Any tokenization solution must satisfy <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk&amp;t=4440s" target="_blank" rel="noopener">01:14:00 <span class="ts">⏱01:14:00</span></a>:</p>
+<ol>
+<li>The model operates on <strong>chunks</strong> (abstractions) of the sequence, not raw characters.</li>
+<li>Chunks are <strong>variable length</strong>, so the model spends capacity on interesting parts.</li>
+</ol>
+<p>BPE satisfies both with a simple greedy heuristic. That is why it won.</p>
+<h2 id="assignment-connection">Assignment connection</h2>
+<p>Assignment 1 implements a BPE tokenizer from scratch: training (merge counting), encoding, decoding, and special-token handling. The <code>BPETokenizer</code> above is the starting sketch. The assignment version must handle large corpora efficiently (the naive <code>merge</code> loop is O(n) per merge. You will need faster data structures) and pass roundtrip tests on real text.</p>
+<div class="callout"><span class="co-label">Interview signal</span><p>Tokenizer questions appear in frontier-lab interviews because they test systems thinking: UTF-8 edge cases, merge-order correctness, and the compression vs. vocabulary tradeoff. Know why BPE beat word tokenizers (no UNK, bounded vocab) and where it still fails (numbers, multilingual text, code).</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=JuoVZkPBiKk" target="_blank" rel="noopener">Lecture 1 video, Stanford Online YouTube</a></li><li><span class="src-tag">CODE</span><a href="https://github.com/stanford-cs336/lectures/blob/main/lecture_01.py" target="_blank" rel="noopener">lecture_01.py — executable lecture code</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-orig)</li><li><span class="src-tag">SUPPLEMENT</span><a href="https://www.youtube.com/watch?v=zduSFxRajkE" target="_blank" rel="noopener">Karpathy, &#x27;Let&#x27;s build the GPT Tokenizer&#x27; (cited in lecture)</a></li></ul></section>
+      <nav class="pager"><a href="cs336/index.html"><span class="lbl">← Previous</span>CS336: Language Modeling from Scratch</a><a href="cs336/l02-pytorch-resource-accounting.html"><span class="lbl">Next →</span>Lecture 2: PyTorch, Resource Accounting</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="assets/vendor/katex.min.js"></script>
+<script src="assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "";</script>
+<script src="assets/app.js"></script>
+</body>
+</html>
