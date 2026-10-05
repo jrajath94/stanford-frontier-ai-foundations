@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 3: The Modern Transformer Architecture — Stanford Frontier AI</title>
+<meta name="description" content="A survey of every live architecture decision: norm placement, RMSNorm, gated activations, RoPE, hyperparameters, stability tricks, GQA, and sliding window atten">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-l03" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03" class="active">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 3: The Modern Transformer Architecture</nav>
+      <h1>Lecture 3: The Modern Transformer Architecture</h1>
+      <p class="meta-line">2026-04-06 · Instructor: Tatsunori Hashimoto · 1:29:08 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="lVynu4bo1rY"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/lVynu4bo1rY" title="Stanford CS336 Spring 2026 Lecture 3: Architectures" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=lVynu4bo1rY" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=lVynu4bo1rY" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tatsu Hashimoto surveys the modern transformer: norms, activations, positions, hyperparameters, stability, and attention variants.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> covers the transformer
+block as every modern lab builds it: where the norms go, which
+activation wins, and how position gets in. <strong>Level 2 (Deep)</strong> covers the
+numbers behind the choices: hyperparameters, stability interventions,
+and inference-driven attention variants.</p>
+<p>The method of this lecture is a survey: look at what 19+ dense models
+actually did, keep what is constant, and vary the rest
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=5s" target="_blank" rel="noopener">00:05 <span class="ts">⏱00:05</span></a>. Links back: <a href="l01-tokenization.html">Lecture 1</a> for
+tokens, <a href="l02-resource-accounting.html">Lecture 2</a> for intensity.</p>
+<h2 id="level-1-how-we-got-here">Level 1: How we got here</h2>
+<p>Three eras. Before GPT-3, everyone experimented and nothing was
+standard. Then Llama 2 shipped, and every lab trained a Llama 2 alike
+with small variations. Then came stability fixes, and now long-context
+variants <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=385s" target="_blank" rel="noopener">06:25 <span class="ts">⏱06:25</span></a>.</p>
+<pre class="ascii">before GPT-3 : everyone experiments, nothing standard
+Llama 2      : every lab trains a Llama alike
+stability era: fixes that stop blowups
+now          : long-context variants
+</pre>
+<p>Architecture serves three masters at once: it must learn from data, run
+efficiently on GPUs, and not blow up mid-training
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=347s" target="_blank" rel="noopener">05:47 <span class="ts">⏱05:47</span></a>. Every odd-looking choice below traces to one of
+these.</p>
+<h2 id="level-1-move-the-norm-out-of-the-residual-stream">Level 1: Move the norm out of the residual stream</h2>
+<p>The original transformer put LayerNorm inside the residual stream: add
+the attention output to x, then normalize the sum
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=451s" target="_blank" rel="noopener">07:31 <span class="ts">⏱07:31</span></a>. Every modern model moved it out. The norm now sits
+before each sublayer, outside the stream. This is prenorm.</p>
+<figure><img alt="Prenorm vs postnorm" src="assets/l03-prenorm.svg"><figcaption>Postnorm normalizes inside the residual stream. Prenorm normalizes before each sublayer. Gradients flow straight through the clean stream.</figcaption></figure>
+<p>Why everyone agrees: the residual stream x runs untouched from input to
+output, so gradients propagate straight through in the backward pass.
+Gradient sizes stay constant at initialization. Under postnorm, each
+block rescales the stream and gradient norms drift, which causes spikes
+and needs warmup to converge <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=660s" target="_blank" rel="noopener">11:00 <span class="ts">⏱11:00</span></a>. The practitioner&rsquo;s rule:
+keep your residual stream clean.</p>
+<p>Variants exist. Some models (Grok, Gemma 2, OLMo 2) put the norm after
+the computation instead of before: still outside the stream, equally
+valid by the same logic <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=779s" target="_blank" rel="noopener">12:59 <span class="ts">⏱12:59</span></a>. When stability breaks, labs
+sprinkle norms everywhere, including inside attention. Ridiculous, and
+it works.</p>
+<div class="qa"><div class="q">Why did every lab switch from postnorm to prenorm?</div><div class="a"><p>Postnorm places LayerNorm inside the residual stream, so each block rescales the stream and gradient norms drift as they flow backward. This causes gradient spikes and requires warmup to converge at all. Prenorm keeps the stream untouched, so gradients propagate straight through with constant size. Training is more stable and converges without warmup. The one exception in the survey is OPT-350M, and OPT was widely regarded as unstable.
+Both satisfy the clean-stream principle, and both are used: Grok, Gemma 2, and OLMo 2 normalize after the sublayer computation. The choice between them is second-order. What is not second-order is keeping the norm out of the residual path itself.</p><div class="followup"><strong>Follow-up:</strong> If outside the stream is what matters, why prenorm instead of post-computation norm?</div></div></div>
+<h2 id="level-1-rmsnorm-and-the-death-of-the-bias">Level 1: RMSNorm and the death of the bias</h2>
+<p>LayerNorm subtracts the mean, divides by the standard deviation, then
+scales and shifts. RMSNorm only divides by the root mean square and
+scales. No mean subtraction, no bias <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=836s" target="_blank" rel="noopener">13:56 <span class="ts">⏱13:56</span></a>.</p>
+<figure><img alt="RMSNorm" src="assets/l03-rmsnorm.svg"><figcaption>LayerNorm: 0.17% of FLOPs, up to 25% of runtime. RMSNorm drops the mean and bias for a free systems win.</figcaption></figure>
+<p>LayerNorm is more expressive on paper, but models train just as well
+without the mean. The win is systems: normalization is 0.17% of FLOPs
+yet up to 25% of runtime on small models, because the workload is memory
+movement, not compute <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=962s" target="_blank" rel="noopener">16:02 <span class="ts">⏱16:02</span></a>. RMSNorm removes low-intensity
+work for free. Same logic kills bias terms in linear layers: they cost
+memory traffic, add little, and can even hurt stability
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=1082s" target="_blank" rel="noopener">18:02 <span class="ts">⏱18:02</span></a>.</p>
+<h2 id="level-1-gate-the-mlp">Level 1: Gate the MLP</h2>
+<p>The activation zoo (ReLU, GeLU, Swish, ELU, SeLU) collapsed to one
+winner: the gated linear unit. A GLU adds a gate to the feedforward
+layer <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=1215s" target="_blank" rel="noopener">20:15 <span class="ts">⏱20:15</span></a>.</p>
+<figure><img alt="SwiGLU block" src="assets/l03-glu.svg"><figcaption>Two up-projections: one activated, one as gate. Elementwise multiply, then down-project. Three matrices, so shrink ff dim by 2/3.</figcaption></figure>
+<p>Take xW, apply the activation, and multiply elementwise by a second
+projection xV. Then down-project with W2. Name it by the activation:
+ReGLU, GeGLU, SwiGLU. Google uses GeGLU (Gemma, T5). Llama descendants
+use SwiGLU <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=1427s" target="_blank" rel="noopener">23:47 <span class="ts">⏱23:47</span></a>.</p>
+<p>Three matrices instead of two means more parameters. The rule of thumb:
+shrink the feedforward dim by 2/3 to keep the parameter count matched
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=1471s" target="_blank" rel="noopener">24:31 <span class="ts">⏱24:31</span></a>. Shazeer&rsquo;s ablations show GLU variants consistently
+beat non-gated ones at matched parameter counts. Gating is close to a
+free win.</p>
+<div class="qa"><div class="q">Why does every modern model use a gated activation?</div><div class="a"><p>The gate lets the network modulate each hidden unit by a learned, input-dependent scale, which adds expressiveness at almost no compute cost: the extra projection is one more matmul of the same shape. Controlled ablations show consistent gains over ReLU and GeLU at matched parameter counts. GPT-3 and Nemotron-340B prove non-gated models can work, but the evidence points one way and the field followed it.
+Three matrices instead of two inflates the MLP parameter count by 1.5x at the same width. Multiplying ff dim by 2/3 restores the original budget, so comparisons measure the gating idea rather than extra parameters. It is a rule of thumb, not an iron law.</p><div class="followup"><strong>Follow-up:</strong> Why shrink the feedforward dim by 2/3 for GLUs?</div></div></div>
+<h2 id="level-1-serial-blocks-beat-parallel-blocks">Level 1: Serial blocks beat parallel blocks</h2>
+<p>The standard block is serial: attention, then MLP, each adding into the
+stream. GPT-J and PaLM tried parallel blocks: attention and MLP read the
+same input and add their outputs together, which allows sharing the norm
+and fusing matmuls <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=1646s" target="_blank" rel="noopener">27:26 <span class="ts">⏱27:26</span></a>.</p>
+<pre class="ascii">serial:    x -&gt; attn -&gt; (+) -&gt; mlp -&gt; (+) -&gt; out
+parallel:  x -&gt; attn -+-&gt; (+) -&gt; out     (norm shared, matmuls fused)
+           x -&gt; mlp  --+
+</pre>
+<p>Parallel fell out of favor. Serial optimization got good enough that
+the systems gain was not worth the representation cost: parallel blocks
+effectively halve your depth <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=1744s" target="_blank" rel="noopener">29:04 <span class="ts">⏱29:04</span></a>.</p>
+<h2 id="level-1-position-via-rotation">Level 1: Position via rotation</h2>
+<p>Attention is permutation invariant: shuffle the tokens and the scores
+do not change. Position must be injected <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=1882s" target="_blank" rel="noopener">31:22 <span class="ts">⏱31:22</span></a>. The field
+tried sinusoidal, absolute, and relative embeddings. The winner since
+2024 is RoPE.</p>
+<p>The design goal: the score between two tokens should depend only on
+their relative distance, never on absolute position
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=1981s" target="_blank" rel="noopener">33:01 <span class="ts">⏱33:01</span></a>. Inner products are invariant to rotation. So rotate
+each token&rsquo;s vector by an angle proportional to its position. Two tokens
+one apart always differ by one rotation step, wherever they sit.</p>
+<figure><img alt="RoPE" src="assets/l03-rope.svg"><figcaption>Rotate each token by its position. Relative angle depends only on distance. Shift the sentence and the scores do not change.</figcaption></figure>
+<p>In d dimensions, split the vector into pairs and rotate each pair at its
+own frequency. Slow pairs capture long-range dependence. Fast pairs
+capture adjacency <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=2183s" target="_blank" rel="noopener">36:23 <span class="ts">⏱36:23</span></a>. Apply the rotations to queries and
+keys at every attention layer. Crucially, RoPE multiplies by sines and
+cosines instead of adding them, so no cross terms leak absolute position
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=2277s" target="_blank" rel="noopener">37:57 <span class="ts">⏱37:57</span></a>. Gemma 4&rsquo;s p-RoPE rotates only the first two
+coordinates, a valid cheap variant <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=2235s" target="_blank" rel="noopener">37:15 <span class="ts">⏱37:15</span></a>.</p>
+<div class="qa"><div class="q">Why did RoPE replace absolute position embeddings?</div><div class="a"><p>Absolute embeddings bake position indices into the token vectors, so the model must learn every position separately and cannot generalize past the trained length cleanly. RoPE encodes only relative distance through rotation, which generalizes to new positions by construction and adds no parameters. Since 2024 nearly every new model uses it or a variant.
+Adding creates cross terms between the position embedding and the word embedding, and from those cross terms the model can recover absolute position. Multiplying rotates the vector, which keeps the inner product purely a function of relative angle. That is the entire trick.</p><div class="followup"><strong>Follow-up:</strong> Why multiply by sines and cosines instead of adding them like the original transformer?</div></div></div>
+<h2 id="level-2-hyperparameters-that-forgive">Level 2: Hyperparameters that forgive</h2>
+<p>Three ratios and one size decision cover nearly every model. All have
+wide basins: defaults win, and only FLOPs truly move the needle
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=2620s" target="_blank" rel="noopener">43:40 <span class="ts">⏱43:40</span></a>.</p>
+<figure><img alt="Forgiving hyperparameters" src="assets/l03-hparams.svg"><figcaption>ff dim 4x, head dims multiply to d_model, aspect ratio 100, vocab by language coverage.</figcaption></figure>
+<p><strong>Feedforward ratio: 4x.</strong> ff dim = 4 x d model. GLU variants use ~2.67x
+after the 2/3 correction. Llama multiplied by 1.33x to ~3.5x because
+efficient MQA attention freed budget for the MLP. T5 tried 64x for
+hardware efficiency, then quietly returned to 2.5x in v1.1
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=2704s" target="_blank" rel="noopener">45:04 <span class="ts">⏱45:04</span></a>. Kaplan&rsquo;s sweep shows a flat basin from 1x to 10x.</p>
+<p><strong>Head dimensions multiply to d model.</strong> h heads of d/h each: the ratio
+sits near 1 across models, with another wide basin
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=2993s" target="_blank" rel="noopener">49:53 <span class="ts">⏱49:53</span></a>.</p>
+<p><strong>Aspect ratio ~100.</strong> d model divided by n layers lands near 100 for
+GPT-3, Llama, and most modern models. Wide models parallelize cleanly
+with tensor parallelism. Deep models force pipeline parallelism, which
+everyone avoids <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=3091s" target="_blank" rel="noopener">51:31 <span class="ts">⏱51:31</span></a>. EK et al. found that sweeping
+depth-vs-width mostly measures FLOPs: bigger compute wins regardless of
+shape.</p>
+<p><strong>Vocabulary size follows language coverage.</strong> Monolingual English
+models used ~30k. Multilingual production models use 100k-200k. Bigger
+models can carry bigger vocabs <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=3311s" target="_blank" rel="noopener">55:11 <span class="ts">⏱55:11</span></a>.</p>
+<p>Side note on comparisons: bits per byte is always a valid metric across
+tokenizers, because modern tokenizers are complete (nothing dropped) and
+bytes are the fixed normalizer <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=3432s" target="_blank" rel="noopener">57:12 <span class="ts">⏱57:12</span></a>.</p>
+<div class="qa"><div class="q">How do you pick hyperparameters for a new training run?</div><div class="a"><p>Do not search from scratch. Copy the consensus: ff dim 4x (2.67x for GLU), head dims multiplying to d model, aspect ratio ~100, vocab sized to language coverage. These sit in wide flat basins, so small deviations cost little. Spend your experimentation budget on one thesis at a time, usually an architecture change, not on re-tuning forgiving ratios. What actually moves loss is total FLOPs, not the shape.
+It worked but was compute-inefficient: the matrices were oversized for the gain. T5 v1.1 reverted to 2.5x, which tells you what the authors concluded. Bold deviations can train, but the basin around 4x is where efficiency lives.</p><div class="followup"><strong>Follow-up:</strong> T5 used 64x ff dim and worked. Why not copy that?</div></div></div>
+<h2 id="level-2-weight-decay-is-an-optimizer-not-a-regularizer">Level 2: Weight decay is an optimizer, not a regularizer</h2>
+<p>Language models train single-pass: more internet data than FLOPs, so the
+model never sees most data twice. Overfitting barely happens
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=3591s" target="_blank" rel="noopener">59:51 <span class="ts">⏱59:51</span></a>. Dropout has mostly died out. Yet weight decay remains
+popular. Why?</p>
+<pre class="ascii">single pass  -&gt;  no overfitting  -&gt;  decay is not regularizing
+decay + lr   -&gt;  better minimum   -&gt;  decay is an optimizer trick
+</pre>
+<p>Because it is not regularizing. It interacts with the optimizer:
+stronger weight decay with learning-rate decay converges to a better
+minimum, even though train and validation loss track each other the
+whole way <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=3734s" target="_blank" rel="noopener">62:14 <span class="ts">⏱62:14</span></a>. Shrinkage toward zero lets you use higher
+learning rates or decay faster. The lesson: in deep learning, knobs
+interact in ways ML-101 intuition does not predict. Test, do not assume.</p>
+<h2 id="level-2-stability-three-interventions">Level 2: Stability, three interventions</h2>
+<p>Training can blow up halfway through a million-dollar run. The usual
+suspect is softmax: an exponential plus a division, in two places (the
+output and attention) <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=3901s" target="_blank" rel="noopener">65:01 <span class="ts">⏱65:01</span></a>.</p>
+<p><strong>z-loss</strong> tames the output softmax. The log normalizer log z can blow
+up either direction even when model outputs are fine. Add c x (log z)^2
+to the loss: penalize drift from zero, keep z near 1
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=4026s" target="_blank" rel="noopener">67:06 <span class="ts">⏱67:06</span></a>.</p>
+<figure><img alt="z-loss" src="assets/l03-zloss.svg"><figcaption>log prob = u - log z. The z term can explode. Penalize (log z)^2 and it stays near zero.</figcaption></figure>
+<p><strong>QK norm</strong> tames attention. LayerNorm the Qs and Ks before they
+multiply, so the softmax inputs sit at scale ~1
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=4188s" target="_blank" rel="noopener">69:48 <span class="ts">⏱69:48</span></a>. Borrowed from multimodal models (Idefics, Chameleon),
+now standard in large LMs, with no measured performance cost.</p>
+<figure><img alt="QK norm" src="assets/l03-qknorm.svg"><figcaption>Normalize Q and K before the matmul. Softmax inputs stay at scale 1. Attention stops degenerating.</figcaption></figure>
+<p><strong>Logit soft-capping</strong> is the strong version: tanh-cap attention logits
+so they can never grow large (Gemma 2/3/4) <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=4327s" target="_blank" rel="noopener">72:07 <span class="ts">⏱72:07</span></a>. Very safe,
+but it clips confident signals and measurably costs quality. QK norm
+gives the stability without the tax.</p>
+<div class="qa"><div class="q">Your loss curve shows sudden spikes mid-training. What do you try, in order?</div><div class="a"><p>First, check whether the spikes come from attention or the output: both have softmaxes with exp and division. Add z-loss to pin the output normalizer near zero. Add QK norm so attention softmax inputs stay at scale 1. Both are cheap and cost no quality. Reach for logit soft-capping only if those fail, knowing it caps expressiveness. And remember the standing rule: sprinkle LayerNorms at the instability until it stops.
+Matmuls are linear: large inputs give proportionally large outputs, and norms stay predictable. Softmax exponentiates, so a slightly large logit becomes an astronomically large numerator, and then it divides by a sum that can underflow toward zero. Both directions explode. That is why both softmaxes get dedicated interventions.</p><div class="followup"><strong>Follow-up:</strong> Why is softmax the danger zone and not the matmuls?</div></div></div>
+<h2 id="level-2-gqa-because-decode-is-memory-bound">Level 2: GQA, because decode is memory bound</h2>
+<p>Serving pays for FLOPs and for memory accesses. During prefill and
+training, intensity is healthy. During decode, each step generates one
+token: the KV cache must be re-read every step, and the arithmetic
+intensity collapses to n/d + 1/b <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=4622s" target="_blank" rel="noopener">77:02 <span class="ts">⏱77:02</span></a>. Small models with
+long contexts suffer most.</p>
+<p>Multi-Query Attention shares one K head and one V head across all query
+heads. The KV cache shrinks by the head count, memory traffic drops, but
+expressiveness drops too <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=4772s" target="_blank" rel="noopener">79:32 <span class="ts">⏱79:32</span></a>. Grouped-Query Attention is
+the sweet spot: G groups of KV heads shared across all query heads.
+Near-MHA quality at near-MQA inference cost <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=4867s" target="_blank" rel="noopener">81:07 <span class="ts">⏱81:07</span></a>.</p>
+<figure><img alt="MHA vs GQA vs MQA" src="assets/l03-gqa.svg"><figcaption>Share KV heads across query groups. The KV cache shrinks. Decode stops drowning in memory traffic.</figcaption></figure>
+<h2 id="level-2-sliding-window-attention">Level 2: Sliding window attention</h2>
+<p>Full attention costs n^2. Sliding window restricts each position to a
+fixed local window. GPT-3 alternated full and banded layers. The idea
+returned because long context is the current frontier
+<a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=5108s" target="_blank" rel="noopener">85:08 <span class="ts">⏱85:08</span></a>.</p>
+<pre class="ascii">layers:  F  W  W  W  F  W  W  W  F
+         |  |  |  |  |  |  |  |  |
+window:  *  w  w  w  *  w  w  w  *     F = full, W = window
+</pre>
+<p>Every fourth layer attends globally. The rest attend locally. Local
+layers aggregate into the global ones as you go up, so the top of the
+network still sees everything <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=5167s" target="_blank" rel="noopener">86:07 <span class="ts">⏱86:07</span></a>. Llama 4, Gemma 4, and
+OLMo 3 use this pattern. Qwen3.5 swaps the window layers for a gated
+delta net (a state-space layer, next lecture) in the same alternating
+skeleton. Long-context architecture is still the most active design
+space in the field <a href="https://www.youtube.com/watch?v=lVynu4bo1rY&amp;t=5233s" target="_blank" rel="noopener">87:13 <span class="ts">⏱87:13</span></a>.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/l03-prenorm.svg" alt="Prenorm vs postnorm">
+<div class="rc-body">
+<strong>1. Keep the residual stream clean</strong>
+<p>Move the norm out of the residual path. Gradients flow straight
+through with constant size. No warmup needed. Everyone does this.</p>
+<p class="rc-num">Key: prenorm, not postnorm</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l03-rmsnorm.svg" alt="RMSNorm">
+<div class="rc-body">
+<strong>2. RMSNorm drops the mean</strong>
+<p>Same modeling power as LayerNorm, far less memory traffic.
+Normalization is 0.17% of FLOPs but up to 25% of runtime. Drop biases
+too.</p>
+<p class="rc-num">Key: free systems win</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l03-glu.svg" alt="SwiGLU block">
+<div class="rc-body">
+<strong>3. Gate the MLP</strong>
+<p>SwiGLU and GeGLU beat ReLU consistently at matched parameters.
+Three matrices, so shrink ff dim by 2/3. Google uses GeGLU, Llama uses
+SwiGLU.</p>
+<p class="rc-num">Key: gate = free expressiveness</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l03-rope.svg" alt="RoPE rotation">
+<div class="rc-body">
+<strong>4. RoPE rotates by position</strong>
+<p>Inner products ignore rotation, so scores depend only on relative
+distance. Split dims into pairs, rotate each at its own frequency.
+Multiply, do not add.</p>
+<p class="rc-num">Key: relative by construction</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l03-hparams.svg" alt="Hyperparameters">
+<div class="rc-body">
+<strong>5. Hyperparameters forgive</strong>
+<p>ff dim 4x, head dims multiply to d model, aspect ratio 100, vocab by
+language coverage. Wide flat basins. Only FLOPs truly move the
+needle.</p>
+<p class="rc-num">Key: copy the defaults</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l03-zloss.svg" alt="z-loss">
+<div class="rc-body">
+<strong>6. z-loss pins the output softmax</strong>
+<p>Add (log z)^2 to the loss. The normalizer stays near 1 instead of
+exploding. Cheap, effective, revived from 2014.</p>
+<p class="rc-num">Key: penalize drift from zero</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l03-qknorm.svg" alt="QK norm">
+<div class="rc-body">
+<strong>7. QK norm steadies attention</strong>
+<p>Normalize Q and K before they multiply. Softmax inputs sit at scale
+1. No quality cost. Soft-capping is stronger but taxes
+expressiveness.</p>
+<p class="rc-num">Key: norms inside attention</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l03-gqa.svg" alt="GQA">
+<div class="rc-body">
+<strong>8. GQA fixes decode economics</strong>
+<p>Decode is memory bound on KV cache reads. Share KV heads across
+query groups: near-MQA cost, near-MHA quality. Sliding windows handle
+long context the same way.</p>
+<p class="rc-num">Key: share KVs, keep queries</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 3 video and slides: the 19-model survey table.
+- Vaswani et al. (2017): the original transformer. Postnorm inside the
+  residual stream.
+- Shazeer (2020): GLU variants with parameter-matched ablations.
+- Su et al. (2021): RoFormer, the RoPE paper.</p>
+<p><strong>Further reading:</strong>
+- Kaplan et al. (2020): scaling laws with the hyperparameter sweeps
+  (ff ratio basin, aspect ratio).
+- Ainslie et al. (2023): GQA, the inference-quality trade-off.
+- Narang et al. (2020): architecture ablations including RMSNorm speed.</p>
+<p><strong>Caveats from these sources.</strong> The survey reflects open models up to
+early 2026. Closed labs may differ silently. Parallel-vs-serial has no
+clean controlled ablation: the field&rsquo;s verdict is implicit (later Google
+models dropped parallel). Soft-capping numbers come from Gemma reports.
+the quality tax is real but workload-dependent. Bits-per-byte
+comparisons assume complete tokenizers.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS224N:</strong> the vanilla transformer and absolute/sinusoidal positions
+  are defined there. This lecture is the diff to modern practice.</li>
+<li><strong>CME295:</strong> the attention arrow symbol (Q, K, V, score, mix) is defined
+  there and reused in every attention figure here.</li>
+<li><strong>CS336 later lectures:</strong> QK norm and z-loss return in the stability
+  discussion. GQA&rsquo;s KV cache is the core object of the inference
+  lecture. The alternating local-global pattern returns with SSMs.</li>
+<li><strong>CS229S:</strong> tensor vs pipeline parallelism explains the aspect-ratio
+  sweet spot.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Architecture cheatsheet.</strong> Prenorm: norm outside the residual stream, gradients flow straight through. RMSNorm: drop mean and bias, free systems win (0.17% FLOPs, up to 25% runtime). Biases: drop everywhere. GLU: gate the MLP, shrink ff dim by 2/3, SwiGLU (Llama) vs GeGLU (Google). Blocks: serial beats parallel (parallel halves effective depth). RoPE: rotate Q/K by position, relative by construction, multiply not add. Hyperparams: ff 4x (2.67x GLU), heads multiply to d model, aspect ratio ~100, vocab 30k mono / 100-200k multi. Regularization: single-pass means no overfitting. Weight decay is an optimizer. Stability: z-loss for output softmax, QK norm for attention, soft-capping as last resort. GQA: share KV heads, fix decode economics. Sliding window: full every 4th layer for long context.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Clean stream, gated MLP, rotated positions.</strong> Prenorm keeps gradients honest. GLU gates for free. RoPE makes distance relative. Everything else is defaults in wide basins.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=lVynu4bo1rY" target="_blank" rel="noopener">Lecture 3 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">SLIDES</span>Lecture 3 slides (PDF)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener">Vaswani et al., Attention Is All You Need (2017)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2002.05202" target="_blank" rel="noopener">Shazeer, GLU Variants Improve Transformer (2020)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2104.09864" target="_blank" rel="noopener">Su et al., RoFormer: Rotary Position Embedding (2021)</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://arxiv.org/abs/2305.13245" target="_blank" rel="noopener">Ainslie et al., GQA: Training Generalized Multi-Query Transformer Models (2023)</a></li></ul></section>
+      <nav class="pager"><a href="../cs336/l02-resource-accounting.html"><span class="lbl">← Previous</span>Lecture 2: Resource Accounting</a><a href="../cs336/l04-linear-attention-moe.html"><span class="lbl">Next →</span>Lecture 4: Linear Attention and Mixture of Experts</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
