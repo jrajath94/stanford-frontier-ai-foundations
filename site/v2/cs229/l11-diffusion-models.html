@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 11: Diffusion Models — Stanford Frontier AI</title>
+<meta name="description" content="The predominant image generator: a fixed noising process, a learned denoiser, ELBO training, and sampling from pure noise.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229-l11" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11" class="active">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229: Machine Learning</a> / Lecture 11: Diffusion Models</nav>
+      <h1>Lecture 11: Diffusion Models</h1>
+      <p class="meta-line">2026-05-11 · Instructor: Tengyu Ma · 1:22:21 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="dqUMCzWjZSI"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/dqUMCzWjZSI" title="Lecture 11: Diffusion Models" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=dqUMCzWjZSI" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tengyu Ma derives diffusion models: forward noising, learned reverse, ELBO training.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> contains what you need to
+understand everything that follows in CS229 and the courses that build on
+it. <strong>Level 2 (Deep)</strong> contains what you need for correct, interview-grade
+understanding. Read Level 1 straight through. Return to Level 2 when you
+want depth.</p>
+<p>No prerequisites are assumed. Every term is defined at first use. The
+ELBO and the generative question were defined in <a href="l10-em-pca.html">lecture
+10</a>; they are reused, not re-explained.</p>
+<h2 id="level-1-what-diffusion-models-are">Level 1: What diffusion models are</h2>
+<p>A <strong>diffusion model</strong> is a generative model for images, and now video and
+robot actions. Given many natural images, it learns to generate new
+clean images from the same distribution <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=5s" target="_blank" rel="noopener">00:05 <span class="ts">⏱00:05</span></a>. Not copies of
+training images. New images that look like they came from the same
+source.</p>
+<p>The field history matters. Image generation used GANs, then variational
+autoencoders (VAEs). Diffusion is now the predominant approach, better
+than both <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=100s" target="_blank" rel="noopener">01:40 <span class="ts">⏱01:40</span></a>. The course no longer teaches GANs or VAEs;
+the notes keep VAEs only for the curious. When a course drops two
+established topics for one, pay attention.</p>
+<p>Two applications beyond images. <strong>VLA</strong> models, vision-language-action,
+use diffusion to generate robot actions <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=39s" target="_blank" rel="noopener">00:39 <span class="ts">⏱00:39</span></a>. And diffusion
+can generate in <strong>parallel</strong> in some sense, making inference potentially
+faster than autoregressive generation <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=153s" target="_blank" rel="noopener">02:33 <span class="ts">⏱02:33</span></a>.</p>
+<figure><img alt="Diffusion chain" src="assets/svg/l11-diffusion.svg"><figcaption>Forward: fixed noising. Reverse: learned denoising. Original plate.</figcaption></figure>
+<div class="qa"><div class="q">What problem do diffusion models solve?</div><div class="a"><p>Sampling from a complex distribution given only samples. You have many real images and want new ones from the same distribution. The model learns a denoising process: start from pure noise, remove noise step by step, land on a realistic image. Training needs only the real images and the fixed noising process, no labels.
+Training stability. GANs pit two networks against each other in a game that is notoriously unstable. Diffusion trains a single denoising network on a straightforward regression-like objective. Stable training plus excellent sample quality won the field. The lecture states the outcome without relitigating the war.</p><div class="followup"><strong>Follow-up:</strong> Why did diffusion beat GANs?</div></div></div>
+<h2 id="level-1-the-forward-process">Level 1: The forward process</h2>
+<p>The <strong>forward process</strong> q destroys images gradually <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=1678s" target="_blank" rel="noopener">27:58 <span class="ts">⏱27:58</span></a>.
+Start from a clean image x_0. Each step shrinks it slightly and adds a
+little Gaussian noise:</p>
+<p>x_t = (1 - beta_t) x_{t-1} + sqrt(beta_t) eps_t</p>
+<p>Beta is small, between 0 and 1, like 1e-4 <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=460s" target="_blank" rel="noopener">07:40 <span class="ts">⏱07:40</span></a>. Eps_t is
+fresh standard Gaussian noise each step. One step barely blurs the
+image. After T steps, around 1000 in the original paper
+<a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=2120s" target="_blank" rel="noopener">35:20 <span class="ts">⏱35:20</span></a>, the image is pure noise.</p>
+<p>The coefficients are chosen to <strong>preserve variance</strong>
+<a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=749s" target="_blank" rel="noopener">12:29 <span class="ts">⏱12:29</span></a>. If the data starts with identity covariance, every
+x_t keeps identity covariance: the shrinkage and the added noise balance
+exactly. Normalize the data first and the scale never drifts. This is
+bookkeeping, but the kind that prevents training from exploding.</p>
+<p>The forward process is fixed. No learning. It is just a recipe for
+turning images into noise, step by step.</p>
+<figure><img alt="Clean to noise" src="assets/figs-notes/notes-diffusion-x0.png"><figcaption>x_0: a clean image. Source: Stanford notes.</figcaption></figure>
+<figure><img alt="Noise" src="assets/figs-notes/notes-diffusion-xT.png"><figcaption>x_T: pure noise after T steps. Source: Stanford notes.</figcaption></figure>
+<div class="qa"><div class="q">Why add noise gradually instead of all at once?</div><div class="a"><p>Because denoising gradually is easier to learn than denoising all at once <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=2031s" target="_blank" rel="noopener">33:51 <span class="ts">⏱33:51</span></a>. One giant jump from pure noise to a clean image is a brutally hard function to learn. A thousand tiny denoising steps are each easy: remove a little noise, keep the structure. The lecture&rsquo;s intuition: the gradual path gives the learner a curriculum of easy problems instead of one impossible one.
+A learned noiser is what VAEs do, and it complicates training: the noiser and denoiser must co-adapt. Diffusion is more brute force: fix a simple noising recipe, spend all learning capacity on the denoiser. Fewer moving parts, more stable training. The fixed process is a feature.</p><div class="followup"><strong>Follow-up:</strong> Why is the forward process fixed rather than learned?</div></div></div>
+<h2 id="level-1-the-reverse-process-and-training">Level 1: The reverse process and training</h2>
+<p>The <strong>reverse process</strong> p_theta learns to denoise. Given the noisier
+x_t, predict the cleaner x_{t-1}. A neural network does this, one step
+at a time. Chain T steps: start from pure noise x_T, apply the denoiser
+repeatedly, and a clean image x_0 emerges.</p>
+<p>Training needs a loss for the denoiser. The answer is the <strong>ELBO</strong> from
+lecture 10: the evidence lower bound over the whole chain
+<a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=2384s" target="_blank" rel="noopener">39:44 <span class="ts">⏱39:44</span></a>. The latent variables are the intermediate noisy
+images. The bound decomposes per step, so training becomes: pick a
+random clean image, pick a random step t, noise it to x_t with the fixed
+forward process, and train the network to denoise it. Simple, stable,
+scalable.</p>
+<p>Sampling reverses the recipe. Draw x_T from a standard Gaussian. For t
+from T down to 1, sample x_{t-1} from p_theta given x_t. Output x_0.
+Every sample is a fresh walk from noise to image.</p>
+<div class="qa"><div class="q">What does the diffusion network actually predict?</div><div class="a"><p>How to remove the noise added at one step: given x_t, produce a cleaner x_{t-1}. Equivalently, and commonly implemented, it predicts the noise eps_t that was added, and the cleaner image follows by subtraction. Both views describe the same learned denoiser. The network sees the noisy image and the step index t, because the right amount of denoising depends on how noisy the input is.
+As the training objective. The chain x_0..x_T is a latent-variable model: the noisy intermediates are hidden. The ELBO over the chain gives a per-step denoising loss. EM&rsquo;s pattern, bound the hard thing and climb the bound, is literally the training algorithm. Lecture 10 was the rehearsal.</p><div class="followup"><strong>Follow-up:</strong> Where does the ELBO from lecture 10 appear?</div></div></div>
+<h2 id="level-2-why-t-is-large">Level 2: Why T is large</h2>
+<p>T around 1000 looks wasteful. Each step is cheap, but a thousand steps
+per sample is a thousand network evaluations. The lecture&rsquo;s answer is
+that small steps make each denoising problem easy, and easy problems
+train reliably. Fewer, bigger steps make each step harder and training
+less stable.</p>
+<p>The field has since developed shortcuts: fewer-step samplers that skip
+along the chain, and distillation that compresses many steps into few.
+The training still uses the long chain. The sampling need not. This
+split, train long and sample short, is characteristic of deployed
+diffusion systems.</p>
+<h2 id="level-2-diffusion-versus-autoregression">Level 2: Diffusion versus autoregression</h2>
+<p>Lecture 14 covers autoregressive generation: predict token by token,
+each depending on all previous. Diffusion differs in two ways. The
+generation order is not fixed: every step refines the whole image at
+once, which is the parallelism the lecture mentions. And the model sees
+the full noisy canvas each step, not just a prefix.</p>
+<p>The tradeoff: autoregressive models handle discrete sequences naturally
+and need no fixed length. Diffusion handles continuous data naturally
+and refines globally. The frontier uses both: diffusion for images and
+actions, autoregression for text. Stefano Ermon&rsquo;s work on diffusion
+language models tries to cross that boundary for faster text inference.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<p>Eight ideas carry this lecture. Read each card. Say the core sentence out
+loud. If you can, you own the lesson.</p>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/svg/l11-diffusion.svg" alt="Diffusion chain">
+<div class="rc-body">
+<strong>1. Diffusion generates from noise</strong>
+<p>Learn the distribution of real images. Sample: pure noise in, clean
+image out. Predominant approach, better than GANs and VAEs.</p>
+<p class="rc-num">Key: noise to image, learned</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/figs-notes/notes-diffusion-x0.png" alt="Clean image x_0, Stanford notes">
+<div class="rc-body">
+<strong>2. Forward: fixed noising</strong>
+<p>x_t = (1-beta_t) x_{t-1} + sqrt(beta_t) eps. Small beta, ~1000 steps.
+Variance preserving. No learning here.</p>
+<p class="rc-num">Key: image to noise, fixed</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/figs-notes/notes-diffusion-xT.png" alt="Pure noise x_T, Stanford notes">
+<div class="rc-body">
+<strong>3. After T steps: pure noise</strong>
+<p>The chain ends at a standard Gaussian. Sampling starts here. The
+forward process defines the starting distribution exactly.</p>
+<p class="rc-num">Key: x_T is just noise</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l11-diffusion.svg" alt="Reverse process">
+<div class="rc-body">
+<strong>4. Reverse: learned denoising</strong>
+<p>p_theta(x_{t-1} | x_t): a network removes one step of noise. Chain T
+applications. Gradual beats one-shot: easy problems, not one hard
+one.</p>
+<p class="rc-num">Key: denoise step by step</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l11-diffusion.svg" alt="ELBO training">
+<div class="rc-body">
+<strong>5. Training is the ELBO</strong>
+<p>The chain is a latent-variable model. The bound gives a per-step
+denoising loss. Lecture 10's pattern, deployed.</p>
+<p class="rc-num">Key: bound, then climb</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/figs-notes/notes-diffusion-x0.png" alt="Sampling, Stanford notes">
+<div class="rc-body">
+<strong>6. Sampling walks backward</strong>
+<p>Draw noise, denoise T times, keep x_0. Every run gives a fresh image.
+Shortcuts exist for fewer steps at sample time.</p>
+<p class="rc-num">Key: T denoise evaluations</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l11-diffusion.svg" alt="VLA and parallelism">
+<div class="rc-body">
+<strong>7. Beyond images: VLA and speed</strong>
+<p>Diffusion generates robot actions in VLA models. Parallel refinement
+can beat autoregressive token-by-token inference.</p>
+<p class="rc-num">Key: actions are images too</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/figs-notes/notes-diffusion-xT.png" alt="Fixed forward, Stanford notes">
+<div class="rc-body">
+<strong>8. Fixed forward, learned reverse</strong>
+<p>VAEs learn both directions and co-adaptation hurts. Diffusion fixes
+the noiser, learns only the denoiser. Fewer moving parts win.</p>
+<p class="rc-num">Key: brute force, stable</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 11 video: image generation task <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=5s" target="_blank" rel="noopener">00:05 <span class="ts">⏱00:05</span></a>, VLA <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=39s" target="_blank" rel="noopener">00:39 <span class="ts">⏱00:39</span></a>, predominant approach <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=100s" target="_blank" rel="noopener">01:40 <span class="ts">⏱01:40</span></a>, parallel generation <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=153s" target="_blank" rel="noopener">02:33 <span class="ts">⏱02:33</span></a>, forward process <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=460s" target="_blank" rel="noopener">07:40 <span class="ts">⏱07:40</span></a>, variance preservation <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=749s" target="_blank" rel="noopener">12:29 <span class="ts">⏱12:29</span></a>, one-shot question <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=2031s" target="_blank" rel="noopener">33:51 <span class="ts">⏱33:51</span></a>, T ~ 1000 <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=2120s" target="_blank" rel="noopener">35:20 <span class="ts">⏱35:20</span></a>, ELBO training <a href="https://www.youtube.com/watch?v=dqUMCzWjZSI&amp;t=2384s" target="_blank" rel="noopener">39:44 <span class="ts">⏱39:44</span></a>.
+- CS229 Spring 2026 official course notes: diffusion chapter; the x_0/x_T figures above are from it.</p>
+<p><strong>Further reading:</strong>
+- Ho, Jain, and Abbeel (2020), &ldquo;Denoising Diffusion Probabilistic Models&rdquo;: the DDPM paper.
+- Sohl-Dickstein et al. (2015): the original diffusion formulation.</p>
+<p><strong>Caveats from these sources.</strong> The &ldquo;better than GANs and VAEs&rdquo; claim is
+about image quality and training stability circa 2026; GANs still win on
+single-step sampling speed. The parallelism claim is &ldquo;in some sense&rdquo;:
+practical speedups need few-step samplers. The notes&rsquo; VAE chapter is
+retained for interest, not examined.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336:</strong> diffusion language models are the alternative to autoregressive generation; the course compares the paradigms.</li>
+<li><strong>CS224N:</strong> the ELBO training pattern matches variational objectives in text generation.</li>
+<li><strong>CS329H:</strong> VLA models are diffusion policies: actions sampled like images.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Diffusion cheatsheet.</strong> Task: sample new images from the data distribution. Forward q: x_t = (1-beta_t)x_{t-1} + sqrt(beta_t) eps_t; fixed; variance preserving; T ~ 1000; ends at pure noise. Reverse p_theta: learned denoiser, one step at a time; gradual beats one-shot. Training: ELBO over the chain, per-step denoising loss. Sampling: noise, denoise T times. Wins: stable training, quality; VLA actions; parallel refinement.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Easy problems, chained.</strong> One impossible denoising jump becomes a thousand easy ones. When a task looks unlearnable, ask what gradual version of it is learnable. The curriculum is the algorithm.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=dqUMCzWjZSI" target="_blank" rel="noopener">Lecture 11 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <nav class="pager"><a href="../cs229/l10-em-pca.html"><span class="lbl">← Previous</span>Lecture 10: EM Algorithm and Principal Component Analysis</a><a href="../cs229/l12-foundation-models.html"><span class="lbl">Next →</span>Lecture 12: Foundation Models and Representation Learning</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
