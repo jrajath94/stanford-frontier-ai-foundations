@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 13: Training Data — Stanford Frontier AI</title>
+<meta name="description" content="Data is the most important ingredient: crawling and its limits, copyright and fair use, Common Crawl, quality pockets, a decade of datasets, rules vs classifier">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-l13" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13" class="active">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 13: Training Data</nav>
+      <h1>Lecture 13: Training Data</h1>
+      <p class="meta-line">2026-05-11 · Instructor: Percy Liang · 1:19:51 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="-qm0ln33G24"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/-qm0ln33G24" title="Stanford CS336 Spring 2026 Lecture 13: Training Data" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=-qm0ln33G24" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=-qm0ln33G24" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Percy Liang on data: where it comes from, who owns it, and how it gets cleaned.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>You know how to train, given data (Lectures 2 to 11). You know what
+good means (Lecture 12). <strong>Level 1 (Core):</strong> why data is the most
+important thing, the stages, crawling and its limits, copyright.
+<strong>Level 2 (Deep):</strong> the datasets, filtering schools, code data,
+license-only training.</p>
+<h2 id="level-1-data-is-the-secret-sauce">Level 1: Data is the secret sauce</h2>
+<p>Data is the most important thing to get right <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=24s" target="_blank" rel="noopener">00:24 <span class="ts">⏱00:24</span></a>. The
+Llama 3 paper discloses everything about the architecture and the
+training procedure, and says nothing about the data. Two reasons for
+the secrecy: competitive dynamics, and copyright liability
+<a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=58s" target="_blank" rel="noopener">00:58 <span class="ts">⏱00:58</span></a>.</p>
+<p>Data arrives in stages, and the trend is one direction <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=138s" target="_blank" rel="noopener">02:18 <span class="ts">⏱02:18</span></a>.</p>
+<figure><img alt="Training stages" src="assets/l13-pipeline.svg"><figcaption>Pre, mid, post: large low-quality first, small high-quality last.</figcaption></figure>
+<p>Pre-training takes raw web documents. Mid-training upgrades to higher
+quality data and adds long context. Post-training is chat transcripts
+and RL environments. The largest new models skip the base-model
+checkpoint entirely: just one release <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=210s" target="_blank" rel="noopener">03:30 <span class="ts">⏱03:30</span></a>.</p>
+<h2 id="level-1-crawling-and-its-limits">Level 1: Crawling and its limits</h2>
+<p>&ldquo;Trained on the entire internet&rdquo; does not type-check. The web is live
+servers. Unless you are an RL agent, you do not train on servers: a
+crawler discovers pages and downloads them <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=316s" target="_blank" rel="noopener">05:16 <span class="ts">⏱05:16</span></a>. And the
+crawlable web is much smaller than the web.</p>
+<figure><img alt="Crawl barriers" src="assets/l13-crawl.svg"><figcaption>Dynamic pages, auth walls, robots.txt, anti-bot, terms, licenses.</figcaption></figure>
+<p>Dynamic apps and the deep web have no hyperlinks to follow.
+Authentication locks the big platforms. Robots.txt plus
+&ldquo;Consent in Crisis&rdquo;: by mid-2023, about half of websites fully
+restrict crawling <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=643s" target="_blank" rel="noopener">10:43 <span class="ts">⏱10:43</span></a>. Cloudflare, CAPTCHAs, rate limits,
+IP blocks. Terms of service increasingly say no AI training. And then
+shadow libraries (LibGen, Anna&rsquo;s Archive) bypass all of it: piracy
+from servers in other countries <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=770s" target="_blank" rel="noopener">12:50 <span class="ts">⏱12:50</span></a>.</p>
+<h2 id="level-1-copyright-and-fair-use">Level 1: Copyright and fair use</h2>
+<p>Everything on the internet is copyrighted. The Copyright Act of 1976
+lowered the bar: fixed in a tangible medium is enough, registration
+not required (sue later for $65). It lasts 75 years, then the public
+domain <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=871s" target="_blank" rel="noopener">14:31 <span class="ts">⏱14:31</span></a>.</p>
+<figure><img alt="Copyright" src="assets/l13-copyright.svg"><figcaption>License or fair use. Fair use is semantics and economics, not n-gram overlap.</figcaption></figure>
+<p>You can use copyrighted works two ways. Get a license (Creative
+Commons bridges the 75-year wait. Or pay for a deal). Or claim fair
+use, section 107: purpose and character, nature of the work, amount
+used, effect on the market. Fair use is semantics, not verbatim
+overlap: Harry Potter the character is copyrightable, not any
+particular book <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=1491s" target="_blank" rel="noopener">24:51 <span class="ts">⏱24:51</span></a>. Authors Guild v Google took 11
+years and ruled snippets fair use: the precedent the field leans on
+<a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=1451s" target="_blank" rel="noopener">24:11 <span class="ts">⏱24:11</span></a>.</p>
+<p>The 2025 picture. Training itself has been ruled fair use (so far,
+narrowly). Pirating the books is clearly illegal. Anthropic paid
+$1.5 billion to settle, about $3,000 a book. The Meta case followed
+the same pattern <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=1660s" target="_blank" rel="noopener">27:40 <span class="ts">⏱27:40</span></a>. Note the layering: training can
+be fair use while the copying that enabled it is not. And terms of
+service are a separate layer on top <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=1627s" target="_blank" rel="noopener">27:07 <span class="ts">⏱27:07</span></a>.</p>
+<div class="qa"><div class="q">Is training on copyrighted data legal?</div><div class="a"><p>The honest answer has three layers. First, accessing it: robots.txt, terms of service, and anti-bot measures can make the download itself a violation even when training would be fine. Second, copying it: mere copying can violate copyright. The Anthropic case settled at $1.5 billion over pirated books while separately finding training was fair use. Third, training on it: so far ruled fair use in narrow cases, but not settled in general. Practical rule: permissively licensed data is safe, Common Crawl appeals to fair use, and shadow libraries are piracy. This is an active area. Verify with counsel, not with a lecture.
+Slapping a permissive license on a work you do not own, or claiming a dataset is permissively licensed because its collection page says so. Collection licenses do not extend to the individual works. The Common Pile project found that many &ldquo;permissively licensed&rdquo; datasets on Hugging Face fail at the individual-work level. If you are risk-averse, you must check licenses per work, not per dataset page.</p><div class="followup"><strong>Follow-up:</strong> What is license laundering?</div></div></div>
+<h2 id="level-2-common-crawl">Level 2: Common Crawl</h2>
+<p>Common Crawl has run a monthly web crawl since 2007: 3 to 5 billion
+pages per dump, about 300 billion total <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=1957s" target="_blank" rel="noopener">32:37 <span class="ts">⏱32:37</span></a>. WARC files
+hold the raw HTTP responses. WET files hold lossy extracted text.</p>
+<figure><img alt="Common Crawl" src="assets/l13-commoncrawl.svg"><figcaption>The open crawl: scale, formats, and why extraction tooling matters.</figcaption></figure>
+<p>The extraction tool matters. Trafilatura and Resiliparse beat the
+stock WET conversion (DataComp LLM ablation) <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=2132s" target="_blank" rel="noopener">35:32 <span class="ts">⏱35:32</span></a>.
+Crawling is conceptually graph traversal. The gory details are the
+product: refresh policies, dedup, mirror sites, dynamic URLs
+<a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=2021s" target="_blank" rel="noopener">33:41 <span class="ts">⏱33:41</span></a>.</p>
+<h2 id="level-2-quality-pockets">Level 2: Quality pockets</h2>
+<p>The web is not uniform. Three pockets deserve special handling
+<a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=2188s" target="_blank" rel="noopener">36:28 <span class="ts">⏱36:28</span></a>.</p>
+<figure><img alt="Quality pockets" src="assets/l13-quality-pockets.svg"><figcaption>Wikipedia, GitHub, arXiv: dense sources, each with its own access pattern.</figcaption></figure>
+<p>Wikipedia (67M articles): download the dumps, do not crawl. Even
+&ldquo;high quality&rdquo; can be attacked: Carlini&rsquo;s dump-timing poisoning
+edited Wikipedia just before the dump and rolled back after
+<a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=2320s" target="_blank" rel="noopener">38:40 <span class="ts">⏱38:40</span></a>. GitHub (420M repos, 28M public): train on
+permissive licenses only. The GitHub Archive records every event.
+Code matters for reasoning, not just coding. ArXiv (3M submissions
+since 1991): LaTeX source, mostly Creative Commons.</p>
+<h2 id="level-2-a-decade-of-datasets">Level 2: A decade of datasets</h2>
+<figure><img alt="Dataset history" src="assets/l13-dataset-history.svg"><figcaption>From BookCorpus to Nemotron: the filtering arms race.</figcaption></figure>
+<p>BERT (2018): Wikipedia plus Books, documents not sentences. GPT-2
+(2019): outgoing links from Reddit posts with &gt;3 karma, 40GB.
+CCNet (2019): Wikipedia-like language-model classifier. C4 (2019):
+rules only, 156B tokens. GPT-3 (2020): Common Crawl plus WebText plus
+Books1/2, quality classifier, fuzzy dedup, 400B tokens. The Pile
+(2020): grassroots, including Books3 from the shadow library
+Bibliotik. Llama 1 (2022): 1.2T tokens, and announcing Books3 got
+them in trouble: the watershed that silenced everyone <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=3647s" target="_blank" rel="noopener">60:47 <span class="ts">⏱60:47</span></a>.
+RefinedWeb then FineWeb: web-only, 5T then 15T tokens, rules-first.
+DCLM (2024): fastText classifier on OpenHermes plus ELI5, keep 1.4%
+of 240T tokens, and the magic works. Nemotron (2024): LLM-judged
+educational value, synthetic rephrasing, 6T tokens.</p>
+<h2 id="level-2-rules-vs-classifiers">Level 2: Rules vs classifiers</h2>
+<figure><img alt="Rules vs classifiers" src="assets/l13-rules-vs-classifiers.svg"><figcaption>Two filtering schools. The funnel from 240T to 3T is the whole game.</figcaption></figure>
+<p>Two schools. Rules (C4, Gopher, RefinedWeb): control, no ML bias.
+Classifiers (CCNet, GPT-3, DCLM): decide what &ldquo;good&rdquo; looks like, train
+it, filter everything. The strangest wins: DCLM&rsquo;s classifier trained
+on instruction data plus ELI5 beats everything, and nobody fully
+knows why <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=3964s" target="_blank" rel="noopener">66:04 <span class="ts">⏱66:04</span></a>. The funnel is the point: 240 trillion
+tokens in, about 3 trillion out. Filtering is probably the single
+most important lever in data processing <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=4774s" target="_blank" rel="noopener">79:34 <span class="ts">⏱79:34</span></a>.</p>
+<h2 id="level-2-code-data-and-license-only-data">Level 2: Code data and license-only data</h2>
+<figure><img alt="Stack and Common Pile" src="assets/l13-stack-commonpile.svg"><figcaption>The Stack for code, Common Pile for the risk-averse.</figcaption></figure>
+<p>The Stack: 137 repos to 3TB of permissively licensed code. v2 adds
+issues, PRs, and comments linearized as structured events, so the
+model learns the development process, not just code. Low-resource
+languages get paired with LLVM IR so knowledge transfers from the
+shared low-level representation <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=4366s" target="_blank" rel="noopener">72:46 <span class="ts">⏱72:46</span></a>.</p>
+<p>Common Pile: the risk-averse experiment. Only permissively licensed
+data, 8TB total, no synthetic data (data laundering: the models that
+generate it trained on unlicensed data). Result: competitive with
+2023-era models, not with Qwen <a href="https://www.youtube.com/watch?v=-qm0ln33G24&amp;t=4732s" target="_blank" rel="noopener">78:52 <span class="ts">⏱78:52</span></a>. Reasonable, not
+champion.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/l13-pipeline.svg" alt="Pipeline">
+<div class="rc-body">
+<strong>1. Stages, one direction</strong>
+<p>Pre (raw web), mid (quality, long context), post (chat, RL).
+Large low-quality first, small high-quality last.</p>
+<p class="rc-num">Key: blur the lines, keep the trend</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l13-crawl.svg" alt="Crawl barriers">
+<div class="rc-body">
+<strong>2. The crawlable web is small</strong>
+<p>Dynamic pages, deep web, auth walls, robots.txt, anti-bot,
+terms, licenses. Restrictions doubled after 2023.</p>
+<p class="rc-num">Key: not the whole internet</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l13-copyright.svg" alt="Copyright">
+<div class="rc-body">
+<strong>3. License or fair use</strong>
+<p>Everything is copyrighted. License it, or claim the four
+factors. Training: fair use so far. Pirating: illegal.</p>
+<p class="rc-num">Key: three layers of risk</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l13-commoncrawl.svg" alt="Common Crawl">
+<div class="rc-body">
+<strong>4. Common Crawl</strong>
+<p>Monthly since 2007, ~300B pages. WARC raw, WET lossy.
+Trafilatura and Resiliparse extract better text.</p>
+<p class="rc-num">Key: the open raw material</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l13-quality-pockets.svg" alt="Quality pockets">
+<div class="rc-body">
+<strong>5. Quality pockets</strong>
+<p>Wikipedia (dumps, poisonable), GitHub (licenses, archive),
+arXiv (LaTeX, CC). Code trains reasoning.</p>
+<p class="rc-num">Key: dense sources, special handling</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l13-dataset-history.svg" alt="Dataset history">
+<div class="rc-body">
+<strong>6. The dataset timeline</strong>
+<p>Reddit links to classifiers to synthetic data. Books3 was the
+watershed. Sizes grew. Secrecy grew faster.</p>
+<p class="rc-num">Key: filtering arms race</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l13-rules-vs-classifiers.svg" alt="Rules vs classifiers">
+<div class="rc-body">
+<strong>7. The funnel is the lever</strong>
+<p>Rules vs classifiers. 240T tokens in, ~3T out. DCLM keeps 1.4%
+and wins. Filtering decides the model.</p>
+<p class="rc-num">Key: 240T to 3T</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l13-stack-commonpile.svg" alt="Stack and Common Pile">
+<div class="rc-body">
+<strong>8. Code and caution</strong>
+<p>The Stack: process, not just code. Common Pile: license-only
+works, reasonably. Watch license laundering.</p>
+<p class="rc-num">Key: process data, honest licenses</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 13 video.
+- Llama 3 paper (what it says about data, and what it does not).</p>
+<p><strong>Further reading:</strong>
+- &ldquo;Consent in Crisis&rdquo; (Longpre et al.).
+- The Pile, C4, RefinedWeb/FineWeb, DCLM, Nemotron, Common Pile papers.
+- The Stack v2. Carlini&rsquo;s Wikipedia poisoning paper.
+- The Anthropic and Meta copyright rulings (active litigation area).</p>
+<p><strong>Caveats from these sources.</strong> Copyright law is evolving fast.
+The 2025 rulings are narrow, not blanket permission. Dataset sizes
+mix unique and repeated tokens (epochs count twice). Compare with
+care. &ldquo;Books3 got Meta in trouble&rdquo; refers to the Llama disclosure,
+not a single court ruling.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 Lecture 12:</strong> eval defines the target. Data is what must
+  hit it.</li>
+<li><strong>CS336 Lecture 14:</strong> post-training data and deeper filtering.</li>
+<li><strong>CS229:</strong> the same copyright questions apply to any training
+  corpus.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Training data cheatsheet.</strong> Data is the secret sauce. Llama 3 hides it. Stages: pre (raw web), mid (quality, context), post (chat, RL). Big low-quality to small high-quality. Crawling: dynamic web, deep web, auth walls, robots.txt (~50% restricted by mid-2023), anti-bot, terms, licenses. Shadow libraries = piracy. Copyright: everything copyrighted, 75 years, license (CC) or fair use (4 factors). Training = fair use (narrow 2025 rulings), pirating = illegal (Anthropic $1.5B). Common Crawl: monthly since 2007, ~300B pages, WARC/WET, trafilatura better. Pockets: Wikipedia (dumps, poisonable), GitHub (permissive only), arXiv (LaTeX, CC). Datasets: BERT docs, GPT-2 Reddit links, CCNet classifier, C4 rules, GPT-3 classifier+dedup, Pile (Books3), Llama 1 (watershed), Refined/FineWeb, DCLM (1.4% kept), Nemotron (synthetic). Rules vs classifiers. The funnel is the lever. Stack: code process as data. Common Pile: license-only, reasonable.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Filter, license, repeat.</strong> The crawlable web is small, filtering is the biggest lever, and license-only training is possible but costly.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=-qm0ln33G24" target="_blank" rel="noopener">Lecture 13 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li></ul></section>
+      <nav class="pager"><a href="../cs336/l12-evaluation.html"><span class="lbl">← Previous</span>Lecture 12: Evaluation</a><a href="../cs336/l14-data-pipeline.html"><span class="lbl">Next →</span>Lecture 14: The Data Pipeline</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
