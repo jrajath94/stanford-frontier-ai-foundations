@@ -1,98 +1,76 @@
-# Lesson Format Spec — Stanford Frontier AI Learning System
+# Lesson Spec v2 — FDE-Dossier Style (2026-10-05)
 
-Every lesson is a Markdown file with YAML frontmatter. The build script renders it into the site template.
+## The reader
+A strong software engineer with ZERO ML background. Define every ML term at first use.
+He skips what he knows. Never assume. Never forward-reference.
+
+## The unit
+One lesson = one lecture's topics, in the professor's order. The lecture supplies
+CONTENT and SEQUENCE only. Each concept inside gets rebuilt from zero.
+
+## Section rules
+- ATOMIC sections: one idea per section, smallest complete unit.
+- ORDER FOR LEARNING: simplest version first, then add complexity step by step.
+- NO rigid template. Never force "what/why/how" into every section.
+- NO redundancy: each fact stated ONCE at its natural place. Precedence: no redundancy.
+- NO bloat. Short direct sentences. ASD-STE100. No em dashes.
+
+## Per concept (only where the concept warrants it, never forced)
+1. The problem it solves (one or two sentences).
+2. The simplest toy version, with CONCRETE NUMBERS worked by hand.
+3. Step-by-step buildup. A visual at EVERY step.
+4. How it works under the hood (only the mechanism that matters).
+5. The common misunderstanding (the trap interviewers set).
+6. Interview Q&A inline as `> [!QA]` blocks (see below). No separate
+   "interview relevance" section unless needed to avoid leaving gaps.
+
+## Interview Q&A format
+> [!QA]
+> Q: <the question, as an interviewer would ask it>
+> A: <the answer, 3-8 sentences, with a concrete number or example>
+> Follow-up: <the harder follow-up and its one-line answer>
+
+Add follow-ups. Cover general concepts too, not just lecture specifics.
+Depth follows INTERVIEW IMPORTANCE, not lecture airtime.
+
+## Visuals — binding spec: build/VISUAL_SYSTEM.md
+
+Every figure on every page follows build/VISUAL_SYSTEM.md strictly.
+No page ships without its figures. Summary of the binding rules:
+
+- Draw only on state change (count, merge, score, mask, move, new symbol).
+- Source order: official slide figure, official note figure, board/demo frame
+  with timestamp, assigned paper figure, original only as last resort.
+  Label the source on the figure (Stanford, paper, original).
+- One atomic unit gets one lesson plate. One claim per plate.
+- Medium ladder: table, equation, ASCII, Mermaid, SVG plate, Canvas 2D,
+  three.js, Manim, Hyperframes. Use the first medium that passes the tests.
+- Plate style: warm paper #F7F4EE, ink #1B2838, flat fills, no gradient,
+  no glow, no shadow, no watermark, no clip art. Caption names source + shell.
+- Cross-course symbols are reused, never redrawn (table in VISUAL_SYSTEM.md).
+- Page audit before ship: every heading, equation, and architecture noun
+  gets a unit id mapped to a figure id. Blank figure cell fails the page.
+
+Figures that teach a process the reader can control (tokenizer lab,
+attention explorer) are Canvas 2D with one control, computed live.
 
 ## Frontmatter
-
-```yaml
 ---
-page_id: cs336-l01            # unique id, used for progress tracking
-course_slug: cs336
-course_name: "CS336: Language Modeling from Scratch"
-course_order: 1              # course order within the repo
-order: 1                     # lesson order within the course
-nav: "L01 · Overview, Tokenization"   # short sidebar label
-title: "Lecture 1: Overview, Tokenization"
-summary: "One or two sentences on what this lesson covers."
-date: "2026-03-30"
-instructor: "Percy Liang"
-offering: "Spring 2026"
-duration: "1:19:22"
-video_id: JuoVZkPBiKk        # YouTube id; embeds the video at the top
-video_title: "Stanford CS336 Spring 2026 Lecture 1: Overview, Tokenization"
-video_caption: "Original lecture. Timestamps link to exact moments."
-concepts: [tokenization, BPE]   # for search/cross-linking
-papers: []                      # assigned papers discussed
-sources:
-  - tag: video
-    label: "Lecture 1 video, Stanford Online YouTube"
-    url: https://www.youtube.com/watch?v=JuoVZkPBiKk
-  - tag: slides
-    label: "lecture_01.py (executable lecture code)"
-    url: https://cs336.stanford.edu/lectures/?trace=lecture_01
-  - tag: notes
-    label: "Official subtitle transcript (en-orig)"
+page_id, course_slug, course_name, course_order, order, nav, title, summary,
+date, instructor, offering, duration,
+video_id, video_title, video_caption,
+concepts: [], sources: [{tag, label, url}]
 ---
-```
-
-Source tags: `video`, `slides`, `notes`, `paper`, `code`, `assignment`, `supplement`, `synthesis`, `inference`.
-Use `synthesis` when you merge sources, `inference` when you state something not directly in a source. Never invent professor quotes.
+Tags: video, slides, notes, paper, code, assignment, supplement, synthesis, inference.
 
 ## Writing rules (ASD-STE100)
+Short direct sentences. Active voice. No em dashes. No contractions.
+No semicolons. No banned filler. No generic intros. Start with substance.
 
-- Short, direct sentences. One meaning per sentence.
-- Active voice when possible.
-- Keep the technical terms the course uses. Define each term at first use.
-- NO em dashes anywhere. Use commas or periods instead.
-- NO contractions (do not, cannot, will not).
-- No semicolons.
-- No banned filler: delve, leverage, robust, seamless, nuanced, pivotal, landscape, realm, tapestry, groundbreaking, cutting-edge, holistic, multifaceted, "it is important to note", "in today's world", "let's break it down".
-- No generic intros ("In this lesson we will…"). Start with substance.
-- No "why this matters" blocks. No motivational filler.
-- Compress ruthlessly. Every paragraph must carry information.
-
-## Structure
-
-- Do NOT use a fixed template. Let the lecture's natural flow decide.
-- Typical lesson: 1500-3500 words. Dense lectures (parallelism, scaling laws) can run longer.
-- Aim for a useful visual after every 1-2 paragraphs of text. A visual can be: mermaid diagram, table, equation, code block, figure.
-- End with the Sources box (from frontmatter). No summary section unless the lecture itself summarizes.
-
-## Elements
-
-Timestamps: `[12:34](ts:12:34)` renders as a link to that exact video moment. Use for key explanations, derivations, caveats.
-
-Callouts (use sparingly, only when the content earns it):
-```
-> [!KEY] One or two sentences on the single most important takeaway.
-> [!PROF] Something the professor said that slides omit (paraphrase, never invent quotes).
-> [!CAVEAT] A caveat or failure mode from the lecture.
-> [!INTERVIEW] Why this matters for frontier-lab interviews.
-> [!PAPER] Paper connection.
-> [!WARN] Common misunderstanding.
-```
-
-Mermaid diagrams:
-````markdown
-```mermaid
-flowchart LR
-    A[Token] --> B[Embed]
-```
-````
-
-Equations: inline `\(x^2\)`, display `\[ \sum_i x_i \]`. Rendered by KaTeX.
-
-Code: Python. Clean, minimal, commented only where logic is non-obvious. Prefer the official lecture code, simplified.
-
-Figures: `![alt](figures/l01-attn.png "Caption: what the figure shows.")` — caption is required.
-
-Cross-course links: link to the canonical concept page when it exists, e.g. `[attention](../../concepts/attention.html)`. When a concept was taught in an earlier course in this system, write "As taught in [CS229 Lesson 4](../cs229/l04.html), …" and do NOT re-explain it. Explain only what is new here.
-
-## Source fidelity
-
-- The lecture subtitles are the primary source. Map every major section to what the professor actually said.
-- Slides are the primary visual source. Reference slide content; do not copy full slide decks.
-- When slides and lecture disagree, say so explicitly.
-- Assignments: include an "Assignment connection" note where the lecture feeds an assignment.
-- Papers: name the paper, state the one result the lecture uses, link it.
-- If a fact is uncertain or the source is ambiguous, label it `[uncertain]` inline.
+## Hard rules
+- Never hallucinate lecture content. [uncertain] where unsure.
+- Timestamps: [mm:ss](ts:mm:ss), video_id must be real.
+- Each fact once. If taught in an earlier lesson, link it, do not re-explain.
+- ASD-STE100 + humanizer on every word, including READMEs and captions.
+  Short sentences. Plain words. Zero AI tells. No contractions.
+- No page ships until its audit table has no blank figure cell.
