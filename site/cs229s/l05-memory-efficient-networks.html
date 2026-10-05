@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lecture 5: Memory-Efficient Neural Networks — Stanford Frontier AI</title>
+<meta name="description" content="Three ways to shrink a trained model without losing quality: pruning and sparsity, quantization, and knowledge distillation.">
+<link rel="stylesheet" href="assets/vendor/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="cs229s-l05">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Home</h3><ul>
+<li><a href="index.html" data-page="foundations-home">Home</a></li>
+</ul>
+<h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="cs336/l01-overview-tokenization.html" data-page="cs336-l01">L01 · Overview, Tokenization</a></li>
+<li><a href="cs336/l02-pytorch-resource-accounting.html" data-page="cs336-l02">L02 · PyTorch, Resource Accounting</a></li>
+<li><a href="cs336/l03-architectures-hyperparameters.html" data-page="cs336-l03">L03 · Architectures, Hyperparameters</a></li>
+<li><a href="cs336/l04-attention-alternatives-moe.html" data-page="cs336-l04">L04 · Attention Alternatives, MoE</a></li>
+<li><a href="cs336/l05-gpus-tpus.html" data-page="cs336-l05">L05 · GPUs, TPUs</a></li>
+<li><a href="cs336/l06-kernels-triton-xla.html" data-page="cs336-l06">L06 · Kernels, Triton, XLA</a></li>
+<li><a href="cs336/l07-parallelism-1.html" data-page="cs336-l07">L07 · Parallelism I</a></li>
+<li><a href="cs336/l08-parallelism-2.html" data-page="cs336-l08">L08 · Parallelism II</a></li>
+<li><a href="cs336/l09-scaling-laws-1.html" data-page="cs336-l09">L09 · Scaling Laws I</a></li>
+<li><a href="cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="cs336/l11-scaling-laws-2.html" data-page="cs336-l11">L11 · Scaling Laws II</a></li>
+<li><a href="cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="cs336/l13-data-sources.html" data-page="cs336-l13">L13 · Data Sources</a></li>
+<li><a href="cs336/l14-data-processing.html" data-page="cs336-l14">L14 · Data Processing</a></li>
+<li><a href="cs336/l15-post-training-sft-rlhf.html" data-page="cs336-l15">L15 · SFT, RLHF</a></li>
+<li><a href="cs336/l16-post-training-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="cs336/l17-alignment-multimodality.html" data-page="cs336-l17">L17 · Alignment, Multimodality</a></li>
+<li><a href="cs336/l18-guest-dan-fu.html" data-page="cs336-l18">L18 · Guest: Dan Fu</a></li>
+<li><a href="cs336/labs-index.html" data-page="cs336-labs-index">CS336 · Labs</a></li>
+<li><a href="cs336/lab1-tokenizer-transformer.html" data-page="cs336-lab1">Lab 1 · Tokenizer, Transformer</a></li>
+<li><a href="cs336/lab2-systems.html" data-page="cs336-lab2">Lab 2 · Systems</a></li>
+<li><a href="cs336/lab3-scaling.html" data-page="cs336-lab3">Lab 3 · Scaling Laws</a></li>
+<li><a href="cs336/lab4-data.html" data-page="cs336-lab4">Lab 4 · Data</a></li>
+<li><a href="cs336/lab5-post-training.html" data-page="cs336-lab5">Lab 5 · Post-Training</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="cs229/l02-supervised-setup.html" data-page="cs229-l02">L02 · Supervised Learning Setup</a></li>
+<li><a href="cs229/l03-weighted-least-squares.html" data-page="cs229-l03">L03 · Weighted Least Squares</a></li>
+<li><a href="cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="cs229/l12-representation-learning.html" data-page="cs229-l12">L12 · Representation Learning</a></li>
+<li><a href="cs229/l13-llms-next-token.html" data-page="cs229-l13">L13 · LLMs, Next-Token Prediction</a></li>
+<li><a href="cs229/l14-transformers-icl.html" data-page="cs229-l14">L14 · Transformers, In-Context Learning</a></li>
+<li><a href="cs229/l16-rl-basics.html" data-page="cs229-l16">L16 · RL Basics, MDPs</a></li>
+<li><a href="cs229/l17-policy-gradient.html" data-page="cs229-l17">L17 · Policy Gradient, PPO</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction, the Systems Mindset</a></li>
+<li><a href="cs229s/l02-hardware-aware-design.html" data-page="cs229s-l02">L02 · Hardware-Aware Algorithm Design</a></li>
+<li><a href="cs229s/l03-transformer-performance.html" data-page="cs229s-l03">L03 · Analyzing Transformer Performance</a></li>
+<li><a href="cs229s/l04-efficient-attention.html" data-page="cs229s-l04">L04 · Efficient Attention</a></li>
+<li><a href="cs229s/l05-memory-efficient-networks.html" data-page="cs229s-l05" class="active">L05 · Memory-Efficient Networks</a></li>
+<li><a href="cs229s/l06-parallelism-fundamentals.html" data-page="cs229s-l06">L06 · Parallelism Fundamentals</a></li>
+<li><a href="cs229s/l07-guest-dettmers.html" data-page="cs229s-l07">L07 · Guest: Tim Dettmers</a></li>
+<li><a href="cs229s/l08-guest-narayanan.html" data-page="cs229s-l08">L08 · Guest: Deepak Narayanan</a></li>
+</ul>
+<h3></h3><ul>
+<li><a href="cs229/labs-index.html" data-page="cs229/labs-index.html">CS229 Labs</a></li>
+<li><a href="cs229/index.html" data-page="cs229/index.html">CS229: Machine Learning</a></li>
+<li><a href="cs229s/index.html" data-page="cs229s/index.html">CS229S: Systems for Machine Learning</a></li>
+<li><a href="cs229/l01-introduction.html" data-page="cs229/l01-introduction.html">L01: Introduction</a></li>
+<li><a href="cs229/l04-exponential-family-glms.html" data-page="cs229/l04-exponential-family-glms.html">L04: Exponential Family and GLMs</a></li>
+<li><a href="cs229/l05-gda-naive-bayes.html" data-page="cs229/l05-gda-naive-bayes.html">L05: Gaussian Discriminant Analysis</a></li>
+<li><a href="cs229/l06-ml-advice.html" data-page="cs229/l06-ml-advice.html">L06: Dataset Splits and ML Advice</a></li>
+<li><a href="cs229/l07-neural-networks-1.html" data-page="cs229/l07-neural-networks-1.html">L07: Neural Networks 1 (Architecture)</a></li>
+<li><a href="cs229/l08-neural-networks-2.html" data-page="cs229/l08-neural-networks-2.html">L08: Neural Networks 2 (Backprop)</a></li>
+<li><a href="cs229/l09-kmeans-gmm.html" data-page="cs229/l09-kmeans-gmm.html">L09: K-Means and GMM</a></li>
+<li><a href="cs229/l10-em-pca-ica.html" data-page="cs229/l10-em-pca-ica.html">L10: EM, PCA, ICA</a></li>
+<li><a href="cs229/l15-attention-variants.html" data-page="cs229/l15-attention-variants.html">L15: Attention Variants</a></li>
+<li><a href="cs229/lab1-derivations.html" data-page="cs229/lab1-derivations.html">Lab 1: Derivations by Hand</a></li>
+<li><a href="cs229/lab2-bias-variance.html" data-page="cs229/lab2-bias-variance.html">Lab 2: Bias-Variance in Practice</a></li>
+<li><a href="cs229/lab3-em-from-scratch.html" data-page="cs229/lab3-em-from-scratch.html">Lab 3: EM from Scratch</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="index.html">Home</a> / <a href="#">CS229S: Systems for Machine Learning</a> / Lecture 5: Memory-Efficient Neural Networks</nav>
+      <h1>Lecture 5: Memory-Efficient Neural Networks</h1>
+      <p class="meta-line">Instructor: Azalia Mirhoseini · Fall 2024</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><p>Memory is expensive. The gap between model size and GPU memory keeps growing: a 70B model in FP16 needs 140 GB just for weights, while a single H100 holds 80 GB. Last lesson reduced memory traffic through algorithm design. This lesson reduces the memory requirement itself, through three techniques: pruning, quantization, and knowledge distillation. The deck draws on MIT 6.5940 (Song Han).</p>
+<h2 id="the-three-levers">The three levers</h2>
+<div class="mermaid">flowchart LR
+    A[Trained FP32 model] --> B[Pruning and sparsity]
+    A --> C[Quantization]
+    A --> D[Knowledge distillation]
+    B --> E[Smaller model, same architecture]
+    C --> E
+    D --> F[Smaller model, new architecture]
+</div>
+<ul>
+<li><strong>Pruning and sparsity</strong> discard a subset of parameters or neurons after training. The result is a sparse network.</li>
+<li><strong>Quantization</strong> uses a subset of the real numbers instead of the full FP32 set.</li>
+<li><strong>Knowledge distillation</strong> trains a small model that mimics the quality of the large one.</li>
+</ul>
+<p>All three preserve accuracy while cutting memory. They also compose: Deep Compression showed pruning plus quantization beats either alone.</p>
+<h2 id="pruning">Pruning</h2>
+<h3 id="formal-setup">Formal setup</h3>
+<p>Let (W) be the original weights and (W_P) the pruned weights. Let (|W_P|_0) be the number of nonzeros, (T) the target parameter count, (L) the loss. Pruning is the optimization problem</p>
+<p>[ \min_{W_P} L(x; W_P) \quad \text{s.t.} \quad |W_P|_0 &lt; T. ]</p>
+<p>An ideal pruning process has three properties: it accelerates training or inference on real hardware, it retains the original accuracy, and it generalizes across models instead of being over-engineered for one.</p>
+<h3 id="patterns-decide-whether-pruning-helps-hardware">Patterns decide whether pruning helps hardware</h3>
+<p>Two weight matrices pruned to the same sparsity can behave very differently:</p>
+<div class="mermaid">flowchart LR
+    A[Unstructured: zeros scattered] --> B[High accuracy, poor hardware use]
+    C[Structured: whole rows or channels zero] --> D[Lower accuracy, real speedup]
+</div>
+<p>Fine-grained pruning keeps more accuracy but may still touch every memory block, so the hardware sees no savings. The deck&rsquo;s key point: structured access is what hardware rewards. Three access patterns rank very differently on a GPU: repeatedly reading the same location (fast, cached), reading sequential memory (fast, coalesced), reading random locations (slow). Unstructured sparsity turns weight reads into random reads.</p>
+<p><strong>2:4 (N:M) sparsity</strong> is the compromise that made it into silicon. In every contiguous block of 4 values, exactly 2 are zero. The pattern is structured enough that metadata overhead stays low, and NVIDIA Ampere sparse tensor cores execute it at roughly 2x the dense rate. The deck asks the right question: how does accuracy survive 50% pruning? Answer: iterative pruning with fine-tuning, not one-shot pruning.</p>
+<h3 id="which-weights-to-remove">Which weights to remove</h3>
+<p><strong>Magnitude-based pruning</strong>, the widely used heuristic: weights with larger absolute values matter more. Fine-grained version drops small individual weights. Coarse-grained version drops whole rows whose summed absolute values are small. The deck works a small example: (W = [5, 0.3, -0.4]), ReLU activation. The weight 5 dominates the output. Drop the small ones first.</p>
+<p><strong>Regression-based (channel) pruning</strong> treats one layer at a time. Learn a binary vector (B) that selects which rows (channels) to keep, then relearn (W) to minimize the reconstruction error (|Z - \hat{Z}|_F^2) subject to (|B|_0 &lt; N_c). This is He et al., &ldquo;Channel Pruning for Accelerating Very Deep Neural Networks.&rdquo;</p>
+<p><strong>Sensitivity analysis</strong> picks the pruning ratio per layer instead of using one global ratio. Different layers have different sensitivities: the first layer is usually sensitive, fully connected layers usually are not. For each layer, prune at increasing ratios in magnitude order and measure accuracy. Stop where the curve bends.</p>
+<p>For transformers specifically, the deck cites SpAtten: cascade token and head pruning for sparse attention.</p>
+<div class="callout"><span class="co-label">Interview signal</span><p>When asked how to fit a model on a smaller GPU, name the three levers and the decision order: quantize first (cheapest, no retraining for post-training quantization), then prune with 2:4 sparsity if the hardware supports it, then distill if you need a fundamentally smaller architecture. Mention that unstructured sparsity rarely speeds up inference without specialized kernels.</p></div>
+<h2 id="quantization">Quantization</h2>
+<h3 id="how-numbers-live-in-hardware">How numbers live in hardware</h3>
+<p>A char is 8 bits. An int is 32 bits. ML training historically used FP32 (4 bytes). BFloat16 (2 bytes) is now standard. Programs address memory by byte, so halving the bit-width halves the memory traffic for reading weights.</p>
+<p>The deck walks the IEEE 754 format because the bit budget is the whole game:</p>
+<p>[ \text{value} = (-1)^{\text{sign}} \times (1 + \text{fraction}) \times 2^{\text{exponent} - \text{bias}}. ]</p>
+<p>FP32 uses 8 exponent bits and 23 fraction bits. FP16 shrinks both (5 exponent, 10 fraction), which hurts dynamic range, the gap between the largest and smallest representable values. <strong>BF16</strong> keeps 8 exponent bits and cuts the fraction to 7: same range as FP32, less precision. That tradeoff is why BF16 trains stably while FP16 needed loss scaling.</p>
+<p>Two motivations for quantizing below 16 bits:</p>
+<ol>
+<li><strong>Storage.</strong> Total bytes = parameters × bit-width. A 70B model drops from 140 GB (FP16) to 35 GB (INT4).</li>
+<li><strong>Compute and energy.</strong> Addition costs (O(N)) for (N)-bit values. Multiplication costs (O(N^2)). Narrower integers mean cheaper, cooler arithmetic.</li>
+</ol>
+<p>As taught in <a href="../cs336/l10-inference.html">CS336 L10</a>, inference is memory-bound, so the storage win translates directly into serving speed. The mechanics of low-precision serving live there. This lesson covers the two classical quantization methods.</p>
+<h3 id="method-1-k-means-quantization-deep-compression">Method 1: K-means quantization (Deep Compression)</h3>
+<p>Han et al., ICLR 2016 best paper. During inference:</p>
+<ol>
+<li>Cluster the FP32 weights into (S) clusters.</li>
+<li>Store a (\log_2(S))-bit index per weight plus the (S) FP32 centroids.</li>
+<li>Reconstruct weights on the fly from the index-to-centroid map.</li>
+</ol>
+<p>Storage math for a (D \times D) FP32 matrix: (32D^2) bits shrink to (\log_2(S) \cdot D^2 + 32S). With (D = 4) and (S = 4), that is 64 bytes down to 20 bytes, a 3.2x compression. As (S \ll D), savings grow. Note the limitation: computation stays FP32, so this saves memory traffic, not FLOPs.</p>
+<p>Fine-tuning works too: backpropagate through the shared centroids. The gradient for centroid (C_k) is the sum of gradients of all weights assigned to it:</p>
+<p>[ \frac{dL}{dC_k} = \sum_{i,j : W_{ij} \in C_k} \frac{dL}{dW_{ij}}. ]</p>
+<p>Huffman coding on top squeezes further: frequent centroid indices get shorter codes, saving 20%+ more on AlexNet&rsquo;s final layer.</p>
+<h3 id="method-2-linear-quantization-integer-only-inference">Method 2: Linear quantization (integer-only inference)</h3>
+<p>Jacob et al. Map the real range ([r_{\min}, r_{\max}]) to the integer range ([q_{\min}, q_{\max}]) with a scale (S) and zero-point (Z):</p>
+<p>[ r = S(q - Z). ]</p>
+<p>Solve for (S) and (Z) from the two endpoint equations. Then rewrite the matmul (Y = WX) entirely in integers:</p>
+<p>[ q_Y = \frac{S_W S_X}{S_Y}(q_W - Z_W)(q_X - Z_X) + Z_Y, ]</p>
+<p>rescaling the multiplier back to (N)-bit integers. Every operation is integer arithmetic: no FP32 anywhere in the loop. The deck&rsquo;s 2-bit example shows the reconstruction error explicitly, so you can see what the quantization error costs.</p>
+<p>The deck cites the Lite Transformer as quantization applied to attention architectures.</p>
+<div class="mermaid">flowchart TD
+    A[FP32 weights] --> B{Goal?}
+    B -->|Save memory traffic| C[K-means: store indices plus centroids]
+    B -->|Integer-only compute| D[Linear: solve for S and Z, integer matmul]
+    C --> E[Deep Compression pipeline]
+    D --> E
+</div>
+<h2 id="knowledge-distillation">Knowledge distillation</h2>
+<p>Small models are hard to train directly: they underfit. The key idea: let a large teacher guide a small student. Motivating cases are phones, laptops, IoT devices, and healthcare monitors, anywhere the full model cannot run.</p>
+<p>The design space is what to align between teacher and student:</p>
+<ul>
+<li><strong>Output logits</strong> (Hinton et al., 2014): match the softmax probabilities. The teacher&rsquo;s soft targets carry &ldquo;dark knowledge&rdquo;: a plane image scores 0.982 for plane and 0.017 for car, and that 0.017 tells the student planes look slightly car-like. Losses used: cross-entropy (E[-p_t \log p_s]) or L2 on the logits.</li>
+<li><strong>Intermediate weights, features, gradients, sparsity patterns</strong>: progressively deeper alignment (FitNets, attention transfer, and related work).</li>
+</ul>
+<p>The student trains on a combined loss: the distillation loss against the teacher plus the standard classification loss against the labels.</p>
+<h2 id="recap">Recap</h2>
+<p>Pruning removes weights (mind the pattern, or hardware ignores you). Quantization narrows the number format (k-means for memory traffic, linear for integer compute). Distillation trains a small model from a large teacher&rsquo;s soft targets. Next: adapting a trained model to new data, through fine-tuning and parameter-efficient methods.</p>
+<blockquote>
+<p><strong>Interview line:</strong> For &ldquo;how do you serve a 70B model on limited GPUs,&rdquo; answer in layers: BF16 halves memory over FP32 for free. INT8/INT4 quantization cuts another 2-4x (post-training quantization needs no retraining. Watch activation outliers, which is what SmoothQuant addresses). 2:4 sparsity doubles throughput on Ampere+ if you can hold accuracy. Distillation is the last resort because it means retraining. Then name the hardware fact that makes it all work: inference is memory-bandwidth bound, so every byte saved is latency saved.</p>
+</blockquote>
+<h2 id="sources">Sources</h2>
+<ul>
+<li>Slides: Memory Efficient Neural Networks deck, CS229S Fall 2024 (<a href="https://cs229s.stanford.edu/fall2024/calendar/">course calendar</a>). Draws on MIT 6.5940 (Song Han).</li>
+<li>Related in this system: <a href="../cs336/l10-inference.html">CS336 L10: Inference</a> (low-precision serving mechanics), <a href="../cs336/l05-gpus-tpus.html">CS336 L05: GPUs</a> (memory hierarchy).</li>
+</ul>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span><a href="https://cs229s.stanford.edu/fall2024/calendar/" target="_blank" rel="noopener">Memory Efficient Neural Networks deck, CS229S Fall 2024</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1506.02626" target="_blank" rel="noopener">Han et al., Deep Compression (ICLR 2016)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1712.05877" target="_blank" rel="noopener">Jacob et al., Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference</a></li></ul></section>
+      <nav class="pager"><a href="cs229s/l04-efficient-attention.html"><span class="lbl">← Previous</span>Lecture 4: Efficient Attention</a><a href="cs229s/l06-parallelism-fundamentals.html"><span class="lbl">Next →</span>Lecture 6: Parallelism Fundamentals</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="assets/vendor/katex.min.js"></script>
+<script src="assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "";</script>
+<script src="assets/app.js"></script>
+</body>
+</html>
