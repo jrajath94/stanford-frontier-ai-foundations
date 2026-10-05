@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 1: Why Systems for Machine Learning — Stanford Frontier AI</title>
+<meta name="description" content="The economic case for SysML: compute demand outruns hardware, memory lags models, and wins come from every layer of the stack.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229s-l01" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01" class="active">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229S: Systems for Machine Learning</a> / Lecture 1: Why Systems for Machine Learning</nav>
+      <h1>Lecture 1: Why Systems for Machine Learning</h1>
+      <p class="meta-line">2024-09-23 · Instructor: Azalia Mirhoseini · Fall 2024</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p><strong>Level 1 (Core)</strong> gives the economic and technical case for the course.
+<strong>Level 2 (Deep)</strong> walks through the four evidence pillars the lecture
+uses: compute trends, the memory wall, quantization and sparsity, and
+hardware-aware design. Read Level 1 straight through.</p>
+<p>Note: the slide decks shipped with the course carry Fall 2023 headers
+and list Simran Arora alongside Azalia Mirhoseini as instructor. The
+Fall 2024 calendar lectures are ordered below. Flagged where the two
+disagree.</p>
+<h2 id="level-1-the-course-in-one-paragraph">Level 1: The course in one paragraph</h2>
+<p>CS229S studies the systems side of deep learning: how to train,
+fine-tune, and serve large models within the limits of real hardware.
+The motivation is arithmetic. Model compute demand grows far faster
+than hardware improves, memory capacity lags model size, and a cheaper
+algorithm on paper can lose to a hardware-aware one in wall-clock
+time. The course attacks all four layers of the stack: data, model,
+software, and hardware.</p>
+<figure><img alt="Full-stack efficiency" src="assets/media-generation-plate-chapter-l01-fullstack-0-ba96d864-a7fa-4e8c-b343-e346c5aa61cf.webp"><figcaption>Shell: synthesis. Every layer of the stack gets its own efficiency lever. Source: original chapter plate.</figcaption></figure>
+<h2 id="level-1-why-models-keep-growing">Level 1: Why models keep growing</h2>
+<p>Performance keeps improving with three inputs: compute, dataset size,
+and parameter count. Kaplan et al. (2020) formalized this as scaling
+laws. Larger models also show emergent behavior: capabilities like
+few-shot learning and chain of thought appear only past a size
+threshold. Brown et al. (GPT-3, 2020) and Wei et al. (2022)
+documented this. The economic result is that every lab wants bigger
+models, which is what makes systems work valuable.</p>
+<p>The pretraining recipe is next-token prediction on vast text. The raw
+pretrained model then needs fine-tuning to follow instructions and to
+align with human intent. Thoppilan et al. (LaMDA, 2022) is the
+lecture&rsquo;s example of fine-tuning for dialog.</p>
+<div class="qa"><div class="q">Why does the field keep training larger models instead of better small ones?</div><div class="a"><p>Two reasons. Scaling laws show smooth, predictable gains from more compute, data, and parameters, so size is a reliable lever. Emergent abilities such as few-shot learning and chain of thought appear only at large scale, so some capabilities have no small-model equivalent. Systems work exists because this appetite for scale collides with hardware limits.
+Money and memory. Training a frontier model costs tens of millions of dollars, and model size outruns accelerator memory: GPT-4-scale weights sit far above an A100&rsquo;s 40 or 80 GB. That is why the course opens with memory and compute, not with architectures.</p><div class="followup"><strong>Follow-up:</strong> What breaks first as models grow?</div></div></div>
+<h2 id="level-1-the-three-pillars-of-the-course">Level 1: The three pillars of the course</h2>
+<p>The lecture organizes the field into three themes.</p>
+<p><strong>Efficient architectures and algorithms.</strong> Efficient attention,
+quantization, sparsity, pruning, distillation. Reduce memory
+footprint, reduce compute, or both.</p>
+<p><strong>Hardware understanding.</strong> GPUs, memory hierarchies, interconnects,
+compilers. You cannot optimize what you cannot measure.</p>
+<p><strong>Parallelism and scheduling.</strong> Data, tensor, and pipeline
+parallelism across devices and nodes. Mapping a computation graph to
+hardware is a combinatorial optimization problem.</p>
+<p>Later lectures give each pillar its own treatment:
+<a href="l03-hardware-aware-design.html">L03</a> for arithmetic intensity,
+<a href="l05-gpu-execution-model.html">L05</a> for the GPU execution model,
+<a href="l10-parallelism.html">L10</a> for parallelism.</p>
+<h2 id="level-1-the-efficiency-stack">Level 1: The efficiency stack</h2>
+<p>Four layers, each with its own levers.</p>
+<figure><img alt="Efficiency across the stack" src="assets/slide-l01-efficiency-stack.png"><figcaption>Data, model, software, hardware. Each layer gets its own efficiency levers. Source: Stanford slides.</figcaption></figure>
+<p><strong>Data.</strong> Smaller, better data. Higher quality samples, compression,
+dimensionality reduction.</p>
+<p><strong>Model.</strong> Neural architecture search, quantization, distillation,
+pruning, sparsification, pretraining and reuse.</p>
+<p><strong>Software.</strong> Custom mapping and scheduling, parallel distribution,
+pipelining. Compilers such as XLA, MLIR, and framework stacks
+(TensorFlow, JAX, PyTorch).</p>
+<p><strong>Hardware.</strong> Specialized accelerators: NVIDIA GPUs, Google TPUs,
+Tesla Dojo, SambaNova, Cerebras, Graphcore, phone accelerator cores.</p>
+<p>The FAST paper (Zhang et al., ASPLOS 2022) is the lecture&rsquo;s proof
+that hardware-software co-optimization unlocks multi-fold gains: the
+best datapath, scheduling, and fusion choices differ across vision
+and language workloads, so the stack must be searched together.</p>
+<h2 id="level-2-compute-demand-outruns-moores-law">Level 2: Compute demand outruns Moore&rsquo;s law</h2>
+<figure><img alt="Compute trends" src="assets/slide-l01-compute-trends.png"><figcaption>Training FLOPs across eras: deep learning compute grows 32x every 2 years against Moore's law 2x. Source: Stanford slides, Sevilla et al. 2022.</figcaption></figure>
+<p>Sevilla et al. (2022) plotted training compute across three eras of
+machine learning. The deep learning era line rises 32x every 2 years.
+Moore&rsquo;s law gives 2x every 2 years. The gap between demand and
+hardware improvement is the entire economic reason this course
+exists. If hardware kept pace, efficiency research would be a hobby.
+It does not, so efficiency is a requirement.</p>
+<div class="qa"><div class="q">Quote the two growth rates and say why they matter together.</div><div class="a"><p>Deep learning training compute grows 32x every 2 years; Moore&rsquo;s law gives roughly 2x every 2 years. The 16x gap per 2-year window compounds, so each generation of models demands far more than new hardware supplies. Every missing factor must come from better algorithms, better parallelism, or better utilization.
+No. Hardware still sets the ceiling: peak FLOPs and memory bandwidth bound every roofline analysis in Lecture 3. The point is that hardware alone cannot close the gap, so systems techniques carry the rest.</p><div class="followup"><strong>Follow-up:</strong> Does this mean hardware progress is irrelevant?</div></div></div>
+<h2 id="level-2-the-memory-wall">Level 2: The memory wall</h2>
+<figure><img alt="Models vs accelerator memory" src="assets/slide-l01-memory-wall.png"><figcaption>Model size over time against fixed accelerator memories: A100 40/80 GB, TPUv3 32 GB, V100 32 GB. Source: Stanford slides.</figcaption></figure>
+<p>Model size grows along the same steep curve, but accelerator memory
+is nearly flat: V100 32 GB, TPUv3 32 GB, A100 40 or 80 GB. GPT-4
+scale sits far above all of them. The lecture states the consequence
+plainly: a new LLM drops, you get A100s to fine-tune it, and you hit
+an out-of-memory error. That single failure mode motivates
+quantization (smaller weights), parallelism (split weights across
+devices), and KV cache management (Lecture 4).</p>
+<p>Training and inference costs split differently. Training is a large
+upfront cost: tens of millions of dollars for a large LLM. One
+inference call is cheap, under $0.0001 for a large LLM, but it
+accumulates with users. The lecture&rsquo;s production example (OctoML)
+shows total inference cost rising steadily as the user base grows.
+Design for training when the bill is upfront; design for serving
+when the bill compounds.</p>
+<figure><img alt="Training and inference costs" src="assets/slide-l01-train-infer-costs.png"><figcaption>Training is a large upfront cost; inference is cheap per call and compounds with users. Source: Stanford slides.</figcaption></figure>
+<h2 id="level-2-algorithmic-scaling-is-not-wall-clock-speed">Level 2: Algorithmic scaling is not wall-clock speed</h2>
+<p>This is the lecture&rsquo;s sharpest claim, and it returns in every later
+lecture. A fancy new linear attention algorithm scales as O(N) in
+sequence length against standard attention&rsquo;s O(N squared). But
+FlashAttention, a hardware-aware exact implementation, runs faster in
+wall-clock time. Asymptotic complexity ignores constants and
+implementation details, and those dominate on real hardware.</p>
+<figure><img alt="Efficient attention meme" src="assets/slide-l01-algorithmic-scaling-meme.png"><figcaption>Linear attention wins on asymptotics; FlashAttention wins on wall-clock time. Source: Stanford slides, credit Michael Zhang.</figcaption></figure>
+<p>The rule: judge algorithms by measured runtime on the target
+hardware, never by big-O alone. <a href="l06-flash-attention.html">L06</a>
+derives exactly why FlashAttention wins.</p>
+<div class="qa"><div class="q">An algorithm scales linearly while the baseline scales quadratically. Is it faster?</div><div class="a"><p>Not necessarily. Big-O hides constants and ignores memory behavior. The lecture&rsquo;s example is linear attention versus FlashAttention: the linear algorithm has better asymptotics, but FlashAttention wins in wall-clock time because it is hardware-aware. Always profile on the target device.
+It means the implementation accounts for the memory hierarchy: SRAM versus HBM, tiling to keep data on-chip, and fusion to avoid round trips. Those decisions live in Lectures 3, 5, and 6.</p><div class="followup"><strong>Follow-up:</strong> What does &quot;hardware-aware&quot; mean concretely here?</div></div></div>
+<h2 id="level-2-quantization-fits-models-into-memory">Level 2: Quantization fits models into memory</h2>
+<p>Training and serving in 32-bit floating point is desirable for its
+wide dynamic range. But 8-bit integer arithmetic sharply improves
+memory and speed. The catch: naive quantization degrades accuracy
+unacceptably, and it scales poorly past about 6B parameters.</p>
+<p>Dettmers et al. (LLM.int8(), 2022) showed the fix is model-aware.
+Outlier features in large transformers break naive 8-bit
+quantization; an outlier-aware mixed-precision decomposition keeps
+most of the matrix in INT8 and handles outliers in FP16, enabling
+inference up to 175B parameters without accuracy loss.</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Bit-width</th>
+<th>Works past 6B params</th>
+<th>Accuracy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Naive vector-wise INT8</td>
+<td>8</td>
+<td>No, degrades</td>
+<td>Lost</td>
+</tr>
+<tr>
+<td>Outlier-aware mixed precision</td>
+<td>INT8 + FP16 outliers</td>
+<td>Yes, to 175B</td>
+<td>Kept</td>
+</tr>
+</tbody>
+</table>
+<p>The lesson: quantization is not a blunt bit-width cut. It is a
+diagnosis of which values actually break, then a targeted fix. <a href="l07-memory-efficient-networks.html">L07</a>
+derives the classical schemes.</p>
+<h2 id="level-2-sparsity-routes-around-dense-compute">Level 2: Sparsity routes around dense compute</h2>
+<p>Traditionally neural networks are dense: each input is processed by
+the entire model. Mixture-of-experts (MoE) is dynamic: large weight
+matrices are replaced by a mixture of smaller matrices called
+experts, and a gating function routes each input to a small number
+of them.</p>
+<figure><img alt="Dense vs mixture of experts" src="assets/plate-moe.svg"><figcaption>Shell 4. The gate selects experts per token; only active experts compute. Source: original plate; Shazeer, Mirhoseini et al. 2017, Fedus et al. 2021.</figcaption></figure>
+<p>Shazeer, Mirhoseini et al. (2017) introduced the sparsely-gated MoE
+layer; Fedus et al. (Switch Transformers, 2021) applied it to
+transformer language models. Total capacity grows with expert count
+while cost per token stays near flat. The systems cost moves to
+routing, load balancing, and communication, which is why MoE is a
+systems topic as much as an architecture topic.</p>
+<h2 id="level-2-parallelism-and-the-network-you-run-on">Level 2: Parallelism and the network you run on</h2>
+<p>Scaling is only possible with effective parallelization across many
+devices. Two tradeoffs dominate.</p>
+<p><strong>Model versus tensor parallelism.</strong> Traditional model parallelism
+partitions the model into disjoint sub-models, e.g. layer groups.
+Tensor parallelism partitions tensors within the same operation.</p>
+<figure><img alt="Parallelism tradeoffs" src="assets/slide-l01-parallelism-tradeoffs.png"><figcaption>Model parallelism: less communication, more idle time. Tensor parallelism: more communication, less idle time. Source: Stanford slides.</figcaption></figure>
+<p>Model parallelism communicates less but idles more. Tensor
+parallelism idles less but communicates more, so it demands fast
+interconnects. <a href="l10-parallelism.html">L10</a> derives both plus pipeline
+parallelism.</p>
+<p><strong>Network topology.</strong> The optimized mapping must know the hardware
+it runs on. Device connections inside one machine are orders of
+magnitude faster than networking between machines. This single fact
+decides where each parallelism style lives: tensor parallelism
+inside the node on NVLink, data parallelism across nodes on
+InfiniBand.</p>
+<h2 id="level-2-hardware-efficiency-not-just-flops">Level 2: Hardware efficiency, not just FLOPs</h2>
+<p>EfficientNet introduced depthwise convolutions with fewer FLOPs than
+competing ResNets. But the operation took 5.00% of FLOPs and 65.30%
+of runtime. Lower FLOP count, higher runtime.</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Share of FLOPs</th>
+<th>Share of runtime</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DepthwiseConv2D</td>
+<td>5.00%</td>
+<td>65.30%</td>
+</tr>
+<tr>
+<td>Conv2D</td>
+<td>94.67%</td>
+<td>34.20%</td>
+</tr>
+<tr>
+<td>Other</td>
+<td>0.33%</td>
+<td>0.50%</td>
+</tr>
+</tbody>
+</table>
+<p>The compute utilization ratio collapsed because the operation did not suit the hardware.</p>
+<p>The general principle: FLOPs measure work, not speed. Speed is work
+divided by achieved throughput, and achieved throughput depends on
+memory access patterns, parallelism, and the device&rsquo;s strengths.
+Lecture 3 makes this quantitative with arithmetic intensity and the
+roofline model.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/slide-l01-compute-trends.png" alt="Compute trends">
+<div class="rc-body">
+<strong>1. Compute demand grows 32x every 2 years</strong>
+<p>Deep learning training compute rises 32x per 2 years against
+Moore's law 2x. The gap compounds. Efficiency research fills it.</p>
+<p class="rc-num">Key: 32x vs 2x per 2 years</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l01-memory-wall.png" alt="Memory wall">
+<div class="rc-body">
+<strong>2. Memory lags model size</strong>
+<p>Accelerator memory sits near 32 to 80 GB while models keep
+growing. Out-of-memory is the default failure, not the exception.</p>
+<p class="rc-num">Key: A100 40/80 GB, TPUv3 32 GB</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l01-train-infer-costs.png" alt="Training and inference costs">
+<div class="rc-body">
+<strong>3. Training is upfront, inference compounds</strong>
+<p>Training costs tens of millions of dollars once. One inference
+call is under $0.0001 but grows with every user.</p>
+<p class="rc-num">Key: design for the bill you pay</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l01-algorithmic-scaling-meme.png" alt="Efficient attention meme">
+<div class="rc-body">
+<strong>4. Asymptotics are not wall-clock time</strong>
+<p>Linear attention wins on big-O. FlashAttention wins on the GPU.
+Judge algorithms by measured runtime on target hardware.</p>
+<p class="rc-num">Key: profile, never assume</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l01-efficiency-stack.png" alt="Efficiency stack">
+<div class="rc-body">
+<strong>5. Efficiency spans data, model, software, hardware</strong>
+<p>Each layer has its own levers: better data, quantization and
+pruning, scheduling, accelerators. Co-optimize them together.</p>
+<p class="rc-num">Key: FAST, ASPLOS 2022</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/plate-moe.svg" alt="Dense vs mixture of experts">
+<div class="rc-body">
+<strong>6. MoE grows capacity without growing cost</strong>
+<p>A gate routes each token to a few experts. Total parameters
+grow; active parameters per token stay flat.</p>
+<p class="rc-num">Key: Shazeer, Mirhoseini et al. 2017</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l01-parallelism-tradeoffs.png" alt="Parallelism tradeoffs">
+<div class="rc-body">
+<strong>7. Parallelism trades communication for utilization</strong>
+<p>Model parallelism communicates less but idles more. Tensor
+parallelism idles less but needs fast interconnects.</p>
+<p class="rc-num">Key: know your network topology</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/media-generation-plate-chapter-l01-fullstack-0-ba96d864-a7fa-4e8c-b343-e346c5aa61cf.webp" alt="Full-stack chapter plate">
+<div class="rc-body">
+<strong>8. SysML is the whole stack at once</strong>
+<p>Efficient architectures, hardware understanding, parallelism
+and scheduling. Every later lecture picks up one thread.</p>
+<p class="rc-num">Key: L03, L05, L10 next</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Course site: https://cs229s.stanford.edu/fall2024/
+- Introduction slide deck (Fall 2023 headers): the source of the figures above.</p>
+<p><strong>Further reading:</strong>
+- Sevilla et al., &ldquo;Compute Trends Across Three Eras of Machine Learning&rdquo; (2022): the source of the 32x figure.
+- Kaplan et al., &ldquo;Scaling Laws for Neural Language Models&rdquo; (2020): why size keeps winning.
+- Dettmers et al., &ldquo;LLM.int8()&rdquo; (2022): model-aware quantization at 175B scale.
+- Shazeer, Mirhoseini et al., &ldquo;Outrageously Large Neural Networks&rdquo; (2017): the original MoE paper.
+- Fedus et al., &ldquo;Switch Transformers&rdquo; (2021): MoE for transformers.
+- Zhang et al., &ldquo;FAST&rdquo;, ASPLOS 2022: full-stack hardware-software co-search.</p>
+<p><strong>Caveats from these sources.</strong> The deck headers say Fall 2023 while
+the calendar is Fall 2024; lecture numbering below follows the Fall
+2024 calendar. The compute-trends and memory-wall figures are
+estimates, and the &ldquo;GPT-4 is estimated to be here&rdquo; markers are the
+lecturer&rsquo;s placement, not confirmed model sizes. Fine-tuning as
+alignment (LaMDA) is presented as motivation; the course&rsquo;s technical
+treatment of fine-tuning is <a href="l08-finetuning-and-peft.html">L08</a>.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 L05/L06:</strong> the GPU memory hierarchy and kernel view behind
+the hardware-efficiency claims; the device block is defined in
+<a href="l05-gpu-execution-model.html">L05</a> here and reused by MS&amp;E435.</li>
+<li><strong>CS336 L07/L08:</strong> data, tensor, and pipeline parallelism in full;
+CS229S <a href="l10-parallelism.html">L10</a> gives the framing and the Megatron
+view.</li>
+<li><strong>CS336 L10:</strong> inference costs and KV caching continue the
+training-versus-inference cost split.</li>
+<li><strong>CS329H:</strong> RLHF and preference modeling, the systems view of which
+is <a href="l08-finetuning-and-peft.html">L08</a>.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Introduction cheatsheet.</strong> SysML: efficient training, fine-tuning, deployment of deep models, mainly language models. Compute: deep learning 32x per 2 years vs Moore&rsquo;s law 2x. Memory: A100 40/80 GB, TPUv3 32 GB; models outgrow them. Costs: training tens of millions upfront; inference under $0.0001 per call, compounds with users. Scaling: Kaplan 2020 (compute, data, params); emergent few-shot and chain of thought. SysML pillars: efficient architectures, hardware understanding, parallelism and scheduling. Stack levers: data quality, quantization/pruning/distillation, mapping/scheduling/pipelining, accelerators. Rules: big-O is not wall-clock; FLOPs are not runtime; know your network topology.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>The three gaps.</strong> Compute demand outruns hardware. Model size outruns memory. Asymptotics outrun wall-clock. SysML closes all three.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Introduction slide deck (CS 229S Fall 2023 headers; Fall 2024 calendar lecture)</li><li><span class="src-tag">PAPER</span><a href="https://epochai.org/blog/compute-trends" target="_blank" rel="noopener">Sevilla et al., Compute Trends Across Three Eras of Machine Learning (2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2001.08361" target="_blank" rel="noopener">Kaplan et al., Scaling Laws for Neural Language Models (2020)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2208.07339" target="_blank" rel="noopener">Dettmers et al., LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale (2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1701.06538" target="_blank" rel="noopener">Shazeer, Mirhoseini et al., Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer (2017)</a></li><li><span class="src-tag">PAPER</span><a href="https://dl.acm.org/doi/10.1145/3503222.3507767" target="_blank" rel="noopener">Zhang et al., FAST: A Full-Stack Search Technique for Domain Optimized Deep Learning Accelerators, ASPLOS 2022</a></li></ul></section>
+      <nav class="pager"><a href="../cs229s/index.html"><span class="lbl">← Previous</span>CS229S: Systems for Machine Learning</a><a href="../cs229s/l02-sequence-models.html"><span class="lbl">Next →</span>Lecture 2: Sequence Models and the Transformer</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
