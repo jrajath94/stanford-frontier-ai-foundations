@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 12: Foundation Models and Representation Learning — Stanford Frontier AI</title>
+<meta name="description" content="The paradigm shift after GPT-3: pre-train on massive unlabeled data, then adapt. Representations, linear probing, LoRA, parallelism.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229-l12" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12" class="active">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229: Machine Learning</a> / Lecture 12: Foundation Models and Representation Learning</nav>
+      <h1>Lecture 12: Foundation Models and Representation Learning</h1>
+      <p class="meta-line">2026-05-13 · Instructor: Tengyu Ma · 1:15:47 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="_kREM2UAiJ8"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/_kREM2UAiJ8" title="Lecture 12: Representation Learning" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=_kREM2UAiJ8" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tengyu Ma presents the foundation-model paradigm: pre-training, adaptation, probing, efficient fine-tuning.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> contains what you need to
+understand everything that follows in CS229 and the courses that build on
+it. <strong>Level 2 (Deep)</strong> contains what you need for correct, interview-grade
+understanding. Read Level 1 straight through. Return to Level 2 when you
+want depth.</p>
+<p>No prerequisites are assumed. Every term is defined at first use. Neural
+networks were defined in <a href="l07-neural-networks-1.html">lectures 7</a> and
+<a href="l08-backpropagation.html">8</a>; they are reused, not re-explained.</p>
+<h2 id="level-1-a-new-paradigm">Level 1: A new paradigm</h2>
+<p>After GPT-3 arrived in summer 2020 <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=2232s" target="_blank" rel="noopener">37:12 <span class="ts">⏱37:12</span></a>, Stanford faculty
+gathered around the OpenAI playground and realized the field had
+changed. Percy Liang led a team to study the shift and named it in a
+survey paper: <strong>foundation models</strong> <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=2279s" target="_blank" rel="noopener">37:59 <span class="ts">⏱37:59</span></a>. Not an emergent
+paradigm anymore. The new paradigm.</p>
+<p>The old paradigm: pick a task, collect labeled data, train a model for
+that task. The new paradigm has two phases. <strong>Pre-training</strong>: train one
+big model on massive unlabeled data <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=2363s" target="_blank" rel="noopener">39:23 <span class="ts">⏱39:23</span></a>, orders of
+magnitude more than before, messy internet text and all. <strong>Adaptation</strong>:
+adapt that model to many downstream tasks <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=2386s" target="_blank" rel="noopener">39:46 <span class="ts">⏱39:46</span></a>. You start
+from a good foundation instead of from scratch. That is why it is called
+a foundation model.</p>
+<figure><img alt="Foundation model paradigm" src="assets/svg/l12-fm.svg"><figcaption>Pre-train once on massive unlabeled data. Adapt to many tasks. Original plate.</figcaption></figure>
+<p>The pre-training data is deliberately broad and initially messy: HTML
+with tags, Word documents, everything. Quality filtering came later.
+The bet: scale plus diversity teaches general structure that no single
+task&rsquo;s labels could.</p>
+<div class="qa"><div class="q">What makes a model a foundation model?</div><div class="a"><p>Two phases. Pre-training on massive, broad, unlabeled data produces one general model. Adaptation specializes it to tasks. The old way trained one model per task from its own labels. The new way amortizes one expensive pre-training across unlimited adaptations. GPT-3 was the demonstration that this works.
+Labels are expensive and narrow. Unlabeled text is abundant and broad. A pre-training objective like next-word prediction turns raw text into supervision for free: every word is a label for its context. Scale of data beats quality of labels for learning general structure.</p><div class="followup"><strong>Follow-up:</strong> Why unlabeled data?</div></div></div>
+<h2 id="level-1-representation-learning">Level 1: Representation learning</h2>
+<p><strong>Representation learning</strong> is pre-training with a specific product: a
+mapping from raw input to a vector <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=2883s" target="_blank" rel="noopener">48:03 <span class="ts">⏱48:03</span></a>. The vector is
+called the <strong>representation</strong>, the <strong>embedding</strong>, or the <strong>feature</strong>.
+The lecture uses &ldquo;embedding&rdquo; as the standard word. Similar inputs should
+land near each other in vector space.</p>
+<p>Formally: learn phi_theta mapping x to a vector in R^m. Train it with
+some loss on unlabeled or weakly labeled data. Freeze the result. The
+frozen phi is the product. Everything downstream consumes vectors, not
+raw inputs.</p>
+<p>This lecture covers the pre-ChatGPT era techniques, roughly 2019 to
+2022. The post-2022 dominating approach, full LLM pre-training plus
+post-training, is lectures 13 through 17. The representation idea
+survives in all of them: every modern model is, at bottom, a machine
+that turns inputs into vectors.</p>
+<div class="qa"><div class="q">What is an embedding, intuitively?</div><div class="a"><p>A list of numbers that places an input in a space where distance means similarity. Two cat photos get nearby vectors. A cat photo and an airplane get distant vectors. The numbers are learned, not designed. Downstream models work in this space because similarity is now geometry: near means alike.
+Nobody. The dimensions are not designed to mean anything. They are whatever the training loss found useful. This is why embeddings need probing to interpret: the coordinates are emergent, not assigned. Interpretability methods exist precisely because we did not choose the axes.</p><div class="followup"><strong>Follow-up:</strong> Who decides what the embedding dimensions mean?</div></div></div>
+<h2 id="level-1-linear-probing">Level 1: Linear probing</h2>
+<p>Once you have a frozen representation, the cheapest downstream model is
+<strong>linear probing</strong> <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=3006s" target="_blank" rel="noopener">50:06 <span class="ts">⏱50:06</span></a>: train a linear classifier on top
+of the fixed vectors. Prediction = w . phi(x), plus softmax for
+classification.</p>
+<figure><img alt="Linear probing" src="assets/svg/l12-probe.svg"><figcaption>Frozen phi(x), trained linear w. Prediction is their dot product. Original plate.</figcaption></figure>
+<p>Linear probing has two uses. As a task solver: when data is scarce, a
+linear layer on good embeddings beats training a full network. As a
+measuring instrument: probe accuracy reports what the representation
+knows. If a linear probe can read syntax from the vectors, the
+representation encodes syntax. This second use survives into the LLM
+era as <strong>mechanistic interpretability</strong> <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=3014s" target="_blank" rel="noopener">50:14 <span class="ts">⏱50:14</span></a>: probes as
+tools for understanding what large models compute internally.</p>
+<p>The logic is a fortiori. If even a linear model can extract the
+information, the information is definitely there. Probing is a lower
+bound on what the representation contains.</p>
+<div class="qa"><div class="q">Why freeze the representation instead of fine-tuning everything?</div><div class="a"><p>Two reasons. Data: a linear layer has few parameters, so it trains on little labeled data without overfitting. Diagnosis: freezing isolates what pre-training learned from what the task added. If the probe succeeds, credit goes to the representation. Fine-tuning everything is stronger but tells you nothing about the frozen features.
+Less than you hope. It proves a linear model cannot read the information, not that the information is absent. A nonlinear probe might succeed. Probing gives lower bounds on represented knowledge, never upper bounds. Absence of evidence is not evidence of absence.</p><div class="followup"><strong>Follow-up:</strong> What does a failed probe prove?</div></div></div>
+<h2 id="level-1-adapting-cheaply-lora-and-multitask">Level 1: Adapting cheaply. LoRA and multitask</h2>
+<p>Full fine-tuning updates every parameter. For billion-parameter models
+that is expensive. <strong>LoRA</strong>, low-rank adaptation <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=3779s" target="_blank" rel="noopener">62:59 <span class="ts">⏱62:59</span></a>,
+updates less. Freeze the pre-trained weight W_0. Learn a low-rank change
+Delta = A B, where A and B are thin matrices. The adapted weight is W_0
++ A B.</p>
+<p>Rank r controls the budget. W_0 is d-by-d. A is d-by-r, B is r-by-d.
+With r much smaller than d, the update has a fraction of the
+parameters. The bet: task adaptation lives in a low-dimensional
+subspace. Empirically it usually does.</p>
+<p><strong>Multitask</strong> training <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=2521s" target="_blank" rel="noopener">42:01 <span class="ts">⏱42:01</span></a> is the other adaptation
+strategy: train one model on many tasks at once, sharing the
+representation. Tasks regularize each other. The shared layers learn
+structure useful across tasks, which is exactly the foundation-model
+bet in miniature.</p>
+<div class="qa"><div class="q">Why does low-rank adaptation work?</div><div class="a"><p>Because adapting to a new task rarely needs the full parameter space. The pre-trained model already knows language, or vision, or both. The task adds a small adjustment: a style, a format, a domain. That adjustment fits in a low-rank subspace. LoRA bets the update rank is small, and the bet usually pays.
+LoRA for cheap adaptation: few parameters, fast training, easy to swap adapters per task. Full fine-tuning when the task needs deep changes the low-rank update cannot express, or when you have the compute budget anyway. Many deployments use LoRA for everything and reserve full fine-tuning for the base model itself.</p><div class="followup"><strong>Follow-up:</strong> LoRA or full fine-tuning?</div></div></div>
+<h2 id="level-2-parallelism">Level 2: Parallelism</h2>
+<p>Training foundation models needs many GPUs. Two kinds of <strong>parallelism</strong>
+<a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=4320s" target="_blank" rel="noopener">72:00 <span class="ts">⏱72:00</span></a> split the work. <strong>Data parallelism</strong>: copy the model
+to each GPU, give each a different data shard, average the gradients.
+Simple, but every GPU holds the full model. <strong>Model parallelism</strong>: split
+the model itself across GPUs, each holding some layers or some shards
+of layers. Needed when the model does not fit on one GPU.</p>
+<p>The lecture treats parallelism as architecture co-design: the model&rsquo;s
+shape and the hardware&rsquo;s shape must be designed together. Attention&rsquo;s
+quadratic cost from lecture 14 is the kind of fact that forces this
+co-design. The guest lecture on system ML continues the thread.</p>
+<h2 id="level-2-what-paradigm-claims-and-what-it-does-not">Level 2: What &ldquo;paradigm&rdquo; claims and what it does not</h2>
+<p>&ldquo;New paradigm&rdquo; is a strong claim. The lecture earns it with the
+deployment story from lecture 15: one off-the-shelf model plus prompts
+replaced per-company training pipelines. But the claim has limits. The
+paradigm covers models where pre-training transfers. For problems with
+no relevant unlabeled data, the old task-specific training remains the
+answer. Paradigms describe the center of the field, not its edges.</p>
+<p>Also note the convergence the lecture mentions: the paradigm narrowed
+over five years. Early &ldquo;foundation models&rdquo; included many techniques.
+By 2026 the term mostly means pre-trained transformers plus
+adaptation. The course follows that narrowing: representation
+techniques here, the transformer core next.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<p>Eight ideas carry this lecture. Read each card. Say the core sentence out
+loud. If you can, you own the lesson.</p>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/svg/l12-fm.svg" alt="Foundation model paradigm">
+<div class="rc-body">
+<strong>1. Foundation models: pre-train, then adapt</strong>
+<p>One big model on massive unlabeled data, then many adaptations.
+Named after GPT-3 by Percy Liang's team. The new paradigm.</p>
+<p class="rc-num">Key: two phases, one foundation</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l12-fm.svg" alt="Pre-training data">
+<div class="rc-body">
+<strong>2. Pre-training eats the messy internet</strong>
+<p>Massive, diverse, initially unfiltered. Scale teaches general
+structure. Quality filtering came later. Unlabeled is abundant.</p>
+<p class="rc-num">Key: scale over labels</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l12-probe.svg" alt="Embeddings">
+<div class="rc-body">
+<strong>3. Embeddings geometrize similarity</strong>
+<p>Representation, embedding, feature: a vector per input. Near means
+alike. Dimensions are emergent, not designed.</p>
+<p class="rc-num">Key: similarity as distance</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l12-probe.svg" alt="Linear probing">
+<div class="rc-body">
+<strong>4. Linear probing: freeze, then fit w</strong>
+<p>Prediction = w . phi(x). Cheap task solver. Honest measuring
+instrument. Powers mechanistic interpretability.</p>
+<p class="rc-num">Key: frozen phi, trained w</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l12-probe.svg" alt="Probe logic">
+<div class="rc-body">
+<strong>5. Probes give lower bounds</strong>
+<p>Success proves the information is there. Failure proves only that a
+linear read failed. Never an upper bound on knowledge.</p>
+<p class="rc-num">Key: a fortiori logic</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l12-fm.svg" alt="LoRA">
+<div class="rc-body">
+<strong>6. LoRA: adapt in low rank</strong>
+<p>W = W_0 + AB, thin A and B. Task changes live in small subspaces.
+Cheap, swappable, usually enough.</p>
+<p class="rc-num">Key: rank r controls budget</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l12-fm.svg" alt="Multitask">
+<div class="rc-body">
+<strong>7. Multitask shares the representation</strong>
+<p>One model, many tasks, shared layers. Tasks regularize each other.
+The foundation bet in miniature.</p>
+<p class="rc-num">Key: shared structure</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l12-probe.svg" alt="Parallelism">
+<div class="rc-body">
+<strong>8. Parallelism: data and model</strong>
+<p>Data: shard the batch, average gradients. Model: shard the weights.
+Co-design architecture with hardware. Scale demands both.</p>
+<p class="rc-num">Key: split work, split model</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 12 video: GPT-3 summer 2020 <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=2232s" target="_blank" rel="noopener">37:12 <span class="ts">⏱37:12</span></a>, foundation models named <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=2279s" target="_blank" rel="noopener">37:59 <span class="ts">⏱37:59</span></a>, pre-training <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=2363s" target="_blank" rel="noopener">39:23 <span class="ts">⏱39:23</span></a>, adaptation <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=2386s" target="_blank" rel="noopener">39:46 <span class="ts">⏱39:46</span></a>, representation learning <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=2883s" target="_blank" rel="noopener">48:03 <span class="ts">⏱48:03</span></a>, linear probing <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=3006s" target="_blank" rel="noopener">50:06 <span class="ts">⏱50:06</span></a>, mechanistic interpretability <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=3014s" target="_blank" rel="noopener">50:14 <span class="ts">⏱50:14</span></a>, LoRA <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=3779s" target="_blank" rel="noopener">62:59 <span class="ts">⏱62:59</span></a>, parallelism <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8&amp;t=4320s" target="_blank" rel="noopener">72:00 <span class="ts">⏱72:00</span></a>.
+- CS229 Spring 2026 official course notes: foundation models chapter.</p>
+<p><strong>Further reading:</strong>
+- Bommasani et al. (2021), &ldquo;On the Opportunities and Risks of Foundation Models&rdquo;: the survey paper.
+- Hu et al. (2021), &ldquo;LoRA: Low-Rank Adaptation of Large Language Models.&rdquo;</p>
+<p><strong>Caveats from these sources.</strong> The paradigm narrative is a framing,
+not a theorem; task-specific training still wins where unlabeled data
+is irrelevant. LoRA&rsquo;s rank is a hyperparameter; too small starves the
+task. Probing lower bounds are often misread as upper bounds; the
+lecture warns against it.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336:</strong> the full pre-training pipeline is CS336&rsquo;s subject; this lecture is its conceptual on-ramp.</li>
+<li><strong>CS224N:</strong> word embeddings were the original representation-learning success; sentence embeddings generalize them.</li>
+<li><strong>CS329H:</strong> RLHF is adaptation by reinforcement; LoRA is adaptation by low-rank updates. Same phase, different tool.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Foundation model cheatsheet.</strong> Paradigm: pre-train on massive unlabeled data, adapt to tasks. Named by Percy Liang&rsquo;s team post-GPT-3. Representation learning: phi_theta maps x to vectors; similar inputs near each other; &ldquo;embedding&rdquo; is standard. Linear probing: freeze phi, train w; prediction w.phi(x); measures what is represented; lower bounds only. LoRA: W_0 + AB, rank r budget. Multitask: shared layers across tasks. Parallelism: data shards batches, model shards weights.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Amortize the expensive part.</strong> Pre-training is the cost. Adaptation is the dividend. Whenever one expensive computation serves many cheap uses, you are looking at a foundation-model-shaped deal.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=_kREM2UAiJ8" target="_blank" rel="noopener">Lecture 12 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <nav class="pager"><a href="../cs229/l11-diffusion-models.html"><span class="lbl">← Previous</span>Lecture 11: Diffusion Models</a><a href="../cs229/l13-contrastive-rag.html"><span class="lbl">Next →</span>Lecture 13: Contrastive Embeddings, Search, and RAG</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
