@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 5: How GPUs Work — Stanford Frontier AI</title>
+<meta name="description" content="The GPU hardware model, the memory hierarchy, six speed tricks (divergence, precision, fusion, recompute, coalescing, tiling), and FlashAttention as the victory">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-l05" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05" class="active">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 5: How GPUs Work</nav>
+      <h1>Lecture 5: How GPUs Work</h1>
+      <p class="meta-line">2026-04-13 · Instructor: Tatsunori Hashimoto · 1:18:29 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="izZba4UA7iY"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/izZba4UA7iY" title="Stanford CS336 Spring 2026 Lecture 5: GPUs and Systems" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=izZba4UA7iY" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=izZba4UA7iY" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tatsu Hashimoto builds the GPU mental model and derives FlashAttention from six performance tricks.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> builds the GPU mental
+model: cores, memory hierarchy, and the programming model. <strong>Level 2
+(Deep)</strong> gives the six speed tricks and derives FlashAttention from
+them.</p>
+<p>Three parts, in order: the hardware, the tricks, the victory lap
+<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=200s" target="_blank" rel="noopener">03:20 <span class="ts">⏱03:20</span></a>. Links back: <a href="l02-resource-accounting.html">Lecture 2</a>
+for arithmetic intensity.</p>
+<h2 id="level-1-why-gpus-won">Level 1: Why GPUs won</h2>
+<p>In the 1990s, computers got faster by raising clock speed. That ended
+in the 2000s: smaller transistors stopped meaning faster clocks
+(Dennard scaling ended) <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=296s" target="_blank" rel="noopener">04:56 <span class="ts">⏱04:56</span></a>. The field switched from
+faster serial execution to wider parallel execution. GPUs are that
+switch made silicon.</p>
+<table>
+<thead>
+<tr>
+<th>Era</th>
+<th>Speed came from</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1990s</td>
+<td>clock speed</td>
+<td>ended: Dennard scaling stopped</td>
+</tr>
+<tr>
+<td>2000s on</td>
+<td>wider parallel execution</td>
+<td>still going: GPUs are that switch</td>
+</tr>
+</tbody>
+</table>
+<p>The FLOPS curve tells the story: modest gains through K20/M40, then a
+takeoff at P100/V100 driven by tensor cores, structured sparsity, and
+lower number formats <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=386s" target="_blank" rel="noopener">06:26 <span class="ts">⏱06:26</span></a>.</p>
+<h2 id="level-1-cpu-latency-vs-gpu-throughput">Level 1: CPU latency vs GPU throughput</h2>
+<p>A CPU runs a few complex cores with big control units: complex
+branches, complex control flow, minimal time from instruction to result.
+Design goal: latency <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=451s" target="_blank" rel="noopener">07:31 <span class="ts">⏱07:31</span></a>.</p>
+<p>A GPU runs hundreds of simple cores executing in parallel. One task may
+take long to finish, but aggregate throughput across all tasks is
+enormous. Design goal: throughput.</p>
+<figure><img alt="CPU vs GPU" src="assets/l05-cpu-vs-gpu.svg"><figcaption>CPU: few complex cores, low latency. GPU: 108 SMs, SIMT execution, high throughput. V100 added tensor cores in 2017.</figcaption></figure>
+<h2 id="level-1-the-sm-is-the-unit">Level 1: The SM is the unit</h2>
+<p>The streaming multiprocessor (SM) is the discrete compute unit of a
+GPU: an independent core with its own subcomponents and memory access
+<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=565s" target="_blank" rel="noopener">09:25 <span class="ts">⏱09:25</span></a>. Inside each SM sit streaming processors running
+threads in parallel. An A100 carries 108 SMs, each independently
+programmable.</p>
+<pre class="ascii">GPU : 108 SMs (A100), each an independent core
+SM  : streaming processors running threads in parallel
+</pre>
+<h2 id="level-1-the-memory-hierarchy">Level 1: The memory hierarchy</h2>
+<p>Compute is only half the story. Modern LLM optimization is defined by
+memory: where data lives and how fast it moves <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=627s" target="_blank" rel="noopener">10:27 <span class="ts">⏱10:27</span></a>.</p>
+<figure><img alt="Memory hierarchy" src="assets/l05-mem-hierarchy.svg"><figcaption>Registers ~1 cycle. L1/shared 20-30 cycles. L2 slower. HBM global ~10x L1. SRAM costs hundreds of times more than DRAM.</figcaption></figure>
+<p>Registers are fastest and most local. L1 and shared memory answer in
+20-30 cycles. L2 is slower. Global HBM is ~10x L1 latency. Physically,
+global memory chips sit outside the compute die. L2 and L1 live on the
+chip, close to the SMs <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=700s" target="_blank" rel="noopener">11:40 <span class="ts">⏱11:40</span></a>.</p>
+<p>Why not build everything from fast SRAM? It costs hundreds of times
+more than DRAM and burns far more power <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=730s" target="_blank" rel="noopener">12:10 <span class="ts">⏱12:10</span></a>. Groq tried
+giant SRAM (great for inference, expensive always). Everyone else lives
+with the hierarchy and programs against it.</p>
+<h2 id="level-1-threads-blocks-warps">Level 1: Threads, blocks, warps</h2>
+<p>Three terms carry the programming model <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=815s" target="_blank" rel="noopener">13:35 <span class="ts">⏱13:35</span></a>.</p>
+<pre class="ascii">thread : one worker, SIMT (same instruction, different data)
+block  : threads on one SM, sharing its shared memory
+warp   : 32 threads, the scheduling unit, swapped on stalls
+</pre>
+<p><strong>Thread:</strong> lightweight parallel worker. All threads obey SIMT: every
+thread executes the same instruction on different data.</p>
+<p><strong>Block:</strong> a group of threads guaranteed to run on one SM, sharing that
+SM&rsquo;s shared memory. Blocks matter for tiling later.</p>
+<p><strong>Warp:</strong> 32 consecutively numbered threads, the scheduling unit. The
+scheduler swaps whole warps quickly when one stalls.</p>
+<p>Shared memory is programmable: you put things in and take them out. The
+L1 cache is automatic: it just holds recent data <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=774s" target="_blank" rel="noopener">12:54 <span class="ts">⏱12:54</span></a>.
+Beyond shared memory, everything is slow. Grouping blocks to cut global
+reads is the name of the game <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1028s" target="_blank" rel="noopener">17:08 <span class="ts">⏱17:08</span></a>.</p>
+<div class="qa"><div class="q">What is the difference between a block and a warp?</div><div class="a"><p>A block is a programming unit: a group of threads guaranteed to land on one SM, sharing its shared memory. A warp is a hardware scheduling unit: 32 threads that always execute the same instruction together under SIMT. You organize work into blocks to control data sharing. The hardware schedules it in warps. Confusing them leads to bugs about what memory threads can share.
+It amortizes scheduler overhead: one scheduling decision drives 32 threads. The number is architectural, not mathematical. What matters for you is the consequence: 32 threads move in lockstep, so make their memory accesses land in the same burst.</p><div class="followup"><strong>Follow-up:</strong> Why 32 threads per warp?</div></div></div>
+<h2 id="level-1-tpus-the-convergent-cousin">Level 1: TPUs, the convergent cousin</h2>
+<p>TPUs are the alternative evolution of the same idea: an
+energy-efficient ML accelerator converges to the same shape
+<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1038s" target="_blank" rel="noopener">17:18 <span class="ts">⏱17:18</span></a>. Same memory hierarchy (HBM + fast local memory),
+same matrix-multiply unit (systolic arrays underneath both), same
+concepts with different names.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>GPU</th>
+<th>TPU</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>matrix units</td>
+<td>many small (100+ SMs)</td>
+<td>few giant (2 cores, 8 MXUs)</td>
+</tr>
+<tr>
+<td>flexibility</td>
+<td>high</td>
+<td>lower (64-dim minimums)</td>
+</tr>
+<tr>
+<td>memory</td>
+<td>HBM plus fast local</td>
+<td>HBM plus fast local</td>
+</tr>
+</tbody>
+</table>
+<p>The differences: TPUs use few giant matrix units (2 cores, 8 MXUs) vs
+the GPU&rsquo;s many small ones (100+ SMs, hundreds of tensor cores). Giant
+units are less flexible: a TPU tensor core refuses inputs below 64 dims,
+so batch sweeps stop at 64 <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1306s" target="_blank" rel="noopener">21:46 <span class="ts">⏱21:46</span></a>. Naming trap: a TPU
+&ldquo;tensor core&rdquo; is a processor. A GPU &ldquo;tensor core&rdquo; is a matrix-multiply
+unit <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1230s" target="_blank" rel="noopener">20:30 <span class="ts">⏱20:30</span></a>.</p>
+<h2 id="level-1-tensor-cores-made-matmul-privileged">Level 1: Tensor cores made matmul privileged</h2>
+<p>Before V100, no dedicated matmul unit existed: researchers hand-programmed
+shaders to multiply matrices <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1475s" target="_blank" rel="noopener">24:35 <span class="ts">⏱24:35</span></a>. Tensor cores changed the
+game: matmul throughput exceeds other FP ops by 10x or more. Any
+architecture that scales with compute will contain a matmul, because
+nothing else converts silicon to FLOPs as efficiently.</p>
+<pre class="ascii">before V100 : hand-programmed shaders for matmul
+V100+       : tensor cores, matmul 10x other FP ops
+rule        : architectures that scale contain a matmul
+</pre>
+<h2 id="level-1-compute-outruns-memory">Level 1: Compute outruns memory</h2>
+<p>Three curves diverge <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1531s" target="_blank" rel="noopener">25:31 <span class="ts">⏱25:31</span></a>. Compute throughput (gray) climbs
+fast. Memory bandwidth (green) climbs slowly. Interconnect (blue)
+climbs slowest. The growing gap is why this lecture&rsquo;s tricks are memory
+tricks: every year, utilizing the hardware takes more data-movement
+work. Inference hardware splits already reflect this: prefill (matmul
+heavy) and decode (bandwidth heavy) want different chips
+<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1732s" target="_blank" rel="noopener">28:52 <span class="ts">⏱28:52</span></a>.</p>
+<pre class="ascii">compute      (gray)  : climbs fast
+bandwidth    (green) : climbs slowly
+interconnect (blue)  : climbs slowest
+result : every year, more data-movement work per FLOP
+</pre>
+<h2 id="level-2-trick-1-no-if-statements">Level 2: Trick 1, no if statements</h2>
+<p>SIMT means every thread in a warp executes the same instruction. An if
+statement runs both branches: each side executes while the other side&rsquo;s
+threads sit idle and masked <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1977s" target="_blank" rel="noopener">32:57 <span class="ts">⏱32:57</span></a>.</p>
+<figure><img alt="SIMT divergence" src="assets/l05-simt-divergence.svg"><figcaption>One warp hits an if. Both branches execute. The threads on the wrong side idle. This is control divergence.</figcaption></figure>
+<p>This is control divergence. The fix: multiply by a mask instead of
+branching. ReLU as <code>x * (x &gt; 0)</code> beats <code>if (x &gt; 0) x else 0</code>, because
+the multiply runs uniformly <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2066s" target="_blank" rel="noopener">34:26 <span class="ts">⏱34:26</span></a>.</p>
+<h2 id="level-2-trick-2-low-precision">Level 2: Trick 2, low precision</h2>
+<p>Halve the bits, halve the bytes moved, halve the memory bottleneck. The
+subtlety: tensor cores downcast inputs, accumulate partial sums in full
+precision, and emit fp32 <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2194s" target="_blank" rel="noopener">36:34 <span class="ts">⏱36:34</span></a>. The black art is choosing
+which op gets which format: matmuls can be low precision, softmax and
+exponentials usually need fp32. Years of empirical work mapped this out.</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Bits</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>fp32</td>
+<td>32</td>
+<td>softmax, exponentials, optimizer states</td>
+</tr>
+<tr>
+<td>bf16</td>
+<td>16</td>
+<td>weights, activations (range matters)</td>
+</tr>
+<tr>
+<td>FP8 E4M3</td>
+<td>8</td>
+<td>matmuls needing range</td>
+</tr>
+<tr>
+<td>FP8 E5M2</td>
+<td>8</td>
+<td>matmuls needing precision</td>
+</tr>
+</tbody>
+</table>
+<p>FP8 has no single format: E4M3 (range) vs E5M2 (precision), chosen per
+use <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2284s" target="_blank" rel="noopener">38:04 <span class="ts">⏱38:04</span></a>. MXFP8 goes further: one scale factor per 32
+elements, scales stored as E8M0 (pure powers of two)
+<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2385s" target="_blank" rel="noopener">39:45 <span class="ts">⏱39:45</span></a>. The trap: transposing an MXFP8 matrix breaks the
+scaling pattern, so training keeps two copies of every quantized
+matrix, one for each orientation <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2476s" target="_blank" rel="noopener">41:16 <span class="ts">⏱41:16</span></a>. Real savings are
+20-30%, not 2x: quantization overhead eats the rest. MXFP4 (-6 to 6,
+per-16 scales) is next. First and last layers resist quantization: the
+last layer drives the loss directly <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2568s" target="_blank" rel="noopener">42:48 <span class="ts">⏱42:48</span></a>.</p>
+<div class="qa"><div class="q">Why does MXFP8 keep two copies of every matrix?</div><div class="a"><p>MXFP8 attaches one scale factor to each block of 32 elements. Transpose the matrix and the blocks land in different positions: the scaling pattern no longer matches the data. Requantizing on every transpose would be prohibitive, so the framework stores both orientations pre-quantized. It is a memory-for-sanity trade that shows how exotic sub-8-bit formats get.
+The last layer&rsquo;s outputs feed the loss directly, so quantization error there propagates undiluted into every gradient. The first layer sees raw input distributions with the widest dynamic range. Both are high-stakes, low-redundancy positions: the accuracy cost of quantizing them exceeds the throughput gain.</p><div class="followup"><strong>Follow-up:</strong> Why not quantize the first and last layers?</div></div></div>
+<h2 id="level-2-trick-3-operator-fusion">Level 2: Trick 3, operator fusion</h2>
+<p>Think of the GPU as a factory with a warehouse (memory) and a conveyor
+belt between them. Five small ops mean five round trips. Fuse them into
+one kernel: read once, compute everything inside the SM, write once
+<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2863s" target="_blank" rel="noopener">47:43 <span class="ts">⏱47:43</span></a>.</p>
+<figure><img alt="Fusion" src="assets/l05-fusion.svg"><figcaption>sin^2+cos^2 as five kernels: five global round trips. Fused: one read, one write.</figcaption></figure>
+<p>Easy fusions (sin^2+cos^2) are automatic via torch.compile or JAX.
+Hard fusions (FlashAttention) are hand-written kernels. Same idea,
+different effort.</p>
+<h2 id="level-2-trick-4-recomputation">Level 2: Trick 4, recomputation</h2>
+<p>Backprop stores activations, then reads them on the backward pass. With
+compute cheap and memory dear, throw the activations away and recompute
+them during backward <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3013s" target="_blank" rel="noopener">50:13 <span class="ts">⏱50:13</span></a>.</p>
+<pre class="ascii">naive     : 1 read + 3 writes fwd, 3 reads + 1 write bwd = 8 accesses
+recompute : 1 read + 1 write fwd, recompute on the fly = 5 accesses
+same math, 5/8 the memory traffic
+</pre>
+<p>Example: x through three sigmoids. Naive: 1 read + 3 writes forward, 3
+reads + 1 write backward = 8 accesses. Recompute: forward 1 read + 1
+write. Backward re-runs the sigmoids on the fly: 2 reads + 1 write = 5
+total. Same math, 5/8 the memory traffic, a little extra compute. (This
+is <a href="l02-resource-accounting.html">Lecture 2</a>&rsquo;s checkpointing, seen from
+the kernel&rsquo;s point of view.)</p>
+<h2 id="level-2-trick-5-coalesced-reads">Level 2: Trick 5, coalesced reads</h2>
+<p>DRAM serves bursts: one access returns ~128 contiguous bytes, the rest
+effectively free <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3232s" target="_blank" rel="noopener">53:52 <span class="ts">⏱53:52</span></a>. If all threads in a warp fall in one
+burst, the access is coalesced: full utilization of the burst.</p>
+<figure><img alt="Coalescing" src="assets/l05-coalesce.svg"><figcaption>Four threads in four bursts: wasteful. Four threads in one burst: coalesced. Row-major matrices favor row reads.</figcaption></figure>
+<p>For row-major matrices, threads sweeping along rows coalesce. Threads
+sweeping down columns touch four bursts for four values. Mnemonic:
+threads moving along the major axis are not coalesced
+<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3382s" target="_blank" rel="noopener">56:22 <span class="ts">⏱56:22</span></a>.</p>
+<h2 id="level-2-trick-6-tiling">Level 2: Trick 6, tiling</h2>
+<p>Cut matrices into tiles, load each tile into shared memory once, and do
+all reuse there <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3471s" target="_blank" rel="noopener">57:51 <span class="ts">⏱57:51</span></a>.</p>
+<figure><img alt="Tiling" src="assets/l05-tiling.svg"><figcaption>Naive: each element read N times from HBM. Tiled with size T: N/T HBM reads, T fast shared reads.</figcaption></figure>
+<p>Naive N x N matmul reads each element N times from HBM. With tile size
+T, each element is read N/T times from HBM and T times from shared
+memory. At T = N, one HBM read and N fast reuses. Tile sizes are tuned,
+not guessed: torch.compile max-autotune benchmarks candidates for
+minutes <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3811s" target="_blank" rel="noopener">63:31 <span class="ts">⏱63:31</span></a>. Misaligned tiles break coalescing, hence
+padding: Karpathy&rsquo;s vocab 50257 to 50304 bought 25% speedup through
+alignment alone <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3918s" target="_blank" rel="noopener">65:18 <span class="ts">⏱65:18</span></a>.</p>
+<h2 id="level-2-the-mystery-plot-solved">Level 2: The mystery plot, solved</h2>
+<p>Plot matmul throughput vs matrix size and color by divisibility. Sizes
+divisible by 1 or 2 crawl. 8 improves. 16 and 32 are equivalent and
+fast <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3999s" target="_blank" rel="noopener">66:39 <span class="ts">⏱66:39</span></a>. Not magic: 16 and 32 fill whole burst windows,
+so tiles read coalesced.</p>
+<p>The periodic craters are wave quantization. At 1792 with 256x128 tiles:
+98 tiles, fits in 108 SMs, one wave. At 1793: 120 tiles, needs two
+waves, and the second wave runs 12 tiles while 96 SMs idle
+<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=4088s" target="_blank" rel="noopener">68:08 <span class="ts">⏱68:08</span></a>.</p>
+<figure><img alt="Wave quantization" src="assets/l05-wave-quant.svg"><figcaption>98 tiles fit 108 SMs: one wave. 120 tiles need a second wave where 96 SMs idle. One extra dimension, one crater.</figcaption></figure>
+<h2 id="level-2-flashattention-the-victory-lap">Level 2: FlashAttention, the victory lap</h2>
+<p>Attention = three matmuls + one global softmax. The softmax couples all
+tiles, which seems to defeat tiling. The escape is the online softmax:
+sweep blocks, track the running max m and running sum l, rescale when a
+new max appears <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=4447s" target="_blank" rel="noopener">74:07 <span class="ts">⏱74:07</span></a>.</p>
+<p>m_new = max(m, rowmax), then rescale the accumulated sum by the max
+ratio. Each tile&rsquo;s softmax needs no future tiles. Keep K/Q/V tiles in
+SRAM, accumulate the softmax statistics in registers, multiply by V in
+tiles, divide once at the end. Fuse it all into one kernel. On the
+backward pass, recompute instead of storing the n x n matrix
+<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=4611s" target="_blank" rel="noopener">76:51 <span class="ts">⏱76:51</span></a>.</p>
+<figure><img alt="FlashAttention" src="assets/l05-flashattn.svg"><figcaption>Tile the matmuls. Online softmax per tile. Fuse into one kernel. Recompute on backward. Never materialize n x n.</figcaption></figure>
+<p>That is FlashAttention: tiling + online softmax + fusion +
+recomputation. Every trick in this lecture, in one kernel.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/l05-cpu-vs-gpu.svg" alt="CPU vs GPU">
+<div class="rc-body">
+<strong>1. Throughput, not latency</strong>
+<p>CPUs minimize time per instruction. GPUs maximize instructions per
+second across hundreds of SMs. Dennard ended. Parallelism is the only
+scaling left.</p>
+<p class="rc-num">Key: 108 SMs, SIMT</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l05-mem-hierarchy.svg" alt="Memory hierarchy">
+<div class="rc-body">
+<strong>2. Respect the hierarchy</strong>
+<p>Registers ~1 cycle, shared 20-30, HBM ~10x L1. Outside shared memory
+everything is slow. SRAM costs hundreds of times more than DRAM.</p>
+<p class="rc-num">Key: 20-30 cycles vs 10x</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l05-simt-divergence.svg" alt="SIMT divergence">
+<div class="rc-body">
+<strong>3. Never branch in a warp</strong>
+<p>if/else executes both branches with masking. Multiply by a mask
+instead. Control divergence is pure idle time.</p>
+<p class="rc-num">Key: x * (x > 0)</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l05-fusion.svg" alt="Fusion">
+<div class="rc-body">
+<strong>4. Fuse the factory</strong>
+<p>Five kernels mean five global round trips. One fused kernel reads
+once and writes once. Compilers do the easy ones. You write the hard
+ones.</p>
+<p class="rc-num">Key: read once, write once</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l05-tiling.svg" alt="Tiling">
+<div class="rc-body">
+<strong>5. Tile and reuse</strong>
+<p>Load tiles to shared memory, reuse T times there instead of N times
+from HBM. Tune tile sizes by benchmark. Pad for alignment.</p>
+<p class="rc-num">Key: N/T global reads</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l05-coalesce.svg" alt="Coalescing">
+<div class="rc-body">
+<strong>6. Coalesce your reads</strong>
+<p>DRAM bursts serve 128 bytes. Keep each warp inside one burst. Row
+reads coalesce in row-major. Column reads do not.</p>
+<p class="rc-num">Key: one burst per warp</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l05-wave-quant.svg" alt="Wave quantization">
+<div class="rc-body">
+<strong>7. Count tiles vs SMs</strong>
+<p>98 tiles fill 108 SMs in one wave. 120 tiles need two waves and 96
+SMs idle. One extra dimension can crater throughput.</p>
+<p class="rc-num">Key: 1792 fine, 1793 crater</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l05-flashattn.svg" alt="FlashAttention">
+<div class="rc-body">
+<strong>8. FlashAttention is the tricks combined</strong>
+<p>Tiled matmuls, online softmax with running max, one fused kernel,
+recomputed backward. Never materialize n x n. ~2x and beyond.</p>
+<p class="rc-num">Key: tiling + online softmax</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 5 video.
+- Dao et al. (2022): FlashAttention, the tiled exact-attention paper.</p>
+<p><strong>Further reading:</strong>
+- Horace He&rsquo;s GPU blogs: the clearest written versions of these
+  mechanics.
+- GPU Mode community: kernels, exercises, and the speedrun culture.
+- Google&rsquo;s TPU/GPU book: exercises matching the assignment style.</p>
+<p><strong>Caveats from these sources.</strong> SM counts and latencies are A100-era
+numbers. Newer chips differ in degree, not in kind. MXFP8/MXFP4 details
+track NVIDIA&rsquo;s evolving formats. Check the current spec before
+implementing. The 20-30% MXFP8 savings are workload-dependent.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 later lectures:</strong> Triton kernels are hand-written versions of
+  these tricks. Parallelism lectures tile across devices the way this
+  lecture tiles across SMs. Inference reuses fusion and recomputation.</li>
+<li><strong>CS229S:</strong> the device block starts here: SM counts, HBM sizes, and
+  the compute/bandwidth gap curves.</li>
+<li><strong>CS229:</strong> the roofline here is the same diagnostic as the intensity
+  analysis in Lecture 2.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>GPU cheatsheet.</strong> CPU: latency, few complex cores. GPU: throughput, 108 SMs, SIMT. Hierarchy: registers ~1 cycle, L1/shared 20-30, L2 slower, HBM ~10x L1. SRAM 100x cost of DRAM. Thread/block/warp: block = one SM + shared memory, warp = 32 lockstep threads. TPU: convergent, few giant units, 64-dim minimum. Tensor cores (V100+): matmul 10x other ops. Curves: compute fast, bandwidth slow, interconnect slowest. Tricks: no ifs (mask instead), low precision (halve bytes. MXFP8 per-32 scales, two copies for transpose. 20-30% real), fusion (read once write once), recompute (8 to 5 accesses), coalesce (128B bursts, major axis), tile (N/T reads, tune sizes, pad). Mystery plot: divisibility 16/32 wins. Wave quantization at 1792/1793 over 108 SMs. FlashAttention: tiled matmuls + online softmax (running max) + fused kernel + recomputed backward.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Memory, memory, memory.</strong> Every trick cuts data movement: fewer bytes, fewer trips, better reuse. Compute is abundant. Movement is the bill.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=izZba4UA7iY" target="_blank" rel="noopener">Lecture 5 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2205.14135" target="_blank" rel="noopener">Dao et al., FlashAttention: Fast and Memory-Efficient Exact Attention (2022)</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://horace.io/" target="_blank" rel="noopener">Horace He: GPU blogs and explainers</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://github.com/gpu-mode" target="_blank" rel="noopener">GPU Mode (ex CUDA Mode): community kernel resources</a></li></ul></section>
+      <nav class="pager"><a href="../cs336/l04-linear-attention-moe.html"><span class="lbl">← Previous</span>Lecture 4: Linear Attention and Mixture of Experts</a><a href="../cs336/l06-triton-kernels.html"><span class="lbl">Next →</span>Lecture 6: Benchmarking, Profiling, and Triton Kernels</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
