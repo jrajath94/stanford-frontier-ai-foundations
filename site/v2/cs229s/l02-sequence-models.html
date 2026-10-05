@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 2: Sequence Models and the Transformer — Stanford Frontier AI</title>
+<meta name="description" content="The systems view of sequence modeling: what the transformer replaced, why it won, and the block every later lecture optimizes.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229s-l02" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02" class="active">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229S: Systems for Machine Learning</a> / Lecture 2: Sequence Models and the Transformer</nav>
+      <h1>Lecture 2: Sequence Models and the Transformer</h1>
+      <p class="meta-line">2024-09-27 · Instructor: Azalia Mirhoseini · Fall 2024</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This is a <strong>bridge lesson</strong>. The transformer is derived from scratch
+in <a href="../cs336/l03-architecture.html">CS336 L03</a> and in CS224N. This
+lecture gives the CS229S framing: why sequence models matter for
+systems, what the transformer replaced, and the block diagram every
+later lecture in this course optimizes. Read Level 1, then follow the
+links for depth.</p>
+<h2 id="level-1-sequence-models-map-sequences-to-sequences">Level 1: Sequence models map sequences to sequences</h2>
+<p>A sequence model takes an input sequence and produces an output
+sequence. Text to text is the flagship: &ldquo;The Cat in the&rdquo; goes in,
+&ldquo;Hat is a book by Dr. Seuss&rdquo; comes out. But the same frame covers
+audio, sensor data, medical signals, and images. The systems in this
+course treat all of them as (batch, length, dim) tensors.</p>
+<p>A language model is a compact probability distribution over token
+sequences. For vocabulary V = {lights, off, the, turn}, the model
+might learn P(&ldquo;turn off the lights&rdquo;) = 0.03 and P(&ldquo;off turn the
+lights&rdquo;) = 0.0002.</p>
+<figure><img alt="Chain rule" src="assets/slide-l02-chain-rule.png"><figcaption>Factoring the joint distribution into conditional next-token predictions. Source: Stanford slides.</figcaption></figure>
+<p>Modeling the joint distribution directly fails: sequences have
+varying lengths, the space of possible sequences explodes, and
+average-case probabilities are imprecise. Instead the model learns
+the conditional distribution with the chain rule:</p>
+<p>p(x1..xL) = p(x1) p(x2|x1) p(x3|x1,x2) &hellip; p(xL|x1..xL-1)</p>
+<p>Each factor is one next-token prediction. Training on large corpora
+such as the Pile (800 GB of diverse text) teaches the model these
+conditionals. Perplexity is the intrinsic evaluation: how uncertain
+is the model about the true next word.</p>
+<div class="qa"><div class="q">Why factor the distribution with the chain rule instead of modeling whole sequences?</div><div class="a"><p>Three failures of the joint approach. Sequences have varying lengths, so one fixed model cannot cover them. The number of possible sequences explodes with length, so the space cannot be represented. And joint probabilities average over sequences instead of picking the best continuation. The chain rule turns one impossible problem into many small next-token predictions, which is exactly what the hardware in later lectures is tuned to compute.
+In autoregressive decoding. Each factor p(xi | x1..xi-1) is one model call that reads the whole prefix. Lecture 4 shows why that call is memory bound and how KV caching removes the repeated work.</p><div class="followup"><strong>Follow-up:</strong> Where does this factorization show up in systems?</div></div></div>
+<h2 id="level-1-three-architecture-families">Level 1: Three architecture families</h2>
+<figure><img alt="Three families" src="assets/slide-l02-arch-families.png"><figcaption>RNNs, ConvNets, Transformers on the same (batch, length, dim) interface. Source: Stanford slides.</figcaption></figure>
+<p>All three families share the interface: (batch, length, dim) in,
+(batch, length, dim) out. They differ in the training versus
+inference tradeoff.</p>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Training</th>
+<th>Inference</th>
+<th>Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Recurrent nets</td>
+<td>Slow (serial)</td>
+<td>Fast</td>
+<td>Finite, compressed into state</td>
+</tr>
+<tr>
+<td>ConvNets</td>
+<td>Fast</td>
+<td>Slow sampling</td>
+<td>Finite</td>
+</tr>
+<tr>
+<td>Transformers</td>
+<td>Fast (parallel)</td>
+<td>Slow sampling</td>
+<td>Finite, full look-back</td>
+</tr>
+</tbody>
+</table>
+<p>Transformers won because training dominates cost: fast parallel
+training on huge data beats elegant serial inference. The systems
+course then spends its energy fixing the slow-inference column.
+<a href="l09-efficient-architectures.html">L09</a> revisits this table when
+asking whether attention-free architectures can change it.</p>
+<h2 id="level-1-what-the-transformer-replaced">Level 1: What the transformer replaced</h2>
+<p>Recurrent neural networks were the state of the art around 2016. The
+idea: compress the history of all seen tokens into a hidden state,
+update it each timestep, generate outputs from it. Three challenges
+motivated the transformer.</p>
+<figure><img alt="RNN challenges" src="assets/slide-l02-rnn-challenges.png"><figcaption>Long interaction distances, vanishing and exploding gradients, serial bottleneck. Source: Stanford slides.</figcaption></figure>
+<p><strong>Challenge 1: long interaction distances.</strong> In &ldquo;The counselor
+helped frame the situation&rdquo;, the word &ldquo;The&rdquo; passes through many
+timesteps before reaching &ldquo;situation&rdquo;. Distant tokens interact only
+through a long chain of state updates.</p>
+<p><strong>Challenge 2: vanishing and exploding gradients.</strong> Backpropagation
+multiplies through every timestep. Large values explode the
+gradient and destabilize training; small values shrink it toward
+zero and the network stops learning.</p>
+<p><strong>Challenge 3: serial bottleneck.</strong> Timestep t must finish before
+timestep t+1 starts. No parallelization across the sequence.</p>
+<p>The lecture notes that RNN research continued (S4, Mamba, linear
+attention), which is the subject of <a href="l09-efficient-architectures.html">L09</a>.</p>
+<h2 id="level-1-attention-as-a-hash-table-lookup">Level 1: Attention as a hash-table lookup</h2>
+<p>The key idea of attention: all tokens interact with all other
+tokens&rsquo; representations. The lecture&rsquo;s intuition is a hash table.
+Every token xi becomes a key ki and a value vi. Each token also
+becomes a query qi that looks up the table: compare the query to all
+keys, take the most similar values, mix them.</p>
+<figure><img alt="Attention as hash table" src="assets/slide-l02-attention-hashtable.png"><figcaption>Queries look up keys; values mix by similarity. Source: Stanford slides.</figcaption></figure>
+<p>Concretely, for the word &ldquo;frame&rdquo; in &ldquo;The counselor helped frame the
+situation&rdquo;, the query for &ldquo;frame&rdquo; might return 0.25 of &ldquo;counselor&rdquo;,
+0.45 of &ldquo;helped&rdquo;, 0.30 of &ldquo;situation&rdquo;. The new representation is
+the weighted mix. Attention supplies the weights. This is the
+contextual representation: &ldquo;frame&rdquo; now carries its context.</p>
+<p>The full computation, in four steps:</p>
+<figure><img alt="Attention math" src="assets/slide-l02-attention-math.png"><figcaption>O = QK^T: every query meets every key. Two observations: O(1) interaction distance and parallelizability. Source: Stanford slides.</figcaption></figure>
+<ol>
+<li>Transform each token three ways: qi = xi Wq, ki = xi Wk,
+   vi = xi Wv.</li>
+<li>Score every pair: O = Q K^T, an N by N matrix.</li>
+<li>Normalize rows: S = Softmax(O / sqrt(d)).</li>
+<li>Mix values: output = S V.</li>
+</ol>
+<p>Two properties made this a systems success. Maximum interaction
+distance is O(1) instead of O(n): any two tokens meet directly.
+And the pairwise interactions compute in parallel, which is why
+transformers train fast on GPUs. The price is the N by N matrix:
+quadratic memory and compute, the target of Lectures 3 and 6.</p>
+<p>Multi-head attention splits the d dimensions across h heads, so each
+head attends over d/h dimensions. Different heads learn different
+interaction patterns. The feed-forward network then applies
+nonlinearity, since attention alone only takes weighted averages.
+Residual connections, layer normalization, and scaled dot products
+keep training stable. Position encodings (absolute, Alibi, rotary)
+tell attention which token sits where.</p>
+<figure><img alt="Transformer stack" src="assets/slide-l02-transformer-stack.png"><figcaption>The full block: multi-head attention, feed-forward, residuals, norms, inputs to outputs. Source: Stanford slides.</figcaption></figure>
+<h2 id="level-1-three-ways-to-use-a-transformer">Level 1: Three ways to use a transformer</h2>
+<p><strong>Decoder-only.</strong> Uses the final representation to generate text.
+Training objective: next-token prediction. Reads left to right.
+Example: GPT. This is the architecture the whole course optimizes.</p>
+<p><strong>Encoder-only.</strong> Uses the final representation for classification or
+embeddings. Training objective: span prediction (mask words, predict
+them). Reads bidirectionally. Example: BERT.</p>
+<p><strong>Encoder-decoder.</strong> Two stacks: one reads the input, one generates
+the output. Useful when inputs and generations differ in kind, e.g.
+questions versus answers.</p>
+<p>Pretrained models learn from next-token or span prediction on the
+open web. Fine-tuning then adapts them to instructions and human
+preferences, which is <a href="l08-finetuning-and-peft.html">L08</a>.</p>
+<div class="qa"><div class="q">Why does this systems course care mostly about decoder-only models?</div><div class="a"><p>Because generation is the expensive workload. Decoder-only models generate token by token, and each step is a full model pass over a growing prefix. That is the memory-bound, latency-sensitive pattern that KV caching, batching, and speculative decoding in Lecture 4 exist to fix. Encoders do one forward pass; there is far less to optimize.
+Every token attends to every other token, which costs O(N squared) in the sequence length. That single cost drives the memory hierarchy work in Lecture 3, the FlashAttention derivation in Lecture 6, and the attention-free architectures in Lecture 9.</p><div class="followup"><strong>Follow-up:</strong> What is the one systems fact about the transformer block to carry forward?</div></div></div>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/slide-l02-chain-rule.png" alt="Chain rule">
+<div class="rc-body">
+<strong>1. Language models factor with the chain rule</strong>
+<p>One impossible joint distribution becomes many small next-token
+predictions. Each prediction is one model call over the prefix.</p>
+<p class="rc-num">Key: p(x1..xL) as a product of conditionals</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l02-arch-families.png" alt="Architecture families">
+<div class="rc-body">
+<strong>2. Three families, one interface</strong>
+<p>RNNs, ConvNets, and transformers all map (batch, length, dim) to
+(batch, length, dim). They differ in training versus inference
+speed.</p>
+<p class="rc-num">Key: transformers won on parallel training</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l02-rnn-challenges.png" alt="RNN challenges">
+<div class="rc-body">
+<strong>3. RNNs failed on distance, gradients, and serialism</strong>
+<p>Long interaction distances, vanishing and exploding gradients,
+and a timestep bottleneck. Attention answers all three.</p>
+<p class="rc-num">Key: O(n) interaction distance in RNNs</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l02-attention-hashtable.png" alt="Attention as hash table">
+<div class="rc-body">
+<strong>4. Attention is a differentiable hash table</strong>
+<p>Queries look up keys, values mix by similarity. The result is a
+contextual representation of each token.</p>
+<p class="rc-num">Key: xi_new = weighted mix of values</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l02-attention-math.png" alt="Attention math">
+<div class="rc-body">
+<strong>5. Four steps, one quadratic matrix</strong>
+<p>Project to Q, K, V. Score QK^T. Softmax. Mix V. The N by N
+matrix costs O(N squared): the target of Lectures 3 and 6.</p>
+<p class="rc-num">Key: S = Softmax(QK^T / sqrt(d))</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l02-transformer-stack.png" alt="Transformer stack">
+<div class="rc-body">
+<strong>6. The block: attention plus feed-forward</strong>
+<p>Multi-head attention mixes tokens. The MLP adds nonlinearity.
+Residuals, norms, and scaling keep training stable.</p>
+<p class="rc-num">Key: this block is what we optimize</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l02-transformer-stack.png" alt="Three transformer uses">
+<div class="rc-body">
+<strong>7. Decoder-only, encoder-only, encoder-decoder</strong>
+<p>Generate text, classify text, or translate between kinds of
+text. This course optimizes decoder-only generation.</p>
+<p class="rc-num">Key: GPT vs BERT vs seq2seq</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l02-chain-rule.png" alt="Pretraining">
+<div class="rc-body">
+<strong>8. Pretrain, then fine-tune</strong>
+<p>Next-token prediction on the web teaches the base model.
+Fine-tuning teaches instructions and human preferences.</p>
+<p class="rc-num">Key: L08 covers fine-tuning systems</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Intro to Sequence Modeling slide deck (Fall 2023 headers).</p>
+<p><strong>Further reading:</strong>
+- Vaswani et al., &ldquo;Attention Is All You Need&rdquo; (2017): the original transformer paper.
+- <a href="../cs336/l03-architecture.html">CS336 L03</a>: the transformer derived from scratch with executable code.
+- CS224N: the full NLP treatment of attention and transformers.
+- Brown et al., &ldquo;Language Models are Few-Shot Learners&rdquo; (2020): what scale unlocked.</p>
+<p><strong>Caveats from these sources.</strong> The slide deck is the Fall 2023
+version; the lecture order follows the Fall 2024 calendar. Some
+slides (e.g. &ldquo;Created by genmo.ai&rdquo;) are generated illustrations,
+not data. Position encoding research (absolute, Alibi, rotary) is
+mentioned as active; the lecture does not endorse one.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 L03:</strong> the transformer from scratch. Read it for the full derivation.</li>
+<li><strong>CS224N:</strong> attention, transformers, and their NLP history in depth.</li>
+<li><strong>CS229S L04:</strong> autoregressive decoding as a systems workload.</li>
+<li><strong>CS229S L06:</strong> why the N by N attention matrix must go.</li>
+<li><strong>CS229S L09:</strong> the RNN strikes back: S4, Mamba, and linear attention.</li>
+<li><strong>CS336 L15:</strong> post-training: what fine-tuning does to the model.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Sequence models cheatsheet.</strong> Sequence model: input sequence to output sequence. LM: compact distribution over token sequences; chain rule p(x1..xL) = product of conditionals. Perplexity: uncertainty about the true next word. Families: RNN (slow train, fast infer), ConvNet, transformer (fast train, slow sampling). RNN failures: long distances, vanishing/exploding gradients, serial bottleneck. Attention: qi looks up kj, mixes vj; O = QK^T (N by N); S = Softmax(O/sqrt(d)); out = S V. O(1) interaction distance, parallelizable, O(N^2) cost. Multi-head: h heads over d/h dims. Block: attention + MLP + residual + norm. Uses: decoder-only (generate), encoder-only (classify), encoder-decoder (translate). Pretrain on web, fine-tune for instructions.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Attention in one line.</strong> Every token asks every other token how much it matters, then becomes the weighted average of the answers.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Intro to Sequence Modeling slide deck (Fall 2023 headers)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener">Vaswani et al., Attention Is All You Need (2017)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2005.14165" target="_blank" rel="noopener">Brown et al., Language Models are Few-Shot Learners (GPT-3, 2020)</a></li></ul></section>
+      <nav class="pager"><a href="../cs229s/l01-introduction.html"><span class="lbl">← Previous</span>Lecture 1: Why Systems for Machine Learning</a><a href="../cs229s/l03-hardware-aware-design.html"><span class="lbl">Next →</span>Lecture 3: Hardware-Aware Algorithm Design</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
