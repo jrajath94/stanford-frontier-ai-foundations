@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 7: Parallelism, Data, Tensor, Pipeline — Stanford Frontier AI</title>
+<meta name="description" content="Cut the work three ways: the multi-GPU memory hierarchy, collective communication, NVLink/InfiniBand/RDMA, and data, tensor, and pipeline parallelism on MLPs.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-l07" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07" class="active">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 7: Parallelism, Data, Tensor, Pipeline</nav>
+      <h1>Lecture 7: Parallelism, Data, Tensor, Pipeline</h1>
+      <p class="meta-line">2026-04-20 · Instructor: Tatsunori Hashimoto · 1:20:54 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="SzpOcwdIL0Y"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/SzpOcwdIL0Y" title="Stanford CS336 Spring 2026 Lecture 7: Parallelism" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=SzpOcwdIL0Y" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tatsunori Hashimoto builds collective communication and three parallelism styles from scratch on MLPs.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>Last week made one GPU fast. This week makes many GPUs useful. Two
+parts. <strong>Level 1 (Core):</strong> collectives, hardware topology, and the
+torch.distributed programming model. <strong>Level 2 (Deep):</strong> the three
+parallelisms on MLPs, which are the transformer&rsquo;s compute bottleneck.</p>
+<h2 id="level-1-why-multi-gpu">Level 1: Why multi-GPU</h2>
+<p>Two reasons <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=197s" target="_blank" rel="noopener">03:17 <span class="ts">⏱03:17</span></a>. The model does not fit: parameters,
+activations, gradients, and optimizer state overflow one GPU&rsquo;s HBM
+(B200: 192 GB. 1T parameters will not fit). Or it fits and you want
+speed anyway. But spreading work costs communication, so the game is
+orchestration: avoid data-transfer bottlenecks <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=109s" target="_blank" rel="noopener">01:49 <span class="ts">⏱01:49</span></a>.</p>
+<p>The mental model extends Lecture 5&rsquo;s hierarchy one level out.</p>
+<figure><img alt="Memory hierarchy" src="assets/l07-memory-hierarchy.svg"><figcaption>Registers to HBM to NVLink to InfiniBand to Ethernet. Distance grows, bandwidth shrinks.</figcaption></figure>
+<p>HBM was slow last week and is fast this week. Beyond it: NVLink/NVSwitch
+between GPUs, InfiniBand between pods, Ethernet when you run out of
+money. Same trick set as before (replicate, shard, tile), one level
+larger <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=126s" target="_blank" rel="noopener">02:06 <span class="ts">⏱02:06</span></a>.</p>
+<h2 id="level-1-collectives">Level 1: Collectives</h2>
+<p>Collectives are communication templates from 1980s parallel
+programming, still the interface today <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=353s" target="_blank" rel="noopener">05:53 <span class="ts">⏱05:53</span></a>. Rank = one
+device. World size = device count. The warmups (broadcast, scatter,
+gather, reduce) teach the vocabulary. The three that run training:</p>
+<figure><img alt="Collectives" src="assets/l07-collectives.svg"><figcaption>All-gather: everyone holds everything. Reduce-scatter: reduce per shard. All-reduce: reduce-scatter then all-gather.</figcaption></figure>
+<ul>
+<li><strong>all-gather:</strong> each rank&rsquo;s piece ends up on every rank. Forward:
+  assemble full parameters from shards.</li>
+<li><strong>reduce-scatter:</strong> reduce per shard, scatter the results. Backward:
+  sum gradients, redistribute storage.</li>
+<li><strong>all-reduce:</strong> reduce-scatter then all-gather. One call, sum
+  replicated everywhere <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=2765s" target="_blank" rel="noopener">46:05 <span class="ts">⏱46:05</span></a>.</li>
+</ul>
+<p><strong>all-to-all</strong> generalizes: each rank sends arbitrary bytes to each
+other rank. It routes tokens to experts in MoE (load balancing keeps it
+near a transpose) <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1064s" target="_blank" rel="noopener">17:44 <span class="ts">⏱17:44</span></a>.</p>
+<div class="qa"><div class="q">Why not just send point-to-point messages between GPUs?</div><div class="a"><p>Collectives name the whole pattern at once, so the library (NCCL) can pick the best topology, ring or tree, and pipeline the transfers. Point-to-point forces you to schedule every send and receive by hand, and one wrong ordering deadlocks. The collective is the API that lets the system do the hard work for you.
+Splitting lets you intervene between the two halves. FSDP all-gathers parameters for the forward pass, computes, then reduce-scatters gradients, never holding the full model. The monolithic all-reduce cannot do that because it never exposes the intermediate. Next lecture&rsquo;s topic.</p><div class="followup"><strong>Follow-up:</strong> All-reduce is reduce-scatter plus all-gather. Why ever split it?</div></div></div>
+<h2 id="level-1-hardware-topology">Level 1: Hardware topology</h2>
+<p>Eight GPUs per node, NVLinked to an NVSwitch: any GPU reaches any GPU
+and the switch routes <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1415s" target="_blank" rel="noopener">23:35 <span class="ts">⏱23:35</span></a>. NVLink 5 gives 1.8 TB/s, about
+4x slower than B200&rsquo;s 8 TB/s HBM <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1436s" target="_blank" rel="noopener">23:56 <span class="ts">⏱23:56</span></a>. Beyond the node:
+InfiniBand, much slower. Beyond that: Ethernet, slowest, and it routes
+through the CPU.</p>
+<figure><img alt="Topology" src="assets/l07-topology.svg"><figcaption>8 GPUs per node on NVSwitch. InfiniBand between pods. NVL72 packs 72 GPUs into one NVLink domain.</figcaption></figure>
+<p><strong>RDMA</strong> is the reason the fast paths are fast: a GPU reads or writes
+another GPU&rsquo;s memory directly, no CPU in the loop <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1625s" target="_blank" rel="noopener">27:05 <span class="ts">⏱27:05</span></a>.
+Standard Ethernet copies through the CPU kernel&rsquo;s socket buffer:
+latency. RoCE (RDMA over converged Ethernet) bypasses the CPU and is
+the cheap answer to InfiniBand <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1735s" target="_blank" rel="noopener">28:55 <span class="ts">⏱28:55</span></a>. NVL72 packs nine
+8-GPU trays into one 72-GPU NVLink domain for buyers with deep pockets
+<a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1679s" target="_blank" rel="noopener">27:59 <span class="ts">⏱27:59</span></a>.</p>
+<figure><img alt="RDMA" src="assets/l07-rdma.svg"><figcaption>Ethernet: GPU to CPU to NIC. RDMA: GPU to GPU memory directly.</figcaption></figure>
+<p><strong>NCCL</strong> translates collectives into actual packets: it learns the
+topology, finds paths, and launches communication kernels (everything
+on a GPU is a kernel) <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=1803s" target="_blank" rel="noopener">30:03 <span class="ts">⏱30:03</span></a>.</p>
+<h2 id="level-1-programming-it">Level 1: Programming it</h2>
+<p><code>torch.distributed</code> wraps NCCL (gloo on CPU). <code>spawn</code> launches one
+process per rank. Setup configures master address/port for coordination
+metadata. The data itself moves through NCCL <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=2315s" target="_blank" rel="noopener">38:35 <span class="ts">⏱38:35</span></a>.
+<code>barrier()</code> synchronizes processes: async ranks may otherwise interleave
+arbitrarily. Benchmarking collectives needs both CUDA synchronize and
+the barrier, because there are two asynchronies: kernels and processes
+<a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=2848s" target="_blank" rel="noopener">47:28 <span class="ts">⏱47:28</span></a>.</p>
+<pre class="ascii">spawn   -&gt; one process per rank
+setup   -&gt; master address and port for metadata
+barrier -&gt; sync processes (ranks interleave otherwise)
+NCCL    -&gt; moves the data, GPU to GPU
+</pre>
+<p>Effective bandwidth check: all-reduce 100M elements in 1.6 ms gives
+~400 GB/s <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=2921s" target="_blank" rel="noopener">48:41 <span class="ts">⏱48:41</span></a>. The accounting: 2 x (world-1)/world x size
+/ duration. The 2x is send plus reduce. The (world-1)/world converges
+to 1, so bandwidth is independent of world size and topology. NCCL
+handles that. Reduce-scatter moves half the data (no 2x) and lands in
+the same 400s <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3136s" target="_blank" rel="noopener">52:16 <span class="ts">⏱52:16</span></a>.</p>
+<h2 id="level-2-data-parallelism">Level 2: Data parallelism</h2>
+<p>Split the data, not the model. Batch 128 rows across 4 ranks: each gets
+32 rows of the 128x1024 matrix <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3404s" target="_blank" rel="noopener">56:44 <span class="ts">⏱56:44</span></a>. Forward and backward
+run locally. Then the one line that makes DDP work:</p>
+<pre><code class="language-python">for p in params:
+    dist.all_reduce(p.grad)   # sum across ranks
+    p.grad /= world_size      # average
+</code></pre>
+<figure><img alt="Data parallel" src="assets/l07-data-parallel.svg"><figcaption>Each GPU holds 32 rows. All-reduce gradients, average, update. Parameters stay identical everywhere.</figcaption></figure>
+<p>Losses differ per rank. Gradients start different, all-reduce makes them
+identical. Parameters stay identical everywhere, forever
+<a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3611s" target="_blank" rel="noopener">60:11 <span class="ts">⏱60:11</span></a>. DDP is modular: it does not care what the forward
+pass looks like, so transformers work the same as MLPs
+<a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3707s" target="_blank" rel="noopener">61:47 <span class="ts">⏱61:47</span></a>. Batch size must exceed world size, ideally by a lot.</p>
+<h2 id="level-2-tensor-parallelism">Level 2: Tensor parallelism</h2>
+<p>Split each layer, not the data. Column split: rank r holds dim x dim/4
+of each weight matrix <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=3817s" target="_blank" rel="noopener">63:37 <span class="ts">⏱63:37</span></a>. Forward: each rank computes its
+local activations, then all-gather to full width for the next layer.
+Backward: the dual, reduce-scatter the gradients <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4092s" target="_blank" rel="noopener">68:12 <span class="ts">⏱68:12</span></a>.</p>
+<figure><img alt="Tensor parallel" src="assets/l07-tensor-parallel.svg"><figcaption>Split each layer's columns across ranks. All-gather activations forward. Reduce-scatter gradients backward.</figcaption></figure>
+<p>Unlike DDP, this mucks with the model: every layer communicates, so the
+interconnect must be fast. Tensor parallelism lives inside the NVLink
+domain <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4583s" target="_blank" rel="noopener">76:23 <span class="ts">⏱76:23</span></a>.</p>
+<h2 id="level-2-pipeline-parallelism">Level 2: Pipeline parallelism</h2>
+<p>Split the layers: rank r owns a contiguous layer group, sees all
+dimensions and all data eventually <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4182s" target="_blank" rel="noopener">69:42 <span class="ts">⏱69:42</span></a>. Rank 0 takes input,
+forwards activations to rank 1 via send/recv, and so on.</p>
+<p>The tax is bubbles: ranks idle while waiting on neighbors. Micro-batches
+chop the batch so work flows continuously, shrinking bubbles
+<a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4380s" target="_blank" rel="noopener">73:00 <span class="ts">⏱73:00</span></a>. The missing piece (next lecture): overlap
+communication with computation, receiving while computing, so waiting
+time nearly vanishes <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4442s" target="_blank" rel="noopener">74:02 <span class="ts">⏱74:02</span></a>.</p>
+<figure><img alt="Pipeline parallel" src="assets/l07-pipeline-parallel.svg"><figcaption>Each rank owns some layers. Micro-batches keep the pipe full. Bubbles are idle tax.</figcaption></figure>
+<h2 id="level-2-which-parallelism-where">Level 2: Which parallelism where</h2>
+<figure><img alt="Which parallelism where" src="assets/l07-where-which.svg"><figcaption>Tensor: NVLink only. Data: scales far, needs batch. Pipeline: tolerates slow links.</figcaption></figure>
+<p>The hardware picks the strategy <a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4570s" target="_blank" rel="noopener">76:10 <span class="ts">⏱76:10</span></a>. Tensor parallel needs
+NVLink: it moves big activations every layer. Pipeline tolerates slow
+links: point-to-point, small tensors, so decentralized training uses it
+across the world. Data parallel scales far but hits the critical batch
+size: past it, bigger batches waste compute, and you switch to tensor
+<a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y&amp;t=4655s" target="_blank" rel="noopener">77:35 <span class="ts">⏱77:35</span></a>. In practice: tensor within a node, data/FSDP across,
+pipeline if you still need it.</p>
+<p>Uncovered here: sequence parallelism (chop the sequence for attention),
+expert parallelism (all-to-all for MoE), and the combinations in the
+assignment.</p>
+<div class="qa"><div class="q">You have 8 GPUs on NVLink and 128 more across InfiniBand. Sketch the parallelization.</div><div class="a"><p>Tensor parallel inside each 8-GPU node: the per-layer activation traffic needs NVLink bandwidth. Data parallel or FSDP across the nodes: one gradient sync per step tolerates InfiniBand. Pipeline parallel across node groups only if the model still does not fit or bubbles are cheaper than the alternative. Never tensor across the InfiniBand boundary: the per-layer all-gathers would drown.
+Each rank must receive at least one example, or it contributes nothing and still pays the all-reduce. In practice you want many examples per rank: tiny per-rank batches make the communication dominate and waste the GPUs.</p><div class="followup"><strong>Follow-up:</strong> Why does DDP need the batch to exceed world size?</div></div></div>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/l07-memory-hierarchy.svg" alt="Memory hierarchy">
+<div class="rc-body">
+<strong>1. Two reasons for multi-GPU</strong>
+<p>Model does not fit (params, acts, grads, optimizer state), or it
+fits and you want speed. Either way, orchestrate around data transfer.</p>
+<p class="rc-num">Key: hierarchy extends outward</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l07-collectives.svg" alt="Collectives">
+<div class="rc-body">
+<strong>2. Three collectives run training</strong>
+<p>All-gather assembles, reduce-scatter sums and splits, all-reduce
+does both. Warmups teach vocabulary. All-to-all routes MoE tokens.</p>
+<p class="rc-num">Key: all-reduce = RS + AG</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l07-topology.svg" alt="Topology">
+<div class="rc-body">
+<strong>3. NVLink inside, IB across</strong>
+<p>8 GPUs per node on NVSwitch, 1.8 TB/s. InfiniBand between pods.
+Ethernet last. NVL72: 72 GPUs, one domain, deep pockets.</p>
+<p class="rc-num">Key: 1.8 TB/s vs 8 TB/s HBM</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l07-rdma.svg" alt="RDMA">
+<div class="rc-body">
+<strong>4. Bypass the CPU</strong>
+<p>RDMA: GPU writes GPU memory directly. Ethernet copies via the CPU.
+RoCE brings RDMA to Ethernet cheaply.</p>
+<p class="rc-num">Key: no CPU in the path</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l07-data-parallel.svg" alt="Data parallel">
+<div class="rc-body">
+<strong>5. DDP: split the rows</strong>
+<p>Each GPU, 1/4 of the batch. One all-reduce of gradients. Params
+stay identical. Batch must exceed world size.</p>
+<p class="rc-num">Key: sync only gradients</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l07-tensor-parallel.svg" alt="Tensor parallel">
+<div class="rc-body">
+<strong>6. Tensor: split the columns</strong>
+<p>Each rank, 1/4 of every layer. All-gather forward, reduce-scatter
+backward. Needs NVLink: it talks every layer.</p>
+<p class="rc-num">Key: comm per layer</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l07-pipeline-parallel.svg" alt="Pipeline parallel">
+<div class="rc-body">
+<strong>7. Pipeline: split the layers</strong>
+<p>Each rank, some layers. Micro-batches shrink idle bubbles. Overlap
+comm with compute. Tolerates slow links.</p>
+<p class="rc-num">Key: bubbles are the tax</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l07-where-which.svg" alt="Which parallelism where">
+<div class="rc-body">
+<strong>8. Hardware picks the strategy</strong>
+<p>Tensor within NVLink, data/FSDP across nodes, pipeline if needed.
+Past the critical batch size, data parallel wastes compute.</p>
+<p class="rc-num">Key: match comm to links</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 7 video, slides (lecture_7.pdf), and executable code
+  (lecture_07.py): the collectives and the three parallelisms run live.
+- torch.distributed documentation: the spawn/barrier/collective API.</p>
+<p><strong>Further reading:</strong>
+- ZeRO/FSDP papers: the fancier data parallelism promised for next
+  lecture.
+- Decentralized training work: pipeline parallel across the world.</p>
+<p><strong>Caveats from these sources.</strong> The 256-GPU pod number is made up.
+Eight per node is the real figure. Bandwidth numbers (1.8 TB/s NVLink
+5, ~400 GB/s effective all-reduce) are demo measurements on specific
+hardware. The pipeline code is naive: no comm/compute overlap.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 Lecture 8:</strong> FSDP and ZeRO split the all-reduce. 4D
+  parallelism combines all three.</li>
+<li><strong>CS336 Lecture 4:</strong> expert parallelism reuses all-to-all for MoE
+  routing.</li>
+<li><strong>CS229S:</strong> NCCL topology and RDMA deepen on the systems side.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Parallelism cheatsheet.</strong> Why multi-GPU: model does not fit, or speed. Hierarchy: shared/L1, HBM 8TB/s, NVLink 1.8TB/s, IB, Ethernet. Rank = device. World size = count. Collectives: all-gather (assemble), reduce-scatter (sum and split), all-reduce (both). All-to-all: MoE routing. Topology: 8 GPUs per node, NVSwitch, IB across, NVL72 = 72. RDMA: GPU to GPU, no CPU. RoCE: cheap IB. NCCL: collectives to packets. torch.distributed: spawn, barrier, gloo/NCCL. Bandwidth: 2(N-1)/N x size/duration, ~400GB/s demo. DDP: split rows, all-reduce grads, one line. Tensor: split columns, all-gather fwd, reduce-scatter bwd, NVLink only. Pipeline: split layers, micro-batches kill bubbles, overlap comm. Strategy: tensor in node, data across, pipeline if needed. Critical batch size caps data parallel.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Cut along the cheapest axis.</strong> Data splits rows, tensor splits layers, pipeline splits depth. The interconnect decides which cut you can afford.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=SzpOcwdIL0Y" target="_blank" rel="noopener">Lecture 7 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">CODE</span><a href="https://cs336.stanford.edu/lectures/?trace=lecture_07" target="_blank" rel="noopener">lecture_07.py, executable lecture code</a></li></ul></section>
+      <nav class="pager"><a href="../cs336/l06-triton-kernels.html"><span class="lbl">← Previous</span>Lecture 6: Benchmarking, Profiling, and Triton Kernels</a><a href="../cs336/l08-4d-parallelism.html"><span class="lbl">Next →</span>Lecture 8: 4D Parallelism at Scale</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
