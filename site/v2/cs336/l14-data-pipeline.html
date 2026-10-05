@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 14: The Data Pipeline — Stanford Frontier AI</title>
+<meta name="description" content="From raw crawl to training tokens: transformation, filtering, MinHash LSH deduplication, data mixing, and synthetic post-training data.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-l14" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14" class="active">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 14: The Data Pipeline</nav>
+      <h1>Lecture 14: The Data Pipeline</h1>
+      <p class="meta-line">2026-05-13 · Instructor: Percy Liang · 1:24:34 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="5sxHosTLPF8"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/5sxHosTLPF8" title="Stanford CS336 Spring 2026 Lecture 14: The Data Pipeline" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=5sxHosTLPF8" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=5sxHosTLPF8" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Percy Liang on transforming, filtering, deduping, mixing, and synthesizing data.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>Lecture 13 covered where data comes from. This is the pipeline:
+transform, filter, dedupe, mix, then post-train. <strong>Level 1 (Core):</strong>
+transformation, filtering, dedup, mixing. <strong>Level 2 (Deep):</strong> MinHash
+LSH internals, RegMix, synthetic post-training data.</p>
+<h2 id="level-1-transformation">Level 1: Transformation</h2>
+<p>Raw data is not text. Common Crawl holds HTML (sometimes PDFs,
+sometimes repos). HTML-to-text is rule-based: strip boilerplate and
+navigation, extract content. Tables are the hard case: simple ones
+render as markdown, nested ones force approximation <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=111s" target="_blank" rel="noopener">01:51 <span class="ts">⏱01:51</span></a>.</p>
+<figure><img alt="Transform" src="assets/l14-transform.svg"><figcaption>HTML to text is lossy. PDFs are rare and valuable.</figcaption></figure>
+<p>PDFs are a small fraction of the web and disproportionately
+valuable: making a PDF means having something to say. Many are
+truncated in crawls (they are big), and conversion often means OCR
+with a vision model, which is expensive <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=262s" target="_blank" rel="noopener">04:22 <span class="ts">⏱04:22</span></a>.</p>
+<h2 id="level-1-filtering">Level 1: Filtering</h2>
+<p>The general skeleton: a small target T of high-quality data, a huge
+raw pool R, and the goal of finding the subset of R that looks like
+T <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=416s" target="_blank" rel="noopener">06:56 <span class="ts">⏱06:56</span></a>. Filtering must generalize (you already own T)
+and be fast (100 trillion tokens). You keep a single-digit fraction.</p>
+<figure><img alt="Filtering" src="assets/l14-filtering.svg"><figcaption>Target vs raw. Generative or discriminative scoring, fastText at scale.</figcaption></figure>
+<p>Two classifier types <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=542s" target="_blank" rel="noopener">09:02 <span class="ts">⏱09:02</span></a>. Generative: fit a small
+model (KenLM 5-gram) on T, keep low perplexity. Discriminative:
+fastText linear classifier, T positive, R sample negative,
+threshold. Instantiations: Meta language ID (176 languages).
+OpenMathText (rules plus KenLM plus fastText, 15B tokens that beat
+20x unfiltered data). GPT-3 (Wikipedia, WebText, books positive).
+phi-1 (GPT-4 labels 100k, distill to Random Forest) <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=691s" target="_blank" rel="noopener">11:31 <span class="ts">⏱11:31</span></a>.</p>
+<p>Quality has no universal definition. Define what you want (math),
+filter for it, get better at it <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=853s" target="_blank" rel="noopener">14:13 <span class="ts">⏱14:13</span></a>.</p>
+<div class="qa"><div class="q">What is the right quality threshold?</div><div class="a"><p>There is none in the abstract. The optimal threshold depends on how many tokens you will train on. Michael Ryan&rsquo;s experiment (157M params): DCLM&rsquo;s high-quality data wins early, but once you start epoching the small high-quality pool, unfiltered Resiliparse catches up. Train longer, tolerate lower quality. The real mistake is not tuning the threshold: it is ignoring that your high-quality source is finite and epoching it silently.
+Because you run out. The 50-epoch trap: uniform mixing of 10T low-quality and 10B high-quality tokens, training 1T tokens, repeats every high-quality token 50 times. Best case you waste compute, worst case you overfit. UniMax caps epochs per source. Simulated epoching downsamples small runs so they feel large-scale scarcity. Always compute the implied epoch count before you pick a mixture.</p><div class="followup"><strong>Follow-up:</strong> If high-quality data always wins at small scale, why not train only on it?</div></div></div>
+<h2 id="level-1-deduplication">Level 1: Deduplication</h2>
+<p>Exact duplicates (mirrors, forks) and near duplicates (licenses,
+headers, templates differing by a comma). The web is weird: one gas
+mask description appeared 61,000 times in C4 <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=1549s" target="_blank" rel="noopener">25:49 <span class="ts">⏱25:49</span></a>. Why
+dedupe: efficiency, avoiding memorization of copyrighted or private
+text, and decontamination (test set out of training set)
+<a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=1577s" target="_blank" rel="noopener">26:17 <span class="ts">⏱26:17</span></a>.</p>
+<figure><img alt="Dedupe" src="assets/l14-dedupe.svg"><figcaption>Exact and near duplicates. Dedupe globally, decontaminate always.</figcaption></figure>
+<p>C4 did exact dedup on 3-sentence spans, removing all but one: which
+rips sentences out of documents and breaks coherence <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=1830s" target="_blank" rel="noopener">30:30 <span class="ts">⏱30:30</span></a>.
+Design space: item granularity (sentence, paragraph, document),
+match definition (exact, common subitem, Jaccard fraction), and what
+to remove. Dedupe across the entire dataset, not per source
+<a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=2935s" target="_blank" rel="noopener">48:55 <span class="ts">⏱48:55</span></a>.</p>
+<h2 id="level-2-minhash-lsh">Level 2: MinHash LSH</h2>
+<figure><img alt="MinHash LSH" src="assets/l14-minhash-lsh.svg"><figcaption>Collision probability equals Jaccard. Bands sharpen it into a threshold.</figcaption></figure>
+<p>Near-duplicate means Jaccard similarity above a threshold (say
+0.99). MinHash: hash every element of the set, keep the minimum.
+The key property: P(collision) = Jaccard(A, B). The intuition is a
+random permutation: the first row in the ordering decides, and it
+lands in the intersection exactly Jaccard of the time
+<a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=2038s" target="_blank" rel="noopener">33:58 <span class="ts">⏱33:58</span></a>.</p>
+<p>One hash is too stochastic, so LSH sharpens it. Split n hashes into
+b bands of r. A band matches if all r agree. The pair collides if
+any band matches. This and-or structure makes an S-curve: below the
+threshold collisions vanish, above it they approach certainty.
+Increasing r moves the curve right (stricter), increasing b moves it
+left (looser). The phase transition sits at (1/b)^(1/r), where the
+collision probability is 0.64 <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=2824s" target="_blank" rel="noopener">47:04 <span class="ts">⏱47:04</span></a>. Real setting from
+the dedup literature: b=20, r=450. All linear time.</p>
+<h2 id="level-1-data-mixing">Level 1: Data mixing</h2>
+<p>You have many sources. A mixture is a distribution over them. The
+baseline options: vibes (manual), uniform, proportional to token
+count. All are heuristic, and proportional has a flaw: a huge
+low-quality source eats the budget <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=3056s" target="_blank" rel="noopener">50:56 <span class="ts">⏱50:56</span></a>.</p>
+<figure><img alt="Mixing" src="assets/l14-mixing.svg"><figcaption>Uniform mixing can silently epoch your best data 50 times.</figcaption></figure>
+<p>The 50-epoch trap is the cautionary example <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=3225s" target="_blank" rel="noopener">53:45 <span class="ts">⏱53:45</span></a>.
+Uniform mixing, 10T low-quality plus 10B high-quality, training 1T
+tokens: low-quality tokens get touched 5%, high-quality tokens
+repeat 50 times. UniMax caps epochs per source and reallocates
+<a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=3513s" target="_blank" rel="noopener">58:33 <span class="ts">⏱58:33</span></a>. Keep diversity: literature, code, and papers are
+incomparable, and the model needs all of them <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=3161s" target="_blank" rel="noopener">52:41 <span class="ts">⏱52:41</span></a>.</p>
+<h2 id="level-2-regmix">Level 2: RegMix</h2>
+<p>The principled approach: train a swarm of small models (e.g. 300M
+params) on sampled mixtures, fit a regression from mixture weights
+to loss, optimize the regressor, train the big model on the
+optimum <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=3639s" target="_blank" rel="noopener">60:39 <span class="ts">⏱60:39</span></a>.</p>
+<figure><img alt="RegMix" src="assets/l14-regmix.svg"><figcaption>Small models predict the mixture. Two leaps of faith carry it to scale.</figcaption></figure>
+<p>Two leaps of faith. The optimizer hunts the extremes, where the
+regressor has the least coverage. And the small-scale optimum may
+not be the large-scale optimum: at large token counts,
+low-quality data becomes acceptable, which small runs cannot see
+<a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=3890s" target="_blank" rel="noopener">64:50 <span class="ts">⏱64:50</span></a>. Simulated epoching fixes the scale mismatch:
+downsample the small runs so they feel the same data scarcity as
+the big run <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=4062s" target="_blank" rel="noopener">67:42 <span class="ts">⏱67:42</span></a>. And never optimize against your
+downstream evals directly: upweighting code to ace code evals is
+overfitting, not mixing <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=3782s" target="_blank" rel="noopener">63:02 <span class="ts">⏱63:02</span></a>.</p>
+<h2 id="level-2-synthetic-post-training-data">Level 2: Synthetic post-training data</h2>
+<p>Post-training data is task-dependent, and in the open community it
+is almost all synthetic. The recipe: define environments (GitHub
+repos), define tasks or prompts, collect responses from a strong
+teacher <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=4428s" target="_blank" rel="noopener">73:48 <span class="ts">⏱73:48</span></a>. Humans are slow and expensive. The
+frontier uses hybrid human-AI.</p>
+<figure><img alt="Post-training" src="assets/l14-posttraining.svg"><figcaption>Environments, tasks, teachers. Synthetic data at scale.</figcaption></figure>
+<p>OpenThoughts: 1.2M reasoning examples for math, science, code. Two
+surprises: better models are not better teachers (QwQ-32B beat
+DeepSeek-R1), and sampling 16 generations per question helps
+<a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=4498s" target="_blank" rel="noopener">74:58 <span class="ts">⏱74:58</span></a>. SWE-smith: 50k synthetic tasks by injecting bugs
+into real repos, verified <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=4686s" target="_blank" rel="noopener">78:06 <span class="ts">⏱78:06</span></a>. SWE-Zero: 300k agent
+trajectories with no execution at all (grep-only scaffolds work
+because models have internal code semantics), scaled to 12M in
+SWE-rebench <a href="https://www.youtube.com/watch?v=5sxHosTLPF8&amp;t=4743s" target="_blank" rel="noopener">79:03 <span class="ts">⏱79:03</span></a>.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/l14-transform.svg" alt="Transform">
+<div class="rc-body">
+<strong>1. Raw is not text</strong>
+<p>HTML to text: strip boilerplate, tables are hard. PDFs: rare,
+truncated, OCR-expensive, worth it.</p>
+<p class="rc-num">Key: linearization loses things</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l14-filtering.svg" alt="Filtering">
+<div class="rc-body">
+<strong>2. Filter for your target</strong>
+<p>T small and good, R huge and raw. fastText, KenLM. Quality is
+whatever you define.</p>
+<p class="rc-num">Key: generalize and be fast</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l14-quality-threshold.svg" alt="Threshold">
+<div class="rc-body">
+<strong>3. Budget sets the bar</strong>
+<p>Longer training tolerates lower quality. High-quality data is
+finite. Epoching flips the winner.</p>
+<p class="rc-num">Key: no universal threshold</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l14-dedupe.svg" alt="Dedupe">
+<div class="rc-body">
+<strong>4. Dedupe everything</strong>
+<p>Exact and near. Gas mask x61,000. Dedupe globally,
+decontaminate the test set.</p>
+<p class="rc-num">Key: stop paying twice</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l14-minhash-lsh.svg" alt="MinHash LSH">
+<div class="rc-body">
+<strong>5. MinHash LSH</strong>
+<p>P(collision) = Jaccard. b bands of r sharpen the S-curve.
+Threshold (1/b)^(1/r). Linear time.</p>
+<p class="rc-num">Key: similarity as hashing</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l14-mixing.svg" alt="Mixing">
+<div class="rc-body">
+<strong>6. Mixtures epoch silently</strong>
+<p>Uniform plus small high-quality source = 50 epochs. Cap with
+UniMax. Keep diversity.</p>
+<p class="rc-num">Key: count your epochs</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l14-regmix.svg" alt="RegMix">
+<div class="rc-body">
+<strong>7. Learn the mixture</strong>
+<p>Small-model swarm, regression, optimize, scale up. Watch the
+two leaps of faith. Simulate epoching.</p>
+<p class="rc-num">Key: optimize carefully</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l14-posttraining.svg" alt="Post-training">
+<div class="rc-body">
+<strong>8. Synthetic teachers</strong>
+<p>Environments, tasks, teachers. OpenThoughts, SWE-smith,
+SWE-Zero. Better is not always the better teacher.</p>
+<p class="rc-num">Key: the new data economy</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 14 video.
+- DataComp LLM, DCLM, FineWeb, Nemotron papers (filtering).</p>
+<p><strong>Further reading:</strong>
+- RegMix, Olmix, UniMax papers (mixing).
+- OpenThoughts, SWE-smith, SWE-Zero, SWE-rebench (synthetic data).
+- FinePDFs (PDF processing).</p>
+<p><strong>Caveats from these sources.</strong> The epoching experiment is a small
+preliminary run (157M params). Trends may shift at scale. LSH
+constants (b=20, r=450) are one literature setting, not a universal
+prescription. Synthetic-data quality claims are from the open
+community. Frontier practice is hybrid and undisclosed.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 Lecture 13:</strong> sources and copyright. This lecture is the
+  pipeline that follows.</li>
+<li><strong>CS336 Lecture 9:</strong> the same small-to-large extrapolation logic
+  as scaling laws.</li>
+<li><strong>CS229:</strong> hash-based near-dup detection generalizes to any
+  large-scale retrieval system.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Data pipeline cheatsheet.</strong> Transform: HTML to text (boilerplate out, tables hard), PDFs rare and valuable (truncated, OCR). Filter: T small good, R huge raw, subset like T. fastText linear, KenLM generative. Quality = defined. Threshold depends on token budget (Ryan: quality wins early, loses after epoching). Dedupe: exact (C4 3-sentence spans), near (Jaccard 0.99). Gas mask 61k. Dedupe globally, decontaminate. MinHash: P(collision) = Jaccard. LSH: b bands of r, S-curve, threshold (1/b)^(1/r), 0.64 at center. Mixing: distribution over sources. 50-epoch trap. UniMax caps. Diversity. RegMix: small swarm, regression, optimize, scale. Two leaps of faith. Simulated epoching. Post-training: environments, tasks, teachers. OpenThoughts 1.2M, SWE-smith 50k, SWE-Zero 300k no-exec, 12M scaled.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Count your epochs.</strong> Filtering defines quality, dedup removes waste, and every mixture implies an epoch count: compute it before you train.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=5sxHosTLPF8" target="_blank" rel="noopener">Lecture 14 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li></ul></section>
+      <nav class="pager"><a href="../cs336/l13-training-data.html"><span class="lbl">← Previous</span>Lecture 13: Training Data</a><a href="../cs336/l15-post-training.html"><span class="lbl">Next →</span>Lecture 15: Post-training</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
