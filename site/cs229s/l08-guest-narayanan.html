@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lecture 8: Guest Talk, Deepak Narayanan on Parallelism — Stanford Frontier AI</title>
+<meta name="description" content="How NVIDIA&#x27;s Megatron-LM team composes data, tensor, and pipeline parallelism to train hundred-billion-parameter models, and the open questions that remain.">
+<link rel="stylesheet" href="assets/vendor/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="cs229s-l08">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Home</h3><ul>
+<li><a href="index.html" data-page="foundations-home">Home</a></li>
+</ul>
+<h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="cs336/l01-overview-tokenization.html" data-page="cs336-l01">L01 · Overview, Tokenization</a></li>
+<li><a href="cs336/l02-pytorch-resource-accounting.html" data-page="cs336-l02">L02 · PyTorch, Resource Accounting</a></li>
+<li><a href="cs336/l03-architectures-hyperparameters.html" data-page="cs336-l03">L03 · Architectures, Hyperparameters</a></li>
+<li><a href="cs336/l04-attention-alternatives-moe.html" data-page="cs336-l04">L04 · Attention Alternatives, MoE</a></li>
+<li><a href="cs336/l05-gpus-tpus.html" data-page="cs336-l05">L05 · GPUs, TPUs</a></li>
+<li><a href="cs336/l06-kernels-triton-xla.html" data-page="cs336-l06">L06 · Kernels, Triton, XLA</a></li>
+<li><a href="cs336/l07-parallelism-1.html" data-page="cs336-l07">L07 · Parallelism I</a></li>
+<li><a href="cs336/l08-parallelism-2.html" data-page="cs336-l08">L08 · Parallelism II</a></li>
+<li><a href="cs336/l09-scaling-laws-1.html" data-page="cs336-l09">L09 · Scaling Laws I</a></li>
+<li><a href="cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="cs336/l11-scaling-laws-2.html" data-page="cs336-l11">L11 · Scaling Laws II</a></li>
+<li><a href="cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="cs336/l13-data-sources.html" data-page="cs336-l13">L13 · Data Sources</a></li>
+<li><a href="cs336/l14-data-processing.html" data-page="cs336-l14">L14 · Data Processing</a></li>
+<li><a href="cs336/l15-post-training-sft-rlhf.html" data-page="cs336-l15">L15 · SFT, RLHF</a></li>
+<li><a href="cs336/l16-post-training-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="cs336/l17-alignment-multimodality.html" data-page="cs336-l17">L17 · Alignment, Multimodality</a></li>
+<li><a href="cs336/l18-guest-dan-fu.html" data-page="cs336-l18">L18 · Guest: Dan Fu</a></li>
+<li><a href="cs336/labs-index.html" data-page="cs336-labs-index">CS336 · Labs</a></li>
+<li><a href="cs336/lab1-tokenizer-transformer.html" data-page="cs336-lab1">Lab 1 · Tokenizer, Transformer</a></li>
+<li><a href="cs336/lab2-systems.html" data-page="cs336-lab2">Lab 2 · Systems</a></li>
+<li><a href="cs336/lab3-scaling.html" data-page="cs336-lab3">Lab 3 · Scaling Laws</a></li>
+<li><a href="cs336/lab4-data.html" data-page="cs336-lab4">Lab 4 · Data</a></li>
+<li><a href="cs336/lab5-post-training.html" data-page="cs336-lab5">Lab 5 · Post-Training</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="cs229/l02-supervised-setup.html" data-page="cs229-l02">L02 · Supervised Learning Setup</a></li>
+<li><a href="cs229/l03-weighted-least-squares.html" data-page="cs229-l03">L03 · Weighted Least Squares</a></li>
+<li><a href="cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="cs229/l12-representation-learning.html" data-page="cs229-l12">L12 · Representation Learning</a></li>
+<li><a href="cs229/l13-llms-next-token.html" data-page="cs229-l13">L13 · LLMs, Next-Token Prediction</a></li>
+<li><a href="cs229/l14-transformers-icl.html" data-page="cs229-l14">L14 · Transformers, In-Context Learning</a></li>
+<li><a href="cs229/l16-rl-basics.html" data-page="cs229-l16">L16 · RL Basics, MDPs</a></li>
+<li><a href="cs229/l17-policy-gradient.html" data-page="cs229-l17">L17 · Policy Gradient, PPO</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction, the Systems Mindset</a></li>
+<li><a href="cs229s/l02-hardware-aware-design.html" data-page="cs229s-l02">L02 · Hardware-Aware Algorithm Design</a></li>
+<li><a href="cs229s/l03-transformer-performance.html" data-page="cs229s-l03">L03 · Analyzing Transformer Performance</a></li>
+<li><a href="cs229s/l04-efficient-attention.html" data-page="cs229s-l04">L04 · Efficient Attention</a></li>
+<li><a href="cs229s/l05-memory-efficient-networks.html" data-page="cs229s-l05">L05 · Memory-Efficient Networks</a></li>
+<li><a href="cs229s/l06-parallelism-fundamentals.html" data-page="cs229s-l06">L06 · Parallelism Fundamentals</a></li>
+<li><a href="cs229s/l07-guest-dettmers.html" data-page="cs229s-l07">L07 · Guest: Tim Dettmers</a></li>
+<li><a href="cs229s/l08-guest-narayanan.html" data-page="cs229s-l08" class="active">L08 · Guest: Deepak Narayanan</a></li>
+</ul>
+<h3></h3><ul>
+<li><a href="cs229/labs-index.html" data-page="cs229/labs-index.html">CS229 Labs</a></li>
+<li><a href="cs229/index.html" data-page="cs229/index.html">CS229: Machine Learning</a></li>
+<li><a href="cs229s/index.html" data-page="cs229s/index.html">CS229S: Systems for Machine Learning</a></li>
+<li><a href="cs229/l01-introduction.html" data-page="cs229/l01-introduction.html">L01: Introduction</a></li>
+<li><a href="cs229/l04-exponential-family-glms.html" data-page="cs229/l04-exponential-family-glms.html">L04: Exponential Family and GLMs</a></li>
+<li><a href="cs229/l05-gda-naive-bayes.html" data-page="cs229/l05-gda-naive-bayes.html">L05: Gaussian Discriminant Analysis</a></li>
+<li><a href="cs229/l06-ml-advice.html" data-page="cs229/l06-ml-advice.html">L06: Dataset Splits and ML Advice</a></li>
+<li><a href="cs229/l07-neural-networks-1.html" data-page="cs229/l07-neural-networks-1.html">L07: Neural Networks 1 (Architecture)</a></li>
+<li><a href="cs229/l08-neural-networks-2.html" data-page="cs229/l08-neural-networks-2.html">L08: Neural Networks 2 (Backprop)</a></li>
+<li><a href="cs229/l09-kmeans-gmm.html" data-page="cs229/l09-kmeans-gmm.html">L09: K-Means and GMM</a></li>
+<li><a href="cs229/l10-em-pca-ica.html" data-page="cs229/l10-em-pca-ica.html">L10: EM, PCA, ICA</a></li>
+<li><a href="cs229/l15-attention-variants.html" data-page="cs229/l15-attention-variants.html">L15: Attention Variants</a></li>
+<li><a href="cs229/lab1-derivations.html" data-page="cs229/lab1-derivations.html">Lab 1: Derivations by Hand</a></li>
+<li><a href="cs229/lab2-bias-variance.html" data-page="cs229/lab2-bias-variance.html">Lab 2: Bias-Variance in Practice</a></li>
+<li><a href="cs229/lab3-em-from-scratch.html" data-page="cs229/lab3-em-from-scratch.html">Lab 3: EM from Scratch</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="index.html">Home</a> / <a href="#">CS229S: Systems for Machine Learning</a> / Lecture 8: Guest Talk, Deepak Narayanan on Parallelism</nav>
+      <h1>Lecture 8: Guest Talk, Deepak Narayanan on Parallelism</h1>
+      <p class="meta-line">Instructor: Deepak Narayanan · 55:54 · Fall 2024</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/JA1l96tjrs4" title="Deepak Narayanan on training LLMs at scale" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div><p class="video-cap">Guest talk linked from the CS229S calendar (Stanford MLSys Seminars). Timestamps link to exact moments.</p><p>Deepak Narayanan is a senior applied research scientist in NVIDIA&rsquo;s ADLR group, on the Megatron-LM team. He did his PhD at Stanford with Matei Zaharia, working on pipeline parallelism and cluster scheduling. This talk is about training large language models at scale: not the algorithms, but the systems decisions that decide whether a training run finishes in weeks or never. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=56s" target="_blank" rel="noopener">00:56 <span class="ts">⏱56</span></a></p>
+<div class="callout"><span class="co-label">Caveat</span><p>This talk comes from the Stanford MLSys Seminars series, not from a CS229S lecture recording. The CS229S calendar links it as the guest talk on parallelism. No public lecture video playlist exists for this course offering.</p></div>
+<h2 id="why-parallelism-is-not-optional">Why parallelism is not optional</h2>
+<p>Model sizes grew by almost four orders of magnitude in five years. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=106s" target="_blank" rel="noopener">01:46 <span class="ts">⏱106</span></a> Two walls make single-GPU training impossible.</p>
+<p>First, memory. The parameters of a hundred-billion-parameter model do not fit in the main memory of the largest accelerators, and that is before counting activations, gradients, and optimizer states. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=120s" target="_blank" rel="noopener">02:00 <span class="ts">⏱120</span></a></p>
+<p>Second, compute. Narayanan estimates that training a 175-billion-parameter GPT-3-style model on 300 billion tokens would take about 288 years on a single NVIDIA V100. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=155s" target="_blank" rel="noopener">02:35 <span class="ts">⏱155</span></a></p>
+<p>A third pressure limits the easy way out. Grouping inputs into large batches amortizes communication overhead, but larger batches need more tokens to reach the same loss. That caps how far data parallelism alone can scale. In HPC terms, the problem demands strong scaling: parallelize a fixed problem over as many GPUs as possible. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=176s" target="_blank" rel="noopener">02:56 <span class="ts">⏱176</span></a></p>
+<h2 id="the-talks-structure">The talk&rsquo;s structure</h2>
+<p>Narayanan organizes the talk in four parts: existing parallelism methods, how the methods interact, domain-specific optimizations, and recent paradigm changes plus open questions. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=215s" target="_blank" rel="noopener">03:35 <span class="ts">⏱215</span></a> The throughline is that no single method wins. The art is in composing them.</p>
+<h2 id="the-three-methods">The three methods</h2>
+<p><strong>Data parallelism</strong> splits a batch over devices. Each device holds a full model copy. At the end of each iteration, gradient updates are aggregated with an all-reduce so every copy stays identical. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=326s" target="_blank" rel="noopener">05:26 <span class="ts">⏱326</span></a> It cannot be used alone for large models because each device must still hold the full model.</p>
+<p><strong>Tensor parallelism</strong> splits the model&rsquo;s own parameters across devices. For transformers, Megatron splits each matrix multiplication: one weight matrix column-wise, the next row-wise. This particular split minimizes synchronization points. Each transformer layer needs an all-reduce in the forward pass and one in the backward pass. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=427s" target="_blank" rel="noopener">07:07 <span class="ts">⏱427</span></a></p>
+<p><strong>Pipeline parallelism</strong> splits the model&rsquo;s layers across devices and splits each batch into microbatches that flow through the stages. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=517s" target="_blank" rel="noopener">08:37 <span class="ts">⏱517</span></a> <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=636s" target="_blank" rel="noopener">10:36 <span class="ts">⏱636</span></a></p>
+<div class="mermaid">flowchart LR
+    DP[Data parallelism<br/>split the batch] --> AR[All-reduce<br/>gradients]
+    TP[Tensor parallelism<br/>split each layer] --> AR2[All-reduce<br/>per layer]
+    PP[Pipeline parallelism<br/>split the layers] --> P2P[Point-to-point<br/>activations]
+</div>
+<h2 id="the-pipeline-bubble">The pipeline bubble</h2>
+<p>Pipeline parallelism has a fundamental inefficiency. At the start of an iteration, later stages sit idle waiting for activations to arrive. At the end, early stages sit idle while the pipeline drains. This idle time is the pipeline bubble, or pipeline flush. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=753s" target="_blank" rel="noopener">12:33 <span class="ts">⏱753</span></a></p>
+<p>The bubble fraction is roughly ((P-1)/m), where (P) is the number of pipeline stages and (m) is the number of microbatches. More microbatches shrink the bubble but raise other costs. Every parallelism decision is a trade against something else.</p>
+<h2 id="composing-all-three-the-interconnect-decides">Composing all three: the interconnect decides</h2>
+<p>Real training uses all three methods at once. The composition that works is dictated by the hardware hierarchy. GPUs inside one server connect over NVLink, which is very fast. GPUs across servers connect over InfiniBand, which is much slower. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=901s" target="_blank" rel="noopener">15:01 <span class="ts">⏱901</span></a></p>
+<p>This creates a placement rule: put the communication-heavy parallelism inside the node. Tensor parallelism needs an all-reduce per layer, so its degree (T) should fit within one server&rsquo;s 8 GPUs. Pipeline parallelism only needs point-to-point activation transfers between stages, so it can span the slower cross-server links. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1140s" target="_blank" rel="noopener">19:00 <span class="ts">⏱1140</span></a></p>
+<h2 id="the-tensor-versus-pipeline-tradeoff-measured">The tensor versus pipeline tradeoff, measured</h2>
+<p>Narayanan makes the tradeoff quantitative. With (n) total GPUs, tensor degree (T), and pipeline degree (P), the constraint (T \times P = n) holds. Two effects pull in opposite directions as (T) grows.</p>
+<p>Effect one: the pipeline bubble shrinks. Since (P = n/T), a larger (T) means a smaller (P), and the bubble is proportional to (P). <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1100s" target="_blank" rel="noopener">18:20 <span class="ts">⏱1100</span></a></p>
+<p>Effect two: tensor-parallel all-reduces get expensive. Once (T) exceeds the 8 GPUs in a server, those all-reduces cross InfiniBand. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1132s" target="_blank" rel="noopener">18:52 <span class="ts">⏱1132</span></a></p>
+<p>The experiment: a 162-billion-parameter GPT model on 64 A100 GPUs, sweeping ((T, P)) pairs with (T \times P = 64), measuring per-GPU throughput in teraflops per second. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1157s" target="_blank" rel="noopener">19:17 <span class="ts">⏱1157</span></a> Throughput rises, peaks at ((8, 8)), then falls. The peak sits exactly where tensor all-reduces stay within NVLink while the pipeline bubble stays small. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1250s" target="_blank" rel="noopener">20:50 <span class="ts">⏱1250</span></a></p>
+<div class="callout"><span class="co-label">Key idea</span><p>The optimum is not &ldquo;maximize one method.&rdquo; It is the point where the interconnect hierarchy and the bubble cost balance. On 64 A100s, that point is tensor 8 by pipeline 8.</p></div>
+<h2 id="the-interleaved-schedule">The interleaved schedule</h2>
+<p>The standard pipeline schedule assigns contiguous layer chunks to each device. The interleaved schedule assigns layers round-robin: with 8 layers and 4 devices, device 1 gets layers 1 and 5, device 2 gets 2 and 6, and so on. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1441s" target="_blank" rel="noopener">24:01 <span class="ts">⏱1441</span></a></p>
+<p>The win: device 4 no longer waits for a full (P-1) microbatches of two-layer compute before receiving its first input. The pipeline bubble roughly halves. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1518s" target="_blank" rel="noopener">25:18 <span class="ts">⏱1518</span></a></p>
+<div class="mermaid">flowchart TB
+    subgraph Standard["Standard schedule"]
+        S1[D1: layers 1-2] --> S2[D2: layers 3-4]
+        S2 --> S3[D3: layers 5-6]
+        S3 --> S4[D4: layers 7-8]
+    end
+    subgraph Interleaved["Interleaved schedule"]
+        I1[D1: layers 1,5] --> I2[D2: layers 2,6]
+        I2 --> I3[D3: layers 3,7]
+        I3 --> I4[D4: layers 4,8]
+        I4 --> I1
+    end
+</div>
+<p>The price: activations now travel through the device set twice per microbatch instead of once, doubling point-to-point communication. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1579s" target="_blank" rel="noopener">26:19 <span class="ts">⏱1579</span></a> On a 175B model over 96 A100s, the interleaved schedule wins clearly at small batch sizes, where the bubble dominates. As batch size grows, the bubble shrinks on its own and the gap closes. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1633s" target="_blank" rel="noopener">27:13 <span class="ts">⏱1633</span></a> <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1681s" target="_blank" rel="noopener">28:01 <span class="ts">⏱1681</span></a></p>
+<p>Relaxed schedules go further: they change the semantics slightly, accept small convergence effects, and eliminate the bubble almost entirely. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1743s" target="_blank" rel="noopener">29:03 <span class="ts">⏱1743</span></a></p>
+<h2 id="domain-specific-optimizations">Domain-specific optimizations</h2>
+<p>At scale, even 10 percent throughput improvements are hugely valuable. They cut millions of dollars from a training run. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1825s" target="_blank" rel="noopener">30:25 <span class="ts">⏱1825</span></a></p>
+<p>One Megatron optimization exploits redundant communication. When tensor and pipeline parallelism combine, the same tensor can get sent multiple times over slow InfiniBand. The fix: scatter the tensor at the sending nodes over fast NVLink first, then send smaller pieces across servers. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1885s" target="_blank" rel="noopener">31:25 <span class="ts">⏱1885</span></a> <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=1913s" target="_blank" rel="noopener">31:53 <span class="ts">⏱1913</span></a></p>
+<p>On the precision side, a natural question: if training runs in 16-bit, can the all-reduce also run in 16-bit instead of 32-bit? <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=2520s" target="_blank" rel="noopener">42:00 <span class="ts">⏱2520</span></a> Every byte saved on communication is throughput gained.</p>
+<h2 id="the-paradigm-is-shifting-under-the-methods">The paradigm is shifting under the methods</h2>
+<p>Two changes alter the ground this analysis stands on.</p>
+<p>First, companies stopped publishing model details, so the public scaling curves end around 2021. More importantly, scale stopped meaning only parameter count. The Chinchilla finding pushed the field toward smaller models trained on far more tokens. Reasoning about parallelism now has to cover a different operating regime. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=2119s" target="_blank" rel="noopener">35:19 <span class="ts">⏱2119</span></a> <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=2153s" target="_blank" rel="noopener">35:53 <span class="ts">⏱2153</span></a></p>
+<p>Second, architectures are diversifying. Mixture-of-experts models route tokens to subparts of the model dynamically, which creates very different communication patterns from dense transformers. Parallelizing MoE well is an open problem. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=2546s" target="_blank" rel="noopener">42:26 <span class="ts">⏱2546</span></a></p>
+<h2 id="open-questions">Open questions</h2>
+<p>Narayanan closes with what is unsolved.</p>
+<p><strong>Automation.</strong> Hand-designing ((T, P, D)) configurations means writing out expressions for communication volume, idle time, and memory footprint, then validating against cluster experiments. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=2760s" target="_blank" rel="noopener">46:00 <span class="ts">⏱2760</span></a> Automated search over the configuration space exists but the space is enormous, so the research problem is pruning it intelligently. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=2606s" target="_blank" rel="noopener">43:26 <span class="ts">⏱2606</span></a></p>
+<p><strong>The batch size wall.</strong> There is a regime where batch size divided by GPU count approaches (1/8), one sample per GPU in an 8-GPU node. Past that, the only path is distributing individual matrix multiplications across slower cross-node links, which current interconnects cannot support efficiently. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=2867s" target="_blank" rel="noopener">47:47 <span class="ts">⏱2867</span></a> Newer interconnect hierarchies, where 256 GPUs share fast links before going cross-box, may change this. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=2977s" target="_blank" rel="noopener">49:37 <span class="ts">⏱2977</span></a></p>
+<p><strong>Fault tolerance.</strong> Synchronous training runs at the speed of the slowest GPU. Stragglers and failures slow the entire pipeline. Asynchronous training would help, but it changes convergence, and at million-dollar run costs, teams are conservative about unproven techniques. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=3148s" target="_blank" rel="noopener">52:28 <span class="ts">⏱3148</span></a> <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=3186s" target="_blank" rel="noopener">53:06 <span class="ts">⏱3186</span></a></p>
+<p><strong>Reduced-precision communication and offload.</strong> Active work includes lower-precision collectives and offloading reductions to the network itself, such as NVIDIA SHARP, so GPUs never do the summation. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=3105s" target="_blank" rel="noopener">51:45 <span class="ts">⏱3105</span></a></p>
+<p>Asked what he would talk about next time, Narayanan points at inference: autoregressive serving is not compute-bound the way training is, and its throughput problems are a different world. <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=3280s" target="_blank" rel="noopener">54:40 <span class="ts">⏱3280</span></a></p>
+<blockquote>
+<p><strong>Interview line:</strong> When asked how to parallelize LLM training, do not recite the three methods in isolation. State the composition rule: tensor parallelism inside the node (NVLink), pipeline across nodes (InfiniBand), data parallelism on top. Then name the two costs that fight each other, the pipeline bubble versus all-reduce volume, and give the (8, 8) sweet-spot result as evidence that the optimum is measured, not guessed.</p>
+</blockquote>
+<h2 id="sources">Sources</h2>
+<ul>
+<li>Video: <a href="https://www.youtube.com/watch?v=JA1l96tjrs4">Deepak Narayanan on training LLMs at scale</a> (55:54)</li>
+<li>Notes: official subtitle transcript (en-orig)</li>
+<li>Paper: <a href="https://arxiv.org/abs/2104.04473">Megatron-LM</a> (Narayanan et al.)</li>
+</ul>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=JA1l96tjrs4" target="_blank" rel="noopener">Guest talk video, Stanford MLSys Seminars YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-orig)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2104.04473" target="_blank" rel="noopener">Narayanan et al., Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM</a></li></ul></section>
+      <nav class="pager"><a href="cs229s/l07-guest-dettmers.html"><span class="lbl">← Previous</span>Lecture 7: Guest Talk, Tim Dettmers on Efficient Training and Inference</a><span></span></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="assets/vendor/katex.min.js"></script>
+<script src="assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "";</script>
+<script src="assets/app.js"></script>
+</body>
+</html>
