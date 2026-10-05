@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 18: Serving Inference — Stanford Frontier AI</title>
+<meta name="description" content="The other side of the model: the lifetime of a token, prefill vs decode, KV caching, disaggregation, Megakernels, and Parcae loop transformers.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-l18" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18" class="active">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 18: Serving Inference</nav>
+      <h1>Lecture 18: Serving Inference</h1>
+      <p class="meta-line">2026-05-27 · Instructor: Dan Fu · 1:11:33 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="9EEm4iMAF5s"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/9EEm4iMAF5s" title="Stanford CS336 Language Modeling from Scratch | Spring 2026 | Guest Lecture: Dan Fu" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=9EEm4iMAF5s" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Guest lecture by Dan Fu (UCSD / Together AI): serving models and the research behind it.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>A guest lecture flips the course: from training models to serving
+them. <strong>Level 1 (Core):</strong> the token&rsquo;s lifetime, prefill vs decode,
+the KV cache. <strong>Level 2 (Deep):</strong> disaggregation, Megakernels,
+Parcae.</p>
+<h2 id="level-1-the-lifetime-of-a-token">Level 1: The lifetime of a token</h2>
+<p>Inference is the engine that turns electricity into intelligence,
+the way a car engine turns oil into motion
+<a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=309s" target="_blank" rel="noopener">05:09 <span class="ts">⏱05:09</span></a>. The whole inference stack in one loop:
+schedule the request to GPUs, check the KV cache for seen tokens,
+execute the model, sample a token, repeat
+<a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=454s" target="_blank" rel="noopener">07:34 <span class="ts">⏱07:34</span></a>.</p>
+<figure><img alt="Lifetime" src="assets/l18-lifetime.svg"><figcaption>Request to intelligence, one scheduling loop.</figcaption></figure>
+<p>Know the kernels and you enable full-stack innovation: new routing,
+new kernels, new architectures.</p>
+<h2 id="level-1-workloads">Level 1: Workloads</h2>
+<p>Production traffic does not look like training traffic. Coding
+agents send tens of thousands of input tokens and get short outputs
+<a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=624s" target="_blank" rel="noopener">10:24 <span class="ts">⏱10:24</span></a>. Chat wants the first token in under a second.
+Agentic loops have many turns, tool calls, and idle gaps between
+turns <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=681s" target="_blank" rel="noopener">11:21 <span class="ts">⏱11:21</span></a>. Batch jobs translate each document once.
+The workload shape, and its SLA, decides every systems choice.</p>
+<figure><img alt="Workloads" src="assets/l18-workloads.svg"><figcaption>Coding, chat, agents: different shapes, different SLAs.</figcaption></figure>
+<div class="qa"><div class="q">Why would one inference stack not serve all workloads optimally?</div><div class="a"><p>Because the workloads stress different bottlenecks. A coding agent needs huge KV caches kept hot across turns (memory capacity). A chat app needs low time-to-first-token (prefill latency). Batch translation needs throughput on first-token processing with almost no decode pressure. A stack tuned for one wastes the other&rsquo;s dominant resource. This is why the lecture ends on co-design: architectures like DeepSeek&rsquo;s MLA radically compress the KV cache precisely because agentic workflows are KV-cache bound, while BERT-era batch jobs could use cheap bidirectional encoders (the guest&rsquo;s example) since they barely decode at all.
+Interactive chat: time to first token (under a second keeps the user). Agents: KV cache capacity per session (hot cache across turns). Batch: tokens per second per dollar (throughput). The lecturer&rsquo;s rule: nobody ever asks to serve less traffic, subject to those SLAs.</p><div class="followup"><strong>Follow-up:</strong> What is the single most important number for each workload?</div></div></div>
+<h2 id="level-1-prefill-vs-decode">Level 1: Prefill vs decode</h2>
+<p>Two operations, two bottlenecks. Prefill: 10,000 never-seen tokens
+in, compute the activations and one logit out. Compute bound, like
+training without the backward pass <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=864s" target="_blank" rel="noopener">14:24 <span class="ts">⏱14:24</span></a>. Decode:
+generate one token at a time, reloading the whole model for each
+one. Memory bandwidth bound, light on flops <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=894s" target="_blank" rel="noopener">14:54 <span class="ts">⏱14:54</span></a>.</p>
+<figure><img alt="Prefill vs decode" src="assets/l18-prefill-decode.svg"><figcaption>Compute-bound once, memory-bound forever.</figcaption></figure>
+<p>Prefill takes longer. Decode runs far more steps (once per
+generated token). The standard move: disaggregate, run prefill on
+one fleet, decode on another, specialize each stack
+<a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=1200s" target="_blank" rel="noopener">20:00 <span class="ts">⏱20:00</span></a>. Hardware follows the split: NVIDIA plans GPUs for
+prefill and Groq-style LPU chips for decode. OpenAI partners with
+Cerebras for the same reason <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=1267s" target="_blank" rel="noopener">21:07 <span class="ts">⏱21:07</span></a>.</p>
+<h2 id="level-1-the-kv-cache">Level 1: The KV cache</h2>
+<p>Users repeat themselves. Every &ldquo;hi ChatGPT&rdquo; shares a prefix. Every
+conversation turn repeats the book you pasted. Prefix sharing with
+a radix tree: look up which tokens you have seen, compute only the
+new ones <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=1082s" target="_blank" rel="noopener">18:02 <span class="ts">⏱18:02</span></a>.</p>
+<figure><img alt="KV cache" src="assets/l18-kv-cache.svg"><figcaption>Do not recompute what you already computed.</figcaption></figure>
+<p>When the GPU fills, offload: GPU to CPU DRAM to SSD, each tier
+cheaper and slower <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=1543s" target="_blank" rel="noopener">25:43 <span class="ts">⏱25:43</span></a>. Evict with LRU, prefetch when
+a user reopens an old conversation. Classic OS paging, rediscovered
+for activations <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=1671s" target="_blank" rel="noopener">27:51 <span class="ts">⏱27:51</span></a>.</p>
+<h2 id="level-2-cache-aware-disaggregation">Level 2: Cache-aware disaggregation</h2>
+<p>Two lines of routing code, 40% faster serving. Most requests are
+mid-conversation (warm). About 10% are fresh (someone pasted a
+book). Never run the book-paste on the same GPUs as the short
+chat: route low cache-hit-rate requests to one prefill pool, warm
+requests to another <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=1891s" target="_blank" rel="noopener">31:31 <span class="ts">⏱31:31</span></a>.</p>
+<figure><img alt="Disaggregation" src="assets/l18-disaggregation.svg"><figcaption>Route by cache hit rate. Two lines, 40% faster.</figcaption></figure>
+<p>Early days: in ten years this will look obvious. Scale bugs are the
+tax: 0.001%-probability kernel errors that NaN logits into &ldquo;hi hi
+hi&rdquo; loops, off-by-one reads that emit random Chinese characters,
+tool-call handlers that loop for tens of thousands of tokens
+<a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=1314s" target="_blank" rel="noopener">21:54 <span class="ts">⏱21:54</span></a>.</p>
+<h2 id="level-2-megakernels">Level 2: Megakernels</h2>
+<p>Decode loads the entire model to make one token, so the GPU is a
+glorified memory loader <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=2067s" target="_blank" rel="noopener">34:27 <span class="ts">⏱34:27</span></a>. Worse, one kernel per op
+leaves streaming multiprocessors idle: launch gaps, tail effects,
+gaps between kernels add up. The Megakernel fuses many ops into one
+kernel and schedules them like a distributed system: start the KV
+load before QKV-plus-RoPE finishes, load the O-projection weights
+before attention ends <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=2252s" target="_blank" rel="noopener">37:32 <span class="ts">⏱37:32</span></a>.</p>
+<figure><img alt="Megakernels" src="assets/l18-megakernel.svg"><figcaption>Fuse the layer. Overlap everything. Near the speed of light.</figcaption></figure>
+<p>Built with ThunderKittens, a lower-level Triton-like kernel
+library. Payoff: 30 to 70% on attention inference, one full Llama-1B
+layer in a single kernel, 72% of peak memory bandwidth on H100
+<a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=2456s" target="_blank" rel="noopener">40:56 <span class="ts">⏱40:56</span></a>. The cost: one kernel engineer writes
+Megakernels for one hardware, two or three models, batch sizes 1
+to 16, per year. Batch 17 means starting over <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=3817s" target="_blank" rel="noopener">63:37 <span class="ts">⏱63:37</span></a>.</p>
+<h2 id="level-2-parcae">Level 2: Parcae</h2>
+<p>A different scaling question: is more parameters the only way?
+Parcae loops transformer blocks, reusing parameters for more flops.
+Naive looping blows up (the A matrix powers amplify activations).
+The fix from state-space theory: make A a negative diagonal matrix
+so the spectral radius stays under 1, and the system cannot explode
+<a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=3050s" target="_blank" rel="noopener">50:50 <span class="ts">⏱50:50</span></a>.</p>
+<figure><img alt="Parcae" src="assets/l18-parcae.svg"><figcaption>Loops that do not blow up. Scale recurrence with data.</figcaption></figure>
+<p>The result: stable training where unconstrained loops NaN, and
+better perplexity than the same-parameter transformer baseline
+<a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=3211s" target="_blank" rel="noopener">53:31 <span class="ts">⏱53:31</span></a>. The scaling law finding: as data grows, scale
+recurrence alongside parameters. Today&rsquo;s models have zero
+recurrence and tons of data, sitting at the far left of the curve,
+which suggests pre-training may be under-looping <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=3495s" target="_blank" rel="noopener">58:15 <span class="ts">⏱58:15</span></a>.
+Inference bonus: fewer parameters means more KV cache and less
+cross-GPU communication <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=3723s" target="_blank" rel="noopener">62:03 <span class="ts">⏱62:03</span></a>.</p>
+<h2 id="level-2-co-design">Level 2: Co-design</h2>
+<p>Inference closes the loop back to architecture. Size your model to
+the chip&rsquo;s memory (a Groq LPU holds ~250MB). Match quantization to
+the hardware (NVFP4 on NVIDIA, MXFP4 on AMD) <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=3887s" target="_blank" rel="noopener">64:47 <span class="ts">⏱64:47</span></a>.
+Compress the KV cache if you serve agents (MLA). Skip the decoder
+if you serve batch (BERT on search). The model&rsquo;s shape and the
+fleet&rsquo;s shape are one decision.</p>
+<table>
+<thead>
+<tr>
+<th>Serving target</th>
+<th>Model choice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Groq LPU (~250MB)</td>
+<td>size the model to fit with KV cache room</td>
+</tr>
+<tr>
+<td>NVIDIA GPUs</td>
+<td>train in NVFP4</td>
+</tr>
+<tr>
+<td>AMD</td>
+<td>use MXFP4</td>
+</tr>
+<tr>
+<td>agentic workloads</td>
+<td>compress the KV cache (MLA)</td>
+</tr>
+<tr>
+<td>batch workloads</td>
+<td>skip the decoder (BERT-style)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/l18-lifetime.svg" alt="Lifetime">
+<div class="rc-body">
+<strong>1. Token lifetime</strong>
+<p>Schedule, check KV cache, execute, sample, repeat. Electricity
+to intelligence.</p>
+<p class="rc-num">Key: the serving loop</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l18-workloads.svg" alt="Workloads">
+<div class="rc-body">
+<strong>2. Workloads</strong>
+<p>Coding: long in. Chat: fast first token. Agents: turns and
+tools. SLAs differ.</p>
+<p class="rc-num">Key: shape decides system</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l18-prefill-decode.svg" alt="Prefill decode">
+<div class="rc-body">
+<strong>3. Prefill vs decode</strong>
+<p>Prefill compute-bound, once. Decode memory-bound, per token.
+Split the fleets.</p>
+<p class="rc-num">Key: two bottlenecks</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l18-continuous-batching.svg" alt="Batching">
+<div class="rc-body">
+<strong>4. Batching</strong>
+<p>Requests join and leave mid-step. KV memory is the hard
+limit. Queue when full.</p>
+<p class="rc-num">Key: per-step, not per-request</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l18-kv-cache.svg" alt="KV cache">
+<div class="rc-body">
+<strong>5. KV cache</strong>
+<p>Radix-tree prefix sharing. GPU, CPU, SSD tiers. LRU
+eviction, prefetch.</p>
+<p class="rc-num">Key: never recompute</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l18-disaggregation.svg" alt="Disaggregation">
+<div class="rc-body">
+<strong>6. Routing</strong>
+<p>Route by cache hit rate. Fresh and warm never share GPUs.
+40% faster.</p>
+<p class="rc-num">Key: two lines of code</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l18-megakernel.svg" alt="Megakernels">
+<div class="rc-body">
+<strong>7. Megakernels</strong>
+<p>Fuse ops into one kernel. Overlap loads. 30-70% faster,
+72% of peak bandwidth.</p>
+<p class="rc-num">Key: kill the gaps</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l18-parcae.svg" alt="Parcae">
+<div class="rc-body">
+<strong>8. Parcae</strong>
+<p>Loop blocks, constrain spectral radius below 1. Scale
+recurrence with data.</p>
+<p class="rc-num">Key: flops without parameters</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 18 video (guest lecture, Dan Fu, UCSD / Together AI).
+- Papers named in lecture: Megakernels/ThunderKittens (Stanford and Together), Parcae (UCSD).</p>
+<p><strong>Further reading:</strong>
+- DeepSeek V3/V4 inference papers (fused MoE kernels, MLA).
+- vLLM and TensorRT-LLM docs (continuous batching, disaggregation).</p>
+<p><strong>Caveats from these sources.</strong> The lecturer&rsquo;s slides were AI
+generated. He warned that fine details may be wrong, and this
+lesson follows his spoken claims, not the slide pixels. Scale
+figures (trillion-parameter open models, 5 to 10 trillion frontier)
+are his 2026 estimates, not measurements. The Parcae Twitter story
+was a fabrication the poster retracted.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 Lecture 4:</strong> flash attention and kernel writing meet
+Megakernels.</li>
+<li><strong>CS336 Lecture 9:</strong> scaling laws extended to recurrence.</li>
+<li><strong>CS336 Lecture 16:</strong> RL rollouts are decode-heavy inference
+workloads.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Inference cheatsheet.</strong> Token lifetime: schedule, KV lookup, execute, sample, repeat. Workloads: coding (long in), chat (fast first token), agents (turns), batch (throughput). Prefill: compute bound, 10k in 1 out, once. Decode: memory bound, 1 token per full model load, per step. Disaggregate fleets. LPU/Cerebras for decode. Continuous batching: per-step joins, KV memory is the limit. KV cache: radix prefix sharing, GPU/CPU/SSD tiers, LRU, prefetch. Cache-aware routing: fresh vs warm pools, 40% faster. Megakernels: fuse ops, overlap loads, 30-70% speedup, 72% bandwidth, huge engineering cost. Parcae: loop blocks, spectral radius under 1, scale recurrence with data. Co-design: size to chip memory, match quantization, compress KV for agents.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Serving is a second training problem.</strong> Every flop saved in training is re-spent at inference. The system that generates the tokens is half the model.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=9EEm4iMAF5s" target="_blank" rel="noopener">Lecture 18 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li></ul></section>
+      <nav class="pager"><a href="../cs336/l17-multimodality.html"><span class="lbl">← Previous</span>Lecture 17: Multimodality</a><a href="../cs336/cheatsheet.html"><span class="lbl">Next →</span>CS336 Cheatsheet</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
