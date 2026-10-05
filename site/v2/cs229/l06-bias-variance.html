@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 6: Bias, Variance, and Picking Models — Stanford Frontier AI</title>
+<meta name="description" content="The bias-variance canon, why double descent broke it, train/dev/test discipline, and Hyperband for hyperparameters.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229-l06" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06" class="active">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229: Machine Learning</a> / Lecture 6: Bias, Variance, and Picking Models</nav>
+      <h1>Lecture 6: Bias, Variance, and Picking Models</h1>
+      <p class="meta-line">2026-04-22 · Instructor: Chris Ré · 1:18:20 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="llnEgyyuYkQ"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/llnEgyyuYkQ" title="Lecture 6: Dataset Split, ML Advice" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=llnEgyyuYkQ" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Chris Ré covers bias and variance, double descent, data splits, and Hyperband.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> contains what you need to
+understand everything that follows in CS229 and the courses that build on
+it. <strong>Level 2 (Deep)</strong> contains what you need for correct, interview-grade
+understanding. Read Level 1 straight through. Return to Level 2 when you
+want depth.</p>
+<p>No prerequisites are assumed. Every term is defined at first use. Loss
+functions and MLE were defined in <a href="l02-linear-regression.html">lectures 2</a>
+and <a href="l03-logistic-regression.html">3</a>; they are reused, not re-explained.</p>
+<h2 id="level-1-bias-and-variance">Level 1: Bias and variance</h2>
+<p>Every model error decomposes into two parts <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=7s" target="_blank" rel="noopener">00:07 <span class="ts">⏱00:07</span></a>. <strong>Bias</strong>
+is error from wrong assumptions: the model class cannot capture the
+truth, no matter how much data arrives. A line fit to a curve has high
+bias. <strong>Variance</strong> is error from sensitivity to the training sample: a
+different dataset would give a very different model. A 1000-degree
+polynomial through 10 points has high variance.</p>
+<figure><img alt="Bias vs variance" src="assets/svg/l06-biasvar.svg"><figcaption>Four archers. Low bias low variance is the goal. Original plate.</figcaption></figure>
+<p>Think of four archers. Low bias, low variance: tight group on the
+bullseye. Low bias, high variance: scattered around the bullseye, right
+on average. High bias, low variance: tight group off target. High bias,
+high variance: scattered and off. Simple models err toward bias. Complex
+models err toward variance. <strong>Regularization</strong> <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=18s" target="_blank" rel="noopener">00:18 <span class="ts">⏱00:18</span></a> is the
+dial: penalize complexity to trade variance for bias.</p>
+<p>The classical advice: test error follows a U curve in model complexity.
+Too simple, bias dominates. Too complex, variance dominates. Pick the
+bottom of the U. This canon ruled for decades. Then the next section
+broke it.</p>
+<div class="qa"><div class="q">What is the bias-variance tradeoff?</div><div class="a"><p>Total error splits into bias (wrong assumptions, too simple) plus variance (oversensitive to the sample, too complex) plus irreducible noise. Making the model more flexible reduces bias but raises variance. Regularization tunes the tradeoff. The classic picture is a U-shaped test-error curve with the best model at the bottom.
+Usually not by tuning complexity alone. But more data reduces variance without raising bias, and better features can reduce bias without raising variance. The tradeoff binds a fixed dataset and feature set. Change those and the whole curve shifts down.</p><div class="followup"><strong>Follow-up:</strong> Can you reduce both at once?</div></div></div>
+<h2 id="level-1-double-descent">Level 1: Double descent</h2>
+<p>Modern practice broke the U curve. Keep adding parameters past the point
+where the model perfectly fits the training data, the <strong>interpolation</strong>
+point, and test error falls again. This is <strong>double descent</strong>
+<a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=78s" target="_blank" rel="noopener">01:18 <span class="ts">⏱01:18</span></a>, named in papers by Misha Belkin and coauthors
+<a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=3834s" target="_blank" rel="noopener">63:54 <span class="ts">⏱63:54</span></a>.</p>
+<figure><img alt="Double descent" src="assets/svg/l06-dd.svg"><figcaption>Test error falls, rises to the interpolation point, then falls again. Original plate.</figcaption></figure>
+<p>Why: past interpolation, many parameter settings fit the training data
+exactly. Gradient descent does not pick among them at random. It drifts
+toward the <strong>minimum-norm</strong> solution <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=2965s" target="_blank" rel="noopener">49:25 <span class="ts">⏱49:25</span></a>: the simplest fit,
+in a precise sense. Ridge regression makes this explicit by penalizing
+large weights. Bigger models plus the minimum-norm bias generalize better
+than medium models stuck at the interpolation peak.</p>
+<p>Related: <strong>flat versus sharp minima</strong>. A flat minimum keeps the loss low
+under small parameter wiggles; a sharp one spikes. Flat minima tend to
+generalize better, because test data moves the surface slightly and
+flat regions survive the move. The lecture treats this as useful
+intuition with active debate behind it, not as settled law.</p>
+<div class="qa"><div class="q">What is double descent?</div><div class="a"><p>Test error falls, then rises to a peak at the interpolation threshold where the model just barely fits the training data, then falls again as parameters keep growing. Classical theory predicted only the first U. The second descent comes from the optimizer&rsquo;s bias toward minimum-norm solutions among the many perfect fits. It explains why enormous models can generalize.
+No. The second descent is a tendency, not a guarantee, and it costs compute. Past some size the gains flatten while the bills do not. The practical reading: do not fear overparameterization the way classical theory taught, but still measure test error instead of assuming.</p><div class="followup"><strong>Follow-up:</strong> Does double descent mean bigger is always better?</div></div></div>
+<h2 id="level-1-train-dev-test">Level 1: Train, dev, test</h2>
+<p>Three splits, three jobs <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=179s" target="_blank" rel="noopener">02:59 <span class="ts">⏱02:59</span></a>. <strong>Train</strong>: fit parameters.
+<strong>Dev</strong> (validation): pick hyperparameters and models. <strong>Test</strong>: report
+the final score, once. The test set is locked away. Touch it during
+development and it becomes a dev set: your decisions leak into it and the
+score lies.</p>
+<p><strong>K-fold cross-validation</strong> <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=124s" target="_blank" rel="noopener">02:04 <span class="ts">⏱02:04</span></a> is the small-data
+discipline. Split the data into K chunks. Train on K-1, validate on the
+rest, rotate, average. Every point serves as validation exactly once. It
+costs K training runs and buys a stable estimate when data is scarce.</p>
+<p>The cautionary tale is <strong>adaptive overfitting</strong>: ImageNet to ImageNet-V2
+<a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=101s" target="_blank" rel="noopener">01:41 <span class="ts">⏱01:41</span></a>. Years of models tuned against the same test set
+adapted to its quirks. A fresh test set from the same distribution scored
+everyone lower. The test set had become a dev set through collective
+reuse. Benchmarks rot when the whole field shares one test set.</p>
+<div class="qa"><div class="q">Why three splits instead of two?</div><div class="a"><p>Two splits conflate model selection with evaluation. Every time you pick a hyperparameter using the test set, you fit the test set a little. After enough picks, the test score measures your tuning skill, not the model. The dev set absorbs the tuning. The test set stays clean for one honest measurement at the end.
+Time leakage. Splitting randomly when the data has time structure, so the model trains on the future and is tested on the past. Shuffling is for iid data. For temporal data, split by time: train on the past, test on the future, always.</p><div class="followup"><strong>Follow-up:</strong> What is the most common split mistake in industry?</div></div></div>
+<h2 id="level-1-hyperband">Level 1: Hyperband</h2>
+<p>Hyperparameters are the settings outside the model: learning rate, batch
+size, regularization strength, architecture choices. Tuning them by hand
+is slow. Grid search is wasteful: most configurations are obviously bad
+after a little training.</p>
+<p><strong>Hyperband</strong> <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=134s" target="_blank" rel="noopener">02:14 <span class="ts">⏱02:14</span></a> is successive halving with multiple
+brackets. Try many configurations on a small budget. Keep the top half.
+Double their budget. Repeat. Bad configurations die cheap. Good ones earn
+more training. The brackets vary the starting tradeoff between many-cheap
+and few-expensive trials.</p>
+<figure><img alt="Hyperband" src="assets/svg/l06-hyperband.svg"><figcaption>Many configs on small budgets. Keep winners, double budget, repeat. Original plate.</figcaption></figure>
+<p>The principle generalizes: allocate compute to promising candidates,
+kill the rest early. It is the same instinct behind early stopping, and
+it is how serious hyperparameter searches stay affordable.</p>
+<div class="qa"><div class="q">How do you tune hyperparameters without wasting compute?</div><div class="a"><p>Never give every configuration the full budget. Hyperband starts many configs cheap, keeps the winners, and doubles their budget each round. Random search over the space usually beats grid search because it explores more distinct values per dimension. And always tune on the dev set, never the test set.
+Parameters are learned by the optimizer: weights, biases. Hyperparameters are set before training: learning rate, batch size, regularization strength, depth. The model cannot learn its own learning rate from the loss gradient. You pick it, or a tuner like Hyperband picks it for you.</p><div class="followup"><strong>Follow-up:</strong> What is the difference between a parameter and a hyperparameter?</div></div></div>
+<h2 id="level-2-regularization-concretely">Level 2: Regularization, concretely</h2>
+<p>The lecture&rsquo;s workhorse is <strong>ridge</strong>: add lambda times the squared norm
+of theta to the loss. The loss chip gains a term: J(theta) + lambda
+||theta||^2. Lambda is the dial. Zero recovers ordinary least squares.
+Infinity forces theta to zero. Between them, the fit trades training
+error against weight size.</p>
+<p>Ridge has a closed form like the normal equations, with X^T X + lambda I
+in place of X^T X. The added identity fixes the singularity problem from
+lecture 2: the matrix is always invertible now. Regularization is doing
+two jobs at once: statistical (less variance) and numerical (no null
+space).</p>
+<p>Why penalize large weights at all? Large weights mean the output swings
+hard on small input changes: the definition of a high-variance, jagged
+fit. Small weights mean smooth, stable predictions. The penalty encodes a
+prior belief that the world is smooth. Beliefs like that are what
+regularizers are.</p>
+<h2 id="level-2-reading-the-double-descent-debate-honestly">Level 2: Reading the double-descent debate honestly</h2>
+<p>Double descent is real empirically and genuinely surprising, but the
+lecture keeps two caveats. First, the minimum-norm story is cleanest for
+squared loss and linear models; for deep networks the &ldquo;norm&rdquo; being
+minimized is subtler and optimizer dependent. Second, flat minima as an
+explanation is debated: sharp minima can generalize too, and the
+definitions of flatness that correlate with generalization are delicate.
+The honest summary: classical bias-variance thinking is incomplete, not
+wrong. It describes the first descent. The second descent needs the
+optimizer&rsquo;s implicit bias in the story.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<p>Eight ideas carry this lecture. Read each card. Say the core sentence out
+loud. If you can, you own the lesson.</p>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/svg/l06-biasvar.svg" alt="Bias vs variance">
+<div class="rc-body">
+<strong>1. Error is bias plus variance</strong>
+<p>Bias: wrong assumptions, too simple. Variance: oversensitive to the
+sample, too complex. Regularization is the dial between them.</p>
+<p class="rc-num">Key: simple errs to bias, complex to variance</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l06-dd.svg" alt="Double descent">
+<div class="rc-body">
+<strong>2. Double descent breaks the U curve</strong>
+<p>Past the interpolation peak, test error falls again. The optimizer
+prefers minimum-norm fits among perfect ones. Big models can
+generalize.</p>
+<p class="rc-num">Key: the second descent past interpolation</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/figs-notes/notes-double-descent-samples.png" alt="Double descent samples, Stanford notes">
+<div class="rc-body">
+<strong>3. Flat minima survive shifts</strong>
+<p>Flat regions stay low-loss when data moves the surface. Sharp ones
+spike. Useful intuition, active debate, not settled law.</p>
+<p class="rc-num">Key: flat generalizes, usually</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l06-biasvar.svg" alt="Ridge regularization">
+<div class="rc-body">
+<strong>4. Ridge penalizes large weights</strong>
+<p>Add lambda ||theta||^2 to the loss. Fixes singularity and variance at
+once. Lambda is the dial. Small weights mean smooth predictions.</p>
+<p class="rc-num">Key: J + lambda||theta||^2</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l06-hyperband.svg" alt="Train dev test">
+<div class="rc-body">
+<strong>5. Train, dev, test have three jobs</strong>
+<p>Train fits. Dev selects. Test reports once. Touch test during tuning
+and it becomes dev. K-fold rotates validation when data is scarce.</p>
+<p class="rc-num">Key: test is locked until the end</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l06-hyperband.svg" alt="Adaptive overfitting">
+<div class="rc-body">
+<strong>6. Benchmarks rot: ImageNet-V2</strong>
+<p>Years of tuning on one test set adapted the field to its quirks. Fresh
+data scored everyone lower. Shared test sets become dev sets.</p>
+<p class="rc-num">Key: adaptive overfitting is collective</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l06-hyperband.svg" alt="Hyperband">
+<div class="rc-body">
+<strong>7. Hyperband kills bad configs cheap</strong>
+<p>Many configs, small budgets, keep the top half, double budgets.
+Random search beats grid. Tune on dev, never test.</p>
+<p class="rc-num">Key: successive halving</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/figs-notes/notes-lr-decay-cifar10.png" alt="Learning rate decay on CIFAR-10, Stanford notes">
+<div class="rc-body">
+<strong>8. Schedules refine, scale dominates</strong>
+<p>Learning rate decay helps image models, but model size and training
+time move results more than schedule tuning. Tune the big dials
+first.</p>
+<p class="rc-num">Key: size and time beat schedule</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 6 video: bias and variance <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=7s" target="_blank" rel="noopener">00:07 <span class="ts">⏱00:07</span></a>, double descent <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=78s" target="_blank" rel="noopener">01:18 <span class="ts">⏱01:18</span></a>, Hyperband <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=134s" target="_blank" rel="noopener">02:14 <span class="ts">⏱02:14</span></a>, k-fold <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=124s" target="_blank" rel="noopener">02:04 <span class="ts">⏱02:04</span></a>, ImageNet-V2 <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=101s" target="_blank" rel="noopener">01:41 <span class="ts">⏱01:41</span></a>, minimum norm <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ&amp;t=2965s" target="_blank" rel="noopener">49:25 <span class="ts">⏱49:25</span></a>.
+- CS229 Spring 2026 official course notes: model selection chapter; the notes figures above are from it.</p>
+<p><strong>Further reading:</strong>
+- Belkin et al. (2019), &ldquo;Reconciling modern machine-learning practice and the classical bias-variance trade-off&rdquo;: the double-descent paper.
+- Recht et al. (2019), &ldquo;Do ImageNet Classifiers Generalize to ImageNet?&rdquo;: the ImageNet-V2 study.
+- Li et al. (2018), &ldquo;Hyperband: A Novel Bandit-Based Approach to Hyperparameter Optimization.&rdquo;</p>
+<p><strong>Caveats from these sources.</strong> The flat-minima story is debated; treat it
+as intuition. Double descent&rsquo;s cleanest theory is for linear models; deep
+nets are messier. The notes&rsquo; CIFAR-10 schedule figure is one dataset and
+one architecture; schedules do not transfer blindly.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336:</strong> scaling laws are double descent&rsquo;s big sibling: test loss as a function of compute, measured at frontier scale.</li>
+<li><strong>CS224N:</strong> dev-set discipline governs every embedding and pretraining experiment.</li>
+<li><strong>CS329H:</strong> adaptive overfitting is a mechanism-design problem: benchmarks are games, and participants optimize the metric.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Model selection cheatsheet.</strong> Bias: too simple, wrong assumptions. Variance: too sensitive to sample. Regularization trades them; ridge adds lambda||theta||^2, also fixes singular X^T X. Double descent: error falls again past interpolation; optimizer seeks minimum norm. Flat minima generalize better, debated. Splits: train fits, dev selects, test reports once. K-fold for small data. ImageNet-V2: shared test sets rot. Hyperband: successive halving, many cheap configs, double winners&rsquo; budgets.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>The test set is a budget.</strong> Every peek spends it. Spend it on dev instead. When the final number comes from a set you tuned on, it is not a measurement. It is a memory.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=llnEgyyuYkQ" target="_blank" rel="noopener">Lecture 6 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <nav class="pager"><a href="../cs229/l05-gda-naive-bayes.html"><span class="lbl">← Previous</span>Lecture 5: Generative Models, GDA and Naive Bayes</a><a href="../cs229/l07-neural-networks-1.html"><span class="lbl">Next →</span>Lecture 7: Neural Networks, Architecture</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
