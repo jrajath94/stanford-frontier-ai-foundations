@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 2: Resource Accounting — Stanford Frontier AI</title>
+<meta name="description" content="The accounting behind every training run: tensors, precision, FLOPs, MFU, arithmetic intensity, the 6ND rule, memory budgets, gradient accumulation, and activat">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-l02" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02" class="active">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 2: Resource Accounting</nav>
+      <h1>Lecture 2: Resource Accounting</h1>
+      <p class="meta-line">2026-04-01 · Instructor: Percy Liang · 1:17:16 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="kuYAsz7zspQ"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/kuYAsz7zspQ" title="Stanford CS336 Spring 2026 Lecture 2: Resource Accounting" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=kuYAsz7zspQ" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Percy Liang derives the compute and memory accounting of training: precision, FLOPs, MFU, arithmetic intensity, and the 6ND rule.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> gives you the accounting
+system: how to count compute, how to count memory, and how to tell which
+one limits you. <strong>Level 2 (Deep)</strong> adds the derivations and the memory
+tricks used in real training runs.</p>
+<p>No prerequisites are assumed. Every term is defined at first use. This
+lesson links back to <a href="l01-tokenization.html">Lecture 1</a> for the pipeline.</p>
+<h2 id="level-1-the-goal">Level 1: The goal</h2>
+<p>Train the best model possible given a finite set of resources. Resources
+mean compute and memory. Data is not the limit in this course.</p>
+<pre class="ascii">given    : compute budget (FLOPs), memory budget (bytes)
+maximize : model quality
+measure  : everything below (precision, FLOPs, intensity)
+</pre>
+<p>Before you can optimize efficiency, you must measure it. This lecture
+builds the measurement system. By the end you answer questions like the
+two below.</p>
+<p>The professor opened with news: the Marin project ran at 1e23 FLOPs and
+landed within 0.05 of the loss predicted by scaling-law fits
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=9s" target="_blank" rel="noopener">00:09 <span class="ts">⏱00:09</span></a>. Prediction before the run matched the run. That is
+the power of good accounting.</p>
+<h2 id="level-1-two-questions-you-will-be-able-to-answer">Level 1: Two questions you will be able to answer</h2>
+<p><strong>Question 1.</strong> How long to train a 70B parameter model on 15T tokens on
+1024 H100s? Answer: 143 days <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=125s" target="_blank" rel="noopener">02:05 <span class="ts">⏱02:05</span></a>.</p>
+<pre class="ascii">Q1 : 6 x params x tokens / (spec speed x MFU)  =  training days
+Q2 : total GPU memory / 12 bytes per param     =  max params
+</pre>
+<p>The recipe: total FLOPs = 6 x parameters x tokens. Look up H100 speed
+on the spec sheet. Multiply by MFU, about 0.5. Divide.</p>
+<p><strong>Question 2.</strong> What is the largest model you can train on 8 H100s with
+AdamW? Answer: about 53B parameters <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=171s" target="_blank" rel="noopener">02:51 <span class="ts">⏱02:51</span></a>.</p>
+<p>The recipe: each H100 holds 80 GB. AdamW needs 12 bytes per parameter.
+640 GB divided by 12 bytes gives about 53B.</p>
+<p>These are back-of-the-envelope numbers. The point is the shape of the
+calculation, not the last digit.</p>
+<div class="qa"><div class="q">Estimate the training time for a 70B model on 15T tokens with 1024 H100s.</div><div class="a"><p>Compute total FLOPs first: 6 x 70e9 x 15e12 = 6.3e24 FLOPs. An H100 delivers 989 TFLOP/s dense in bf16. At 0.5 MFU that is ~495 TFLOP/s effective per GPU. With 1024 GPUs, that is ~5.1e17 FLOP/s, or ~4.4e22 FLOP/day. Divide: 6.3e24 / 4.4e22 = ~143 days. Every step is one line of arithmetic once you know the 6ND rule and MFU.
+Time doubles linearly, but the memory picture does not change: memory depends on model size and batch size, not token count. This is why compute accounting (6ND) and memory accounting (12 bytes per parameter) are separate systems.</p><div class="followup"><strong>Follow-up:</strong> What breaks first if you double the tokens?</div></div></div>
+<h2 id="level-1-tensors-are-the-building-blocks">Level 1: Tensors are the building blocks</h2>
+<p>Everything is a tensor: parameters, gradients, optimizer states, data,
+activations <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=286s" target="_blank" rel="noopener">04:46 <span class="ts">⏱04:46</span></a>. A tensor generalizes vectors and matrices
+to any number of dimensions.</p>
+<p>Memory for one tensor = number of elements x bytes per element. A 4x8
+matrix in float32 holds 32 elements x 4 bytes = 128 bytes
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=435s" target="_blank" rel="noopener">07:15 <span class="ts">⏱07:15</span></a>. One matrix in GPT-3&rsquo;s feedforward layer is about 2.3
+GB <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=467s" target="_blank" rel="noopener">07:47 <span class="ts">⏱07:47</span></a>. Tensors get big.</p>
+<p>By default PyTorch creates tensors on CPU in float32. Move them to GPU
+for speed. Declare the dtype you want.</p>
+<h2 id="level-1-flops-is-work-flops-is-speed">Level 1: FLOPs is work, FLOP/s is speed</h2>
+<p>A FLOP is one floating-point operation, such as an addition or a
+multiplication <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=1656s" target="_blank" rel="noopener">27:36 <span class="ts">⏱27:36</span></a>.</p>
+<figure><img alt="FLOPs vs FLOP/s" src="assets/l02-flops-vs-flops.svg"><figcaption>FLOPs counts work done. FLOP/s measures hardware speed. The H100 spec of 1979 TFLOP/s halves to 989 for dense math.</figcaption></figure>
+<p>The pet peeve: FLOPs with a lowercase s is work done. FLOP/s is hardware
+speed. GPT-3 took ~3.14e23 FLOPs of work. The H100 promises 989 TFLOP/s
+of speed in dense bf16. Time = work divided by speed
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=1683s" target="_blank" rel="noopener">28:03 <span class="ts">⏱28:03</span></a>.</p>
+<p>Spec sheet trap: the H100 lists 1979 TFLOP/s, but the footnote says that
+number assumes sparsity. Dense math runs at half: 989 TFLOP/s
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=1769s" target="_blank" rel="noopener">29:29 <span class="ts">⏱29:29</span></a>. Always read the footnote.</p>
+<p>Intuition check: 8 H100s for one week give about 5e21 FLOPs
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=1809s" target="_blank" rel="noopener">30:09 <span class="ts">⏱30:09</span></a>. That is 8 x 989e12 x 604800 seconds. Napkin math like
+this is the whole game.</p>
+<h2 id="level-1-precision-from-fp32-down-to-fp4">Level 1: Precision, from fp32 down to fp4</h2>
+<p>Float32 has 32 bits: 1 sign bit, 8 exponent bits, 23 mantissa bits
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=368s" target="_blank" rel="noopener">06:08 <span class="ts">⏱06:08</span></a>. The exponent sets dynamic range. The mantissa sets
+resolution.</p>
+<figure><img alt="Precision ladder" src="assets/l02-precision.svg"><figcaption>fp32 is the safe default. fp16 underflows. bf16 keeps fp32 range with 16 bits. fp8 and fp4 push further with tricks.</figcaption></figure>
+<p>Cut bits in half and you get float16: 1 sign, 5 exponent, 10 mantissa.
+The 5-bit exponent kills dynamic range. The value 1e-8 rounds to zero.
+Training in fp16 gives underflow, overflow, and NaNs
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=532s" target="_blank" rel="noopener">08:52 <span class="ts">⏱08:52</span></a>.</p>
+<p>bf16 was built in 2018 to fix this. Same 16 bits, but the exponent
+keeps fp32&rsquo;s 8 bits and the mantissa shrinks to 7. Same dynamic range as
+fp32, worse resolution. Deep learning tolerates sloppy resolution but
+not overflow. bf16 is the sweet spot <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=593s" target="_blank" rel="noopener">09:53 <span class="ts">⏱09:53</span></a>.</p>
+<p>Mixed precision is standard practice. Use bf16 for parameters,
+activations, and gradients. Use fp32 for optimizer states. PyTorch AMP
+wraps your code and casts automatically: matmuls go to bf16,
+exponentiation stays fp32 <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=712s" target="_blank" rel="noopener">11:52 <span class="ts">⏱11:52</span></a>.</p>
+<p>Below bf16: fp8 has two variants, one favoring range and one favoring
+resolution, supported by NVIDIA&rsquo;s Transformer Engine <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=795s" target="_blank" rel="noopener">13:15 <span class="ts">⏱13:15</span></a>.
+nvfp4 uses 4 bits per value with a per-block scale factor, so neighbors
+share dynamic range. Nemotron 3 Super trained in fp4
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=827s" target="_blank" rel="noopener">13:47 <span class="ts">⏱13:47</span></a>. One-bit training has no credible result yet: the
+working recipe is train in bf16, then quantize to 1-2 bits after
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=981s" target="_blank" rel="noopener">16:21 <span class="ts">⏱16:21</span></a>.</p>
+<div class="qa"><div class="q">Why is bf16 preferred over fp16 for training?</div><div class="a"><p>bf16 keeps the 8-bit exponent of fp32, so it has the same dynamic range: no underflow of small gradients, no overflow of large activations. fp16 has only 5 exponent bits, so values like 1e-8 round to zero and training produces NaNs. Deep learning needs range more than resolution, because gradients are noisy anyway. That single bit-budget trade is why bf16 won.
+The optimizer squares gradients and keeps running averages across steps. Those are tiny numbers accumulated over thousands of updates. In bf16 the squares underflow and the averages lose the signal. The states are not the compute bottleneck, so paying 4 or 8 bytes per parameter there buys stability cheaply.</p><div class="followup"><strong>Follow-up:</strong> Why do optimizer states stay in fp32?</div></div></div>
+<h2 id="level-1-einops-names-instead-of-indices">Level 1: einops, names instead of indices</h2>
+<p>Reading <code>x.transpose(-2, -1)</code> forces you to track what -2 and -1 mean.
+einops names the dimensions instead <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=1092s" target="_blank" rel="noopener">18:12 <span class="ts">⏱18:12</span></a>.</p>
+<p>einsum is generalized matrix multiplication with bookkeeping. Name each
+dimension. Dimensions that appear on both inputs but not the output get
+summed out.</p>
+<pre class="ascii">shapes:  x is 3 x 4,  y is 4 x 3
+index soup:  z[i,j] = sum_k x[i,k] * y[k,j]   # what is k?
+named:       x[seq1, hidden] * y[hidden, seq2] -&gt; z[seq1, seq2]
+</pre>
+<p>The named version needs no transpose: the names do the work. With
+batches, heads, and sequences stacked, <code>...</code> absorbs the batch
+dimensions you do not want to name <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=1325s" target="_blank" rel="noopener">22:05 <span class="ts">⏱22:05</span></a>.</p>
+<p>Two more tools. <code>reduce</code> generalizes sum, mean, max, min over named
+dimensions <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=1375s" target="_blank" rel="noopener">22:55 <span class="ts">⏱22:55</span></a>. <code>rearrange</code> splits or merges dimensions,
+for example splitting a width-8 dimension into 2 heads x 4 hidden before
+a per-head operation <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=1446s" target="_blank" rel="noopener">24:06 <span class="ts">⏱24:06</span></a>.</p>
+<div class="qa"><div class="q">What does einops buy you over raw PyTorch index ops?</div><div class="a"><p>Correctness and readability, not speed: it compiles to the same primitives. Named dimensions make the contraction pattern explicit, so transpose bugs and wrong-axis reductions become visible. In attention code with batch, head, and sequence dimensions, that clarity prevents the most common shape bugs.
+In the innermost hot loop where you need a fused kernel anyway, you write the kernel directly. einops is for model code, where clarity dominates and the ops lower to the same cuBLAS calls.</p><div class="followup"><strong>Follow-up:</strong> When would you not use einops?</div></div></div>
+<h2 id="level-1-counting-flops-of-a-matmul">Level 1: Counting FLOPs of a matmul</h2>
+<p>A matmul of B x D by D x K costs 2 x B x D x K FLOPs
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=1912s" target="_blank" rel="noopener">31:52 <span class="ts">⏱31:52</span></a>. Each output entry needs D multiplications and D-1
+additions. Round D-1 to D: 2 FLOPs per triple.</p>
+<p>Elementwise ops cost the matrix size: addition on m x n costs mn FLOPs.
+No other op rivals matmul at large sizes, so accounting focuses on
+matmuls <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=1954s" target="_blank" rel="noopener">32:34 <span class="ts">⏱32:34</span></a>.</p>
+<p>Reframe: B is the number of data points, D x K is the parameter count.
+Forward pass of one linear layer = 2 x tokens x parameters. This shape
+grows into the 6ND rule below.</p>
+<p>Benchmarking note: GPUs run asynchronously. Wrap timing with
+<code>torch.cuda.synchronize()</code> before and after, average several runs, or
+your numbers are fiction <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=2127s" target="_blank" rel="noopener">35:27 <span class="ts">⏱35:27</span></a>.</p>
+<h2 id="level-1-mfu-actual-over-promised">Level 1: MFU, actual over promised</h2>
+<p>Model FLOPs Utilization = actual FLOP/s divided by spec-sheet FLOP/s
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=2235s" target="_blank" rel="noopener">37:15 <span class="ts">⏱37:15</span></a>.</p>
+<figure><img alt="MFU definition" src="assets/l02-flops-vs-flops.svg"><figcaption>MFU = actual FLOP/s / promised FLOP/s. 0.5 is good for a full model. 0.8 is reachable for a pure matmul. 0.1 means something is broken.</figcaption></figure>
+<p>An MFU of 0.5 on a real model is good. A pure matmul can reach 0.8. An
+MFU of 0.1 means something is wrong and you should fix it. You never
+exceed 1.0.</p>
+<div class="qa"><div class="q">Your training run reports MFU 0.15. What do you check first?</div><div class="a"><p>Memory bottlenecks. Low MFU with high FLOP counts means the GPUs wait on data movement instead of computing. Check arithmetic intensity of your ops, batch sizes, and whether small elementwise ops dominate the profile. The next section gives you the diagnostic language: compute the intensity, compare to 295, and find the memory-bound ops.</p></div></div>
+<h2 id="level-2-arithmetic-intensity">Level 2: Arithmetic intensity</h2>
+<p>Hardware is two boxes: HBM memory and the compute chip. Every op reads
+tensors from HBM, computes, and writes back <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=2450s" target="_blank" rel="noopener">40:50 <span class="ts">⏱40:50</span></a>. Total time
+is the slower of move time and compute time, assuming perfect overlap
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=2686s" target="_blank" rel="noopener">44:46 <span class="ts">⏱44:46</span></a>.</p>
+<figure><img alt="Memory movement" src="assets/l02-mem-move.svg"><figcaption>ReLU on 1M bf16 values moves 4 MB and does 1M FLOPs. Move time is 1 microsecond. Compute time is 1 nanosecond. The move wins by 1000x.</figcaption></figure>
+<p>Worked example: ReLU on a 1M-element bf16 vector. Bytes moved: read 2n,
+write 2n = 4n = 4 MB. FLOPs: n = 1M comparisons. Move time = 4e6 bytes /
+3.3e12 bytes/s = ~1 microsecond. Compute time = 1e6 / 989e12 = ~1
+nanosecond. The op is memory bound: it spends its life waiting for bits
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=2558s" target="_blank" rel="noopener">42:38 <span class="ts">⏱42:38</span></a>.</p>
+<p>Arithmetic intensity = FLOPs divided by bytes moved. The H100&rsquo;s
+accelerator intensity = 989e12 / 3.3e12 = ~295 FLOP/s per byte/s
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=2760s" target="_blank" rel="noopener">46:00 <span class="ts">⏱46:00</span></a>. An op with intensity below 295 is memory bound. Above
+295, compute bound.</p>
+<table>
+<thead>
+<tr>
+<th>Op</th>
+<th>Bytes</th>
+<th>FLOPs</th>
+<th>Intensity</th>
+<th>Bound by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ReLU</td>
+<td>4n</td>
+<td>n</td>
+<td>0.25</td>
+<td>memory</td>
+</tr>
+<tr>
+<td>GELU</td>
+<td>4n</td>
+<td>20n</td>
+<td>5</td>
+<td>memory</td>
+</tr>
+<tr>
+<td>Dot product</td>
+<td>4n</td>
+<td>2n</td>
+<td>0.5</td>
+<td>memory</td>
+</tr>
+<tr>
+<td>Matvec</td>
+<td>2n^2</td>
+<td>2n^2</td>
+<td>~0.5</td>
+<td>memory</td>
+</tr>
+<tr>
+<td>Matmul</td>
+<td>6n^2</td>
+<td>2n^3</td>
+<td>n/3 ~ 340</td>
+<td>compute</td>
+</tr>
+</tbody>
+</table>
+<p>GELU does 20x the work of ReLU per element, yet runs no slower: both are
+memory bound, so the extra FLOPs are free <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=2903s" target="_blank" rel="noopener">48:23 <span class="ts">⏱48:23</span></a>. Matmul is
+the only compute-bound op here, because it does n^3 work on n^2 bytes.
+Intensity grows with matrix size, which is why large batches and large
+matrices saturate GPUs <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=3139s" target="_blank" rel="noopener">52:19 <span class="ts">⏱52:19</span></a>.</p>
+<p>The inference foreshadow: generating one token at a time is a
+matrix-vector product, hence memory bound. Training processes whole
+sequences at once, hence compute bound <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=3209s" target="_blank" rel="noopener">53:29 <span class="ts">⏱53:29</span></a>.</p>
+<h2 id="level-2-the-roofline">Level 2: The roofline</h2>
+<p>Plot intensity on the x-axis and realized FLOP/s on the y-axis. Each
+accelerator is a roofline: a rising ramp capped by its peak FLOP/s
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=3288s" target="_blank" rel="noopener">54:48 <span class="ts">⏱54:48</span></a>.</p>
+<figure><img alt="Roofline" src="assets/l02-roofline.svg"><figcaption>Ops left of the knee at 295 are memory bound and never reach peak. Matmul sits right of the knee. ReLU and GELU sit far left.</figcaption></figure>
+<p>Ops left of the knee never reach the peak, no matter how well written.
+ReLU sits at 0.25, GELU at 5, both deep in memory-bound territory.
+Matmul at ~340 sits right of the knee and can saturate the chip. This
+plot is the diagnostic: compute your op&rsquo;s intensity, find it on the
+x-axis, read your ceiling.</p>
+<h2 id="level-2-the-backward-pass-costs-twice-the-forward">Level 2: The backward pass costs twice the forward</h2>
+<p>Zoom into one linear layer. Forward: h2 = h1 @ w2. The backward pass
+computes two gradients <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=3674s" target="_blank" rel="noopener">61:14 <span class="ts">⏱61:14</span></a>.</p>
+<pre class="ascii">forward:  h2[batch, out] = sum_in h1[batch, in] * w2[in, out]
+backward: dh1[batch, in]  = sum_out dh2[batch, out] * w2[in, out]
+          dw2[in, out]    = sum_batch dh2[batch, out] * h1[batch, in]
+</pre>
+<p>Each backward line is a matmul over the same three dimensions, so each
+costs the same as the forward. Two of them: the backward pass is exactly
+2x the forward pass.</p>
+<figure><img alt="Backward is two matmuls" src="assets/l02-backward.svg"><figcaption>The input gradient and the weight gradient are both matmuls over the same dimensions. Same dimensions, same FLOP count, twice the forward cost.</figcaption></figure>
+<p>Total: 2ND forward + 4ND backward = 6ND FLOPs per training step, where N
+is tokens and D is parameters <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=3952s" target="_blank" rel="noopener">65:52 <span class="ts">⏱65:52</span></a>. This holds for
+transformers too, as long as context length stays modest: with very long
+contexts the n^2 attention term needs separate accounting
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=3988s" target="_blank" rel="noopener">66:28 <span class="ts">⏱66:28</span></a>.</p>
+<div class="qa"><div class="q">Derive the 6 in the 6ND rule.</div><div class="a"><p>One linear layer forward costs 2 FLOPs per parameter per token: one multiply and one add. The backward pass computes two gradients, each a matmul over the same dimensions, so it costs 2 x 2 = 4 FLOPs per parameter per token. Add forward and backward: 2 + 4 = 6. The rule counts multiply-adds across all parameters and all tokens in the batch.
+When attention dominates: its cost grows with sequence length squared, which 6ND ignores. For long-context training you add the attention term separately. It also ignores the optimizer step and elementwise ops, but those are small next to the matmuls.</p><div class="followup"><strong>Follow-up:</strong> When does 6ND underestimate?</div></div></div>
+<h2 id="level-2-memory-inventory-for-training">Level 2: Memory inventory for training</h2>
+<p>Four residents live in GPU memory during training <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=4167s" target="_blank" rel="noopener">69:27 <span class="ts">⏱69:27</span></a>.</p>
+<figure><img alt="Bytes per parameter" src="assets/l02-bytes-per-param.svg"><figcaption>AdamW: 2 bytes params + 2 bytes grads + 4 bytes first moment + 4 bytes second moment = 12 bytes per parameter.</figcaption></figure>
+<table>
+<thead>
+<tr>
+<th>Resident</th>
+<th>Bytes</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parameters</td>
+<td>2 x P</td>
+<td>bf16</td>
+</tr>
+<tr>
+<td>Gradients</td>
+<td>2 x P</td>
+<td>bf16, one copy of params</td>
+</tr>
+<tr>
+<td>Activations</td>
+<td>2 x B x D x L</td>
+<td>bf16, scales with batch</td>
+</tr>
+<tr>
+<td>Optimizer (Adam)</td>
+<td>8 x P</td>
+<td>fp32: 4 for m, 4 for v</td>
+</tr>
+</tbody>
+</table>
+<p>AdaGrad keeps one fp32 state per parameter: 4 bytes. Adam keeps two: 8
+bytes. Optimizer states are the capacity hog: they decide whether the
+model fits, even though they barely affect step speed
+<a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=4264s" target="_blank" rel="noopener">71:04 <span class="ts">⏱71:04</span></a>.</p>
+<p>The lecture&rsquo;s quiz answer falls out directly: 8 H100s = 640 GB. 640e9 /
+12 bytes per parameter = ~53B parameters with AdamW.</p>
+<h2 id="level-2-gradient-accumulation">Level 2: Gradient accumulation</h2>
+<p>Activation memory scales with batch size. Large batches stabilize
+training up to a critical batch size, but they may not fit in memory.
+Gradient accumulation splits the difference <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=4350s" target="_blank" rel="noopener">72:30 <span class="ts">⏱72:30</span></a>.</p>
+<div class="mermaid">flowchart LR
+    A["microbatch 1"] --> G["compute grads"]
+    B["microbatch 2"] --> G
+    C["microbatch 3"] --> G
+    G --> S["accumulate, no zeroing"]
+    S --> U["step every B/micro steps"]
+    U --> Z["zero grads"]
+</div><pre class="mermaid-fallback"><code>flowchart LR
+    A[&quot;microbatch 1&quot;] --&gt; G[&quot;compute grads&quot;]
+    B[&quot;microbatch 2&quot;] --&gt; G
+    C[&quot;microbatch 3&quot;] --&gt; G
+    G --&gt; S[&quot;accumulate, no zeroing&quot;]
+    S --&gt; U[&quot;step every B/micro steps&quot;]
+    U --&gt; Z[&quot;zero grads&quot;]
+</code></pre>
+<p>Run microbatches, add their gradients without zeroing, and step the
+optimizer every B/microbatch steps. Effective batch size B with the
+activation memory of one microbatch. A small code change for a large
+memory win.</p>
+<h2 id="level-2-activation-checkpointing">Level 2: Activation checkpointing</h2>
+<p>Training stores every layer&rsquo;s activations for the backward pass: 2 x B x
+D x L bytes. Checkpointing stores only a subset and recomputes the rest
+during backward <a href="https://www.youtube.com/watch?v=kuYAsz7zspQ&amp;t=4401s" target="_blank" rel="noopener">73:21 <span class="ts">⏱73:21</span></a>.</p>
+<figure><img alt="Checkpointing" src="assets/l02-checkpoint.svg"><figcaption>Forward stores every third layer. Backward recomputes the dropped ones from the last checkpoint. The sqrt(L) spacing balances memory against recompute.</figcaption></figure>
+<p>The trade: memory down, compute up. Store nothing and recompute costs
+O(L^2). The sweet spot stores every sqrt(L)-th layer: O(sqrt(L)) memory
+and O(sqrt(L)) extra compute. In PyTorch, wrap a block with
+<code>torch.utils.checkpoint</code>: the block runs forward without saving
+intermediates, then recomputes them on the backward pass.</p>
+<div class="qa"><div class="q">When do you reach for gradient accumulation vs activation checkpointing?</div><div class="a"><p>Gradient accumulation when the batch does not fit: it cuts activation memory by the accumulation factor with zero extra compute, but it does not change per-layer memory. Activation checkpointing when depth does not fit: it cuts activation memory to O(sqrt(L)) at the cost of ~30% extra compute from recomputation. Use both when both batch and depth are large. Neither reduces parameter or optimizer memory: that needs sharding or offloading, covered in the parallelism lectures.</p></div></div>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<p>Eight ideas carry this lecture. Read each card. Say the core sentence
+out loud. If you can, you own the lesson.</p>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/l02-6nd.svg" alt="6ND rule">
+<div class="rc-body">
+<strong>1. Training costs 6ND FLOPs</strong>
+<p>Forward is 2 FLOPs per parameter per token. Backward is twice that.
+Add them: 6 x tokens x parameters. This one formula prices every
+training run.</p>
+<p class="rc-num">Key: 6 x 70B x 15T = 6.3e24 FLOPs</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l02-flops-vs-flops.svg" alt="FLOPs vs FLOP/s">
+<div class="rc-body">
+<strong>2. FLOPs is work, FLOP/s is speed</strong>
+<p>Lowercase s counts operations done. Per-second is hardware speed.
+Time equals work divided by speed. The H100 spec halves for dense math:
+989 TFLOP/s, not 1979.</p>
+<p class="rc-num">Key: read the sparsity footnote</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l02-precision.svg" alt="Precision ladder">
+<div class="rc-body">
+<strong>3. bf16 is the training sweet spot</strong>
+<p>fp16 underflows because its exponent is only 5 bits. bf16 keeps
+fp32's 8-bit exponent with 16-bit storage. Same range, less
+resolution, no NaNs.</p>
+<p class="rc-num">Key: 1 sign + 8 exponent + 7 mantissa</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l02-bytes-per-param.svg" alt="Bytes per parameter">
+<div class="rc-body">
+<strong>4. AdamW needs 12 bytes per parameter</strong>
+<p>2 for params, 2 for grads, 4 + 4 for Adam's two fp32 moments.
+Optimizer states decide whether the model fits in memory. 8 H100s fit
+about 53B parameters.</p>
+<p class="rc-num">Key: 2 + 2 + 4 + 4 = 12</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l02-roofline.svg" alt="Roofline plot">
+<div class="rc-body">
+<strong>5. Intensity 295 is the knee</strong>
+<p>Arithmetic intensity is FLOPs per byte moved. Below 295 on the H100
+you are memory bound and never reach peak speed. ReLU sits at 0.25.
+Matmul sits near 340.</p>
+<p class="rc-num">Key: intensity = FLOPs / bytes</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l02-mem-move.svg" alt="Memory movement">
+<div class="rc-body">
+<strong>6. Moving data costs more than computing</strong>
+<p>ReLU on 1M values: 1 microsecond moving, 1 nanosecond computing.
+GELU does 20x the FLOPs of ReLU and runs no slower, because both wait
+on memory.</p>
+<p class="rc-num">Key: time = max(move, compute)</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l02-backward.svg" alt="Backward pass">
+<div class="rc-body">
+<strong>7. Backward costs twice the forward</strong>
+<p>Two gradients per layer: one for the input, one for the weights.
+Both are matmuls over the same dimensions. Same cost each. That is
+where the 4 in 6ND comes from.</p>
+<p class="rc-num">Key: 2 forward + 4 backward = 6</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l02-checkpoint.svg" alt="Activation checkpointing">
+<div class="rc-body">
+<strong>8. Checkpointing trades memory for recompute</strong>
+<p>Store every sqrt(L)-th layer activation, recompute the rest during
+backward. Gradient accumulation instead cuts batch memory with zero
+extra compute.</p>
+<p class="rc-num">Key: O(sqrt(L)) memory, O(sqrt(L)) recompute</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 2 video and executable code (lecture_02.py): all numbers above
+  are computed live in the notebook.
+- einops tutorial: the named-dimension system used in the lecture.</p>
+<p><strong>Further reading:</strong>
+- Williams et al., Roofline (2009): the visual performance model behind
+  the intensity analysis.
+- NVIDIA H100 spec sheet: the 1979 TFLOP/s figure and its sparsity
+  footnote.</p>
+<p><strong>Caveats from these sources.</strong> The 143-day estimate ignores
+communication overhead and assumes a flat 0.5 MFU. Real runs vary. The
+53B figure excludes activations, which depend on batch size and sequence
+length. 6ND ignores attention&rsquo;s n^2 term: it underestimates long-context
+training. Mixed precision details (which ops stay fp32) are handled by
+AMP heuristics, not derived here.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS229:</strong> the loss chip is defined there. Here it becomes the work
+  unit that 6ND prices.</li>
+<li><strong>CS336 later lectures:</strong> 6ND prices every scaling-law fit. The
+  memory-bound inference lecture reuses the intensity table. Parallelism
+  lectures shard the 12-bytes-per-parameter budget.</li>
+<li><strong>CS229S:</strong> the device block and memory hierarchy here become the
+  multi-GPU topology there.</li>
+<li><strong>CS329A:</strong> test-time compute is priced in FLOPs with the same
+  accounting.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Resource accounting cheatsheet.</strong> Goal: best model for fixed compute and memory. Tensors: memory = elements x bytes. Precision: fp32 (1+8+23), fp16 underflows (5-bit exponent), bf16 sweet spot (1+8+7), fp8 two variants, nvfp4 block-scaled, 1-bit only post-training. Mixed precision: bf16 for params/acts/grads, fp32 for optimizer states (AMP). FLOPs = work. FLOP/s = speed. H100 dense bf16 = 989 TFLOP/s (halve the 1979 spec). Matmul = 2BDK FLOPs. MFU = actual/promised. 0.5 good, 0.1 broken. Intensity = FLOPs/byte. H100 knee = 295. ReLU 0.25, GELU 5, matmul n/3. time = max(move, compute). Backward = 2x forward. Total 6ND. AdamW = 12 B/param (2+2+4+4). Activations = 2BDL. Grad accum: microbatches, no zeroing, zero extra compute. Checkpointing: store sqrt(L), recompute rest.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>The three numbers.</strong> 6ND prices the run. 12 bytes per parameter sizes the cluster. 295 decides the bottleneck. If you remember nothing else, remember these.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=kuYAsz7zspQ" target="_blank" rel="noopener">Lecture 2 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">CODE</span><a href="https://cs336.stanford.edu/lectures/?trace=lecture_02" target="_blank" rel="noopener">lecture_02.py, executable lecture code</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://einops.rocks/" target="_blank" rel="noopener">einops tutorial: named tensor operations</a></li><li><span class="src-tag">PAPER</span><a href="https://www2.eecs.berkeley.edu/Pubs/TechRpts/2009/EECS-2009-77.pdf" target="_blank" rel="noopener">Williams et al., Roofline: An Insightful Visual Performance Model (2009)</a></li></ul></section>
+      <nav class="pager"><a href="../cs336/l01-tokenization.html"><span class="lbl">← Previous</span>Lecture 1: The Language Modeling Pipeline and Tokenization</a><a href="../cs336/l03-architecture.html"><span class="lbl">Next →</span>Lecture 3: The Modern Transformer Architecture</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
