@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 9: Scaling Laws, the Basics — Stanford Frontier AI</title>
+<meta name="description" content="The engineering view of scaling: power laws from data to Chinchilla, critical batch size, the Kaplan correction, and why you overtrain for serving.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-l09" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09" class="active">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 9: Scaling Laws, the Basics</nav>
+      <h1>Lecture 9: Scaling Laws, the Basics</h1>
+      <p class="meta-line">2026-04-27 · Instructor: Tatsunori Hashimoto · 1:17:47 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="Q15rhEWZPQ4"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/Q15rhEWZPQ4" title="Stanford CS336 Spring 2026 Lecture 9: Scaling Laws Basics" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=Q15rhEWZPQ4" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tatsunori Hashimoto builds the scaling-law toolkit from statistics to Chinchilla.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>Your wealthy friend hands you 10,000 B200s for a month. How do you
+spend them without wasting millions? <strong>Level 1 (Core):</strong> the
+engineering view, data scaling laws, and their uses. <strong>Level 2
+(Deep):</strong> architecture scaling, critical batch size, the
+Kaplan-Chinchilla saga, and the overtraining turn.</p>
+<h2 id="level-1-the-engineering-view">Level 1: The engineering view</h2>
+<p>Scaling laws are predictive rules that connect small-scale behavior to
+large-scale behavior <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=168s" target="_blank" rel="noopener">02:48 <span class="ts">⏱02:48</span></a>. The naive approach tunes
+hyperparameters on the big run. The scaling approach optimizes at small
+scale and extrapolates with a simple rule. It works only if the
+small-to-large connection is regular, and making it regular is
+engineering: pick the right x-axis, set hyperparameters right, and
+predictability appears <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2308s" target="_blank" rel="noopener">38:28 <span class="ts">⏱38:28</span></a>.</p>
+<pre class="ascii">naive approach  : tune hyperparameters on the big run
+scaling approach: optimize small, extrapolate with a rule
+works when     : the small-to-large connection is regular
+</pre>
+<h2 id="level-1-a-long-history">Level 1: A long history</h2>
+<figure><img alt="History" src="assets/l09-history.svg"><figcaption>1993 Cortes and Vapnik, 2001 Banko and Brill, 2012 Kolachina, 2017 Hestness, 2020 Kaplan, 2022 Chinchilla.</figcaption></figure>
+<p>Generalization bounds were the theorists&rsquo; scaling laws: error bounds
+that decay with sample size <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=295s" target="_blank" rel="noopener">04:55 <span class="ts">⏱04:55</span></a>. Cortes and Vapnik (1993)
+fit error decay on small samples to predict large ones: a data scaling
+law, literally. Banko and Brill showed data beats algorithms. Hestness
+(2017) found neural scaling across speech, translation, and language
+modeling, and already noted emergence: accuracy is discontinuous where
+loss is smooth <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=517s" target="_blank" rel="noopener">08:37 <span class="ts">⏱08:37</span></a>. The ideas are old. The scale is new.</p>
+<h2 id="level-1-data-scaling-laws">Level 1: Data scaling laws</h2>
+<p>Fix the model (bigger than the dataset, ~10x), grow the data, plot
+log-log. A straight line means error decays polynomially: error ~
+1/n^alpha plus the noise floor <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=874s" target="_blank" rel="noopener">14:34 <span class="ts">⏱14:34</span></a>.</p>
+<figure><img alt="Log-log" src="assets/l09-loglog.svg"><figcaption>Slope is the exponent. Mean estimation gives -1. Neural nets give about -0.1.</figcaption></figure>
+<p>The stats interlude: estimating a Gaussian mean gives sigma^2/n, slope
+-1. Neural nets show -0.1 to -0.3: much slower. The model that fits:
+nonparametric regression in D dimensions has rate n^(-1/D). Neural
+nets learn like smooth functions in ~10 dimensions <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1165s" target="_blank" rel="noopener">19:25 <span class="ts">⏱19:25</span></a>.
+The exponent tells you how fast the network really learns.</p>
+<div class="qa"><div class="q">Why is the neural exponent (-0.1) so much worse than the parametric rate (-1)?</div><div class="a"><p>Parametric estimators assume the truth lives in a small, known family: every sample refines a few numbers. A neural net makes far weaker assumptions, so it must learn the shape of the function too, like a nonparametric smoother spreading samples across a high-dimensional space. The exponent is the price of flexibility. That is also why the slope is stable across interventions: it reflects the model class, not the data.
+Near the noise floor. The line is the far-from-asymptote regime. As error approaches the irreducible level, the curve tapers. That is why the setup keeps the model much bigger than the dataset: it stays in the power-law regime instead of the saturated one.</p><div class="followup"><strong>Follow-up:</strong> When does the log-log line break?</div></div></div>
+<h2 id="level-1-data-engineering-with-scaling-laws">Level 1: Data engineering with scaling laws</h2>
+<figure><img alt="Data uses" src="assets/l09-data-uses.svg"><figcaption>Mixtures shift intercepts. Repetition survives 4 epochs. Filtering loosens with scale.</figcaption></figure>
+<ul>
+<li><strong>Mixtures.</strong> Data composition shifts intercepts, not slopes. Fit
+  mixtures at small scale, pick the best, scale it up. Often no scaling
+  law is even needed: the best small mix is the best large mix
+  <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1488s" target="_blank" rel="noopener">24:48 <span class="ts">⏱24:48</span></a>.</li>
+<li><strong>Repetition.</strong> Up to ~4 epochs, no harm. Past it, the realized curve
+  falls below the fresh-data projection. At infinite compute: stop
+  repeating, start ensembling <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1542s" target="_blank" rel="noopener">25:42 <span class="ts">⏱25:42</span></a>.</li>
+<li><strong>Filtering.</strong> Scale-dependent. Small compute: filter hard, keep the
+  best. Big compute: loosen the filter, or you run out of data and
+  repeat yourself <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1654s" target="_blank" rel="noopener">27:34 <span class="ts">⏱27:34</span></a>.</li>
+</ul>
+<p>The recurring lesson: interventions move intercepts, rarely slopes
+<a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1625s" target="_blank" rel="noopener">27:05 <span class="ts">⏱27:05</span></a>.</p>
+<h2 id="level-1-architecture-and-optimizer-scaling">Level 1: Architecture and optimizer scaling</h2>
+<p>Transformers vs LSTMs: different intercepts, possibly different
+slopes. The plot justifies the transformer <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1900s" target="_blank" rel="noopener">31:40 <span class="ts">⏱31:40</span></a>. Tay et
+al.&rsquo;s T5 studies caught the winners early: GLU scales well, Performer
+does not, Switch Transformer does <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1998s" target="_blank" rel="noopener">33:18 <span class="ts">⏱33:18</span></a>. Rule of thumb:
+if it does not show up in the scaling law, it is not a good
+intervention <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2075s" target="_blank" rel="noopener">34:35 <span class="ts">⏱34:35</span></a>.</p>
+<table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Intercepts</th>
+<th>Slopes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Transformer vs LSTM</td>
+<td>different</td>
+<td>transformer wins</td>
+</tr>
+<tr>
+<td>GLU</td>
+<td>better</td>
+<td>scales well</td>
+</tr>
+<tr>
+<td>Performer</td>
+<td>worse</td>
+<td>scales poorly</td>
+</tr>
+<tr>
+<td>SGD vs Adam</td>
+<td>different</td>
+<td>nearly identical</td>
+</tr>
+</tbody>
+</table>
+<p>SGD vs Adam (Hestness): different intercepts, nearly identical slopes.
+Even that big a change leaves the slope alone <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2097s" target="_blank" rel="noopener">34:57 <span class="ts">⏱34:57</span></a>.
+Aspect ratio is scale-invariant: ~100 dims per layer, minima stable
+across sizes, deeper slightly favoring smaller ratios
+<a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2207s" target="_blank" rel="noopener">36:47 <span class="ts">⏱36:47</span></a>. One layer is hopeless. Beyond that, more layers win
+at fixed compute.</p>
+<p>Caution: not all parameters are equal. Kaplan excluded embeddings and
+got clean laws. For MoEs, Apple/MIT show the right axes are total vs
+active parameters, with sparsity growing at scale and inactive
+parameters still helping <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2349s" target="_blank" rel="noopener">39:09 <span class="ts">⏱39:09</span></a>.</p>
+<h2 id="level-2-critical-batch-size">Level 2: Critical batch size</h2>
+<figure><img alt="Critical batch" src="assets/l09-critical-batch.svg"><figcaption>Noise-limited: variance reduction pays. Bias-limited: the local view disagrees with the global optimum.</figcaption></figure>
+<p>Two regimes <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2544s" target="_blank" rel="noopener">42:24 <span class="ts">⏱42:24</span></a>. Noise-limited: extra examples cut
+gradient variance, perfect returns. Bias-limited: you see only the
+local objective, and the local direction disagrees with the global
+optimum, so extra examples buy little. Critical batch size is the
+crossover: B_crit = min examples / min steps, fit from sweeps
+<a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2761s" target="_blank" rel="noopener">46:01 <span class="ts">⏱46:01</span></a>.</p>
+<p>It scales: as the target loss drops, B_crit grows as a power law.
+Closer to the minimum, noise matters more, so big runs earn big
+batches <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2856s" target="_blank" rel="noopener">47:36 <span class="ts">⏱47:36</span></a>.</p>
+<p>Learning rate, the other knob: width scaling suggests LR ~ 1/width.
+The alternative school, muP, reparameterizes so the optimal LR stays
+fixed across scales. Both have succeeded at scale. The advanced
+lecture goes deeper <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2914s" target="_blank" rel="noopener">48:34 <span class="ts">⏱48:34</span></a>.</p>
+<h2 id="level-2-upstream-is-not-downstream">Level 2: Upstream is not downstream</h2>
+<figure><img alt="Upstream downstream" src="assets/l09-upstream-downstream.svg"><figcaption>Perplexity: linear and clean. Downstream tasks: noisy. NL12 won perplexity, NL32XL won tasks.</figcaption></figure>
+<p>Perplexity vs parameters: a beautiful line. Downstream: the best
+perplexity model (NL12) lost to a worse-perplexity one (NL32XL)
+<a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3097s" target="_blank" rel="noopener">51:37 <span class="ts">⏱51:37</span></a>. Fit scaling laws on perplexity, where variance is
+tiny (singletons, second-decimal noise). Then verify transfer
+separately. The post-training team inherits pre-training&rsquo;s sins
+<a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3133s" target="_blank" rel="noopener">52:13 <span class="ts">⏱52:13</span></a>.</p>
+<p>The procedure: train small models, fit log-log lines, predict the big
+run&rsquo;s numbers before spending the money <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3184s" target="_blank" rel="noopener">53:04 <span class="ts">⏱53:04</span></a>.</p>
+<h2 id="level-2-the-kaplan-chinchilla-saga">Level 2: The Kaplan-Chinchilla saga</h2>
+<p>The question: fixed FLOPs, more data or bigger model? FLOPs ~ N x D.
+Tiny model plus huge data wastes compute (flat purple line)
+<a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3452s" target="_blank" rel="noopener">57:32 <span class="ts">⏱57:32</span></a>. Kaplan and Rosenfeld fit joint laws L(N, D). Kaplan
+said N ~ C^0.27, D ~ C^0.73: train giants. The GPT-3 era listened
+<a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3621s" target="_blank" rel="noopener">60:21 <span class="ts">⏱60:21</span></a>.</p>
+<figure><img alt="Kaplan vs Chinchilla" src="assets/l09-kaplan-vs-chinchilla.svg"><figcaption>Kaplan: N^0.27, train giants. Chinchilla: N^0.5, 20 tokens per param. The details decided.</figcaption></figure>
+<p>Chinchilla (2022) said both exponents ~0.5: 20 tokens per parameter,
+smaller models trained longer. Three methods agreed: lower envelope,
+IsoFLOP, parametric fit <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3750s" target="_blank" rel="noopener">62:30 <span class="ts">⏱62:30</span></a>.</p>
+<figure><img alt="Three methods" src="assets/l09-three-methods.svg"><figcaption>Envelope, IsoFLOP, parametric fit. IsoFLOP is the default you reach for.</figcaption></figure>
+<p>Why Kaplan lost: they excluded the unembedding parameters (big effect
+at small scale), ran warmup too short for small models to converge,
+and fixed a batch size that was suboptimal for small models
+<a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=4075s" target="_blank" rel="noopener">67:55 <span class="ts">⏱67:55</span></a>. Minor details, big shifts. Epoch AI later showed
+Chinchilla&rsquo;s method 3 was underfit: refit, it agrees with methods 1
+and 2 <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=4395s" target="_blank" rel="noopener">73:15 <span class="ts">⏱73:15</span></a>.</p>
+<div class="qa"><div class="q">If Chinchilla is right, why does nobody train at exactly 20 tokens per parameter?</div><div class="a"><p>Chinchilla optimizes training compute. Production optimizes serving: most FLOPs go to R&amp;D and inference, not the training run. Serving wants small, capable models, so labs overtrain far past 20:1. The ratio answers &ldquo;how do I spend a training budget,&rdquo; not &ldquo;what model should I ship.&rdquo; Different objective, different optimum.
+IsoFLOP. Fix the FLOP budget, sweep the N-vs-D tradeoff, take the minima, draw the line through them. It makes the fewest modeling assumptions of the three Chinchilla methods, and it generalizes: fix any budget, sweep any tradeoff. The lecture calls it the default for a reason.</p><div class="followup"><strong>Follow-up:</strong> What is the single most reliable scaling-law tool?</div></div></div>
+<h2 id="level-2-overtrain-for-serving">Level 2: Overtrain for serving</h2>
+<figure><img alt="Overtrain" src="assets/l09-overtrain.svg"><figcaption>GPT-3: 3 tokens per param. Chinchilla: 20. Modern serving: 100+, deliberately overtrained.</figcaption></figure>
+<p>GPT-3: 3 tokens per parameter, undertrained. Chinchilla: 20, the
+research optimum. Modern: overtrained on purpose, because the model
+that minimizes training cost is big and expensive to serve
+<a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=4525s" target="_blank" rel="noopener">75:25 <span class="ts">⏱75:25</span></a>. Chinchilla&rsquo;s importance is not the number 20. It is
+the method: how to fit scaling laws and how to think about them.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/l09-loglog.svg" alt="Log-log power law">
+<div class="rc-body">
+<strong>1. Slope is the exponent</strong>
+<p>Log-log line means polynomial decay. Mean estimation: -1. Neural
+nets: about -0.1, like nonparametric regression in ~10 dims.</p>
+<p class="rc-num">Key: slope = learning speed</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l09-history.svg" alt="History">
+<div class="rc-body">
+<strong>2. Old idea, new scale</strong>
+<p>Cortes and Vapnik 1993, Banko and Brill, Hestness 2017, Kaplan
+2020, Chinchilla 2022. Same power law, bigger machines.</p>
+<p class="rc-num">Key: credit the lineage</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l09-data-uses.svg" alt="Data engineering">
+<div class="rc-body">
+<strong>3. Slopes are stubborn</strong>
+<p>Mixtures, repetition, filtering: intercepts move, slopes stay.
+Pick the best mix small, scale it. 4 epochs safe. Loosen filters at
+scale.</p>
+<p class="rc-num">Key: intercepts move</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l09-critical-batch.svg" alt="Critical batch size">
+<div class="rc-body">
+<strong>4. Size the batch to the noise</strong>
+<p>Noise-limited: perfect returns. Bias-limited: diminishing. B_crit
+grows as loss drops. Big runs earn big batches.</p>
+<p class="rc-num">Key: B_crit = E_min / S_min</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l09-kaplan-vs-chinchilla.svg" alt="Kaplan vs Chinchilla">
+<div class="rc-body">
+<strong>5. Details decide</strong>
+<p>Kaplan said train giants (N^0.27). Chinchilla said 20 tok/param
+(N^0.5). Param counting, warmup, batch size: the devil, in the
+details.</p>
+<p class="rc-num">Key: 20 tokens per param</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l09-three-methods.svg" alt="Three methods">
+<div class="rc-body">
+<strong>6. Fit three ways</strong>
+<p>Lower envelope, IsoFLOP, parametric fit. IsoFLOP is the reliable
+default. Epoch AI: method 3 was underfit, agrees on refit.</p>
+<p class="rc-num">Key: IsoFLOP by default</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l09-overtrain.svg" alt="Overtrain">
+<div class="rc-body">
+<strong>7. Serve small, train long</strong>
+<p>Training-optimal is not serving-optimal. GPT-3 was undertrained
+at 3:1. Modern models overtrain deliberately.</p>
+<p class="rc-num">Key: optimize the deployment</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/l09-upstream-downstream.svg" alt="Upstream vs downstream">
+<div class="rc-body">
+<strong>8. Perplexity is not the task</strong>
+<p>Scaling laws are clean for loss, noisy for downstream. Fit on
+perplexity, verify transfer. Post-training inherits your sins.</p>
+<p class="rc-num">Key: measure both</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 9 video and slides (lecture_9.pdf).
+- Kaplan et al. 2020, &ldquo;Scaling Laws for Neural Language Models.&rdquo;
+- Hoffmann et al. 2022, &ldquo;Training Compute-Optimal Large Language
+  Models&rdquo; (Chinchilla).</p>
+<p><strong>Further reading:</strong>
+- Hestness et al. 2017: the under-cited origins.
+- &ldquo;Resolving Discrepancy to Compute-Optimal Scaling&rdquo; (Porian et
+  al.): why Kaplan and Chinchilla disagree.
+- Epoch AI refit of Chinchilla method 3.
+- Tay et al. architecture scaling studies.</p>
+<p><strong>Caveats from these sources.</strong> Exponents are fit, not derived: treat
+them as recipe lower bounds, not physics. The 20:1 ratio is
+training-optimal, not serving-optimal. Downstream transfer is the
+weakest link in every claim here.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 Lecture 11:</strong> advanced scaling: muP, initialization,
+  optimizers.</li>
+<li><strong>CS336 Lecture 2:</strong> the 6ND compute model that the joint laws
+  optimize.</li>
+<li><strong>CS229:</strong> generalization bounds, the theoretical ancestor.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Scaling laws cheatsheet.</strong> View: optimize small, extrapolate big. Log-log line = power law, slope = exponent. Stats: mean est -1, nets -0.1 (~nonparametric, 10 dims). History: 1993 Cortes/Vapnik, 2017 Hestness, 2020 Kaplan, 2022 Chinchilla. Data: mixtures move intercepts, slopes stay. Repetition: 4 epochs safe. Filtering loosens with scale. Arch: GLU good, Performer bad, Switch good. SGD vs Adam: same slopes. Aspect ratio ~100, scale-invariant. Critical batch: noise vs bias limited, B_crit = E_min/S_min, grows as loss drops. LR: 1/width or muP. Upstream vs downstream: fit ppl, verify tasks. Joint: Kaplan N^0.27 (giants), Chinchilla N^0.5 (20 tok/param). Fit: envelope, IsoFLOP (default), parametric. Kaplan lost on: unembedding count, warmup, batch size. Serve: overtrain, small and capable.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Slopes are stubborn, intercepts move.</strong> Fit the law small, spend the budget big, and serve the overtrained model.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4" target="_blank" rel="noopener">Lecture 9 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">SLIDES</span>lecture_9.pdf, official course slides</li></ul></section>
+      <nav class="pager"><a href="../cs336/l08-4d-parallelism.html"><span class="lbl">← Previous</span>Lecture 8: 4D Parallelism at Scale</a><a href="../cs336/l10-inference.html"><span class="lbl">Next →</span>Lecture 10: Inference</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
