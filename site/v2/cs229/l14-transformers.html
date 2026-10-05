@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 14: Transformers and Autoregressive Language Models — Stanford Frontier AI</title>
+<meta name="description" content="Tokenization, the autoregressive paradigm, attention from Q/K/V, causal masking, and the quadratic bottleneck.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229-l14" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14" class="active">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229: Machine Learning</a> / Lecture 14: Transformers and Autoregressive Language Models</nav>
+      <h1>Lecture 14: Transformers and Autoregressive Language Models</h1>
+      <p class="meta-line">2026-05-20 · Instructor: Tengyu Ma · 1:17:25 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="pwQ0l4hFCVI"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/pwQ0l4hFCVI" title="Lecture 14: Transformers, In-Context Learning" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=pwQ0l4hFCVI" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tengyu Ma builds the transformer: tokenization, attention, masking, and the O(T^2) cost.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> contains what you need to
+understand everything that follows in CS229 and the courses that build on
+it. <strong>Level 2 (Deep)</strong> contains what you need for correct, interview-grade
+understanding. Read Level 1 straight through. Return to Level 2 when you
+want depth.</p>
+<p>No prerequisites are assumed. Every term is defined at first use. The
+MLP, residual block, and softmax were defined in <a href="l07-neural-networks-1.html">lectures
+7</a> and <a href="l04-glms-softmax.html">4</a>; they are
+reused, not re-explained.</p>
+<h2 id="level-1-the-autoregressive-paradigm">Level 1: The autoregressive paradigm</h2>
+<p>A language model assigns probabilities to sequences of tokens. The
+<strong>autoregressive</strong> paradigm factors the joint probability into a product
+of conditionals <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=60s" target="_blank" rel="noopener">01:00 <span class="ts">⏱01:00</span></a>:</p>
+<p>p(x_1..x_T) = product over t of p(x_t | x_1..x_{t-1})</p>
+<p>Generate one token at a time. Each new token depends on all previous
+ones. The model is <strong>causal</strong>: position t sees only positions up to t
+<a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=1469s" target="_blank" rel="noopener">24:29 <span class="ts">⏱24:29</span></a>. This lecture covers autoregressive transformers only.
+Non-autoregressive variants are skipped.</p>
+<p>The paradigm starts with GPT-3. Before it, the field trained models per
+task. After it, one model generates text for everything. Lectures 15
+through 17 continue the story: efficiency, prompting, fine-tuning,
+reinforcement learning. This lecture is the architecture.</p>
+<div class="qa"><div class="q">What does autoregressive mean?</div><div class="a"><p>Each token is predicted from the tokens before it, one step at a time. The joint probability is the product of these conditionals by the chain rule. Generation is sequential: you cannot produce token 10 before tokens 1 through 9. Training is parallel, because all the true previous tokens are known. That asymmetry shapes everything about transformers.
+Training uses teacher forcing: the true previous tokens are in the data, so every position&rsquo;s prediction can be computed at once. Generation has no true tokens: each prediction becomes the input for the next. The model must wait for its own output. This is why inference optimization is its own field.</p><div class="followup"><strong>Follow-up:</strong> Why is training parallel but generation sequential?</div></div></div>
+<h2 id="level-1-tokenization">Level 1: Tokenization</h2>
+<p>Transformers compute on numbers, not text. <strong>Tokenization</strong> turns text
+into integers first <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=108s" target="_blank" rel="noopener">01:48 <span class="ts">⏱01:48</span></a>. The <strong>token</strong> is the smallest unit
+the model sees. Not characters: sequences get too long. Not words:
+vocabularies explode and new words break. Subword pieces: frequent
+strings become single tokens, rare ones split.</p>
+<p>The tokenizer is fixed before training and never changes. Every token
+indexes a row of the embedding matrix. Replace the tokenizer and the
+model&rsquo;s input space changes meaning: the trained weights no longer
+apply. Tokenization is infrastructure, decided once, lived with
+forever. CS336 derives it from first principles.</p>
+<h2 id="level-1-attention-from-q-k-v">Level 1: Attention from Q, K, V</h2>
+<p><strong>Attention</strong> lets each position gather information from other
+positions. The input is a sequence of vectors h_1..h_T. Each becomes
+three vectors: a <strong>query</strong> q, a <strong>key</strong> k, a <strong>value</strong> v, via learned
+projections <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=2650s" target="_blank" rel="noopener">44:10 <span class="ts">⏱44:10</span></a>.</p>
+<figure><img alt="Attention" src="assets/svg/l14-attn.svg"><figcaption>Query meets keys, softmax gives weights, values mix. Original plate.</figcaption></figure>
+<p>The mechanism: score = q . k, a dot product measuring relevance. Softmax
+over scores gives weights summing to one. Output = weighted sum of
+values. In words: the query asks &ldquo;what do I need?&rdquo;, the keys advertise
+&ldquo;what I have&rdquo;, the weights decide the mix, the values supply the
+content.</p>
+<p>The lecture is honest about understanding: the intuition is relevance
+matching, but nobody knows exactly how attention works inside trained
+models. It just works. Mechanistic interpretability, mentioned in
+lecture 12, is the field trying to change that.</p>
+<div class="qa"><div class="q">Why three vectors instead of one?</div><div class="a"><p>Separation of concerns. The query encodes what the position is looking for. The key encodes what each position offers. The value encodes what each position contributes if selected. One vector cannot serve all three roles well: what you seek differs from what you hold. The projections learn the three roles separately.
+It measures alignment: large when query and key point the same way. Scaled by dimension to keep softmax inputs in a sane range. The choice is simple, differentiable, and fast on hardware. Fancier similarity functions exist, but the dot product won on the tradeoff.</p><div class="followup"><strong>Follow-up:</strong> Why the dot product for scores?</div></div></div>
+<h2 id="level-1-causal-masking">Level 1: Causal masking</h2>
+<p>Causality must be enforced mechanically. The score matrix is T-by-T:
+every query against every key. <strong>Masking</strong> adds negative infinity to the
+upper triangle before the softmax <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=3669s" target="_blank" rel="noopener">61:09 <span class="ts">⏱61:09</span></a>. Softmax turns
+negative infinity into zero weight. Position t attends only to positions
+up to t.</p>
+<figure><img alt="Causal mask" src="assets/svg/l14-mask.svg"><figcaption>Upper triangle masked. Position t sees only the past. Original plate.</figcaption></figure>
+<p>Without the mask, the model would cheat: peek at future tokens during
+training, then fail at generation where the future does not exist. The
+mask is the difference between a model that predicts and a model that
+copies. Every autoregressive transformer carries it.</p>
+<h2 id="level-1-the-block-and-the-bottleneck">Level 1: The block and the bottleneck</h2>
+<p>A transformer block stacks: attention, normalization, MLP, with residual
+connections around each <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=4355s" target="_blank" rel="noopener">72:35 <span class="ts">⏱72:35</span></a>. The normalization is usually
+<strong>RMSNorm</strong>. The order of norm, residual, and sub-layer varies:
+<strong>pre-norm</strong> applies normalization before the sub-layer,
+<strong>post-norm</strong> after <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=4406s" target="_blank" rel="noopener">73:26 <span class="ts">⏱73:26</span></a>. Details are in the notes. The
+shape is the same: attend, normalize, transform, add back.</p>
+<p>Then the bill. The attention matrix is T-by-T, each entry a dot product
+in d_h dimensions: O(T^2 d_h) operations <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=4472s" target="_blank" rel="noopener">74:32 <span class="ts">⏱74:32</span></a>. The T^2 is
+the bottleneck. Double the sequence length, quadruple the attention
+cost. Everything about transformer efficiency, the guest lecture on
+system ML, sparse attention, and the KV cache of lecture 15, is a
+response to this term.</p>
+<figure><img alt="Quadratic cost" src="assets/svg/l14-t2.svg"><figcaption>T-by-T scores. 4x length means 16x compute. Original plate.</figcaption></figure>
+<div class="qa"><div class="q">Why is attention quadratic?</div><div class="a"><p>Every position scores against every other position: T queries times T keys. The matrix itself is T^2 entries, each costing a dot product. Nothing about the mechanism avoids the pairwise comparison. Linear-time attention variants exist but change the model. The quadratic term is the price of letting every token see every other token.
+Memory, usually before compute. The T^2 matrix must be stored for the backward pass. Long-context training is memory-bound: the activations, not the FLOPs, set the limit. That is why memory-efficient attention and gradient checkpointing are production necessities, not optimizations.</p><div class="followup"><strong>Follow-up:</strong> What breaks first as T grows?</div></div></div>
+<h2 id="level-2-multi-head-attention">Level 2: Multi-head attention</h2>
+<p>One attention head learns one relevance pattern. <strong>Multi-head</strong>
+attention runs several heads in parallel on slices of the dimension and
+concatenates the results. Each head can specialize: one tracks syntax,
+another tracks coreference, a third tracks position. The lecture
+presents single-head first because the mechanism is identical per head.
+The multiplicity is capacity, not concept.</p>
+<p>Heads also parallelize cleanly: independent score matrices, one
+concatenation. The hardware likes this. Much of the transformer&rsquo;s
+success is mechanisms that are both expressive and parallel-friendly.</p>
+<h2 id="level-2-the-next-word-prediction-loss">Level 2: The next-word prediction loss</h2>
+<p>Training minimizes cross-entropy on the next token: the loss chip from
+lecture 2 holding -log p of the true next token, summed over positions.
+Every position is a training example. A 2048-token sequence is 2048
+supervised examples in one forward pass. This density is why language
+modeling scales: the data labels itself, and every token teaches.</p>
+<p>The loss also explains the paradigm&rsquo;s name. The model never sees the
+whole sequence as one object. It sees two thousand next-word problems.
+&ldquo;Language modeling&rdquo; is next-word prediction, repeated at scale until
+reasoning emerges.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<p>Eight ideas carry this lecture. Read each card. Say the core sentence out
+loud. If you can, you own the lesson.</p>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/svg/l14-attn.svg" alt="Autoregressive factorization">
+<div class="rc-body">
+<strong>1. Autoregressive: one token at a time</strong>
+<p>p(x_1..x_T) = product of p(x_t | past). Causal. Training parallel,
+generation sequential. The GPT paradigm.</p>
+<p class="rc-num">Key: chain rule as architecture</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l14-attn.svg" alt="Tokenization">
+<div class="rc-body">
+<strong>2. Tokenization first, forever</strong>
+<p>Text to integers before anything else. Subword pieces. Fixed before
+training, never changed. Infrastructure.</p>
+<p class="rc-num">Key: decided once</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l14-attn.svg" alt="QKV attention">
+<div class="rc-body">
+<strong>3. Attention: query, key, value</strong>
+<p>Scores = q.k, softmax to weights, output = weighted values. Queries
+ask, keys advertise, values supply.</p>
+<p class="rc-num">Key: relevance-weighted mixing</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l14-mask.svg" alt="Causal mask">
+<div class="rc-body">
+<strong>4. Mask the future</strong>
+<p>Upper triangle to negative infinity before softmax. Position t sees
+only the past. No peeking, no cheating.</p>
+<p class="rc-num">Key: causality by construction</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l14-t2.svg" alt="Quadratic cost">
+<div class="rc-body">
+<strong>5. Attention costs O(T^2 d)</strong>
+<p>T-by-T score matrix. 4x length, 16x compute. Memory breaks first.
+The bottleneck everything else answers.</p>
+<p class="rc-num">Key: the quadratic term</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l14-attn.svg" alt="Transformer block">
+<div class="rc-body">
+<strong>6. Block: attend, norm, MLP, residual</strong>
+<p>RMSNorm, pre-norm or post-norm ordering. Residuals around
+everything. Same skip trick as ResNet.</p>
+<p class="rc-num">Key: composition of lecture 7 parts</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/figs-notes/notes-autoregressive.png" alt="Autoregressive factorization, Stanford notes">
+<div class="rc-body">
+<strong>7. Loss: cross-entropy per position</strong>
+<p>Next-token prediction, summed over the sequence. Every token is a
+training example. The data labels itself.</p>
+<p class="rc-num">Key: -log p_true, per token</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l14-mask.svg" alt="Multi-head">
+<div class="rc-body">
+<strong>8. Heads specialize in parallel</strong>
+<p>Multiple Q/K/V projections, concatenated. One mechanism per head.
+Capacity and parallelism, not new concept.</p>
+<p class="rc-num">Key: same attention, many views</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 14 video: autoregressive paradigm <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=60s" target="_blank" rel="noopener">01:00 <span class="ts">⏱01:00</span></a>, tokenization <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=108s" target="_blank" rel="noopener">01:48 <span class="ts">⏱01:48</span></a>, Q/K/V <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=2650s" target="_blank" rel="noopener">44:10 <span class="ts">⏱44:10</span></a>, causal model <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=1469s" target="_blank" rel="noopener">24:29 <span class="ts">⏱24:29</span></a>, masking <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=3669s" target="_blank" rel="noopener">61:09 <span class="ts">⏱61:09</span></a>, residuals <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=4355s" target="_blank" rel="noopener">72:35 <span class="ts">⏱72:35</span></a>, pre/post-norm <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=4406s" target="_blank" rel="noopener">73:26 <span class="ts">⏱73:26</span></a>, T-squared <a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI&amp;t=4472s" target="_blank" rel="noopener">74:32 <span class="ts">⏱74:32</span></a>.
+- CS229 Spring 2026 official course notes: transformer chapter; the autoregressive figure above is from it.</p>
+<p><strong>Further reading:</strong>
+- Vaswani et al. (2017), &ldquo;Attention Is All You Need&rdquo;: the transformer paper.
+- Elhage et al. (2021), &ldquo;A Mathematical Framework for Transformer Circuits&rdquo;: the interpretability program.</p>
+<p><strong>Caveats from these sources.</strong> The &ldquo;nobody knows how attention works&rdquo;
+line is about internal mechanisms, not the mathematics, which is exact.
+Pre-norm versus post-norm is an active design choice with tradeoffs, not
+a settled answer. The lecture skips non-autoregressive transformers
+entirely; they exist and matter for some applications.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336:</strong> the transformer is CS336&rsquo;s entire subject: this lecture is the bridge, CS336 is the deep dive.</li>
+<li><strong>CS224N:</strong> the 2024 course covers the same architecture from the language side; the mathematics matches.</li>
+<li><strong>CS329H:</strong> attention weights are the model&rsquo;s uncertainty made explicit, reused in decision-theoretic analyses.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Transformer cheatsheet.</strong> Autoregressive: p(x) = product p(x_t|past); causal; train parallel, generate sequential. Tokenize first, fix forever. Attention: q,k,v projections; scores=q.k; softmax; output=weighted values. Causal mask: -inf upper triangle. Block: attention, RMSNorm, MLP, residuals; pre/post-norm. Cost O(T^2 d): the bottleneck. Loss: per-position cross-entropy; every token teaches.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Every token sees the past.</strong> The mask is the model&rsquo;s honesty: it can only use what generation would have. Whenever a model seems too good, check what it was allowed to see.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=pwQ0l4hFCVI" target="_blank" rel="noopener">Lecture 14 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <nav class="pager"><a href="../cs229/l13-contrastive-rag.html"><span class="lbl">← Previous</span>Lecture 13: Contrastive Embeddings, Search, and RAG</a><a href="../cs229/l15-efficient-icl-sft.html"><span class="lbl">Next →</span>Lecture 15: Attention Variants, In-Context Learning, and SFT</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
