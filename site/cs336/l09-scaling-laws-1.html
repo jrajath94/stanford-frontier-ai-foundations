@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lecture 9: Scaling Laws, Part 1 — Stanford Frontier AI</title>
+<meta name="description" content="The basics of scaling laws: data scaling and its statistical roots, scaling laws for model engineering, critical batch size, and the Kaplan versus Chinchilla st">
+<link rel="stylesheet" href="assets/vendor/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="cs336-l09">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Home</h3><ul>
+<li><a href="index.html" data-page="foundations-home">Home</a></li>
+</ul>
+<h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="cs336/l01-overview-tokenization.html" data-page="cs336-l01">L01 · Overview, Tokenization</a></li>
+<li><a href="cs336/l02-pytorch-resource-accounting.html" data-page="cs336-l02">L02 · PyTorch, Resource Accounting</a></li>
+<li><a href="cs336/l03-architectures-hyperparameters.html" data-page="cs336-l03">L03 · Architectures, Hyperparameters</a></li>
+<li><a href="cs336/l04-attention-alternatives-moe.html" data-page="cs336-l04">L04 · Attention Alternatives, MoE</a></li>
+<li><a href="cs336/l05-gpus-tpus.html" data-page="cs336-l05">L05 · GPUs, TPUs</a></li>
+<li><a href="cs336/l06-kernels-triton-xla.html" data-page="cs336-l06">L06 · Kernels, Triton, XLA</a></li>
+<li><a href="cs336/l07-parallelism-1.html" data-page="cs336-l07">L07 · Parallelism I</a></li>
+<li><a href="cs336/l08-parallelism-2.html" data-page="cs336-l08">L08 · Parallelism II</a></li>
+<li><a href="cs336/l09-scaling-laws-1.html" data-page="cs336-l09" class="active">L09 · Scaling Laws I</a></li>
+<li><a href="cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="cs336/l11-scaling-laws-2.html" data-page="cs336-l11">L11 · Scaling Laws II</a></li>
+<li><a href="cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="cs336/l13-data-sources.html" data-page="cs336-l13">L13 · Data Sources</a></li>
+<li><a href="cs336/l14-data-processing.html" data-page="cs336-l14">L14 · Data Processing</a></li>
+<li><a href="cs336/l15-post-training-sft-rlhf.html" data-page="cs336-l15">L15 · SFT, RLHF</a></li>
+<li><a href="cs336/l16-post-training-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="cs336/l17-alignment-multimodality.html" data-page="cs336-l17">L17 · Alignment, Multimodality</a></li>
+<li><a href="cs336/l18-guest-dan-fu.html" data-page="cs336-l18">L18 · Guest: Dan Fu</a></li>
+<li><a href="cs336/labs-index.html" data-page="cs336-labs-index">CS336 · Labs</a></li>
+<li><a href="cs336/lab1-tokenizer-transformer.html" data-page="cs336-lab1">Lab 1 · Tokenizer, Transformer</a></li>
+<li><a href="cs336/lab2-systems.html" data-page="cs336-lab2">Lab 2 · Systems</a></li>
+<li><a href="cs336/lab3-scaling.html" data-page="cs336-lab3">Lab 3 · Scaling Laws</a></li>
+<li><a href="cs336/lab4-data.html" data-page="cs336-lab4">Lab 4 · Data</a></li>
+<li><a href="cs336/lab5-post-training.html" data-page="cs336-lab5">Lab 5 · Post-Training</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 9: Scaling Laws, Part 1</nav>
+      <h1>Lecture 9: Scaling Laws, Part 1</h1>
+      <p class="meta-line">2026-04-27 · Instructor: Tatsunori Hashimoto · 1:17:57 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/Q15rhEWZPQ4" title="Stanford CS336 Spring 2026 Lecture 9: Scaling Laws (Part 1)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div><p class="video-cap">Original lecture. Timestamps link to exact moments.</p><h2 id="the-b200-thought-experiment">The B200 thought experiment</h2>
+<p>A wealthy friend gives you 10,000 B200s for a month and asks for a good open-source language model <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=53s" target="_blank" rel="noopener">00:53 <span class="ts">⏱00:53</span></a>. The infra team is assembled. The dataset is ready. Now you must run the big training run. Wide or deep? How many heads? Which nonlinearity? What learning rate?</p>
+<p>Tuning hyperparameters on the big run is terrifying and wasteful. <strong>Scaling laws</strong> offer the alternative: simple predictive rules that map small-scale behavior to large-scale behavior <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=137s" target="_blank" rel="noopener">02:17 <span class="ts">⏱02:17</span></a>. Do all your optimization at small scale, fit a regularity, and extrapolate to the big run with confidence.</p>
+<p>This is the first of two scaling lectures. Today covers the basics and the classics. A later lecture goes advanced: modern tech reports, new parameterizations, and optimizers.</p>
+<h2 id="scaling-laws-have-a-long-history">Scaling laws have a long history</h2>
+<p>Scaling laws feel new. They are not. Theorists have asked &ldquo;how will my model perform?&rdquo; for decades, and their answer was <strong>generalization bounds</strong>: upper bounds on error as a function of sample size <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=272s" target="_blank" rel="noopener">04:32 <span class="ts">⏱04:32</span></a>. A data scaling law is the empirical cousin of a sample complexity bound.</p>
+<table>
+<thead>
+<tr>
+<th>Year</th>
+<th>Work</th>
+<th>Contribution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1993</td>
+<td>Cortes and Vapnik, Bell Labs</td>
+<td>First data scaling law. Fit classifiers on small samples, fit a curve to error decay, estimate large-data performance.</td>
+</tr>
+<tr>
+<td>2001</td>
+<td>Banko and Brill</td>
+<td>Log-linear scaling with data. Asked whether money is better spent on data than on algorithms.</td>
+</tr>
+<tr>
+<td>2012</td>
+<td>Collobert and colleagues</td>
+<td>Functional forms for scaling. Power laws relating data to downstream performance.</td>
+</tr>
+<tr>
+<td>2017</td>
+<td>Hestness et al.</td>
+<td>First large-scale neural scaling study. Predictable scaling across speech, translation, and language modeling.</td>
+</tr>
+</tbody>
+</table>
+<p>Hestness et al. was far ahead of its time <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=489s" target="_blank" rel="noopener">08:09 <span class="ts">⏱08:09</span></a>. It discussed emergence (accuracy is discontinuous while loss is smooth), scaling by compute, and the idea that speed and systems optimization turn into accuracy. Much of today&rsquo;s discourse was foreseeable in 2017.</p>
+<div class="callout"><span class="co-label">Professor note</span><p>When a student asks whether scaling laws are derived or just found empirically, the answer is blunt: they are pure curve-fitting exercises. Theory and physics suggest candidate functional forms, but there is no golden rule that these are the only ones <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=629s" target="_blank" rel="noopener">10:29 <span class="ts">⏱10:29</span></a>.</p></div>
+<h2 id="data-scaling-the-basic-object">Data scaling: the basic object</h2>
+<p>Fix the model and training procedure. Keep the model bigger than the dataset, so you stay in the power-law regime rather than the irreducible-error regime where the model has already fit the data as well as it can <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=815s" target="_blank" rel="noopener">13:35 <span class="ts">⏱13:35</span></a>. Increase the dataset size and watch the error fall.</p>
+<p>Expect a monotone, sigmoidal-ish curve: from random guessing down toward the entropy noise floor. In practice, plotting log test loss against log dataset size gives a strikingly straight line <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=858s" target="_blank" rel="noopener">14:18 <span class="ts">⏱14:18</span></a>.</p>
+<p>A straight line on a log-log plot is a <strong>power law</strong>: error decays polynomially. It also means you are far from the asymptote. Near the noise floor the curve would taper.</p>
+<div class="mermaid">flowchart LR
+    A[More data] --> B[Log-log plot<br>is linear]
+    B --> C[Error decays<br>polynomially]
+    C --> D[Far from<br>noise floor]
+</div>
+<p>The usual x-axes are all resources: log compute, log data, log parameters. Each linearizes log test loss. Downstream benchmarks give sigmoid curves instead, and even dates on the x-axis can look linear for capability envelopes <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=721s" target="_blank" rel="noopener">12:01 <span class="ts">⏱12:01</span></a>.</p>
+<h2 id="toy-example-estimating-a-mean">Toy example: estimating a mean</h2>
+<p>Why should error decay polynomially? Take the simplest estimation problem <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=943s" target="_blank" rel="noopener">15:43 <span class="ts">⏱15:43</span></a>. Draw samples from a Gaussian and estimate the mean with the empirical average:</p>
+<p>[ E[(\hat{\mu} - \mu)^2] = \frac{\sigma^2}{n} ]</p>
+<p>Take logs:</p>
+<p>[ \log(\text{error}) = -\log n + 2\log\sigma ]</p>
+<p>That is a scaling law. Anything of the form (1/n^{\alpha}) plus a constant becomes linear on a log-log plot once you subtract the constant. Classical parametric models give (\alpha = 1).</p>
+<h2 id="the-exponent-mystery">The exponent mystery</h2>
+<p>Here is the puzzle <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1027s" target="_blank" rel="noopener">17:07 <span class="ts">⏱17:07</span></a>. Classical models predict slope −1. Neural scaling laws show exponents around −0.1 to −0.3 for translation, speech, and language modeling. Neural nets learn much more slowly than mean estimation.</p>
+<p>A detour into nonparametric statistics suggests why. Suppose you estimate an arbitrary smooth function on a 2D unit box by cutting it into boxes of side length (n^{-1/4}) <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1071s" target="_blank" rel="noopener">17:51 <span class="ts">⏱17:51</span></a>. You get (\sqrt{n}) boxes, each holding about (\sqrt{n}) samples, and error around (1/\sqrt{n}). In d dimensions the same argument gives:</p>
+<p>[ \text{error} \approx n^{-1/d} ]</p>
+<p>So the log-log slope is (-1/d). A slope of −0.1 looks like a nonparametric regressor in about 10 dimensions. Some researchers (Bahri et al. 2021) argue the exponent literally reveals the intrinsic dimensionality of the data.</p>
+<div class="callout"><span class="co-label">Caveat</span><p>The lecturer does not fully buy the intrinsic-dimension story. Estimators of intrinsic dimension are sketchy, and the argument is not airtight. Treat the exponent as a useful measurement of how fast the model learns, not as a proven fact about data geometry <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1199s" target="_blank" rel="noopener">19:59 <span class="ts">⏱19:59</span></a>.</p></div>
+<h2 id="composition-repetition-and-filtering">Composition, repetition, and filtering</h2>
+<p>Data scaling laws so far map dataset <em>size</em> to error. Three engineering questions go further.</p>
+<p><strong>Data mixture.</strong> Think of data scaling laws as empirical generalization bounds. Classical reasoning says dataset composition changes the <em>offset</em> of the scaling law, not its slope, which is set by the model class <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1281s" target="_blank" rel="noopener">21:21 <span class="ts">⏱21:21</span></a>. So to pick a news-versus-Wikipedia mixture, fit the mixture&rsquo;s effect on small models and extrapolate. In practice, people skip the curve fitting: train small models on candidate mixtures and scale up the winner. The DataDecide study found this works, which is consistent with slopes being mixture-independent <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1465s" target="_blank" rel="noopener">24:25 <span class="ts">⏱24:25</span></a>.</p>
+<p><strong>Repetition.</strong> Compute grows faster than data, so data gets repeated. Up to about 4 epochs, standard recipes show no harm. Past that, realized scaling falls well below the fresh-data projection. Modified functional forms with effective data size capture this <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1511s" target="_blank" rel="noopener">25:11 <span class="ts">⏱25:11</span></a>. Pushed to the extreme of infinite compute, you cannot keep repeating or growing the model. Gains come from elsewhere, like ensembling. Notably, the slopes stay similar. Interventions usually move the intercept, not the slope <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1561s" target="_blank" rel="noopener">26:01 <span class="ts">⏱26:01</span></a>.</p>
+<p><strong>Filtering.</strong> Filtering is scale-dependent <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1650s" target="_blank" rel="noopener">27:30 <span class="ts">⏱27:30</span></a>. With little compute you filter aggressively, keeping only the highest-quality data, because you cannot train on everything anyway. With huge compute you loosen the filters, because you need volume and do not want to repeat the small high-quality set. Optimal filtering changes with scale.</p>
+<div class="callout"><span class="co-label">Warning</span><p>Axes can lie. One plot in the lecture looks linear in both loss and data size, but the x-axis is doubling, so it is secretly log scale, and the y range is so narrow that linear and log look identical. With only a tiny slice of compute range, polynomial and exponential are indistinguishable. Always be skeptical of the functional form <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1732s" target="_blank" rel="noopener">28:52 <span class="ts">⏱28:52</span></a>.</p></div>
+<h2 id="scaling-laws-for-model-engineering">Scaling laws for model engineering</h2>
+<p>Beyond data, scaling laws answer design questions: architecture, optimizer, depth and width, batch size, learning rate. The procedure is always the same <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3184s" target="_blank" rel="noopener">53:04 <span class="ts">⏱53:04</span></a>:</p>
+<ol>
+<li>Train several smaller models.</li>
+<li>Establish a scaling law (e.g., Adam versus SGD curves).</li>
+<li>Pick the hyperparameter the scaling law predicts is best at scale.</li>
+</ol>
+<p><strong>Architecture.</strong> Are transformers really better than LSTMs? The brute-force answer costs tens of millions. The scaling-law answer trains small LSTMs and transformers across compute ranges and compares curves <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1921s" target="_blank" rel="noopener">32:01 <span class="ts">⏱32:01</span></a>. LSTMs show a worse intercept and possibly a worse slope. A worse slope is disqualifying: it means the gap grows with scale. Tay et al. 2022 ran this analysis across T5-style architectures. Efficient attention (Performer) scaled poorly, which is why frontier models do not use it. GLU scaled well, which is why they do <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=1966s" target="_blank" rel="noopener">32:46 <span class="ts">⏱32:46</span></a>.</p>
+<div class="callout"><span class="co-label">Paper</span><p>Kaplan et al. 2020, &ldquo;Neural Scaling Laws for Language Models&rdquo; (OpenAI). The canonical study: power-law fits for loss versus compute, data, and parameters, plus ablations of architecture, depth, and aspect ratio. Referenced throughout this lecture.</p></div>
+<p><strong>Optimizer.</strong> Hestness 2017 compared Adam and SGD. Different intercepts, strikingly similar slopes <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2061s" target="_blank" rel="noopener">34:21 <span class="ts">⏱34:21</span></a>. Even an intervention as large as changing the optimizer leaves the slope nearly unchanged. This pattern repeats everywhere: interventions move intercepts, not slopes.</p>
+<p><strong>Depth and width.</strong> One layer versus two is a huge difference. Beyond that, more layers show diminishing returns. The aspect ratio (depth to width) is a scale-invariant quantity: the optimum sits around 100 d_model per layer and barely shifts as models grow, so fixing the aspect ratio while scaling is safe <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2152s" target="_blank" rel="noopener">35:52 <span class="ts">⏱35:52</span></a>.</p>
+<p><strong>Not all parameters are equal.</strong> Kaplan found that including embedding parameters produced bizarre scaling curves, so they counted only non-embedding parameters. They also excluded the final layer&rsquo;s parameters, since embeddings and the output matrix are duals with the same shape. These bookkeeping choices have non-trivial consequences, as the Chinchilla story will show <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2237s" target="_blank" rel="noopener">37:17 <span class="ts">⏱37:17</span></a>.</p>
+<p><strong>MoE parameters.</strong> With mixtures of experts, total and active parameters decouple. An Apple and MIT analysis shows that as total parameters grow, the loss-minimizing design gets sparser, and inactive parameters still reduce loss <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2322s" target="_blank" rel="noopener">38:42 <span class="ts">⏱38:42</span></a>. The &ldquo;value of a parameter&rdquo; becomes a real question.</p>
+<h2 id="critical-batch-size">Critical batch size</h2>
+<p>Batch size is special for systems reasons: data parallel needs large batches. The question is how large you can go before suffering <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2454s" target="_blank" rel="noopener">40:54 <span class="ts">⏱40:54</span></a>.</p>
+<p>Two regimes. In the <strong>noise-limited</strong> regime, each added batch element reduces gradient variance, and returns are near-perfect. In the <strong>bias-limited</strong> regime, you have hit the noise scale of the gradients. Your descent direction disagrees with the true direction to the optimum no matter how low the noise gets, so extra batch elements give diminishing returns <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2546s" target="_blank" rel="noopener">42:26 <span class="ts">⏱42:26</span></a>.</p>
+<p>The <strong>critical batch size</strong> is the crossover point: the largest batch worth using. The estimation procedure <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2687s" target="_blank" rel="noopener">44:47 <span class="ts">⏱44:47</span></a>:</p>
+<ol>
+<li>Pick a target loss.</li>
+<li>Sweep batch sizes. Record steps needed (S) and examples needed (E) to reach the target.</li>
+<li>Fit for the minima S_min and E_min, then set B_crit = E_min / S_min.</li>
+</ol>
+<p>This balances the two costs: it uses slightly more steps than optimal and slightly more examples than optimal. It is also close to the ratio of the gradient covariance trace to the squared gradient norm.</p>
+<p>Why does this belong in a scaling lecture? Because the critical batch size itself scales <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2822s" target="_blank" rel="noopener">47:02 <span class="ts">⏱47:02</span></a>. As the target loss drops, the critical batch size grows, following a power law. Closer to the minimum, you optimize finer-grained structure, and variance reduction matters more. Large runs can use very large batches.</p>
+<h2 id="learning-rates">Learning rates</h2>
+<p>Naive width scaling says the learning rate should shrink as the model grows, roughly as 1 over width: more parameters moving at once means each should move less <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2913s" target="_blank" rel="noopener">48:33 <span class="ts">⏱48:33</span></a>. The alternative school rescales initialization and per-layer step sizes so the optimal learning rate stays fixed across scales. This is <strong>muP</strong> (maximal update parameterization).</p>
+<p>Two philosophies for picking the big-run learning rate <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=2958s" target="_blank" rel="noopener">49:18 <span class="ts">⏱49:18</span></a>: predict how the optimum shifts with scale, or reparameterize so the optimum does not shift. Both have succeeded at scale. Anecdotally, more practitioners now favor the scaling-law approach. Full details come in the advanced scaling lecture.</p>
+<h2 id="upstream-versus-downstream">Upstream versus downstream</h2>
+<p>Scaling laws are cleanest on perplexity. Perplexity transfers to downstream tasks, but unreliably <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3052s" target="_blank" rel="noopener">50:52 <span class="ts">⏱50:52</span></a>. In one architecture study, the best-perplexity model was far from the best downstream model. Perplexity scaling is regular and predictable. Downstream scaling is much less certain.</p>
+<div class="callout"><span class="co-label">Professor note</span><p>Former students working in post-training complain that pretraining teams hand over models saying &ldquo;the perplexity is good, it is all your problem now.&rdquo; The problems often start in pretraining. Think about transfer, not just perplexity <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3144s" target="_blank" rel="noopener">52:24 <span class="ts">⏱52:24</span></a>.</p></div>
+<p>Two measurement notes. Scaling-law points are usually single runs, not averages, because perplexity has tiny variance: reruns differ in the second decimal place <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3224s" target="_blank" rel="noopener">53:44 <span class="ts">⏱53:44</span></a>. And most plots mix train and validation loss freely, because one-pass SGD makes the generalization gap negligible. Some pretraining codebases do not even track validation loss <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3322s" target="_blank" rel="noopener">55:22 <span class="ts">⏱55:22</span></a>.</p>
+<h2 id="compute-optimal-training-kaplan-versus-chinchilla">Compute-optimal training: Kaplan versus Chinchilla</h2>
+<p>The most famous use of scaling laws: given fixed FLOPs, should you train a bigger model or train longer? A tiny model drowned in data wastes compute. Joint data-model scaling laws quantify the tradeoff <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3419s" target="_blank" rel="noopener">56:59 <span class="ts">⏱56:59</span></a>.</p>
+<p>Rosenfeld et al. 2020 proposed a simple additive form:</p>
+<p>[ \text{error} = n^{-\alpha} + m^{-\beta} + C ]</p>
+<p>where n is data and m is model size. Kaplan et al. 2020 proposed a similar joint form. Sanity-check by taking limits: infinite data leaves a pure model-size law, infinite model leaves a pure data law <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3463s" target="_blank" rel="noopener">57:43 <span class="ts">⏱57:43</span></a>. Fit on small models and small data, extrapolate far. It works surprisingly well.</p>
+<p>Then optimize under the FLOPs constraint (FLOPs scale roughly as data times parameters). Kaplan&rsquo;s optimum <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3600s" target="_blank" rel="noopener">60:00 <span class="ts">⏱60:00</span></a>:</p>
+<p>[ N_{opt} = C^{0.73}, \quad D_{opt} = C^{0.27} ]</p>
+<p>Tokens per parameter <em>decrease</em> with compute. This drove the era of giant models: GPT-3 trained on about 2 to 3 tokens per parameter, and labs raced toward ever-larger models.</p>
+<div class="callout"><span class="co-label">Paper</span><p>Hoffmann et al. 2022, &ldquo;Training Compute-Optimal Large Language Models&rdquo; (Chinchilla, DeepMind). Argued Kaplan&rsquo;s fits were far off and that models were systematically undertrained. Proposed 20 tokens per parameter and three fitting methods that mostly agree.</p></div>
+<p>Chinchilla&rsquo;s three methods <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=3699s" target="_blank" rel="noopener">61:39 <span class="ts">⏱61:39</span></a>:</p>
+<ol>
+<li><strong>Lower envelope.</strong> Take all training curves, trace the lower envelope (best loss ever achieved at each FLOP count), and read off the model size at each envelope point. Predicts a 67B model for their budget.</li>
+<li><strong>IsoFLOPs.</strong> Fix several FLOP budgets, sweep the parameter-to-data ratio at each, fit the convex loss curve, and connect the minima. Predicts 63B. The lecturer&rsquo;s favorite: easy and reliable.</li>
+<li><strong>Joint fits.</strong> Fit a hypothesized loss surface over the size-data grid by least squares. Disagreed with the other two (exponents 0.46/0.54 instead of ~0.5/0.5).</li>
+</ol>
+<p>Methods 1 and 2 say parameters and data should scale together, hence the 20:1 rule. So why did Kaplan and Chinchilla disagree so much when both fit joint scaling laws?</p>
+<p>Three explanations, each a lesson in how fragile scaling laws are <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=4017s" target="_blank" rel="noopener">66:57 <span class="ts">⏱66:57</span></a>:</p>
+<ul>
+<li><strong>Parameter counting and tuning</strong> (Yi et al., &ldquo;Resolving Discrepancies in Compute Optimal Scaling of Language Models&rdquo;). Replicating Kaplan&rsquo;s setup, then changing one thing at a time: excluding the final-layer parameters shifted the curve, overlong warmup at small compute left models under-converged, and a fixed batch size was suboptimal for small models. Fix all three and you land on Chinchilla.</li>
+<li><strong>Compute scale</strong> (Pearson and Song). Simulating Kaplan-style fits from Chinchilla&rsquo;s curves with no new training: Kaplan operated at much lower compute, where small changes (like the non-embedding nonlinearity) have outsized effects.</li>
+<li><strong>Fitting error</strong> (Besiroglu et al. 2024, Epoch AI). Method 3 never agreed with methods 1 and 2, and the reason was mundane: the original fit underfit. Re-extracting the data from the paper&rsquo;s plots and refitting recovered the 20:1 rule. The authors were more right than they knew.</li>
+</ul>
+<div class="callout"><span class="co-label">Key idea</span><p>Scaling laws are lower bounds for a given recipe, not laws of nature. A scaling law fit on a bad recipe (wrong warmup, wrong batch size, wrong parameter counting) predicts bad outcomes. The details are the result.</p></div>
+<h2 id="overtrain-for-serving">Overtrain for serving</h2>
+<p>One more correction: train-compute-optimal is probably not what you want <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=4428s" target="_blank" rel="noopener">73:48 <span class="ts">⏱73:48</span></a>. Most of a lab&rsquo;s compute goes to R&amp;D and serving, not training. Serving favors small, capable models over big, cheap-to-train ones. The right move is to <strong>overtrain</strong>: spend extra training compute to shrink inference cost.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Tokens per parameter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPT-3</td>
+<td>~2</td>
+</tr>
+<tr>
+<td>Chinchilla</td>
+<td>20</td>
+</tr>
+<tr>
+<td>LLaMA 65B</td>
+<td>22</td>
+</tr>
+<tr>
+<td>Llama 2 70B</td>
+<td>29</td>
+</tr>
+<tr>
+<td>Mistral 7B</td>
+<td>110</td>
+</tr>
+<tr>
+<td>Llama 3 70B</td>
+<td>215</td>
+</tr>
+</tbody>
+</table>
+<p>Chinchilla matters less as a golden ratio than as a lesson in how to fit and think about scaling laws. And IsoFLOPs endures as a research tool: fix a FLOP budget, sweep the free parameters, read off the surface. It has been reused for diffusion models and MoEs <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=4558s" target="_blank" rel="noopener">75:58 <span class="ts">⏱75:58</span></a>.</p>
+<h2 id="assignment-connection">Assignment connection</h2>
+<p>Assignment 3 is the scaling assignment. You will fit your own data scaling law, reproducing the log-log linearity from this lecture on small models <a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4&amp;t=858s" target="_blank" rel="noopener">14:18 <span class="ts">⏱14:18</span></a>. The hyperparameter-transfer ideas (aspect ratio, batch size, learning rate) feed the prediction tasks: choose the big-model settings from small-model fits, the way Kaplan and Chinchilla did.</p>
+<div class="callout"><span class="co-label">Interview signal</span><p>Scaling-law questions test engineering judgment under uncertainty: how would you pick a model size for a fixed budget, why would you overtrain for serving, and what breaks when you extrapolate. Know the Kaplan versus Chinchilla disagreement cold, including the three mundane causes. Interviewers use it to separate people who memorized 20:1 from people who understand why.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=Q15rhEWZPQ4" target="_blank" rel="noopener">Lecture 9 video, Stanford Online YouTube</a></li><li><span class="src-tag">SLIDES</span><a href="https://github.com/stanford-cs336/lectures" target="_blank" rel="noopener">lecture_09.pdf, official lecture slides</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-orig)</li></ul></section>
+      <nav class="pager"><a href="cs336/l08-parallelism-2.html"><span class="lbl">← Previous</span>Lecture 8: Parallelism, Part 2</a><a href="cs336/l10-inference.html"><span class="lbl">Next →</span>Lecture 10: Inference</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="assets/vendor/katex.min.js"></script>
+<script src="assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "";</script>
+<script src="assets/app.js"></script>
+</body>
+</html>
