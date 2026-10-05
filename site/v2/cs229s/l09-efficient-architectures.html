@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 9: Efficient Attention-Free Architectures — Stanford Frontier AI</title>
+<meta name="description" content="Beyond quadratic attention: convolutions, recurrences, the FFT trick, S4, and why input-dependent mixing (recall) is the hard part.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229s-l09" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09" class="active">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229S: Systems for Machine Learning</a> / Lecture 9: Efficient Attention-Free Architectures</nav>
+      <h1>Lecture 9: Efficient Attention-Free Architectures</h1>
+      <p class="meta-line">2024-10-28 · Instructor: Azalia Mirhoseini · Fall 2024</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p><strong>Level 1 (Core)</strong> builds the three sequence primitives, derives
+the FFT speedup, and explains the recall gap that separates
+attention from its rivals. <strong>Level 2 (Deep)</strong> covers S4&rsquo;s
+breakthrough and the design direction it opened. Linear attention
+as a trained architecture continues in
+<a href="../cs336/l04-linear-attention-moe.html">CS336 L04</a>.</p>
+<h2 id="level-1-three-primitives-three-tradeoffs">Level 1: Three primitives, three tradeoffs</h2>
+<figure><img alt="Architecture primitives" src="assets/slide-l09-arch-primitives.png"><figcaption>RNNs, ConvNets, Transformers: training speed, sampling speed, and context on one table. Source: Stanford slides.</figcaption></figure>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Training</th>
+<th>Sampling</th>
+<th>Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Recurrent nets</td>
+<td>Slow (serial)</td>
+<td>Fast, O(1) per step</td>
+<td>Potentially infinite</td>
+</tr>
+<tr>
+<td>ConvNets</td>
+<td>Fast (parallel)</td>
+<td>Slow</td>
+<td>Finite</td>
+</tr>
+<tr>
+<td>Transformers</td>
+<td>Fast (parallel)</td>
+<td>Slow, O(N) look-back</td>
+<td>Finite</td>
+</tr>
+</tbody>
+</table>
+<p>Transformers dominate language, but their training is O(N squared)
+and generation needs a full look-back: O(N) memory and compute per
+step. The lecture asks whether new primitives can keep the fast
+training while fixing the scaling.</p>
+<h2 id="level-1-convolutions-mix-with-a-kernel">Level 1: Convolutions mix with a kernel</h2>
+<p>A convolution mixes the input sequence according to weights in a
+filter (kernel) vector: each output is a dot product of the kernel
+against a window of the input. An edge-detector kernel like
+[-1, 2, -1] and an identity kernel [1, 0, 0] show how the kernel
+chooses the mixing.</p>
+<pre class="ascii">input  : ... x0 x1 x2 x3 x4 ...
+kernel : [-1, 2, -1]          &lt;- edge detector
+output : ... y1 y2 y3 ...
+y2 = -x1 + 2*x2 - x3          &lt;- dot product at each position
+</pre>
+<p><strong>Long convolutions</strong> set kernel size equal to input size: every
+output sees the whole sequence. Two details matter. The Fourier
+transform is circular, so naive long convolution wraps samples
+around the ends. For causal modeling (early tokens cannot see
+later ones), pad with kernel_size - 1 zeros.</p>
+<p>Naive long convolution costs O(N squared): N outputs, each a dot
+product of N terms. If attention is also O(N squared), why bother?
+Because of the FFT.</p>
+<h2 id="level-1-the-fft-convolution-theorem">Level 1: The FFT convolution theorem</h2>
+<p><strong>Convolution in the time domain equals pointwise multiplication
+in the frequency domain.</strong></p>
+<figure><img alt="FFT theorem" src="assets/slide-l09-fft-theorem.png"><figcaption>Three steps: FFT both signals, multiply pointwise, inverse FFT. Source: Stanford slides.</figcaption></figure>
+<ol>
+<li>Fourier-transform the input x and the kernel k.</li>
+<li>Multiply pointwise: O(N).</li>
+<li>Inverse-transform back.</li>
+</ol>
+<p>A naive Fourier transform is itself O(n squared): n outputs, each
+a sum of n terms. The Cooley-Tukey Fast Fourier Transform (1965)
+computes it in O(n log n). Total: n^2 becomes O(n log n).</p>
+<figure><img alt="FFT complexity" src="assets/slide-l09-fft-complexity.png"><figcaption>Naive O(n^2) per transform falls to O(n log n) with Cooley-Tukey. Source: Stanford slides.</figcaption></figure>
+<p>The FFT is the core primitive that makes convolution-based
+sequence models fast. It is exact, not approximate: the theorem is
+an equality.</p>
+<div class="qa"><div class="q">Why is a long convolution worth doing if it is O(N squared) like attention?</div><div class="a"><p>Because the FFT convolution theorem turns it into O(N log N). Transform both signals to the frequency domain with the Cooley-Tukey FFT, multiply pointwise, transform back. Attention has no such exact speedup: its only exact fix is the systems engineering of FlashAttention. The convolution&rsquo;s structure admits a faster algorithm.
+The Fourier transform is circular, so samples wrap around the ends and early outputs see late inputs. For autoregressive modeling that leaks the future. Pad with kernel_size - 1 zeros to restore causality.</p><div class="followup"><strong>Follow-up:</strong> What breaks if you forget causality in a long convolution?</div></div></div>
+<h2 id="level-1-linear-recurrences-are-convolutions">Level 1: Linear recurrences are convolutions</h2>
+<p>A recurrent net keeps a fixed-size state, updates it per token,
+and generates from it. General form: a state-update equation and
+an output equation. Inference costs O(1) memory and O(1) compute
+per step: the state is fixed size no matter how long the sequence
+gets.</p>
+<figure><img alt="RNN O(1) inference" src="assets/slide-l09-rnn-inference-o1.png"><figcaption>Fixed-size state: O(1) memory and compute per inference step. Source: Stanford slides.</figcaption></figure>
+<p>The catch is training: nonlinear recurrences serialize across
+timesteps. But if the recurrence is <strong>linear</strong> (and time
+invariant), the computation parallelizes across the sequence
+(Martin and Cundy, 2018). Regrouping the terms shows why: a
+linear time-invariant recurrence unrolls into a convolution of the
+input with a kernel derived from the recurrence weights. Train it
+as a convolution (fast, parallel, FFT), run it as a recurrence
+(fast, O(1) sampling). That duality is the whole trick behind S4.</p>
+<h2 id="level-1-s4-broke-the-long-range-benchmarks">Level 1: S4 broke the long-range benchmarks</h2>
+<p>Efficient transformers struggled on the Long Range Arena (Tay et
+al., 2020), the standard long-context suite. In 2022, S4 (Gu et
+al.), which generalizes linear time-invariant recurrences with
+structured state spaces, solved the failure tasks to near-perfect
+accuracy, including Path-X. It also reached state of the art on
+audio generation and time-series modeling.</p>
+<p>Applied to language modeling, gaps remained. At 360M parameters on
+10B Pile tokens:</p>
+<figure><img alt="Perplexity table" src="assets/slide-l09-perplexity-table.png"><figcaption>Attention (Llama) 8.39 vs SSM variants 9.79-13.13 at 360M scale. Source: Stanford slides, Zoology 2023.</figcaption></figure>
+<p>Attention (Llama-style) reached 8.39 perplexity; the SSM variants
+sat between 9.79 and 13.13. Something about language resisted the
+convolutional answer.</p>
+<h2 id="level-1-the-recall-gap">Level 1: The recall gap</h2>
+<p>Zoology (Arora, Eyuboglu et al., 2023) diagnosed the gap with a
+behavior called <strong>recall</strong>: grounding the next prediction in
+information from the context. Synthetic form: given mappings like
+&ldquo;C 8&rdquo; and &ldquo;A 3&rdquo; earlier in the sequence, predict the value for a
+recall key. Real form: &ldquo;A door panel blew off a 737 Max 9 during
+an Alaska Airlines flight&rdquo; requires &ldquo;Max&rdquo; and &ldquo;Airlines&rdquo; to
+interact across distance.</p>
+<p>Compare the sequence mixers: each takes input embeddings and
+outputs a mixed sequence, i.e. applies a mixing matrix. The
+attention mixing matrix is <strong>input-dependent</strong>: queries and keys
+are functions of the input x, so the mixing adapts to content.
+The attention-free mixing matrix is <strong>diagonal-constant</strong>: fixed,
+independent of the input. Recall needs a fully flexible mixing
+matrix, and only the input-dependent one qualifies.</p>
+<figure><img alt="Mixing matrix" src="assets/slide-l09-mixing-matrix.png"><figcaption>Attention mixing is input-dependent; convolutional mixing is diagonal-constant. Recall needs the former. Source: Stanford slides, Zoology 2023.</figcaption></figure>
+<p>The lecture&rsquo;s two conclusions. First, measure efficiency on the
+task, not just the sequence length: convolutions are O(N log N)
+but attention is more efficient at recall. Second, do error
+analysis on your architectures: the gated convolutions&rsquo; recall
+failure was found by looking at what they predicted wrong, not by
+staring at complexity bounds.</p>
+<div class="qa"><div class="q">Why do convolutional sequence models struggle with recall while attention handles it?</div><div class="a"><p>Recall needs the mixing between tokens to depend on the content: which earlier token matters depends on what the tokens say. Attention&rsquo;s mixing matrix is built from input-dependent queries and keys, so it adapts per example. A convolution&rsquo;s mixing matrix is diagonal-constant, fixed regardless of input. No fixed mixing pattern can route arbitrary content-based lookups, so perplexity gaps persist even though convolutions scale better asymptotically.
+Keep the sub-quadratic scaling but make the mixing input-dependent. That is exactly Mamba&rsquo;s selective state spaces and gated linear attention: the recurrence or convolution weights become functions of the input, recovering the flexibility that recall needs while keeping linear-time scaling.</p><div class="followup"><strong>Follow-up:</strong> What architecture direction does this suggest?</div></div></div>
+<h2 id="level-2-building-the-new-architectures">Level 2: Building the new architectures</h2>
+<p>The design target is now explicit: (1) computational and memory
+efficiency, sub-quadratic in sequence length, and (2)
+input-dependent sequence mixing, for recall. Mamba (Gu and Dao,
+2023) makes the state-space parameters selective, i.e. input
+dependent. Gated linear attention and Based push the same
+direction from the linear-attention side.</p>
+<p>The lecture closes with three open jobs. First, the same legwork
+that trained transformers well (width, depth, hyperparameters)
+must be repeated for the new models. Second, the new primitives
+(FFT, parallel scans) need the efficient implementations that
+transformers already enjoy. Third, keep measuring behavior, not
+just complexity: modalities beyond language are still open
+country.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/slide-l09-arch-primitives.png" alt="Architecture primitives">
+<div class="rc-body">
+<strong>1. Three primitives, three tradeoffs</strong>
+<p>RNNs train slow and sample fast. Transformers train fast and
+sample slow. ConvNets sit between. Pick your bottleneck.</p>
+<p class="rc-num">Key: training vs sampling vs context</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l09-fft-theorem.png" alt="FFT theorem">
+<div class="rc-body">
+<strong>2. Convolution equals frequency multiply</strong>
+<p>FFT both signals, multiply pointwise, inverse FFT. Exact, not
+approximate. Pad kernel_size - 1 zeros for causality.</p>
+<p class="rc-num">Key: time conv = frequency product</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l09-fft-complexity.png" alt="FFT complexity">
+<div class="rc-body">
+<strong>3. Cooley-Tukey makes it O(n log n)</strong>
+<p>The naive transform is O(n squared). The 1965 FFT drops it to
+O(n log n). Long convolutions become genuinely cheap.</p>
+<p class="rc-num">Key: n^2 to n log n</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l09-rnn-inference-o1.png" alt="RNN inference">
+<div class="rc-body">
+<strong>4. Recurrences sample in O(1)</strong>
+<p>Fixed-size state means fixed memory and compute per step, at
+any length. Training serializes unless the recurrence is linear.</p>
+<p class="rc-num">Key: O(1) per step, any length</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l09-rnn-inference-o1.png" alt="Duality">
+<div class="rc-body">
+<strong>5. Linear recurrences are convolutions</strong>
+<p>Unroll a linear time-invariant recurrence and regroup: it is a
+convolution. Train parallel, sample recurrent. S4 exploits both.</p>
+<p class="rc-num">Key: one math, two modes</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l09-perplexity-table.png" alt="Perplexity table">
+<div class="rc-body">
+<strong>6. S4 won long-range, lagged language</strong>
+<p>Near-perfect Long-Range Arena including Path-X. But at 360M
+scale, attention hit 8.39 perplexity versus 9.79 to 13.13.</p>
+<p class="rc-num">Key: benchmarks diverge by task</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l09-mixing-matrix.png" alt="Mixing matrix">
+<div class="rc-body">
+<strong>7. Recall needs input-dependent mixing</strong>
+<p>Attention adapts its mixing to content; convolutions use a
+fixed diagonal-constant pattern. Content lookup needs the former.</p>
+<p class="rc-num">Key: flexibility beats asymptotics</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l09-mixing-matrix.png" alt="Direction">
+<div class="rc-body">
+<strong>8. Sub-quadratic plus selective</strong>
+<p>Mamba, gated linear attention, Based: keep linear scaling, make
+mixing input-dependent. Measure behavior, not just complexity.</p>
+<p class="rc-num">Key: efficiency at the task</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Designing Efficient Architectures slide deck (Fall 2023 headers).</p>
+<p><strong>Further reading:</strong>
+- Gu et al., &ldquo;Efficiently Modeling Long Sequences with Structured State Spaces&rdquo; (2022): S4.
+- Arora, Eyuboglu et al., &ldquo;Zoology&rdquo; (2023): the recall diagnosis.
+- Gu and Dao, &ldquo;Mamba&rdquo; (2023): selective state spaces.
+- <a href="../cs336/l04-linear-attention-moe.html">CS336 L04</a>: linear attention trained at scale.</p>
+<p><strong>Caveats from these sources.</strong> The perplexity table is one
+controlled comparison (360M params, 10B Pile tokens, same
+infrastructure); rankings shift with scale and data. The
+RNN/ConvNet/Transformer tradeoff table simplifies: modern hybrids
+blur every column. The FFT causality discussion assumes the
+circular transform; implementations vary in padding convention.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 L04:</strong> linear attention and MoE: the architecture the kernel idea became.</li>
+<li><strong>CS229S L02:</strong> the RNN challenges that motivated transformers; this lecture revisits them.</li>
+<li><strong>CS229S L06:</strong> the other answer to O(N squared): exact attention done right.</li>
+<li><strong>CS229S L05:</strong> FFT and parallel scans as new primitives needing efficient kernels.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Attention-free cheatsheet.</strong> Families: RNN (slow train, fast O(1) sample, infinite context), ConvNet, transformer (fast train, slow sample, finite). Long conv: kernel = input size; circular wrap; pad kernel_size-1 for causality; naive O(N^2). FFT theorem: time conv = pointwise frequency multiply; Cooley-Tukey 1965: O(n log n). RNN: state update + output eqs; O(1) mem/compute per step. Linear recurrence: parallelizable across timesteps; regroups to convolution; train as conv, sample as recurrence. S4 2022: solved LRA/Path-X; SoTA audio/time-series. LM gaps at 360M/10B tokens: attn 8.39, SSMs 9.79-13.13. Recall: content lookup; attention mixing input-dependent, conv mixing diagonal-constant. Direction: sub-quadratic + input-dependent (Mamba selective SSM, GLA, Based). Measure task efficiency, not asymptotics.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>The recall rule.</strong> Fast mixing is useless if it cannot look up what matters. Make the mixing depend on the input.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Designing Efficient Architectures slide deck (Fall 2023 headers)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2111.00396" target="_blank" rel="noopener">Gu et al., Efficiently Modeling Long Sequences with Structured State Spaces (S4, 2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2312.05482" target="_blank" rel="noopener">Arora, Eyuboglu et al., Zoology: Measuring and Improving Recall in Efficient Language Models (2023)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2312.00752" target="_blank" rel="noopener">Gu and Dao, Mamba: Linear-Time Sequence Modeling with Selective State Spaces (2023)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2410.02663" target="_blank" rel="noopener">Arora, Eyuboglu, Zhang et al., Simple linear attention language models balance the recall-throughput tradeoff (2024)</a></li></ul></section>
+      <nav class="pager"><a href="../cs229s/l08-finetuning-and-peft.html"><span class="lbl">← Previous</span>Lecture 8: Fine-Tuning Large Language Models and PEFT</a><a href="../cs229s/l10-parallelism.html"><span class="lbl">Next →</span>Lecture 10: Parallelism Fundamentals at Scale</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
