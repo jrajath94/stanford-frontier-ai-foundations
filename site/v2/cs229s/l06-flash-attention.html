@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 6: Efficient Attention and FlashAttention — Stanford Frontier AI</title>
+<meta name="description" content="Why standard attention is memory bound, the three approximation families, and the exact fix: FlashAttention&#x27;s tiling, rescaling, and recompute.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229s-l06" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06" class="active">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229S: Systems for Machine Learning</a> / Lecture 6: Efficient Attention and FlashAttention</nav>
+      <h1>Lecture 6: Efficient Attention and FlashAttention</h1>
+      <p class="meta-line">2024-10-11 · Instructor: Azalia Mirhoseini · Fall 2024</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p><strong>Level 1 (Core)</strong> profiles standard attention, shows it is memory
+bound, and derives FlashAttention&rsquo;s three ideas: tiling, online
+softmax rescaling, and backward recompute. <strong>Level 2 (Deep)</strong> covers
+the approximation families the field tried first (sparse, low-rank,
+kernel) and FlashAttention-2&rsquo;s improvements. Linear attention as an
+architecture continues in <a href="../cs336/l04-linear-attention-moe.html">CS336 L04</a>.</p>
+<h2 id="level-1-standard-attention-is-quadratic-and-memory-bound">Level 1: Standard attention is quadratic and memory bound</h2>
+<p>Q, K, V are N by D. The score matrix S = QK^T is N by N. Both
+memory and compute scale as O(N squared) in sequence length in
+standard implementations.</p>
+<p>Profiling with torch.profiler shows why the constant factors hurt.
+Each step reads and writes around the N by N matrix: read Q and K,
+write QK^T, read and write for masking, dropout, and softmax, read
+V, write the output. The FLOPs are modest (matmuls plus an
+elementwise softmax); the memory accesses are massive.</p>
+<p>Fix d = 768 and grow N. The attention op&rsquo;s FLOPs-per-byte ratio
+falls below the A100 ridge of 161. Standard attention is memory
+bound, and longer sequences make it worse. Note the scope: this
+analysis covers attention, not the feed-forward matmuls, which are
+compute bound at large batch.</p>
+<figure><img alt="Tiling attention" src="assets/slide-l06-tiling-attention.png"><figcaption>Approach: never materialize the N by N matrix. Tile Q and K, compute block outputs, aggregate. Source: Stanford slides.</figcaption></figure>
+<h2 id="level-1-the-core-obstacle-is-the-softmax">Level 1: The core obstacle is the softmax</h2>
+<p>Tiling the matmuls is easy: load tiles of Q and K into SRAM,
+compute block scores, never write the full matrix. The obstacle is
+the softmax, which normalizes over the full row. With only tiles in
+hand, the row sum is unknown.</p>
+<p>The fix is online rescaling. Split the row into two tiles with
+partial sums L(1) and L(2). The true output is</p>
+<p>output = (A(1) + A(2)) V / (L(1) + L(2))</p>
+<p>Compute per-tile outputs O(1) = A(1)V(1)/L(1) and
+O(2) = A(2)V(2)/L(2), then rescale: multiply O(1) by
+L(1)/(L(1)+L(2)) so its denominator becomes the true total, and
+likewise for O(2). Add them. The result is exactly standard
+attention. No approximation.</p>
+<figure><img alt="Softmax rescaling" src="assets/slide-l06-softmax-rescaling.png"><figcaption>Rescale each tile's output by its share of the true denominator. Exact, not approximate. Source: Stanford slides.</figcaption></figure>
+<p>Numerical stability needs the same trick for the max. Stable
+softmax subtracts the row max, but the max is also a whole-row
+quantity. Maintain a running max m(x) across tiles and rescale each
+tile&rsquo;s exponentials by the ratio of the tile max to the running
+max. The algebra cancels to the exact stable softmax.</p>
+<div class="qa"><div class="q">How does FlashAttention compute an exact softmax without the full row in memory?</div><div class="a"><p>It processes the row in tiles and keeps two running statistics: the sum of exponentials L and the running max m. Each tile&rsquo;s partial output is rescaled by its share of the running totals, so after the last tile the denominator and the max equal the whole-row values. The output is bit-for-bit standard attention; tiling changes the order of operations, not the result.
+It recomputes the attention tiles from the stored inputs plus the cached L and M vectors, which are only size N. Recomputation adds about 13% more FLOPs but removes the giant read-write of the score matrix. Since the workload is memory bound, trading FLOPs for bandwidth wins: 6x faster runtime in the slides&rsquo; benchmark.</p><div class="followup"><strong>Follow-up:</strong> Why does the backward pass not need the N by N matrix either?</div></div></div>
+<h2 id="level-1-the-results">Level 1: The results</h2>
+<p>Asymptotic HBM accesses: FlashAttention O(N^2 d^2 M^-1) for SRAM
+size M, versus O(Nd + N^2) standard. In practice about 9x fewer HBM
+reads and writes.</p>
+<figure><img alt="FlashAttention results" src="assets/slide-l06-flashattn-results.png"><figcaption>13% more FLOPs, 9x less HBM traffic, 6x faster runtime. Source: Stanford slides, Dao et al. 2022.</figcaption></figure>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Standard</th>
+<th>FlashAttention</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GFLOPs</td>
+<td>66.6</td>
+<td>75.2 (up 13%)</td>
+</tr>
+<tr>
+<td>HBM reads/writes</td>
+<td>40.3 GB</td>
+<td>4.4 GB (down 9x)</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td>41.7 ms</td>
+<td>7.3 ms (down 6x)</td>
+</tr>
+</tbody>
+</table>
+<p>More FLOPs, far less time. The lecture&rsquo;s takeaway: lower FLOPs do
+not imply wall-clock speedup. Downstream: 15% faster than the
+MLPerf 1.1 BERT training record, 3x faster than HuggingFace at 1k
+sequence length, 2.4 to 2.8x faster training on Long-Range Arena
+with no quality drop, and the first transformer above random chance
+on Path-X and Path-256.</p>
+<p>The backward pass recomputes the attention matrix from inputs in
+SRAM using the cached L (normalization) and M (running max)
+vectors. Storing two vectors of size N beats storing an N by N
+matrix.</p>
+<figure><img alt="Backward recompute" src="assets/slide-l06-backward-recompute.png"><figcaption>Cache L and M (size N), recompute the N by N tiles backward. Source: Stanford slides.</figcaption></figure>
+<p>FlashAttention-2 improves work partitioning across blocks and
+warps, which was causing excess reads and writes. It uses CUTLASS 3
+primitives for memory management and parallelizes over more
+dimensions: sequence length, batch size, and attention heads.</p>
+<h2 id="level-1-where-it-sits-among-the-options">Level 1: Where it sits among the options</h2>
+<p>Mistral 7B combined FlashAttention with sparsity ideas. Two
+observations from the slides: FlashAttention alone is more memory
+efficient than the approximate Linformer, and FlashAttention plus
+sparsity gives the fastest runtimes. Exactness and approximation
+stack.</p>
+<figure><img alt="FlashAttention chapter plate" src="assets/media-generation-plate-chapter-l06-flashattn-0-fef314f8-620b-419e-bef8-42397039204e.webp"><figcaption>Shell: synthesis. Fusion, tiling, and recompute trade 13% more FLOPs for 9x less traffic. Source: original chapter plate.</figcaption></figure>
+<div class="qa"><div class="q">When would you choose an approximate attention over FlashAttention?</div><div class="a"><p>When the approximation&rsquo;s inductive bias helps or when even tiled exact attention is too slow at your sequence length. But the lecture&rsquo;s ordering matters: try the exact hardware-aware implementation first, because approximations trade quality for speed while FlashAttention keeps full quality. Combine them only after the exact baseline is in place.
+It never materializes the N by N attention matrix: it tiles Q, K, V through SRAM, tracks running softmax statistics per tile, and recomputes tiles in the backward pass. Exact output, 9x less HBM traffic, 6x faster.</p><div class="followup"><strong>Follow-up:</strong> What is the interview one-liner for FlashAttention?</div></div></div>
+<h2 id="level-2-the-approximation-families">Level 2: The approximation families</h2>
+<p>Before FlashAttention, the field modified the algorithm to dodge
+the quadratic. Three families, from Tay et al.&rsquo;s 2022 survey.</p>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Idea</th>
+<th>Example</th>
+<th>Price</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sparse</td>
+<td>Attend to a token subset</td>
+<td>BigBird O(n)</td>
+<td>Quality loss on long range</td>
+</tr>
+<tr>
+<td>Low rank</td>
+<td>Project to smaller dims</td>
+<td>Linformer</td>
+<td>Causality hard to keep</td>
+</tr>
+<tr>
+<td>Kernel</td>
+<td>Replace similarity, drop softmax</td>
+<td>Linear transformer</td>
+<td>Needs a custom CUDA kernel</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Sparse.</strong> Compute attention over a subset of token pairs. Sparse
+Transformers (Child et al., 2019) use local windows: O(n sqrt(n))
+empirically. BigBird (Zaheer et al., 2021) combines windowed local
+attention with global tokens and random attention for O(n) inner
+products. Common fixed patterns: sliding window, dilated, global,
+blocked, random. Language has locality of reference, which is why
+windows work at all.</p>
+<p><strong>Low rank.</strong> Project to smaller dimensions. Linformer reduces the
+N by N matrix toward k by k. The cost is causality: the projection
+mixes future into past, which is hard to maintain for autoregressive
+modeling.</p>
+<p><strong>Kernel.</strong> Replace the similarity without the full N^2 d cost and
+without the softmax. The linear transformer (Katharopoulos et al.,
+2020) writes sim(qi, kj) as f(qi) f(kj) with an elementwise feature
+map like 1 + ELU. Without the exp, the associative property of
+matrix multiplication regroups the computation into linear time.
+The price, per Lecture 1&rsquo;s meme: without a custom CUDA kernel it
+loses in wall-clock to FlashAttention anyway.</p>
+<p>All three trade quality for efficiency. The Pile perplexity plots
+in the slides show the gap. FlashAttention&rsquo;s contribution was
+showing the tradeoff was optional: exactness at speed was a
+systems problem, not an algorithmic one.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/slide-l06-tiling-attention.png" alt="Tiling attention">
+<div class="rc-body">
+<strong>1. Standard attention is memory bound</strong>
+<p>N by N scores, O(N squared) memory and compute. Profiling shows
+the cost is reads and writes around the matrix, not the FLOPs.</p>
+<p class="rc-num">Key: falls below the 161 ridge</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l06-tiling-attention.png" alt="Never materialize">
+<div class="rc-body">
+<strong>2. Never write the N by N matrix</strong>
+<p>Tile Q, K, V through SRAM. HBM accesses drop from O(Nd + N^2)
+toward O(N^2 d^2 M^-1). About 9x fewer in practice.</p>
+<p class="rc-num">Key: the matrix is the enemy</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l06-softmax-rescaling.png" alt="Softmax rescaling">
+<div class="rc-body">
+<strong>3. Rescale tiles to an exact softmax</strong>
+<p>Track running sum L and running max m per tile. Rescale each
+partial output by its share of the true totals. Exact output.</p>
+<p class="rc-num">Key: O = O(1) + O(2), rescaled</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l06-backward-recompute.png" alt="Backward recompute">
+<div class="rc-body">
+<strong>4. Recompute the backward pass</strong>
+<p>Cache L and M (size N), recompute tiles from inputs. 13% more
+FLOPs buys 9x less traffic. Memory bound means math is free.</p>
+<p class="rc-num">Key: store N, not N squared</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l06-flashattn-results.png" alt="Results">
+<div class="rc-body">
+<strong>5. 6x faster with more FLOPs</strong>
+<p>75.2 vs 66.6 GFLOPs, 4.4 vs 40.3 GB traffic, 7.3 vs 41.7 ms.
+Lower FLOPs do not imply wall-clock speedup.</p>
+<p class="rc-num">Key: 9x traffic, 6x speed</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l06-flashattn-results.png" alt="Quality">
+<div class="rc-body">
+<strong>6. Exactness keeps quality</strong>
+<p>2.4 to 2.8x faster Long-Range Arena training, first
+above-chance Path-X. No approximation means no quality tax.</p>
+<p class="rc-num">Key: exact beats approximate</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l06-tiling-attention.png" alt="Approximations">
+<div class="rc-body">
+<strong>7. Sparse, low-rank, kernel came first</strong>
+<p>Windows, projections, feature maps: all trade quality for
+speed. Useful, but try the exact hardware-aware version first.</p>
+<p class="rc-num">Key: Tay et al. 2022 survey</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/media-generation-plate-chapter-l06-flashattn-0-fef314f8-620b-419e-bef8-42397039204e.webp" alt="Chapter plate">
+<div class="rc-body">
+<strong>8. Three ideas, one system</strong>
+<p>Fusion avoids round trips, tiling keeps data on-chip,
+recompute trades FLOPs for bandwidth. The Lecture 3 principles,
+applied.</p>
+<p class="rc-num">Key: IO-awareness wins</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Hardware Aware Algorithm Design slide deck, attention sections (Fall 2023 headers).</p>
+<p><strong>Further reading:</strong>
+- Dao et al., &ldquo;FlashAttention&rdquo; (NeurIPS 2022): the full derivation.
+- Dao, &ldquo;FlashAttention-2&rdquo; (2023): better parallelism and work partitioning.
+- Tay et al., &ldquo;Efficient Transformers: A Survey&rdquo; (2022): the approximation taxonomy.
+- <a href="../cs336/l04-linear-attention-moe.html">CS336 L04</a>: linear attention as architecture.</p>
+<p><strong>Caveats from these sources.</strong> Benchmark numbers (9x, 6x, 41.7
+ms) are from the 2022 paper&rsquo;s A100 measurements; newer GPUs and
+FlashAttention-3 change the constants. The O(N^2 d^2 M^-1) bound
+assumes SRAM size M. Sparse and low-rank quality gaps are
+dataset-dependent; the Pile perplexity plots are one data point.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS229S L03:</strong> fusion, tiling, and recompute: the principles FlashAttention instantiates.</li>
+<li><strong>CS229S L05:</strong> SRAM versus HBM, warps, tensor cores: the hardware it targets.</li>
+<li><strong>CS229S L09:</strong> attention-free architectures: the other answer to O(N squared).</li>
+<li><strong>CS336 L04:</strong> linear attention and MoE in full.</li>
+<li><strong>CS336 L10:</strong> the same memory-bound attention at inference time.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Efficient attention cheatsheet.</strong> Standard: O(N^2) memory and compute; memory bound (below 161 ridge). Families: sparse (windows, BigBird O(n)), low-rank (Linformer, causality hard), kernel (linear transformer, no softmax, needs custom kernel). FlashAttention: tile QKV through SRAM, never materialize N x N; online softmax via running L and m; backward recomputes from cached L, M (size N). HBM: O(N^2 d^2 M^-1) vs O(Nd + N^2); 9x less traffic, 13% more FLOPs, 6x faster. Results: MLPerf BERT record +15%, 3x vs HF at 1k, LRA 2.4-2.8x, Path-X solved. FA-2: CUTLASS 3, parallelize over seq/batch/heads. Rule: exact hardware-aware first, approximations second.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>FlashAttention in one line.</strong> Tile the math, rescale the softmax online, recompute backward: exact attention at a ninth of the memory traffic.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Hardware Aware Algorithm Design slide deck, attention sections (Fall 2023 headers)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2205.14135" target="_blank" rel="noopener">Dao et al., FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness (NeurIPS 2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2307.08691" target="_blank" rel="noopener">Dao, FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning (2023)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2009.06732" target="_blank" rel="noopener">Tay et al., Efficient Transformers: A Survey (2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2006.16236" target="_blank" rel="noopener">Katharopoulos et al., Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention (ICML 2020)</a></li></ul></section>
+      <nav class="pager"><a href="../cs229s/l05-gpu-execution-model.html"><span class="lbl">← Previous</span>Lecture 5: CUDA and GPU Programming for AI</a><a href="../cs229s/l07-memory-efficient-networks.html"><span class="lbl">Next →</span>Lecture 7: Memory-Efficient Neural Networks</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
