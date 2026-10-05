@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 10: EM Algorithm and Principal Component Analysis — Stanford Frontier AI</title>
+<meta name="description" content="Jensen&#x27;s inequality builds the ELBO, EM alternates E and M steps on GMMs, and PCA finds the axes of variation.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229-l10" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10" class="active">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229: Machine Learning</a> / Lecture 10: EM Algorithm and Principal Component Analysis</nav>
+      <h1>Lecture 10: EM Algorithm and Principal Component Analysis</h1>
+      <p class="meta-line">2026-05-06 · Instructor: Chris Ré · 1:20:00 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="sUS-eTa0l6s"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/sUS-eTa0l6s" title="Lecture 10: GMM (EM), PCA" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=sUS-eTa0l6s" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Chris Ré derives EM via the ELBO and presents PCA as the workhorse of dimensionality reduction.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>This lesson has two levels. <strong>Level 1 (Core)</strong> contains what you need to
+understand everything that follows in CS229 and the courses that build on
+it. <strong>Level 2 (Deep)</strong> contains what you need for correct, interview-grade
+understanding. Read Level 1 straight through. Return to Level 2 when you
+want depth.</p>
+<p>No prerequisites are assumed. Every term is defined at first use.
+K-means and the GMM setup were defined in <a href="l09-kmeans-gmm.html">lecture
+9</a>; they are reused, not re-explained.</p>
+<h2 id="level-1-the-problem-em-solves">Level 1: The problem EM solves</h2>
+<p>Fitting a GMM by MLE hits a wall: the log likelihood has a sum inside
+the log. Log of a sum resists every trick. The <strong>latent variable</strong> z_i
+<a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=108s" target="_blank" rel="noopener">01:48 <span class="ts">⏱01:48</span></a> is the missing piece: which Gaussian generated point
+i. If we knew z, fitting would be easy weighted averages. We do not know
+z. EM iterates: guess z softly, fit parameters to the guess, repeat.</p>
+<p><strong>Jensen&rsquo;s inequality</strong> <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=266s" target="_blank" rel="noopener">04:26 <span class="ts">⏱04:26</span></a> is the tool. For a concave
+function like log, the log of an average is at least the average of the
+logs. Applied to the likelihood, it builds a tractable lower bound: the
+<strong>ELBO</strong>, the evidence lower bound <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=1139s" target="_blank" rel="noopener">18:59 <span class="ts">⏱18:59</span></a>. Maximize the bound
+instead of the likelihood. The bound touches the likelihood at the
+current parameters, so climbing the bound climbs the likelihood.</p>
+<figure><img alt="EM and the ELBO" src="assets/svg/l10-elbo.svg"><figcaption>The ELBO touches the log-likelihood at theta_t. E-step tightens, M-step climbs. Original plate.</figcaption></figure>
+<p>Two guarantees make EM trustworthy. The likelihood never decreases across
+iterations. And the E-step makes the bound <strong>tight</strong> <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=517s" target="_blank" rel="noopener">08:37 <span class="ts">⏱08:37</span></a>:
+equal to the likelihood at the current parameters, so no progress is
+wasted on a loose bound. EM converges to a local optimum, like k-means.
+Same alternating pattern, grown probabilistic.</p>
+<div class="qa"><div class="q">What problem does EM solve that plain MLE cannot?</div><div class="a"><p>Likelihoods with hidden variables, where the log wraps a sum. The sum inside the log blocks closed forms and clean gradients. EM introduces a distribution over the hidden variables, builds the ELBO lower bound via Jensen&rsquo;s inequality, and alternates between tightening the bound and maximizing it. The likelihood rises every iteration by construction.
+The E-step sets the bound equal to the likelihood at the current parameters (tight). The M-step maximizes the bound, moving to parameters with bound at least as high. Since the bound is always below the likelihood, the new likelihood is at least the new bound, which is at least the old likelihood. Three links, each solid.</p><div class="followup"><strong>Follow-up:</strong> Why does the likelihood never decrease?</div></div></div>
+<h2 id="level-1-e-step-and-m-step-on-the-gmm">Level 1: E-step and M-step on the GMM</h2>
+<p>The <strong>E-step</strong> <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=600s" target="_blank" rel="noopener">10:00 <span class="ts">⏱10:00</span></a>: fix the parameters theta, and set
+Q_i(z) to the posterior p(z | x_i; theta). In plain words: for each
+point, compute how likely each cluster generated it under the current
+Gaussians. Those are the responsibilities from lecture 9: 60/40 splits,
+not hard assignments.</p>
+<p>The <strong>M-step</strong> <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=2457s" target="_blank" rel="noopener">40:57 <span class="ts">⏱40:57</span></a>: fix the responsibilities, and update
+the parameters by weighted MLE. Each Gaussian&rsquo;s mean becomes the weighted
+average of points, weighted by responsibility. Covariances and mixing
+weights update the same way. This is exactly &ldquo;fit given assignments&rdquo;
+from k-means, with soft weights.</p>
+<p>Then repeat. E guesses the hidden structure. M fits the visible
+parameters to the guess. The photon plate from lecture 9 runs through
+both: each photon&rsquo;s source probabilities update, then the source
+positions update, until both stabilize.</p>
+<div class="qa"><div class="q">What is the E-step actually computing?</div><div class="a"><p>The posterior distribution over the hidden variables given the data and current parameters. For a GMM, that is each point&rsquo;s responsibility vector: the probability each cluster generated it. It is called E for expectation because the M-step will take expectations under this distribution. Conceptually: your best current guess at the hidden structure.
+That is k-means: hard assignments, the zero-temperature limit. Soft assignments keep uncertainty alive, which matters when clusters overlap. The hard version converges faster per step but to worse answers on overlapping data. EM&rsquo;s softness is the generalization. K-means is the special case.</p><div class="followup"><strong>Follow-up:</strong> Why not just assign each point to its most likely cluster and fit?</div></div></div>
+<h2 id="level-1-pca-the-workhorse">Level 1: PCA, the workhorse</h2>
+<p><strong>Principal component analysis</strong> is the canonical dimensionality
+reduction <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=37s" target="_blank" rel="noopener">00:37 <span class="ts">⏱00:37</span></a>. Data lives in 1000 dimensions. You suspect
+10 directions carry the signal. PCA finds them.</p>
+<p>Two preprocessing steps, both load-bearing. <strong>Center</strong> the data:
+subtract the mean <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=3097s" target="_blank" rel="noopener">51:37 <span class="ts">⏱51:37</span></a>. <strong>Rescale</strong>: divide each feature by
+its standard deviation <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=3292s" target="_blank" rel="noopener">54:52 <span class="ts">⏱54:52</span></a>. The feet-versus-miles warning:
+a feature measured in feet has huge numbers and would dominate the
+variance purely through units. Rescaling puts every feature on equal
+footing. Skip it and PCA discovers your unit choices, not your data.</p>
+<figure><img alt="PCA" src="assets/svg/l10-pca.svg"><figcaption>u1 is the max-variance direction. Keep the top k eigenvectors. Rescale first. Original plate.</figcaption></figure>
+<p>Then: find the orthonormal directions of maximum variance. Direction one,
+u_1, maximizes the projected variance. Direction two, u_2, maximizes
+among directions orthogonal to u_1. And so on. The solution: the
+<strong>eigenvectors</strong> of the covariance matrix Sigma, sorted by eigenvalue
+<a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=184s" target="_blank" rel="noopener">03:04 <span class="ts">⏱03:04</span></a>. Keep the top k. Project the data onto them. 1000
+dimensions become 10, keeping the axes where the data actually varies.</p>
+<p>The instability caveat: if two eigenvalues are close, their eigenvectors
+are unreliable. The data cannot distinguish the directions, so the
+returned axes wobble between runs. Eigenvalue gaps measure how much to
+trust each component. A big drop after eigenvalue k says k components
+are real.</p>
+<div class="qa"><div class="q">Why does PCA use the covariance eigenvectors?</div><div class="a"><p>Projected variance along a unit direction u is u^T Sigma u. Maximizing a quadratic form over unit vectors gives the top eigenvector; the maximum value is the top eigenvalue. Each next direction is the top eigenvector of what remains, by orthogonality. The eigenvalues rank the directions by variance carried. The linear algebra and the statistics agree exactly.
+When the interesting structure is nonlinear: PCA only finds straight axes. When features have meaningful different scales you want preserved: rescaling destroys that. When you need the original features interpretable: principal components are mixtures. And when variance is not the signal: a low-variance direction can be the predictive one.</p><div class="followup"><strong>Follow-up:</strong> When should you not use PCA?</div></div></div>
+<h2 id="level-2-the-elbo-derivation-in-words">Level 2: The ELBO derivation, in words</h2>
+<p>The likelihood of one point: sum over z of p(x, z; theta). Take the log:
+log-sum, the hard object. Introduce any distribution Q(z). Multiply and
+divide inside: log sum_z Q(z) * p(x,z;theta)/Q(z). Jensen: log of
+expectation &gt;= expectation of log. Result: sum_z Q(z) log
+p(x,z;theta)/Q(z). That is the ELBO.</p>
+<p>The E-step chooses Q to make Jensen tight: Q(z) = p(z | x; theta). Then
+the bound equals the likelihood at theta, and the M-step&rsquo;s climb counts
+fully. Any other Q gives a valid but looser bound: still monotone, slower
+progress. The posterior is not just natural. It is optimal for the
+bound.</p>
+<p>One more connection the lecture stresses: diffusion models train on
+ELBOs under the hood. Lecture 11&rsquo;s denoising objective is a variational
+bound of exactly this shape, with the noising steps as the latent
+variables. Learn the pattern here and the diffusion derivation is
+familiar.</p>
+<h2 id="level-2-pca-as-variance-budgeting">Level 2: PCA as variance budgeting</h2>
+<p>The eigenvalues sum to the total variance. Keeping the top k eigenvectors
+keeps (sum of top k eigenvalues) / (total) of the variance. This ratio
+is the honest report of what reduction cost: &ldquo;10 components keep 94% of
+variance&rdquo; is a complete summary. Plot cumulative variance against k and
+the curve tells you where the signal ends.</p>
+<p>PCA is also the optimal linear compressor in squared error: no other
+k-dimensional linear projection reconstructs the data better. Nonlinear
+methods can beat it, but among linear maps it is unbeaten. That
+optimality is why it is the default first try, not just a habit.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<p>Eight ideas carry this lecture. Read each card. Say the core sentence out
+loud. If you can, you own the lesson.</p>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/svg/l10-elbo.svg" alt="EM and the ELBO">
+<div class="rc-body">
+<strong>1. Hidden variables block MLE</strong>
+<p>Log of a sum resists closed forms. The latent z says which Gaussian
+made each point. Guess it softly, fit, repeat.</p>
+<p class="rc-num">Key: log-sum is the wall</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l10-elbo.svg" alt="Jensen and the ELBO">
+<div class="rc-body">
+<strong>2. Jensen builds the ELBO</strong>
+<p>Log of average >= average of logs. The evidence lower bound is
+tractable. Climb the bound, climb the likelihood.</p>
+<p class="rc-num">Key: lower bound, always below</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l10-elbo.svg" alt="E-step and M-step">
+<div class="rc-body">
+<strong>3. E tightens, M climbs</strong>
+<p>E: responsibilities = posterior p(z|x). M: weighted MLE for means,
+covariances, weights. Likelihood never decreases.</p>
+<p class="rc-num">Key: alternate to a local optimum</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l10-elbo.svg" alt="Tight bound">
+<div class="rc-body">
+<strong>4. Tight means touching</strong>
+<p>The E-step sets Q to the posterior, making bound equal likelihood at
+theta_t. No wasted climb on a loose bound.</p>
+<p class="rc-num">Key: Q = posterior is optimal</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l10-pca.svg" alt="PCA">
+<div class="rc-body">
+<strong>5. PCA: axes of max variance</strong>
+<p>Eigenvectors of the covariance, top k kept. 1000 dims to 10. Optimal
+linear compressor in squared error.</p>
+<p class="rc-num">Key: u^T Sigma u maximized</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l10-pca.svg" alt="Center and rescale">
+<div class="rc-body">
+<strong>6. Center, then rescale</strong>
+<p>Subtract the mean. Divide by per-feature std. Feet vs miles: units
+must not vote. Skip it and PCA finds your units.</p>
+<p class="rc-num">Key: preprocess or perish</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l10-pca.svg" alt="Eigenvalue gaps">
+<div class="rc-body">
+<strong>7. Gaps measure trust</strong>
+<p>Close eigenvalues mean wobbly eigenvectors. A big drop after k says
+k components are real. Report variance kept.</p>
+<p class="rc-num">Key: gaps, not just values</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/svg/l10-elbo.svg" alt="ELBO everywhere">
+<div class="rc-body">
+<strong>8. ELBOs power diffusion too</strong>
+<p>Lecture 11's training objective is a variational bound of this shape.
+Learn the pattern once, recognize it everywhere.</p>
+<p class="rc-num">Key: the pattern recurs</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Lecture 10 video: latent variable <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=108s" target="_blank" rel="noopener">01:48 <span class="ts">⏱01:48</span></a>, Jensen <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=266s" target="_blank" rel="noopener">04:26 <span class="ts">⏱04:26</span></a>, tight <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=517s" target="_blank" rel="noopener">08:37 <span class="ts">⏱08:37</span></a>, E-step <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=600s" target="_blank" rel="noopener">10:00 <span class="ts">⏱10:00</span></a>, ELBO <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=1139s" target="_blank" rel="noopener">18:59 <span class="ts">⏱18:59</span></a>, M-step <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=2457s" target="_blank" rel="noopener">40:57 <span class="ts">⏱40:57</span></a>, center <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=3097s" target="_blank" rel="noopener">51:37 <span class="ts">⏱51:37</span></a>, rescale <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=3292s" target="_blank" rel="noopener">54:52 <span class="ts">⏱54:52</span></a>, PCA workhorse <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s&amp;t=37s" target="_blank" rel="noopener">00:37 <span class="ts">⏱00:37</span></a>.
+- CS229 Spring 2026 official course notes: EM and PCA chapters.</p>
+<p><strong>Further reading:</strong>
+- Dempster, Laird, and Rubin (1977), &ldquo;Maximum Likelihood from Incomplete Data via the EM Algorithm&rdquo;: the founding paper.
+- Jolliffe, Principal Component Analysis: the reference text.</p>
+<p><strong>Caveats from these sources.</strong> EM converges to local optima; restarts
+matter as in k-means. The monotone-likelihood guarantee assumes exact
+E and M steps; approximations break it. PCA&rsquo;s optimality is among linear
+maps only. Eigenvector signs are arbitrary: flipped components are the
+same answer.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336:</strong> diffusion models train variational bounds of the ELBO shape derived here.</li>
+<li><strong>CS224N:</strong> EM trains word-alignment models in machine translation; the alternating pattern is identical.</li>
+<li><strong>CS329H:</strong> variational inference generalizes EM; the ELBO is the shared object.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>EM and PCA cheatsheet.</strong> EM: hidden z blocks MLE; Jensen gives ELBO; E sets Q = posterior (tight); M does weighted MLE; likelihood monotone up; local optimum. GMM: E = responsibilities, M = weighted averages. PCA: center, rescale, eigenvectors of covariance, top k; eigenvalues rank variance; gaps measure trust; report variance kept. Preprocess or the units vote.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Bound the hard thing, climb the bound.</strong> When the objective resists attack, find a tractable lower bound that touches it, maximize the bound, repeat. EM is the pattern. Diffusion is the sequel.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=sUS-eTa0l6s" target="_blank" rel="noopener">Lecture 10 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <nav class="pager"><a href="../cs229/l09-kmeans-gmm.html"><span class="lbl">← Previous</span>Lecture 9: Clustering, K-Means and Gaussian Mixtures</a><a href="../cs229/l11-diffusion-models.html"><span class="lbl">Next →</span>Lecture 11: Diffusion Models</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
