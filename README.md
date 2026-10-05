@@ -1,23 +1,48 @@
-# Stanford Frontier AI Learning System — Foundations
+# Stanford Frontier AI — Foundations
 
-Private study repo. Reconstructed from official Stanford course material (latest offerings as of October 2026).
+Private study site. Built from official Stanford lectures, autumn 2026.
 
-## Contents
+## What this is
 
-- `site/` — the built static website. Open `site/index.html` in a browser. Fully offline-capable (videos need internet).
-- `content/` — lesson sources in Markdown. Rebuild with `python3 build/build.py content/foundations site/foundations "Stanford Frontier AI"`.
-- `build/` — the static site generator, templates, and design system.
-- `assignments/` — official CS336 assignment PDFs.
-- `cs336-site.zip` — the built site as a single zip.
-- `cs229-site.zip` — the built site as a single zip (includes both courses).
-- `cs229s-site.zip` — the built site as a single zip (includes all three courses).
+Twelve courses. One site. Each course teaches from zero: no prior
+machine learning needed. Every lesson has two levels. Level 1 gives you
+what you need to follow everything. Level 2 gives you what you need to
+get the details right.
+
+## What each course contains
+
+- **Lessons.** Full coverage of every lecture video. Interactive
+  widgets, diagrams, and interview Q&A with complete answers.
+- **Recap.** Each lesson ends with a one-screen recap: the key ideas
+  with images, built for recall.
+- **Cheatsheet.** One dense page per course. Definitions, formulas,
+  numbers, decisions, common mistakes.
+- **Crash course.** One fast page per course. The whole story in
+  30 minutes, with images and links into the deep lessons.
+
+## Use
+
+Open `site/v2/index.html` in any browser. Chrome, Edge, Firefox,
+and mobile browsers all work. The site is static: no server, no
+build step, no tracking. Videos need internet; everything else
+works offline.
 
 ## Courses in this repo
 
-1. **CS336: Language Modeling from Scratch** (Spring 2026, Liang/Hashimoto) — complete. 18 lessons, 5 labs, 4 AI-generated figures, 29 diagrams.
-2. **CS229: Machine Learning** (Spring 2026, Ma/Re) — complete. 17 lessons, 3 labs, 2 AI-generated figures. Note: three playlist video titles are wrong (verified against transcripts); lessons are organized by actual content with the mislabels flagged.
-3. **CS229S: Systems for Machine Learning** (Fall 2024, Mirhoseini) — complete. 8 bridge lessons + 2 guest talks. Built from official slide decks; no public lecture videos exist. Heavy overlap with CS336 is cross-linked, not rewritten.
+- **CS336:** Language Modeling from Scratch (Spring 2026)
+- **CS229:** Machine Learning
+- **CS229S:** Systems for Machine Learning
 
-## Source fidelity
+## Build
 
-Every lesson cites its sources: the official lecture video (with timestamps), slides or executable lecture code, and the official subtitle transcript. Nothing is invented. Uncertain points are labeled `[uncertain]`.
+Content lives in `content/v2/` as Markdown. To rebuild:
+
+```
+python3 build/build.py content/v2 site/v2 "Stanford Frontier AI"
+```
+
+## Sources
+
+Every lesson cites the official lecture video with timestamps, the
+slides or lecture code, and the transcript. Nothing is invented.
+Uncertain points carry an `[uncertain]` label.
