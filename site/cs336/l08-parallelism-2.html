@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lecture 8: Parallelism, Part 2 — Stanford Frontier AI</title>
+<meta name="description" content="The full parallelism toolbox: ZeRO stages 1-3 and FSDP, pipeline and tensor parallelism, activation memory and sequence parallel, expert parallelism, and the 3D">
+<link rel="stylesheet" href="assets/vendor/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="cs336-l08">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Home</h3><ul>
+<li><a href="index.html" data-page="foundations-home">Home</a></li>
+</ul>
+<h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="cs336/l01-overview-tokenization.html" data-page="cs336-l01">L01 · Overview, Tokenization</a></li>
+<li><a href="cs336/l02-pytorch-resource-accounting.html" data-page="cs336-l02">L02 · PyTorch, Resource Accounting</a></li>
+<li><a href="cs336/l03-architectures-hyperparameters.html" data-page="cs336-l03">L03 · Architectures, Hyperparameters</a></li>
+<li><a href="cs336/l04-attention-alternatives-moe.html" data-page="cs336-l04">L04 · Attention Alternatives, MoE</a></li>
+<li><a href="cs336/l05-gpus-tpus.html" data-page="cs336-l05">L05 · GPUs, TPUs</a></li>
+<li><a href="cs336/l06-kernels-triton-xla.html" data-page="cs336-l06">L06 · Kernels, Triton, XLA</a></li>
+<li><a href="cs336/l07-parallelism-1.html" data-page="cs336-l07">L07 · Parallelism I</a></li>
+<li><a href="cs336/l08-parallelism-2.html" data-page="cs336-l08" class="active">L08 · Parallelism II</a></li>
+<li><a href="cs336/l09-scaling-laws-1.html" data-page="cs336-l09">L09 · Scaling Laws I</a></li>
+<li><a href="cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="cs336/l11-scaling-laws-2.html" data-page="cs336-l11">L11 · Scaling Laws II</a></li>
+<li><a href="cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="cs336/l13-data-sources.html" data-page="cs336-l13">L13 · Data Sources</a></li>
+<li><a href="cs336/l14-data-processing.html" data-page="cs336-l14">L14 · Data Processing</a></li>
+<li><a href="cs336/l15-post-training-sft-rlhf.html" data-page="cs336-l15">L15 · SFT, RLHF</a></li>
+<li><a href="cs336/l16-post-training-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="cs336/l17-alignment-multimodality.html" data-page="cs336-l17">L17 · Alignment, Multimodality</a></li>
+<li><a href="cs336/l18-guest-dan-fu.html" data-page="cs336-l18">L18 · Guest: Dan Fu</a></li>
+<li><a href="cs336/labs-index.html" data-page="cs336-labs-index">CS336 · Labs</a></li>
+<li><a href="cs336/lab1-tokenizer-transformer.html" data-page="cs336-lab1">Lab 1 · Tokenizer, Transformer</a></li>
+<li><a href="cs336/lab2-systems.html" data-page="cs336-lab2">Lab 2 · Systems</a></li>
+<li><a href="cs336/lab3-scaling.html" data-page="cs336-lab3">Lab 3 · Scaling Laws</a></li>
+<li><a href="cs336/lab4-data.html" data-page="cs336-lab4">Lab 4 · Data</a></li>
+<li><a href="cs336/lab5-post-training.html" data-page="cs336-lab5">Lab 5 · Post-Training</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 8: Parallelism, Part 2</nav>
+      <h1>Lecture 8: Parallelism, Part 2</h1>
+      <p class="meta-line">2026-04-22 · Instructor: Tatsunori Hashimoto · 1:20:11 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/6-cXp-aOmdg" title="Stanford CS336 Spring 2026 Lecture 8: Parallelism (Part 2)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div><p class="video-cap">Original lecture. Timestamps link to exact moments.</p><h2 id="the-full-parallelism-toolbox">The full parallelism toolbox</h2>
+<p>The previous lecture covered the mechanics of parallelism. This lecture covers the full set of strategies that modern training runs combine at once <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=5s" target="_blank" rel="noopener">00:05 <span class="ts">⏱00:05</span></a>. At the largest scale, no single strategy suffices. You will need most or all of them, which the lecture calls 4D parallelism: data, tensor, pipeline, and more, running simultaneously.</p>
+<p>Two ideas structure everything. First, the unit of compute is no longer the GPU. It is the entire data center <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=625s" target="_blank" rel="noopener">10:25 <span class="ts">⏱10:25</span></a>. Second, there are two distinct communication regimes: fast intra-node links, where communication-heavy strategies are affordable, and slow inter-node links, which need communication-frugal strategies.</p>
+<div class="callout"><span class="co-label">Key idea</span><p>Every parallelism decision is a tradeoff between memory scaling, compute scaling, and communication cost. The winning recipe matches each strategy to the interconnect it can afford.</p></div>
+<h2 id="why-parallelize-compute-and-memory">Why parallelize: compute and memory</h2>
+<p>Two bottlenecks force multi-machine training <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=55s" target="_blank" rel="noopener">00:55 <span class="ts">⏱00:55</span></a>. One is compute: the fastest supercomputers have exaflops, while a single chip has far less. The other is memory: large models do not fit on one GPU, so you must shard them.</p>
+<p>All accounting in this lecture happens at the level of <strong>collective communication</strong> primitives: reduce, all-reduce, all-gather, broadcast, reduce-scatter <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=153s" target="_blank" rel="noopener">02:33 <span class="ts">⏱02:33</span></a>. You will not send packets. You will reason about which collectives an algorithm needs.</p>
+<p>One equivalence drives much of the lecture <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=190s" target="_blank" rel="noopener">03:10 <span class="ts">⏱03:10</span></a>:</p>
+<div class="mermaid">flowchart LR
+    A[All-reduce<br>gradients] --- B[Reduce-scatter<br>gradients]
+    B --- C[All-gather<br>parameters]
+    A -.->|same cost in<br>bandwidth-limited regime| C
+</div>
+<p>An all-reduce costs the same as a reduce-scatter followed by an all-gather, in the bandwidth-limited regime. That is the best you can do. This equivalence makes several memory-saving tricks free.</p>
+<h2 id="hardware-tpu-mesh-versus-gpu-fat-tree">Hardware: TPU mesh versus GPU fat tree</h2>
+<p>Before the algorithms, one hardware detour, because it changes which strategies different labs prefer <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=271s" target="_blank" rel="noopener">04:31 <span class="ts">⏱04:31</span></a>.</p>
+<p><strong>TPUs</strong> use a toroidal mesh: chips connect to neighbors, and the edges wrap around. The neighbor count stays fixed as the network grows, so scaling is simple and cheap. This topology excels at predictable, neighbor-only communication, like tensor parallelism over a dense model.</p>
+<p><strong>GPUs</strong> use an all-to-all philosophy, often a fat tree: GPUs connect very fast within a pod, and spine switches connect pods. As nodes grow, the tree grows, and communication topology gets more complex. This is more flexible for unstructured, stochastic communication, like routing tokens to experts in a mixture of experts.</p>
+<p>The workloads are now pushing both designs toward each other <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=447s" target="_blank" rel="noopener">07:27 <span class="ts">⏱07:27</span></a>. Google announced a tree-style TPU topology that morning, plus a switched scale-out network called Virgo for cross-rack training. Modern MoEs create all-to-all traffic at inference time, and inference bottlenecks demand flexible connectivity.</p>
+<div class="callout"><span class="co-label">Professor note</span><p>The lecture uses the Huawei Ascend 910 and its CloudMatrix-384 rack as a hardware-design case study. Each chip is much slower than an H200 at matmuls, but 384 chips connect through fiber-optic switches. The system brute-forces communication problems at 4x the power consumption of the equivalent NVIDIA system <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=536s" target="_blank" rel="noopener">08:56 <span class="ts">⏱08:56</span></a>. If you pay the power cost, you can scale out aggressively. If you want power efficiency, you end up somewhere else.</p></div>
+<h2 id="naive-data-parallel-and-the-memory-disaster">Naive data parallel and the memory disaster</h2>
+<p>Data parallelism is the simplest strategy. Take a batch of size B, split it across M machines, compute gradients locally, and synchronize <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=715s" target="_blank" rel="noopener">11:55 <span class="ts">⏱11:55</span></a>.</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Naive data parallel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Compute</td>
+<td>Scales. Each GPU processes B/M examples.</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>2x the parameter count per batch (one all-reduce of gradients). Fine when batches are big.</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>No scaling. Every GPU holds full parameters, gradients, and optimizer state.</td>
+</tr>
+</tbody>
+</table>
+<p>The memory situation is worse than it first looks <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=808s" target="_blank" rel="noopener">13:28 <span class="ts">⏱13:28</span></a>. A common rule of thumb: training needs about 5 copies of the weights, or 16 bytes per parameter.</p>
+<table>
+<thead>
+<tr>
+<th>What is stored</th>
+<th>Bytes per parameter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model parameters (FP16/BF16)</td>
+<td>2</td>
+</tr>
+<tr>
+<td>Gradients (FP16/BF16)</td>
+<td>2</td>
+</tr>
+<tr>
+<td>Master weights (FP32 accumulator)</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Adam first moment (FP32/BF16)</td>
+<td>4 (or 2)</td>
+</tr>
+<tr>
+<td>Adam second moment (FP32/BF16)</td>
+<td>4 (or 2)</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>~16</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The optimizer state dominates. This is the part worth sharding first.</p>
+<h2 id="zero-sharding-the-training-state">ZeRO: sharding the training state</h2>
+<p><strong>ZeRO</strong> (zero redundancy optimizer) shards the expensive training state across GPUs, using the reduce-scatter plus all-gather equivalence <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=988s" target="_blank" rel="noopener">16:28 <span class="ts">⏱16:28</span></a>. Three stages, each sharding one more piece.</p>
+<p><strong>Stage 1: shard the optimizer state.</strong> Every worker keeps full parameters and gradients, but owns the optimizer state for one slice of parameters <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=1028s" target="_blank" rel="noopener">17:08 <span class="ts">⏱17:08</span></a>.</p>
+<ol>
+<li>Each worker computes a full gradient on its data shard.</li>
+<li>Reduce-scatter the gradients, so each worker receives the gradient slice for its parameter slice. Cost: 1x parameters.</li>
+<li>Each worker updates its parameter slice with its local optimizer state.</li>
+<li>All-gather the updated parameters back. Cost: 1x parameters.</li>
+</ol>
+<p>Total communication: 2x parameters, identical to naive data parallel. The memory win is free.</p>
+<p><strong>Stage 2: also shard the gradients.</strong> You can never materialize the full gradient vector now. The trick is incremental: sweep backward through the compute graph, and after computing a layer&rsquo;s gradients, immediately reduce-scatter them to the owning worker and free them <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=1163s" target="_blank" rel="noopener">19:23 <span class="ts">⏱19:23</span></a>. Same 2x parameter communication. Almost free.</p>
+<p><strong>Stage 3 (FSDP): shard everything, including parameters.</strong> Each GPU holds only a slice of parameters, gradients, and optimizer state at any moment. Parameters are requested on demand <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=1249s" target="_blank" rel="noopener">20:49 <span class="ts">⏱20:49</span></a>:</p>
+<ol>
+<li>All-gather one layer&rsquo;s parameters, run the forward pass, free them.</li>
+<li>For the backward pass, all-gather the layer&rsquo;s parameters again, run backward, reduce-scatter the gradients out, free the parameters.</li>
+<li>Repeat per layer, then update.</li>
+</ol>
+<p>Communication: 2 all-gathers plus 1 reduce-scatter, or 3x the parameters. That is 1.5x the cost of data parallel. But FSDP overlaps communication with computation using separate streams for CPU work, GPU compute, and GPU communication <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=1379s" target="_blank" rel="noopener">22:59 <span class="ts">⏱22:59</span></a>. While the forward pass runs on layer i, the all-gather for layer i+1 runs underneath it. If computation takes longer than communication, the extra cost is nearly invisible.</p>
+<div class="mermaid">flowchart LR
+    subgraph forward ["Forward pass"]
+        A[All-gather<br>layer 0] --> B[Compute<br>layer 0]
+        B --> C[All-gather<br>layer 1]
+        C --> D[Compute<br>layer 1]
+    end
+    A -.->|overlaps| B
+    C -.->|overlaps| D
+</div>
+<div class="callout"><span class="co-label">Key idea</span><p>ZeRO stages 1 and 2 cost the same communication as naive data parallel, so their memory savings are literally free. Stage 3 costs 1.5x the communication, but overlap hides most of it. In practice FSDP utilization is very close to single-GPU performance <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=1472s" target="_blank" rel="noopener">24:32 <span class="ts">⏱24:32</span></a>.</p></div>
+<p>The payoff, for pure BF16 training with 12 bytes per parameter on 8x A100 80GB <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=1661s" target="_blank" rel="noopener">27:41 <span class="ts">⏱27:41</span></a>:</p>
+<table>
+<thead>
+<tr>
+<th>Setup</th>
+<th>Max model size</th>
+<th>Bytes per param</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Baseline</td>
+<td>6.7B</td>
+<td>12</td>
+</tr>
+<tr>
+<td>ZeRO stage 1</td>
+<td>16B</td>
+<td>5</td>
+</tr>
+<tr>
+<td>ZeRO stage 2</td>
+<td>24.6B</td>
+<td>2 + 10/8</td>
+</tr>
+<tr>
+<td>ZeRO stage 3 (FSDP)</td>
+<td>53.3B</td>
+<td>12/8</td>
+</tr>
+</tbody>
+</table>
+<div class="callout"><span class="co-label">Warning</span><p>FSDP is not pipelining. Every GPU runs the entire model from start to finish. The difference from data parallel is that no GPU holds all the parameters at the same time. Parameters are gathered, used, and freed layer by layer.</p></div>
+<h2 id="what-data-parallel-cannot-fix">What data parallel cannot fix</h2>
+<p>Data parallel consumes the batch size as a resource. You can never have more data-parallel workers than batch elements, and communication overhead grows near that limit <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=1753s" target="_blank" rel="noopener">29:13 <span class="ts">⏱29:13</span></a>. Past the critical batch size, adding batch elements gives diminishing returns: it is worse than taking another optimization step.</p>
+<p>ZeRO stages 1 and 2 do not scale parameter memory at all. ZeRO-3 shards parameters, but it does not reduce <strong>activation memory</strong>. For further memory scaling you must cut up the model itself. That is model parallelism.</p>
+<p>The conceptual shift <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=1840s" target="_blank" rel="noopener">30:40 <span class="ts">⏱30:40</span></a>: in FSDP, parameters fly across the network. In model parallelism, <strong>activations</strong> fly across the network. Three ways to cut the model: pipeline parallel (depth), tensor parallel (width), expert parallel (experts).</p>
+<h2 id="pipeline-parallel-cutting-along-depth">Pipeline parallel: cutting along depth</h2>
+<p>Naive layer-wise parallel puts different layers on different GPUs. The result is a disaster <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=1931s" target="_blank" rel="noopener">32:11 <span class="ts">⏱32:11</span></a>: GPU 0 computes, hands activations to GPU 1, then idles while every other GPU works. Each GPU is active 1/n of the time. The idle time is the <strong>bubble</strong>.</p>
+<p>The fix is microbatching. Split the batch into microbatches and keep them all in flight: as soon as GPU 0 finishes microbatch 1, it starts microbatch 2 while GPU 1 works on microbatch 1 <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=1973s" target="_blank" rel="noopener">32:53 <span class="ts">⏱32:53</span></a>. The bubble-to-compute ratio is roughly:</p>
+<p>[ \frac{n_{\text{stages}} - 1}{n_{\text{micro}}} ]</p>
+<p>So the bubble shrinks as 1 over the microbatch count. Pipeline parallel needs a big batch size to keep utilization up.</p>
+<p>Why use pipelines at all, given the complexity <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=2066s" target="_blank" rel="noopener">34:26 <span class="ts">⏱34:26</span></a>?</p>
+<ol>
+<li>Pipelines save memory versus data parallel, since layers are split.</li>
+<li>Communication is tiny and well-behaved: b x s x h activations, point to point, per microbatch. That is almost always less data than shipping parameter matrices.</li>
+</ol>
+<p>So pipelines live on the <strong>slowest links</strong>: across machines, pods, or data centers <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=2107s" target="_blank" rel="noopener">35:07 <span class="ts">⏱35:07</span></a>. The NVIDIA Megatron paper&rsquo;s parameter sweeps show that with large batch sizes, pipeline utilization approaches the no-pipeline case, but small batches degrade it fast.</p>
+<p><strong>Zero-bubble pipelining</strong> goes further by splitting the backward pass <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=2211s" target="_blank" rel="noopener">36:51 <span class="ts">⏱36:51</span></a>. Each backward step does two things: propagate partial derivatives down the graph (B), and compute the weight gradients (W). The B part is urgent, because the next stage cannot work without it. The W part is a leaf of the graph and can run anytime. So compute all the B&rsquo;s first and defer the W&rsquo;s into idle gaps. The pipeline fills almost completely.</p>
+<h2 id="tensor-parallel-cutting-along-width">Tensor parallel: cutting along width</h2>
+<p>Tensor parallel cuts matrices instead of layers <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=2344s" target="_blank" rel="noopener">39:04 <span class="ts">⏱39:04</span></a>. A matrix multiply decomposes into smaller multiplies whose partial sums add up. This is the same idea as tiling.</p>
+<p>In the forward pass, an identity function f copies the input to both GPUs, and a function g all-reduces the partial results back together. In the backward pass the roles flip: g becomes the identity and f becomes the all-reduce <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=2434s" target="_blank" rel="noopener">40:34 <span class="ts">⏱40:34</span></a>. This forward-backward duality matters if you implement tensor parallel yourself.</p>
+<p>How a Transformer block is split <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=2474s" target="_blank" rel="noopener">41:14 <span class="ts">⏱41:14</span></a>:</p>
+<table>
+<thead>
+<tr>
+<th>Cut</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Column-wise</td>
+<td>QKV projections, MLP up-projection</td>
+</tr>
+<tr>
+<td>Row-wise</td>
+<td>Attention output projection, MLP down-projection</td>
+</tr>
+<tr>
+<td>Replicated</td>
+<td>Layer norms, nonlinearities, MoE routers</td>
+</tr>
+</tbody>
+</table>
+<p>Tensor parallel is communication-hungry: an all-reduce per matmul, every layer. On GPUs it stays <strong>within one node</strong>, up to 8 GPUs on fast interconnects. Past that boundary, performance drops <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=2519s" target="_blank" rel="noopener">41:59 <span class="ts">⏱41:59</span></a>. TPUs differ here: the mesh gives high bandwidth in a regular pattern, so TPU training can tensor-parallelize much larger groups than the GPU world <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=2609s" target="_blank" rel="noopener">43:29 <span class="ts">⏱43:29</span></a>.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Pipeline parallel</th>
+<th>Tensor parallel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cuts along</td>
+<td>Depth (layers)</td>
+<td>Width (matrices)</td>
+</tr>
+<tr>
+<td>Bubble</td>
+<td>Yes, needs big batches</td>
+<td>No bubble</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>bsh point to point per microbatch</td>
+<td>~8bsh per layer, all-reduce</td>
+</tr>
+<tr>
+<td>Where to use</td>
+<td>Slow links, across nodes</td>
+<td>Fast links, within node</td>
+</tr>
+</tbody>
+</table>
+<p>Use tensor parallel when you have low-latency, high-bandwidth interconnects. Everywhere else, prefer pipeline parallel <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=2658s" target="_blank" rel="noopener">44:18 <span class="ts">⏱44:18</span></a>.</p>
+<h2 id="activation-memory-and-sequence-parallel">Activation memory and sequence parallel</h2>
+<p>Static memory (parameters, optimizer state) is only part of the story. Profiling shows large dynamic bumps: activations stored for the backward pass, then gradients <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=2707s" target="_blank" rel="noopener">45:07 <span class="ts">⏱45:07</span></a>. Peak memory arrives during the backward sweep, while activations are still alive.</p>
+<p>Storing everything costs roughly [34 \cdot s \cdot b \cdot h + 5 \cdot A \cdot S / H], where the second term is the quadratic attention term including dropout (A is attention heads, S sequence, H hidden) <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=2795s" target="_blank" rel="noopener">46:35 <span class="ts">⏱46:35</span></a>. Flash attention and recomputation drop the second term.</p>
+<p>Tensor parallel divides the matmul-heavy terms by the tensor-parallel size T: the MLP&rsquo;s 24 of the 34, and the attention term <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=2845s" target="_blank" rel="noopener">47:25 <span class="ts">⏱47:25</span></a>. But pointwise ops do not split: layer norm (4sbh), dropout (2sbh), and layer inputs kept as residuals (4sbh). That 10sbh stays no matter how many tensor-parallel GPUs you add.</p>
+<p><strong>Sequence parallel</strong> splits those leftovers along the sequence axis instead of the hidden axis <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=2942s" target="_blank" rel="noopener">49:02 <span class="ts">⏱49:02</span></a>. In the forward pass, g is an all-gather and g-bar is a reduce-scatter. In the backward pass they reverse. This mirrors the FSDP idea: keep activations sharded, materialize them on demand.</p>
+<p>Combined: [34 \cdot s \cdot b \cdot h / T] (plus the droppable attention term). This is the practical lower bound for activation memory in normal training <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=3088s" target="_blank" rel="noopener">51:28 <span class="ts">⏱51:28</span></a>.</p>
+<div class="callout"><span class="co-label">Key idea</span><p>To hand-check whether a model fits a GPU, budget three things: at least 34sbh/T for activations, plus optimizer state, plus parameters and gradients. That is the working formula the lecture recommends.</p></div>
+<h2 id="expert-parallel">Expert parallel</h2>
+<p><strong>Expert parallel</strong> splits whole experts across devices and routes token activations to them <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=3198s" target="_blank" rel="noopener">53:18 <span class="ts">⏱53:18</span></a>. It behaves roughly like tensor parallel for MLPs: high bandwidth, and it reduces activation memory. But splitting matmuls finely shrinks them and hurts GPU utilization, while routing sparse token activations avoids that. The Megatron guidelines say: for MoE layers, prefer expert parallel over tensor parallel <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=3252s" target="_blank" rel="noopener">54:12 <span class="ts">⏱54:12</span></a>.</p>
+<p>In practice expert parallel is hard. The dispatch is an all-to-all on every MoE layer, and it is latency-sensitive: computation waits for tokens to arrive. DeepSeek built <strong>DPP</strong>, its own dispatch library that reaches into low-level GPU networking primitives. NVIDIA built <strong>Hybrid EP</strong> for the same purpose <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=3354s" target="_blank" rel="noopener">55:54 <span class="ts">⏱55:54</span></a>.</p>
+<div class="callout"><span class="co-label">Professor note</span><p>To squeeze the last bit of dispatch performance, the DeepSeek team found and used undocumented PTX instructions, GPU machine-code level operations, to accelerate networking communication. That is the level of effort the frontier of parallelism demands <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=3405s" target="_blank" rel="noopener">56:45 <span class="ts">⏱56:45</span></a>.</p></div>
+<p>Composition has real constraints <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=3500s" target="_blank" rel="noopener">58:20 <span class="ts">⏱58:20</span></a>. The naive approach shares replicas between data and expert parallel: with data parallel 8, you shard 8 experts across those 8 replicas. That caps how far expert parallel can scale and tangles DP and TP interaction. There is also an imbalance: MoEs change only the MLPs, not attention. You want high tensor parallel to cut up attention, but low tensor parallel for MLPs, since cutting expert matmuls finely kills utilization <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=3546s" target="_blank" rel="noopener">59:06 <span class="ts">⏱59:06</span></a>. Modern systems decouple them: one tensor-parallel degree for attention layers, another for MoE layers (Megatron exposes TP/CP/DP for attention and ETP/EP/EDP for MLPs).</p>
+<p><strong>Context parallel</strong> (ring attention) splits activations across a long sequence in a ring, following the mesh topology <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=3646s" target="_blank" rel="noopener">60:46 <span class="ts">⏱60:46</span></a>. It is standard in long-context extension stages and in serving. The lecture skips details because the ideas overlap with what came before.</p>
+<h2 id="3d4d-parallelism-rules-of-thumb">3D/4D parallelism: rules of thumb</h2>
+<figure><img alt="4D parallelism on a GPU cluster" src="../assets/figures/l08-parallelism.png"><figcaption>Figure: a GPU cluster partitioned four ways at once. Data parallel shards batches, tensor parallel shards layers, pipeline parallel stages depth, expert parallel shards experts. Real runs combine all of them.</figcaption></figure>
+<p>No strategy dominates. FSDP is wonderful but ignores activations and consumes batch size. Tensor parallel needs fast networks. Pipelines need big batches. The art is combining them <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=3704s" target="_blank" rel="noopener">61:44 <span class="ts">⏱61:44</span></a>.</p>
+<p>The simple prescription <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=3989s" target="_blank" rel="noopener">66:29 <span class="ts">⏱66:29</span></a>:</p>
+<ol>
+<li><strong>Until the model fits in memory</strong>, cut it up. Use tensor or expert parallel up to the GPUs in one machine (the fast interconnect), then pipeline parallel or FSDP across machines.</li>
+<li><strong>Then scale the rest with data parallel</strong>, up to the batch-size limit. If the batch gets too small, use gradient accumulation to trade batch size for communication efficiency.</li>
+</ol>
+<p>The Megatron practitioner&rsquo;s version <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=4028s" target="_blank" rel="noopener">67:08 <span class="ts">⏱67:08</span></a>: minimize model parallelism, maximize data parallel. Keep expert and tensor parallel within one NVLink box. Use pipeline parallel across nodes. Prefer expert parallel for MoEs. Use context parallel for long sequences.</p>
+<p>The classic quantitative study is Narayanan et al. 2021 <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=4185s" target="_blank" rel="noopener">69:45 <span class="ts">⏱69:45</span></a>. As models scale: tensor parallel rises first and caps at 8, pipeline parallel keeps growing, and data parallel gradually shrinks (the largest model used DP of only 6). Utilization stays flat and high across enormous GPU counts. Two more findings: tensor parallel 8 is the clear optimum across 64 machines, and activation recomputation pays for itself, because the memory it frees becomes batch size, which becomes utilization <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=4283s" target="_blank" rel="noopener">71:23 <span class="ts">⏱71:23</span></a>.</p>
+<div class="callout"><span class="co-label">Professor note</span><p>Recomputation looks wasteful: you redo computation you already did. But memory converts into batch size, and batch size converts into utilization. Doing more computation can be the way to higher throughput.</p></div>
+<h2 id="what-real-training-runs-use">What real training runs use</h2>
+<p>Patterns across published runs <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=4380s" target="_blank" rel="noopener">73:00 <span class="ts">⏱73:00</span></a>:</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Strategy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OLMo 7B (AI2, Dolma data)</td>
+<td>Pure FSDP. Small models scale fine on FSDP alone.</td>
+</tr>
+<tr>
+<td>DeepSeek V1</td>
+<td>ZeRO stage 1 + tensor + sequence + pipeline parallel</td>
+</tr>
+<tr>
+<td>DeepSeek V3 (MoE)</td>
+<td>Pipeline parallel 16, expert parallel 64-way across 8 nodes, ZeRO stage 1, 1F1B scheduling with all-to-all overlap</td>
+</tr>
+<tr>
+<td>Yi</td>
+<td>ZeRO stage 1 + tensor + pipeline parallel</td>
+</tr>
+<tr>
+<td>Yi-Lightning (MoE)</td>
+<td>Tensor parallel replaced by expert parallel</td>
+</tr>
+<tr>
+<td>Llama 3 405B</td>
+<td>Tensor 8, context 1, pipeline 16, data 128 for main pretraining. Long-context extension cranks context parallel up and data parallel down.</td>
+</tr>
+<tr>
+<td>Gemma 2 (2B/9B/27B)</td>
+<td>ZeRO-3 + tensor/sequence parallel + data parallel 768. No pipeline: the TPU mesh philosophy, tensor-parallel over a big mesh.</td>
+</tr>
+<tr>
+<td>Mixtral 8x22B</td>
+<td>Tensor 4, pipeline 4, context 1, expert 8, data 2 (256 GPUs)</td>
+</tr>
+<tr>
+<td>Nemotron 3 Super 120B-A12B</td>
+<td>Tensor 2, expert 64, context 64 (long-context extension)</td>
+</tr>
+<tr>
+<td>Qwen 3 (225B-A22B, 30B-A3B)</td>
+<td>Expert parallel up to 8 GPUs. Larger runs use tensor 2, expert 32, pipeline 8</td>
+</tr>
+</tbody>
+</table>
+<p>Common threads: maximize data parallel, keep tensor parallel at or below 8, let expert parallel grow large for MoEs, and use context parallel for long-context phases <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=4723s" target="_blank" rel="noopener">78:43 <span class="ts">⏱78:43</span></a>. NVIDIA&rsquo;s Megatron Bridge repository publishes recommended configurations per model size and is worth studying.</p>
+<div class="callout"><span class="co-label">Professor note</span><p>During Llama 3 405B training, GPUs failed 148 times. At this scale you need redundancy and recovery, not just fast collectives. Distributed training is also a distributed-systems problem <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=4580s" target="_blank" rel="noopener">76:20 <span class="ts">⏱76:20</span></a>.</p></div>
+<h2 id="assignment-connection">Assignment connection</h2>
+<p>Assignment 2 is the systems assignment. Two parts of this lecture feed it directly:</p>
+<ol>
+<li><strong>Write an FSDP wrapper.</strong> Conceptually it is simple: wrap any module, all-gather parameters, compute, free, repeat on the backward pass with reduce-scatter <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=1524s" target="_blank" rel="noopener">25:24 <span class="ts">⏱25:24</span></a>.</li>
+<li><strong>Pick the optimal strategy.</strong> Given a network topology and a model, compute the communication and memory cost of each strategy combination and choose the best one <a href="https://www.youtube.com/watch?v=6-cXp-aOmdg&amp;t=55s" target="_blank" rel="noopener">00:55 <span class="ts">⏱00:55</span></a>.</li>
+</ol>
+<div class="callout"><span class="co-label">Interview signal</span><p>Parallelism questions test whether you can do the accounting: bytes per parameter, communication per step, and which interconnect each strategy needs. Know why ZeRO-1 is free, why tensor parallel stays within a node, and why pipelines belong on slow links. The 34sbh/T activation formula is the kind of back-of-envelope math interviewers love.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=6-cXp-aOmdg" target="_blank" rel="noopener">Lecture 8 video, Stanford Online YouTube</a></li><li><span class="src-tag">SLIDES</span><a href="https://github.com/stanford-cs336/lectures" target="_blank" rel="noopener">lecture_08.pdf, official lecture slides</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-orig)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/pdf/2304.11277.pdf" target="_blank" rel="noopener">PyTorch FSDP tutorial paper (cited in lecture)</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://docs.nvidia.com/megatron-core/developer-guide/latest/user-guide/features/moe.html" target="_blank" rel="noopener">Megatron-Core MoE parallelism guide (cited in lecture)</a></li></ul></section>
+      <nav class="pager"><a href="cs336/l07-parallelism-1.html"><span class="lbl">← Previous</span>Lecture 7: Parallelism (Part 1)</a><a href="cs336/l09-scaling-laws-1.html"><span class="lbl">Next →</span>Lecture 9: Scaling Laws, Part 1</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="assets/vendor/katex.min.js"></script>
+<script src="assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "";</script>
+<script src="assets/app.js"></script>
+</body>
+</html>
