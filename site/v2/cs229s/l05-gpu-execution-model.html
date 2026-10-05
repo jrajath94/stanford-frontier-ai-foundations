@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 5: CUDA and GPU Programming for AI — Stanford Frontier AI</title>
+<meta name="description" content="How attention actually executes on GPUs: kernels, warps, tiling, tensor cores. Defines the device block reused by MS&amp;E435.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229s-l05" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05" class="active">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229S: Systems for Machine Learning</a> / Lecture 5: CUDA and GPU Programming for AI</nav>
+      <h1>Lecture 5: CUDA and GPU Programming for AI</h1>
+      <p class="meta-line">2024-10-07 · Instructor: Azalia Mirhoseini · Fall 2024</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p><strong>Level 1 (Core)</strong> defines the <strong>device block</strong>: one GPU, one node,
+one cluster, and the links between them. MS&amp;E435 reuses this symbol;
+it is defined here and nowhere else. <strong>Level 2 (Deep)</strong> covers the
+execution model: kernels, warps, coalesced access, tiling, and
+tensor cores. Kernel code lives in <a href="../cs336/l06-triton-kernels.html">CS336 L06</a>;
+interconnect depth in <a href="../cs336/l07-parallelism.html">CS336 L07</a>.</p>
+<h2 id="level-1-the-device-block">Level 1: The device block</h2>
+<figure><img alt="Device block" src="assets/plate-device-block.svg"><figcaption>Shell 4. One GPU, one node of 8 GPUs on NVLink, many nodes on InfiniBand. Source: original plate; defined here for MS&amp;E435.</figcaption></figure>
+<p>The device block is the machine as a memory hierarchy with three
+shells.</p>
+<p><strong>One GPU (device).</strong> Streaming multiprocessors do the math: 108
+SMs on an A100. On-chip memory sits next to them: registers
+(256 KB per SM, private to threads), shared memory (192 KB per
+SM, visible to a thread block), L2 cache (40 MB). HBM device
+memory (40 GB at about 2 TB/s) holds the model. A <strong>kernel</strong> is one
+GPU operation: threads load inputs from HBM to SRAM and registers,
+compute, and write results back to HBM.</p>
+<p><strong>One node.</strong> Eight GPUs connected by NVLink, a very high bandwidth
+link inside the server. Communication within the node is fast.</p>
+<p><strong>One cluster.</strong> Many nodes connected by InfiniBand, which is much
+slower than NVLink. Communication across nodes is the expensive
+move.</p>
+<p>The placement rule follows from Lecture 1: intra-node links are
+orders of magnitude faster than inter-node networking. So
+communication-heavy patterns (tensor parallelism) live inside the
+node, and rarer, larger patterns (data parallelism) span the
+cluster. <a href="l10-parallelism.html">L10</a> derives the mapping.</p>
+<div class="qa"><div class="q">What is the device block?</div><div class="a"><p>The three-shell symbol for the machine: one GPU (108 SMs, registers, shared memory, L2, 40 GB HBM), one node (8 GPUs on NVLink), and one cluster (nodes on InfiniBand). A kernel is one GPU operation that loads from HBM, computes on-chip, and writes back. The symbol is defined in this lecture and reused by MS&amp;E435.
+Because communication cost follows the hierarchy. Tensor parallelism all-reduces after every attention and MLP block, so it needs NVLink speed and stays inside one node. Data parallelism synchronizes once per step, so it can afford InfiniBand across nodes.</p><div class="followup"><strong>Follow-up:</strong> Why does the hierarchy decide the parallelism strategy?</div></div></div>
+<h2 id="level-1-how-a-kernel-runs">Level 1: How a kernel runs</h2>
+<p>A kernel launches a <strong>grid</strong> of <strong>blocks</strong>. The hardware distributes
+blocks to SMs with free capacity. Multiple blocks can run
+concurrently on one SM. Inside a block, threads also run
+concurrently on that SM.</p>
+<p>Inside the SM, threads execute in groups of 32 called <strong>warps</strong>
+under SIMT: single instruction, multiple threads. One instruction
+unit drives many processors in lockstep on different data.</p>
+<p>Maximum active threads = (number of SMs) x (max blocks per SM) x
+(max threads per block). Expose at least this much work or SMs sit
+idle: this is the parallelization principle from Lecture 3, stated
+in hardware terms.</p>
+<pre class="ascii">grid    : [block 0][block 1][block 2]...
+             |         |         |
+SMs     :  SM A      SM B      SM C      &lt;- blocks land where free
+threads :  warp = 32 threads, one instruction, lockstep
+</pre>
+<h2 id="level-1-three-memories-a-thread-sees">Level 1: Three memories a thread sees</h2>
+<p><strong>Global memory.</strong> Visible to all threads. Slow: it is HBM.</p>
+<p><strong>Shared memory.</strong> Visible to threads of the same block. One thread
+can load data that many threads need, avoiding duplicate reads.</p>
+<p><strong>Registers.</strong> Private to each thread. Fastest.</p>
+<table>
+<thead>
+<tr>
+<th>Memory</th>
+<th>Visible to</th>
+<th>Speed</th>
+<th>Use for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Global (HBM)</td>
+<td>All threads</td>
+<td>Slow</td>
+<td>Model weights, large tensors</td>
+</tr>
+<tr>
+<td>Shared</td>
+<td>One block</td>
+<td>Fast</td>
+<td>Tiles shared by block threads</td>
+</tr>
+<tr>
+<td>Registers</td>
+<td>One thread</td>
+<td>Fastest</td>
+<td>Per-thread accumulators</td>
+</tr>
+</tbody>
+</table>
+<p>Efficient loading has two rules. <strong>Coalesced access:</strong> threads in
+the same warp must touch adjacent memory elements, or bandwidth
+collapses. <strong>Tiling:</strong> partition data into subsets that fit in
+shared memory; compute on tiles independently.</p>
+<p>The tiling example from the slides: four threads multiply
+matrices. Their accessed elements overlap. If the threads
+collaborate through shared memory instead of loading
+independently, half the memory accesses disappear. Tiling is the
+same idea as Lecture 3&rsquo;s 2D matmul tiling, now stated as a CUDA
+programming pattern.</p>
+<div class="qa"><div class="q">What is tiling and why does it cut memory traffic?</div><div class="a"><p>Tiling partitions data into subsets that fit in shared memory, then computes on each tile independently. Threads in a block collaborate: one thread&rsquo;s load serves many threads&rsquo; compute, instead of every thread loading its own copy. The slides&rsquo; matmul example saves half the memory accesses this way.
+Coalescing breaks. The hardware fetches memory in contiguous chunks, so scattered accesses waste most of each fetched chunk. Adjacent threads must touch adjacent elements or effective bandwidth collapses.</p><div class="followup"><strong>Follow-up:</strong> What breaks if threads in a warp access scattered addresses?</div></div></div>
+<h2 id="level-2-tensor-cores-want-big-tiles">Level 2: Tensor cores want big tiles</h2>
+<p>Modern GPUs carry tensor cores: specialized units for generalized
+matrix multiplication, D = AB + C. They natively multiply 16 by 16
+tiles. The speed gap with versus without tensor cores reaches 16x
+on H100 (Fu and Re, MLSys keynote 2023).</p>
+<figure><img alt="Tensor cores" src="assets/slide-l05-tensor-cores.png"><figcaption>Tensor cores multiply 16x16 tiles; keep them busy with large tiles. Source: Stanford slides, credit Dan Fu and Chris Re.</figcaption></figure>
+<p>Two consequences. First, algorithms should be expressed as large
+matmuls so tensor cores can take them. Second, tile sizes should
+keep tensor cores busy: launching them costs time, and the latency
+of a 64 by 64 multiply is roughly the same as a 16 by 16 one. Small
+tiles waste the launch cost; large tiles amortize it.</p>
+<p>This is the hardware-specific optimization principle from Lecture
+3, and it explains a FlashAttention design choice in
+<a href="l06-flash-attention.html">L06</a>: tile sizes are chosen for the
+hardware&rsquo;s fast path, not for the algorithm&rsquo;s elegance.</p>
+<h2 id="level-2-caching-versus-recompute-in-the-backward-pass">Level 2: Caching versus recompute in the backward pass</h2>
+<p>Training&rsquo;s backward pass needs intermediate values from the forward
+pass, which adds reads and writes. If the workload is memory bound
+and the recomputation is cheap relative to memory, skip storing the
+intermediates and recompute them during the backward pass.</p>
+<table>
+<thead>
+<tr>
+<th>Regime</th>
+<th>Forward intermediates</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Compute bound</td>
+<td>Store them</td>
+<td>Math is the limit; traffic is affordable</td>
+</tr>
+<tr>
+<td>Memory bound</td>
+<td>Recompute them</td>
+<td>Traffic is the limit; math is free</td>
+</tr>
+</tbody>
+</table>
+<p>This is the same rule as Lecture 3, applied to training.
+FlashAttention&rsquo;s backward pass (next lecture) recomputes the
+attention matrix from the stored softmax normalization vectors
+instead of keeping the full N by N matrix: less HBM traffic at the
+price of more FLOPs, a winning trade when memory bound.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/plate-device-block.svg" alt="Device block">
+<div class="rc-body">
+<strong>1. The device block has three shells</strong>
+<p>One GPU (SMs, registers, shared, L2, HBM), one node (8 GPUs,
+NVLink), one cluster (nodes, InfiniBand). Defined here, reused by
+MS&E435.</p>
+<p class="rc-num">Key: the machine is a hierarchy</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/plate-device-block.svg" alt="Kernel">
+<div class="rc-body">
+<strong>2. A kernel loads, computes, writes</strong>
+<p>Threads load inputs from HBM to SRAM and registers, compute,
+write results back. Grids of blocks map to SMs with free capacity.</p>
+<p class="rc-num">Key: kernel = one GPU operation</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/plate-device-block.svg" alt="Warps">
+<div class="rc-body">
+<strong>3. Warps execute in lockstep</strong>
+<p>32 threads, one instruction, many data: SIMT. Expose enough
+threads or SMs idle. Max threads = SMs x blocks x threads.</p>
+<p class="rc-num">Key: 32 threads per warp</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/plate-device-block.svg" alt="Thread memories">
+<div class="rc-body">
+<strong>4. Threads see three memories</strong>
+<p>Global (all threads, slow), shared (one block, collaborative),
+registers (one thread, fastest). Place data by sharing pattern.</p>
+<p class="rc-num">Key: share through shared memory</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l05-tiling.png" alt="Tiling">
+<div class="rc-body">
+<strong>5. Tiling halves redundant loads</strong>
+<p>Partition data into shared-memory subsets. Threads collaborate
+on overlapping inputs instead of loading independently.</p>
+<p class="rc-num">Key: coalesce, then tile</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l05-tensor-cores.png" alt="Tensor cores">
+<div class="rc-body">
+<strong>6. Tensor cores want big tiles</strong>
+<p>16 by 16 native tiles, up to 16x faster on H100. Launch cost is
+flat, so large tiles amortize it. Express work as big matmuls.</p>
+<p class="rc-num">Key: 16x16 tiles, big batches</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/plate-device-block.svg" alt="Interconnects">
+<div class="rc-body">
+<strong>7. NVLink inside, InfiniBand between</strong>
+<p>Intra-node links are orders of magnitude faster. Frequent
+collectives stay in the node; rare ones span the cluster.</p>
+<p class="rc-num">Key: topology decides strategy</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/plate-device-block.svg" alt="Recompute">
+<div class="rc-body">
+<strong>8. Recompute when memory bound</strong>
+<p>Skip storing forward intermediates; recompute them backward.
+More FLOPs, less HBM traffic: the winning trade under a memory
+roof.</p>
+<p class="rc-num">Key: memory bound means math is free</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Hardware Aware Algorithm Design slide deck, GPU execution model sections (Fall 2023 headers).</p>
+<p><strong>Further reading:</strong>
+- NVIDIA CUDA C++ Programming Guide: the authoritative execution model.
+- <a href="../cs336/l06-triton-kernels.html">CS336 L06</a>: writing tiled, fused kernels in Triton.
+- <a href="../cs336/l07-parallelism.html">CS336 L07</a>: NVLink, InfiniBand, and collectives in depth.
+- Dan Fu and Chris Re, NeurIPS MLSys keynote 2023: tensor core utilization.</p>
+<p><strong>Caveats from these sources.</strong> SM counts, memory sizes, and the
+16x tensor-core figure are A100/H100 generation numbers from the
+slides; newer GPUs differ. The 8-GPUs-per-node layout is the
+standard DGX/HGX configuration the course assumes. Coalescing and
+tiling rules are NVIDIA CUDA specifics; other accelerators differ
+in detail but not in spirit.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>MS&amp;E435:</strong> reuses the device block defined here. Do not redefine it; link here.</li>
+<li><strong>CS336 L06:</strong> kernel programming: this lecture&rsquo;s patterns in code.</li>
+<li><strong>CS336 L07:</strong> interconnects and collectives in full.</li>
+<li><strong>CS229S L03:</strong> the six principles; this lecture is their hardware substrate.</li>
+<li><strong>CS229S L06:</strong> FlashAttention uses every pattern on this page.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>GPU execution cheatsheet.</strong> Device block: GPU (108 SMs, 256 KB registers/SM, 192 KB shared/SM, 40 MB L2, 40 GB HBM) / node (8 GPUs, NVLink) / cluster (nodes, InfiniBand). Kernel: load HBM to SRAM/registers, compute, write back. Grid of blocks to SMs; warps of 32 threads, SIMT. Max threads = SMs x blocks/SM x threads/block. Thread memories: global (all, slow), shared (block), registers (thread). Coalesced access: adjacent threads touch adjacent elements. Tiling: shared-memory subsets, collaborate to halve loads. Tensor cores: 16x16 GEMM tiles, up to 16x on H100; big tiles amortize launch. Recompute backward intermediates when memory bound. Topology rule: frequent collectives inside node, rare ones across.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>The device in one line.</strong> Fast small memories near the math, slow big memory far away, fast links inside the box and slow links between boxes.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Hardware Aware Algorithm Design slide deck, GPU execution model sections (Fall 2023 headers)</li><li><span class="src-tag">SUPPLEMENT</span><a href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/" target="_blank" rel="noopener">NVIDIA CUDA C++ Programming Guide</a></li><li><span class="src-tag">SUPPLEMENT</span>Dan Fu, Chris Re, NeurIPS MLSys Keynote 2023 (tensor cores)</li></ul></section>
+      <nav class="pager"><a href="../cs229s/l04-transformer-performance.html"><span class="lbl">← Previous</span>Lecture 4: Analyzing the Performance of Transformers</a><a href="../cs229s/l06-flash-attention.html"><span class="lbl">Next →</span>Lecture 6: Efficient Attention and FlashAttention</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
