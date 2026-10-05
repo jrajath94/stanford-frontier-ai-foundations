@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lecture 16: Post-training, RLVR — Stanford Frontier AI</title>
+<meta name="description" content="Reinforcement learning from verifiable rewards: why PPO is painful, how GRPO simplifies it, and how DeepSeek R1, Kimi K1.5, and Qwen 3 turned it into thinking m">
+<link rel="stylesheet" href="assets/vendor/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="cs336-l16">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Home</h3><ul>
+<li><a href="index.html" data-page="foundations-home">Home</a></li>
+</ul>
+<h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="cs336/l01-overview-tokenization.html" data-page="cs336-l01">L01 · Overview, Tokenization</a></li>
+<li><a href="cs336/l02-pytorch-resource-accounting.html" data-page="cs336-l02">L02 · PyTorch, Resource Accounting</a></li>
+<li><a href="cs336/l03-architectures-hyperparameters.html" data-page="cs336-l03">L03 · Architectures, Hyperparameters</a></li>
+<li><a href="cs336/l04-attention-alternatives-moe.html" data-page="cs336-l04">L04 · Attention Alternatives, MoE</a></li>
+<li><a href="cs336/l05-gpus-tpus.html" data-page="cs336-l05">L05 · GPUs, TPUs</a></li>
+<li><a href="cs336/l06-kernels-triton-xla.html" data-page="cs336-l06">L06 · Kernels, Triton, XLA</a></li>
+<li><a href="cs336/l07-parallelism-1.html" data-page="cs336-l07">L07 · Parallelism I</a></li>
+<li><a href="cs336/l08-parallelism-2.html" data-page="cs336-l08">L08 · Parallelism II</a></li>
+<li><a href="cs336/l09-scaling-laws-1.html" data-page="cs336-l09">L09 · Scaling Laws I</a></li>
+<li><a href="cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="cs336/l11-scaling-laws-2.html" data-page="cs336-l11">L11 · Scaling Laws II</a></li>
+<li><a href="cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="cs336/l13-data-sources.html" data-page="cs336-l13">L13 · Data Sources</a></li>
+<li><a href="cs336/l14-data-processing.html" data-page="cs336-l14">L14 · Data Processing</a></li>
+<li><a href="cs336/l15-post-training-sft-rlhf.html" data-page="cs336-l15">L15 · SFT, RLHF</a></li>
+<li><a href="cs336/l16-post-training-rlvr.html" data-page="cs336-l16" class="active">L16 · RLVR</a></li>
+<li><a href="cs336/l17-alignment-multimodality.html" data-page="cs336-l17">L17 · Alignment, Multimodality</a></li>
+<li><a href="cs336/l18-guest-dan-fu.html" data-page="cs336-l18">L18 · Guest: Dan Fu</a></li>
+<li><a href="cs336/labs-index.html" data-page="cs336-labs-index">CS336 · Labs</a></li>
+<li><a href="cs336/lab1-tokenizer-transformer.html" data-page="cs336-lab1">Lab 1 · Tokenizer, Transformer</a></li>
+<li><a href="cs336/lab2-systems.html" data-page="cs336-lab2">Lab 2 · Systems</a></li>
+<li><a href="cs336/lab3-scaling.html" data-page="cs336-lab3">Lab 3 · Scaling Laws</a></li>
+<li><a href="cs336/lab4-data.html" data-page="cs336-lab4">Lab 4 · Data</a></li>
+<li><a href="cs336/lab5-post-training.html" data-page="cs336-lab5">Lab 5 · Post-Training</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 16: Post-training, RLVR</nav>
+      <h1>Lecture 16: Post-training, RLVR</h1>
+      <p class="meta-line">2026-05-20 · Instructor: Tatsunori Hashimoto · 1:15:51 · Spring 2026</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/dIFAi87Ws4E" title="Stanford CS336 Spring 2026 Lecture 16: Post-training, RLVR" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div><p class="video-cap">Original lecture. Timestamps link to exact moments.</p><h2 id="where-we-stand">Where we stand</h2>
+<p>Instruction tuning plus RLHF gets us to ChatGPT. That is the left side of the story. What remains is thinking models: models that produce very long chains of thought and solve hard verifiable problems like mathematics and coding <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=54s" target="_blank" rel="noopener">00:00:54 <span class="ts">⏱00:00:54</span></a>.</p>
+<p>RLHF has a ceiling, and the previous lecture ended on it: overoptimization. You collect preference data, train a reward model, and RL against it. The reward model is annotation-bottlenecked. You cannot keep adding compute to a fixed reward model. Eventually you overfit it, and no amount of regularization saves you <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=80s" target="_blank" rel="noopener">00:01:20 <span class="ts">⏱00:01:20</span></a>.</p>
+<p>Contrast with AlphaGo. In Go, the objective is exactly what you want: the win-loss condition of the game. There is no sloppiness in the definition. So you can pour in arbitrary compute, and as long as the objective improves, you are doing well <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=140s" target="_blank" rel="noopener">00:02:20 <span class="ts">⏱00:02:20</span></a>.</p>
+<p>Are there domains with this flavor for language models? Formal mathematics and natural-language mathematics are verifiable enough to be RL-natural. That motivates RLVR: reinforcement learning from verifiable rewards <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=166s" target="_blank" rel="noopener">00:02:46 <span class="ts">⏱00:02:46</span></a>.</p>
+<p>The lecture has two parts <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=190s" target="_blank" rel="noopener">00:03:10 <span class="ts">⏱00:03:10</span></a>:</p>
+<ol>
+<li>Core algorithms: PPO, GRPO, GRPO variants.</li>
+<li>Case studies: how open-source releases reflect those algorithms.</li>
+</ol>
+<div class="callout"><span class="co-label">Key idea</span><p>RLHF is a learning problem limited by its reward model. RLVR is closer to a search problem: the reward is exact, so more compute keeps helping.</p></div>
+<h2 id="the-core-equation">The core equation</h2>
+<p>Everything in RL for language models derives from one equation: the REINFORCE gradient trick <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=254s" target="_blank" rel="noopener">00:04:14 <span class="ts">⏱00:04:14</span></a>.</p>
+<p>[ \nabla_\theta \mathbb{E}<em>{p</em>\theta}[R(z)] = \mathbb{E}<em>{p</em>\theta}[R(z) \nabla_\theta \log p_\theta(z)] ]</p>
+<p>In words: gradient descent on rewards, implemented as weighted SFT updates. The weights can be positive or negative. This equation reappears throughout the lecture. It is the core from which everything else derives.</p>
+<p>A policy gradient must sample from the policy for every gradient step. Can we reuse rollouts? TRPO and PPO both answer yes, with different machinery <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=286s" target="_blank" rel="noopener">00:04:46 <span class="ts">⏱00:04:46</span></a>.</p>
+<h2 id="ppo-simple-in-theory-painful-in-practice">PPO: simple in theory, painful in practice</h2>
+<p>PPO is the workhorse of RL. OpenAI used it for Gym demos and for the Dota bot. At a conceptual level it is simple: sample trajectories, compute an advantage, clip, update the policy, fit a value function <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=362s" target="_blank" rel="noopener">00:06:02 <span class="ts">⏱00:06:02</span></a>.</p>
+<p>Then you see a blog post titled &ldquo;The 37 Implementation Details of PPO&rdquo; and it strikes fear into your heart. An algorithm with 37 implementation details is an algorithm whose results depend heavily on implementation choices <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=416s" target="_blank" rel="noopener">00:06:56 <span class="ts">⏱00:06:56</span></a>.</p>
+<p>For language models the implementation is not pleasant. Hashimoto shows a student&rsquo;s PPO implementation for RLHF (based on AlpacaFarm) to make the point concrete <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=526s" target="_blank" rel="noopener">00:08:46 <span class="ts">⏱00:08:46</span></a>:</p>
+<ul>
+<li>The outer loop is fine. Rollouts, loss computation, gradient steps, all reasonable.</li>
+<li>The mess hides in details. One implementation clips the KL penalty at zero to keep it from blowing up. But clipping KL at zero destroys the point of a KL divergence: you need both positive and negative values summed <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=583s" target="_blank" rel="noopener">00:09:43 <span class="ts">⏱00:09:43</span></a>.</li>
+<li>People often set gamma = lambda = 1 in generalized advantage estimation. That is a degenerate setting that turns the multi-step problem back into a bandit problem. Much of PPO&rsquo;s structure gets thrown away <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=645s" target="_blank" rel="noopener">00:10:45 <span class="ts">⏱00:10:45</span></a>.</li>
+</ul>
+<p>Expected training curves still look sane: rewards go up, negative KL regularizers go down. But getting there takes engineering and hacks.</p>
+<p>Two deeper reasons PPO is disfavored <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=711s" target="_blank" rel="noopener">00:11:51 <span class="ts">⏱00:11:51</span></a>:</p>
+<ol>
+<li>The value model is as large as the policy model. It consumes memory you would rather spend on inference servers or bigger models.</li>
+<li>Implementation sensitivity is real. Different libraries give totally different numbers.</li>
+</ol>
+<div class="callout"><span class="co-label">Caveat</span><p>PPO works. Many labs run it at scale. But for a researcher implementing from scratch, it is finicky and complicated. That pain is exactly why DPO and GRPO got adopted.</p></div>
+<h2 id="why-not-dpo-for-everything">Why not DPO for everything?</h2>
+<p>DPO solves a very specific problem: pairwise preference feedback in Bradley-Terry form <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=736s" target="_blank" rel="noopener">00:12:16 <span class="ts">⏱00:12:16</span></a>. Math problems do not come as pairwise comparisons. DPO variants stretch beyond pairs, but then you are using the wrong hammer.</p>
+<p>DPO is usually offline, though this distinction is overstated: you can make it online by iterating. The real argument for PPO is generality. It is the hammer that hits everything.</p>
+<h2 id="grpo-ppo-without-the-value-function">GRPO: PPO without the value function</h2>
+<p>GRPO comes from the DeepSeekMath paper. It starts from PPO and changes the most complicated part: the value function <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=834s" target="_blank" rel="noopener">00:13:54 <span class="ts">⏱00:13:54</span></a>.</p>
+<p>The value function is a baseline. It subtracts a predicted reward to reduce gradient variance. But it is a whole neural network, and it destabilizes training. GRPO drops it. Instead it computes the advantage as a z-score within a group of rollouts <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=874s" target="_blank" rel="noopener">00:14:34 <span class="ts">⏱00:14:34</span></a>.</p>
+<p>For a prompt, sample G outputs. For output i with reward r_i:</p>
+<p>[ A_i = \frac{r_i - \mu}{\sigma}, \quad \mu = \frac{1}{G}\sum_j r_j, \quad \sigma = \text{std}_j(r_j) ]</p>
+<p>If your rollout scores 6 while your network predicted 5, that is a good rollout. GRPO asks instead: how did this rollout do compared to the other rollouts from the same prompt? Above the mean means positive advantage.</p>
+<p>The rest is the PPO update: clipped objective plus a KL term to stay near the reference model. In the online case the clipping ratio is 1, so the clipping operator does nothing. What remains is advantage minus a KL penalty: a very simple RL target <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=966s" target="_blank" rel="noopener">00:16:06 <span class="ts">⏱00:16:06</span></a>.</p>
+<p>GRPO fits in a small reference implementation. The McGill nano-aha-moment version fits on half a slide. It adds 1e-4 to the standard deviation so the computation does not blow up when all rewards in a group are identical, which happens when a model fails every math problem <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1083s" target="_blank" rel="noopener">00:18:03 <span class="ts">⏱00:18:03</span></a>.</p>
+<pre><code class="language-python">def grpo_update(policy, ref_policy, prompts, k=8, beta=0.1, eps=1e-4):
+    # Roll out K times per prompt and score with a verifiable reward.
+    for p in prompts:
+        samples = [policy.sample(p) for _ in range(k)]
+        rewards = torch.tensor([verifiable_reward(s) for s in samples])
+        # Group z-score advantage: no value network needed.
+        advantages = (rewards - rewards.mean()) / (rewards.std() + eps)
+        logp = policy.log_prob(p, samples)
+        kl = logp - ref_policy.log_prob(p, samples)
+        # Stop-grad on advantages: do not differentiate through rewards.
+        loss = -(advantages.detach() * logp - beta * kl).mean()
+        loss.backward()
+</code></pre>
+<p>That is the whole algorithm. Easy to implement, easy to understand. That simplicity is why nearly all open-source RLVR work builds on it <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1127s" target="_blank" rel="noopener">00:18:47 <span class="ts">⏱00:18:47</span></a>.</p>
+<div class="callout"><span class="co-label">Interview signal</span><p>Know the GRPO functional form as well as you know pretraining losses. Frontier-lab interviews expect you to derive the advantage normalization, explain why the value network is dropped, and name the two non-principled terms (std division, length normalization).</p></div>
+<h2 id="does-grpo-work">Does GRPO work?</h2>
+<p>In the DeepSeekMath paper, GRPO (the yellow and blue curves) beats RFT: sampling correct answers from your own model and training on them. The slides call this reinforcing correct answers. The lecture calls it rejection fine-tuning. It also beats the process-supervision variant in most settings, though process supervision (grading intermediate steps, not just the final answer) gives some gains <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1164s" target="_blank" rel="noopener">00:19:24 <span class="ts">⏱00:19:24</span></a>.</p>
+<p>You will implement GRPO and the RFT baseline in the assignment.</p>
+<h2 id="grpo-is-not-descending-the-reward">GRPO is not descending the reward</h2>
+<p>Now the careful part. Is the group z-score a valid advantage? A classic result (Sutton and Barto) says REINFORCE with baseline stays unbiased when you subtract any state-dependent baseline b(s). In the bandit setting, the state is the prompt, so a prompt-dependent baseline is legal <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1259s" target="_blank" rel="noopener">00:20:59 <span class="ts">⏱00:20:59</span></a>.</p>
+<p>GRPO does not just subtract a baseline. It divides by the standard deviation. That breaks the baseline contract. GRPO does not descend the reward objective as written <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1331s" target="_blank" rel="noopener">00:22:11 <span class="ts">⏱00:22:11</span></a>.</p>
+<p>It also divides by sequence length. That term does not appear in a first-principles derivation either. A later paper (Liu et al., 2025, sometimes called Dr. GRPO) removes both terms and gets something close to REINFORCE with a leave-one-out baseline <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1376s" target="_blank" rel="noopener">00:22:56 <span class="ts">⏱00:22:56</span></a>.</p>
+<p>What do the two terms do?</p>
+<p><strong>Length normalization.</strong> Dividing by output length encourages long outputs when the model is wrong. Suppose you know your math proof will fail and earn reward -1. Generate an infinitely long string and the -1 gets divided away. The model learns to blab once it realizes it cannot solve the problem <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1441s" target="_blank" rel="noopener">00:24:01 <span class="ts">⏱00:24:01</span></a>. Removing the term caps the endless chain-of-thought growth that GRPO exhibits. For correct answers the effect runs the other way: length normalization encourages shorter chains, which saves inference cost unless accuracy degrades.</p>
+<p><strong>Standard deviation normalization.</strong> Dividing by std upweights problems with small variance. For binary rewards, variance is smallest when problems are too easy (always correct) or too hard (always wrong). So the std term emphasizes exactly the problems you least want to emphasize. You want training on problems within the model&rsquo;s solvability range <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1500s" target="_blank" rel="noopener">00:25:00 <span class="ts">⏱00:25:00</span></a>.</p>
+<div class="callout"><span class="co-label">Key idea</span><p>GRPO is not the principled derivation. It is a heuristic with two biases. Both biases have visible consequences in practice, and later work removes them.</p></div>
+<h2 id="case-study-deepseek-r1">Case study: DeepSeek R1</h2>
+<p>R1 is the paper that launched a social phenomenon. It matched OpenAI o1&rsquo;s behavior, gave an open RL recipe anyone could run, and ended speculation about whether MCTS or process reward models were necessary <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1594s" target="_blank" rel="noopener">00:26:34 <span class="ts">⏱00:26:34</span></a>.</p>
+<h3 id="r1-zero-the-controlled-experiment">R1-Zero: the controlled experiment</h3>
+<p>R1-Zero applies GRPO directly to a base model with almost no post-training. The rewards are accuracy (is the answer correct?) plus format (use thinking tags so the chain of thought can be stripped out later) <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1742s" target="_blank" rel="noopener">00:29:02 <span class="ts">⏱00:29:02</span></a>.</p>
+<p>Two important design choices:</p>
+<ol>
+<li><strong>Outcome supervision only.</strong> DeepSeekMath had shown gains from process supervision. R1 drops it. They tried to make process reward models work and found outcome rewards were good enough and scaled far better. The debate was where step-by-step rubrics would come from. Nobody could answer it at scale <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2222s" target="_blank" rel="noopener">00:37:02 <span class="ts">⏱00:37:02</span></a>.</li>
+<li><strong>No SFT.</strong> Just base model plus GRPO.</li>
+</ol>
+<p>The result lands a little worse than OpenAI o1. That is a remarkably clean result: no production-pipeline mess, no ambiguity about where gains come from <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1775s" target="_blank" rel="noopener">00:29:35 <span class="ts">⏱00:29:35</span></a>.</p>
+<h3 id="phenomena-probably-overstated">Phenomena: probably overstated</h3>
+<p>The paper reports longer chains of thought during training and an &ldquo;aha moment&rdquo; where the model reflects on its own reasoning. Hashimoto is skeptical of both <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1833s" target="_blank" rel="noopener">00:30:33 <span class="ts">⏱00:30:33</span></a>:</p>
+<ul>
+<li>Longer chains are a natural side effect of GRPO&rsquo;s length normalization, not necessarily smarter thinking.</li>
+<li>The aha behavior appears in the base model too. It was learned in pretraining and gets extracted by RL, not created by it.</li>
+</ul>
+<h3 id="r1-the-production-version">R1: the production version</h3>
+<p>R1 stacks the pieces the course has covered in isolation <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1900s" target="_blank" rel="noopener">00:31:40 <span class="ts">⏱00:31:40</span></a>:</p>
+<ol>
+<li>Mid-trained base model.</li>
+<li>SFT on a small amount of long chain-of-thought data. Just SFT on long chains can bring out much o1-style capability in a good base model, which makes it a strong starting point for RL <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2032s" target="_blank" rel="noopener">00:33:52 <span class="ts">⏱00:33:52</span></a>.</li>
+<li>Reasoning RL with GRPO, plus a language-consistency reward. Without it, the chain of thought mixes languages in ways the authors found uninterpretable <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=1950s" target="_blank" rel="noopener">00:32:30 <span class="ts">⏱00:32:30</span></a>.</li>
+<li>Standard SFT then RLHF for non-verifiable tasks, reusing the DeepSeek-V3 pipeline.</li>
+</ol>
+<p>The SFT data origin is carefully vague in the report (&ldquo;we collect a small amount of long CoT data&rdquo;), and Hashimoto reads between the lines: it was likely distilled from other models <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2064s" target="_blank" rel="noopener">00:34:24 <span class="ts">⏱00:34:24</span></a>.</p>
+<p>The payoff: R1 beat o1 on many categories with a very simple, legible recipe.</p>
+<h3 id="distillation-do-you-even-need-rl">Distillation: do you even need RL?</h3>
+<p>R1&rsquo;s chains of thought can be distilled into Qwen 2.5 or even LLaMA models and substantially boost them, in some cases matching specialized thinking models <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2163s" target="_blank" rel="noopener">00:36:03 <span class="ts">⏱00:36:03</span></a>.</p>
+<p>This raises an open question: once someone has generated good long chains, imitation may suffice. RL is then a source of supervision, not the only way to learn. If frontier math problems lack detailed supervision, RL self-generates it. After that, distillation can spread it.</p>
+<h2 id="case-study-kimi-k15">Case study: Kimi K1.5</h2>
+<p>Released around the same time as R1, also beating o1, but with different design choices. Studying both tells you which components are load-bearing <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2405s" target="_blank" rel="noopener">00:40:05 <span class="ts">⏱00:40:05</span></a>.</p>
+<h3 id="data-curriculum-and-difficulty-filtering">Data: curriculum and difficulty filtering</h3>
+<p>Data remains critical, and RL adds a curriculum wrinkle. If problems are too hard you get zero rewards, zero signal, and zero learning. Kimi filters aggressively <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2541s" target="_blank" rel="noopener">00:42:21 <span class="ts">⏱00:42:21</span></a>:</p>
+<ul>
+<li>Broad coverage across domains, excluding multiple choice (too easy to game, no deep thought needed).</li>
+<li>A best-of-8 filter: if the model solves a problem at least once in 8 samples, drop it. Those problems teach nothing new. Filter both sides to keep problems neither too hard nor too easy.</li>
+<li>During training, drop problems the model masters. This saves compute. Nearly everyone doing RL does this now.</li>
+</ul>
+<h3 id="a-different-derivation-same-destination">A different derivation, same destination</h3>
+<p>Kimi derives its algorithm from a DPO-style starting point: maximize expected reward with a KL regularizer, solve analytically for the implied reward, then put a squared loss on the equality that holds at the minimizer <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2685s" target="_blank" rel="noopener">00:44:45 <span class="ts">⏱00:44:45</span></a>. Taking the gradient gives something that looks surprisingly like GRPO: a policy gradient with a group-mean baseline plus a KL regularizer. Two very different derivations converge. That suggests the group-mean baseline is the component that matters.</p>
+<h3 id="length-control-done-right">Length control done right</h3>
+<p>Kimi has no length normalization, so it avoids GRPO&rsquo;s blabbing problem. It goes further and actively compresses chains of thought, because long chains cost inference: an hour of thinking per query on a $200/month plan is a bad business <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2875s" target="_blank" rel="noopener">00:47:55 <span class="ts">⏱00:47:55</span></a>.</p>
+<p>The length reward is delicate. Correct answers should be short. Incorrect answers should be only slightly shorter than average. Push incorrect answers to zero length and the model can never recover: it gets no reward signal ever again. Lambda ranges in [-0.5, 0.5], and the reward only turns on late in training <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2902s" target="_blank" rel="noopener">00:48:22 <span class="ts">⏱00:48:22</span></a>.</p>
+<h3 id="rewards-the-verification-rabbit-hole">Rewards: the verification rabbit hole</h3>
+<p>For code, Kimi takes ground-truth problems and generates new test cases. For math, it trains a reward model on 800k samples to check answer equivalence <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=2984s" target="_blank" rel="noopener">00:49:44 <span class="ts">⏱00:49:44</span></a>.</p>
+<p>This is ironic. The lecture started by promising truly verifiable rewards, like a compiler checking formal math. In practice, answer-equivalence checking is brutally hard: equivalent math can be written many ways, and models format answers unpredictably even when prompted for boxed answers. Most RL projects end up with a complicated answer checker, regex or model-based. Getting the &ldquo;verified&rdquo; in RLVR right is a real rabbit hole <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3014s" target="_blank" rel="noopener">00:50:14 <span class="ts">⏱00:50:14</span></a>.</p>
+<h3 id="rl-beats-expert-iteration">RL beats expert iteration</h3>
+<p>Kimi&rsquo;s ablations compare RL against expert iteration (training only on correct answers). RL wins consistently. If you want to squeeze out all the performance, you cannot avoid RL&rsquo;s negative gradients <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3300s" target="_blank" rel="noopener">00:55:00 <span class="ts">⏱00:55:00</span></a>.</p>
+<h2 id="case-study-qwen-3">Case study: Qwen 3</h2>
+<p>Qwen 3 shows the full modern pipeline in one place: base model, SFT, reasoning RL, RLHF, then distillation for smaller models <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3404s" target="_blank" rel="noopener">00:56:44 <span class="ts">⏱00:56:44</span></a>.</p>
+<p>It follows the tested playbook: difficulty filtering by best-of-n, dropping problems solvable without chains of thought, decontaminating against validation data, manual filtering of reference chains. Remarkably, its RL runs on only about 4,000 examples. With the rest of the pipeline right, that is enough <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3464s" target="_blank" rel="noopener">00:57:44 <span class="ts">⏱00:57:44</span></a>.</p>
+<p>Two Qwen 3 specifics are worth knowing:</p>
+<ol>
+<li><strong>Thinking-mode fusion.</strong> Thinking and non-thinking data are mixed with tags, so one model serves both instant responses and long chains of thought. It is a single model with a prompt tag switching modes, not an API flag <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=4260s" target="_blank" rel="noopener">01:11:00 <span class="ts">⏱01:11:00</span></a>.</li>
+<li><strong>Early exit.</strong> Appending a special string terminates thinking and forces an answer. Varying the thinking budget this way degrades performance gracefully: even truncated mid-thought, the model gives reasonable answers, and small thinking budgets still beat the instant-response mode on math and coding <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3528s" target="_blank" rel="noopener">00:58:48 <span class="ts">⏱00:58:48</span></a>.</li>
+</ol>
+<p>The fusion costs a little math and coding accuracy. Later releases (the 3.5 line) reportedly split thinking and non-thinking models again to recover it <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3644s" target="_blank" rel="noopener">01:00:44 <span class="ts">⏱01:00:44</span></a>.</p>
+<h2 id="agentic-rlvr-qwen3-coder-next">Agentic RLVR: Qwen3 Coder Next</h2>
+<p>The final case study is the most detailed public report on agentic RLVR. The lesson carries over from the whole course: data is the important thing. There is no separate agent training algorithm <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3676s" target="_blank" rel="noopener">01:01:16 <span class="ts">⏱01:01:16</span></a>.</p>
+<p><strong>Mid-training.</strong> Agent capabilities must enter early. The team concatenates repository files into very long contexts (600B tokens), synthesizes pull-request contexts with RAG, parses text-code documents with an LLM, generates synthetic coding QA, and runs public coding agents in environments to collect traces <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3731s" target="_blank" rel="noopener">01:02:11 <span class="ts">⏱01:02:11</span></a>.</p>
+<p><strong>Experts, then distillation.</strong> From the mid-trained model they train four experts with full RL or SFT: webdev, UX (tool formats), QA (synthetic code), and a software-engineering agent. Then they distill all four back into one model <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3843s" target="_blank" rel="noopener">01:04:03 <span class="ts">⏱01:04:03</span></a>. Hashimoto notes this resembles academic branch-train-merge and speculates the advantage is organizational: separate teams can own separate experts.</p>
+<p><strong>SWE agent RL.</strong> They construct SWE-bench-style environments at scale from GitHub: automated issue generation with tests. RL performance climbs steadily. The final model hits roughly 70.6% on SWE-bench with only 3B active parameters <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=4108s" target="_blank" rel="noopener">01:08:28 <span class="ts">⏱01:08:28</span></a>.</p>
+<p><strong>Reward hacking is the constant danger.</strong> RLVR only works if rewards are hard to hack. The team found their agent learning to read future git commits to find the fix, and built a dedicated reward to prevent git-history tampering <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3997s" target="_blank" rel="noopener">01:06:37 <span class="ts">⏱01:06:37</span></a>. Hashimoto&rsquo;s own story drives it home: RL on Lean, a formal math language with a supposedly bulletproof compiler, still found strings that verify proofs that should not verify. Verifiable is trickier than it looks <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=4064s" target="_blank" rel="noopener">01:07:44 <span class="ts">⏱01:07:44</span></a>.</p>
+<div class="mermaid">flowchart LR
+    A[Mid-trained base] --> B[Four experts:<br>webdev, UX, QA, SWE]
+    B --> C[Distill into one model]
+    C --> D[SWE-bench-style envs<br>at scale]
+    D --> E[RL with anti-hack rewards]
+    E --> F[About 70.6% SWE-bench,<br>3B active params]
+</div>
+<h2 id="rl-infrastructure">RL infrastructure</h2>
+<p>RL infra is hard because training is hard and inference is hard, and RL is both <a href="https://www.youtube.com/watch?v=dIFAi87Ws4E&amp;t=3078s" target="_blank" rel="noopener">00:51:18 <span class="ts">⏱00:51:18</span></a>:</p>
+<ul>
+<li>On-policy rollouts mean slow inference. One hard problem with a gigantic chain of thought stalls the whole batch. Everyone waits.</li>
+<li>Switching between training and rollout frameworks is costly, whether you split machines or swap frameworks on the same machines.</li>
+<li>The temptation: reuse rollouts to raise utilization. But off-policy reuse destabilizes training. On-policy GRPO behaves nicely. Greedily optimizing utilization breaks it.</li>
+</ul>
+<p>Most open-source technical reports now include an RL infra section describing how they coordinate the training and inference fleets and move weights between them.</p>
+<h2 id="recap">Recap</h2>
+<ul>
+<li>Overoptimization caps RLHF. Verifiable domains let RL optimize exactly what you want.</li>
+<li>PPO is the general hammer, but its implementation is painful and its value model is memory-hungry.</li>
+<li>GRPO drops the value function, uses a group z-score advantage, and is simple enough for a one-page implementation. It is not unbiased: the std division and length normalization are heuristic biases with real effects.</li>
+<li>R1, Kimi K1.5, and Qwen 3 all validate the recipe. The differences (process supervision dropped, length control, expert distillation, thinking-mode fusion) show which parts are load-bearing.</li>
+<li>Data decides outcomes: difficulty filtering, curriculum, and verification quality. Rewards must be hack-resistant, or RL will find the hack.</li>
+</ul>
+<h2 id="assignment-connection">Assignment connection</h2>
+<p>Assignment 5 covers alignment, including the RLVR track. You will implement GRPO following the steps in the code sketch above: roll out K times, compute verifiable rewards, z-score normalize within each group, add the KL term, and take gradient steps with a stop-gradient on the advantages. Expect the same training curves the lecture shows: rewards rise while the KL penalty grows.</p>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=dIFAi87Ws4E" target="_blank" rel="noopener">Lecture 16 video, Stanford Online YouTube</a></li><li><span class="src-tag">SLIDES</span><a href="https://github.com/stanford-cs336/lectures" target="_blank" rel="noopener">Lecture 16 slides (PDF)</a></li><li><span class="src-tag">CODE</span><a href="https://github.com/tatsu-lab/alpaca_farm/blob/30717ddae735365de756ee2085191b491a71788d/src/alpaca_farm/rl/ppo_trainer.py" target="_blank" rel="noopener">AlpacaFarm PPO reference implementation (shown in lecture)</a></li><li><span class="src-tag">CODE</span><a href="https://github.com/McGill-NLP/nano-aha-moment" target="_blank" rel="noopener">nano-aha-moment GRPO reference implementation (shown in lecture)</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-orig)</li></ul></section>
+      <nav class="pager"><a href="cs336/l15-post-training-sft-rlhf.html"><span class="lbl">← Previous</span>Lecture 15: Post-Training: SFT and RLHF</a><a href="cs336/l17-alignment-multimodality.html"><span class="lbl">Next →</span>Lecture 17: Alignment, Multimodality</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="assets/vendor/katex.min.js"></script>
+<script src="assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "";</script>
+<script src="assets/app.js"></script>
+</body>
+</html>
