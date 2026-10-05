@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L09: K-Means and GMM — Stanford Frontier AI</title>
+<meta name="description" content="L09: K-Means and GMM">
+<link rel="stylesheet" href="assets/vendor/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="cs229/l09-kmeans-gmm.html">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Home</h3><ul>
+<li><a href="index.html" data-page="foundations-home">Home</a></li>
+</ul>
+<h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="cs336/l01-overview-tokenization.html" data-page="cs336-l01">L01 · Overview, Tokenization</a></li>
+<li><a href="cs336/l02-pytorch-resource-accounting.html" data-page="cs336-l02">L02 · PyTorch, Resource Accounting</a></li>
+<li><a href="cs336/l03-architectures-hyperparameters.html" data-page="cs336-l03">L03 · Architectures, Hyperparameters</a></li>
+<li><a href="cs336/l04-attention-alternatives-moe.html" data-page="cs336-l04">L04 · Attention Alternatives, MoE</a></li>
+<li><a href="cs336/l05-gpus-tpus.html" data-page="cs336-l05">L05 · GPUs, TPUs</a></li>
+<li><a href="cs336/l06-kernels-triton-xla.html" data-page="cs336-l06">L06 · Kernels, Triton, XLA</a></li>
+<li><a href="cs336/l07-parallelism-1.html" data-page="cs336-l07">L07 · Parallelism I</a></li>
+<li><a href="cs336/l08-parallelism-2.html" data-page="cs336-l08">L08 · Parallelism II</a></li>
+<li><a href="cs336/l09-scaling-laws-1.html" data-page="cs336-l09">L09 · Scaling Laws I</a></li>
+<li><a href="cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="cs336/l11-scaling-laws-2.html" data-page="cs336-l11">L11 · Scaling Laws II</a></li>
+<li><a href="cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="cs336/l13-data-sources.html" data-page="cs336-l13">L13 · Data Sources</a></li>
+<li><a href="cs336/l14-data-processing.html" data-page="cs336-l14">L14 · Data Processing</a></li>
+<li><a href="cs336/l15-post-training-sft-rlhf.html" data-page="cs336-l15">L15 · SFT, RLHF</a></li>
+<li><a href="cs336/l16-post-training-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="cs336/l17-alignment-multimodality.html" data-page="cs336-l17">L17 · Alignment, Multimodality</a></li>
+<li><a href="cs336/l18-guest-dan-fu.html" data-page="cs336-l18">L18 · Guest: Dan Fu</a></li>
+<li><a href="cs336/labs-index.html" data-page="cs336-labs-index">CS336 · Labs</a></li>
+<li><a href="cs336/lab1-tokenizer-transformer.html" data-page="cs336-lab1">Lab 1 · Tokenizer, Transformer</a></li>
+<li><a href="cs336/lab2-systems.html" data-page="cs336-lab2">Lab 2 · Systems</a></li>
+<li><a href="cs336/lab3-scaling.html" data-page="cs336-lab3">Lab 3 · Scaling Laws</a></li>
+<li><a href="cs336/lab4-data.html" data-page="cs336-lab4">Lab 4 · Data</a></li>
+<li><a href="cs336/lab5-post-training.html" data-page="cs336-lab5">Lab 5 · Post-Training</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="cs229/l02-supervised-setup.html" data-page="cs229-l02">L02 · Supervised Learning Setup</a></li>
+<li><a href="cs229/l03-weighted-least-squares.html" data-page="cs229-l03">L03 · Weighted Least Squares</a></li>
+<li><a href="cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="cs229/l12-representation-learning.html" data-page="cs229-l12">L12 · Representation Learning</a></li>
+<li><a href="cs229/l13-llms-next-token.html" data-page="cs229-l13">L13 · LLMs, Next-Token Prediction</a></li>
+<li><a href="cs229/l14-transformers-icl.html" data-page="cs229-l14">L14 · Transformers, In-Context Learning</a></li>
+<li><a href="cs229/l16-rl-basics.html" data-page="cs229-l16">L16 · RL Basics, MDPs</a></li>
+<li><a href="cs229/l17-policy-gradient.html" data-page="cs229-l17">L17 · Policy Gradient, PPO</a></li>
+</ul>
+<h3></h3><ul>
+<li><a href="cs229/labs-index.html" data-page="cs229/labs-index.html">CS229 Labs</a></li>
+<li><a href="cs229/index.html" data-page="cs229/index.html">CS229: Machine Learning</a></li>
+<li><a href="cs229/l01-introduction.html" data-page="cs229/l01-introduction.html">L01: Introduction</a></li>
+<li><a href="cs229/l04-exponential-family-glms.html" data-page="cs229/l04-exponential-family-glms.html">L04: Exponential Family and GLMs</a></li>
+<li><a href="cs229/l05-gda-naive-bayes.html" data-page="cs229/l05-gda-naive-bayes.html">L05: Gaussian Discriminant Analysis</a></li>
+<li><a href="cs229/l06-ml-advice.html" data-page="cs229/l06-ml-advice.html">L06: Dataset Splits and ML Advice</a></li>
+<li><a href="cs229/l07-neural-networks-1.html" data-page="cs229/l07-neural-networks-1.html">L07: Neural Networks 1 (Architecture)</a></li>
+<li><a href="cs229/l08-neural-networks-2.html" data-page="cs229/l08-neural-networks-2.html">L08: Neural Networks 2 (Backprop)</a></li>
+<li><a href="cs229/l09-kmeans-gmm.html" data-page="cs229/l09-kmeans-gmm.html" class="active">L09: K-Means and GMM</a></li>
+<li><a href="cs229/l10-em-pca-ica.html" data-page="cs229/l10-em-pca-ica.html">L10: EM, PCA, ICA</a></li>
+<li><a href="cs229/l15-attention-variants.html" data-page="cs229/l15-attention-variants.html">L15: Attention Variants</a></li>
+<li><a href="cs229/lab1-derivations.html" data-page="cs229/lab1-derivations.html">Lab 1: Derivations by Hand</a></li>
+<li><a href="cs229/lab2-bias-variance.html" data-page="cs229/lab2-bias-variance.html">Lab 2: Bias-Variance in Practice</a></li>
+<li><a href="cs229/lab3-em-from-scratch.html" data-page="cs229/lab3-em-from-scratch.html">Lab 3: EM from Scratch</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="index.html">Home</a> / <a href="#"></a> / L09: K-Means and GMM</nav>
+      <h1>L09: K-Means and GMM</h1>
+      <p class="meta-line">Instructor: Chris Re · 1:16:30</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><p>Unsupervised learning drops the labels and keeps the data. The lecture covers the two canonical clustering algorithms, k-means and Gaussian mixtures, and uses them to force a harder question than any algorithm: what are you actually modeling?</p>
+<h2 id="what-changes-without-labels">What changes without labels</h2>
+<p>In supervised learning the labels told you exactly what to optimize: draw the boundary that separates plus from minus. Remove the labels and that specification disappears. You want &ldquo;clusters,&rdquo; but nothing in the data defines what a cluster is. <a href="ts:136">02:16</a></p>
+<p>The trade of unsupervised learning: <strong>stronger assumptions, weaker guarantees</strong>. You must assume the data came from some structured process (a mixture of sources, points near prototypes). In return you get no clean optimality statement. Finding the optimal k-means clustering is NP-hard, so the algorithm settles for local answers. <a href="ts:279">04:39</a></p>
+<div class="mermaid">flowchart LR
+    subgraph Supervised
+    D1["points + labels"] --> B["find separating boundary"]
+    end
+    subgraph Unsupervised
+    D2["points, no labels"] --> M["assume a generative process"] --> C["recover its structure"]
+    end
+</div>
+<div class="callout"><span class="co-label">Key idea</span><p>Unsupervised learning only works under assumptions. Machine learning only works under assumptions. That is the trade. <a href="ts:1342">22:22</a></p></div>
+<h2 id="k-means">K-means</h2>
+<p>You are given points (x^{(1)}, \dots, x^{(n)}) and an integer (k). Each point gets assigned to one of (k) clusters, written (c^{(i)} = j). Each cluster has a center (\mu_j). The algorithm:</p>
+<ol>
+<li>Initialize (\mu_1, \dots, \mu_k) randomly (for instance, at (k) random training points).</li>
+<li>Repeat until the assignments stop changing:
+   - Assign each point to its nearest center: (c^{(i)} := \arg\min_j |x^{(i)} - \mu_j|^2).
+   - Move each center to the mean of its assigned points.</li>
+</ol>
+<p>The name comes from step two: each (\mu_j) is the mean of its cluster. <a href="ts:387">06:27</a></p>
+<div class="mermaid">flowchart TB
+    I["initialize μ₁…μₖ randomly"] --> A["assign: each point → nearest center"]
+    A --> R["recompute: each center → mean of its points"]
+    R --> S{"assignments changed?"}
+    S -->|"yes"| A
+    S -->|"no"| D["done"]
+</div>
+<p><strong>Why it converges.</strong> Define the distortion function:</p>
+<p>[ J(c, \mu) = \sum_{i=1}^{n} |x^{(i)} - \mu_{c^{(i)}}|^2 ]</p>
+<p>K-means is coordinate descent on (J): the assignment step minimizes (J) over (c) with (\mu) fixed, and the recompute step minimizes (J) over (\mu) with (c) fixed. So (J) decreases monotonically every iteration. It cannot oscillate forever, because there are only finitely many assignments and the objective never goes back up. <a href="ts:944">15:44</a></p>
+<p><strong>Why it does not find the best answer.</strong> (J) is non-convex. Coordinate descent lands in a local minimum, and the global problem is NP-hard. Different random initializations give different final clusterings. The standard remedy is random restarts: run k-means several times and keep the clustering with the lowest distortion. <a href="ts:1002">16:42</a></p>
+<p><strong>Initialization matters enough to have its own algorithm.</strong> Stanford graduate students developed <strong>k-means++</strong>, a smarter seeding that spreads the initial centers apart and guarantees an approximation ratio to the optimal cost. It is the default initialization in sklearn. <a href="ts:1129">18:49</a></p>
+<div class="callout"><span class="co-label">Caveat</span><p>If the data has no cluster structure, k-means still returns an answer. The answer means nothing. In high dimensions this bites harder: random points have nearly identical nearest and farthest neighbor distances, so &ldquo;closeness&rdquo; itself degrades. Only run clustering when you have reason to believe clusters exist, and validate the result against outside knowledge. <a href="ts:1328">22:08</a></p></div>
+<h2 id="picking-k-is-a-modeling-decision">Picking k is a modeling decision</h2>
+<p>The integer (k) is not learned. It encodes your belief about the world: two light sources, five data sources, four gene types. The same dataset can honestly be &ldquo;two clusters&rdquo; or &ldquo;four clusters&rdquo; depending on the question you ask. Comparing distortion across different (k) values is treacherous, because more clusters always fit tighter. The elbow heuristic (look for the kink where adding clusters stops helping much) is a rough guide, not a test. Auxiliary knowledge beats any statistic computed from the same fit. <a href="ts:1435">23:55</a></p>
+<h2 id="from-hard-to-soft-gaussian-mixtures">From hard to soft: Gaussian mixtures</h2>
+<p>K-means makes hard assignments: each point belongs to exactly one cluster. The Gaussian mixture model (GMM) keeps the same idea but makes the assignments probabilistic. Intuitively it is k-means plus Bayes&rsquo; rule. <a href="ts:1787">29:47</a></p>
+<p>The motivating example comes from astronomy. Photons from quasars and stars hit a detector plate. Tight bright bundles come from one kind of source, wide dim smears from another. You observe only the photon positions. You want to recover the sources: their locations, their shapes, and how many photons each one emitted. <a href="ts:1812">30:12</a></p>
+<p><strong>The forward model.</strong> Each point is generated in two steps. First flip a biased coin: with probability (\phi_j) pick source (j). Then sample the point from that source&rsquo;s Gaussian (\mathcal{N}(\mu_j, \Sigma_j)). The coin outcome (z^{(i)}) is a <strong>latent variable</strong>: it exists in the model but you never observe it. <a href="ts:2318">38:38</a></p>
+<p>The parameters are the mixture weights (\phi), the means (\mu_j), and the covariances (\Sigma_j). Unlike k-means, each Gaussian gets its own shape: spherical, diagonal, or full covariance ellipses that rotate. <a href="ts:2111">35:11</a></p>
+<div class="mermaid">flowchart LR
+    Z["z⁽ⁱ⁾ ~ Multinomial(φ)<br/>which source?"] --> X["x⁽ⁱ⁾ ~ N(μ_z, Σ_z)<br/>sample a point"]
+    X --> O["observed: only x⁽ⁱ⁾<br/>z⁽ⁱ⁾ stays hidden"]
+</div>
+<p><strong>The likelihood.</strong> The probability of the data under parameters (\theta = (\phi, \mu, \Sigma)) is:</p>
+<p>[ \ell(\phi, \mu, \Sigma) = \sum_{i=1}^{n} \log \sum_{z^{(i)}=1}^{k} p(x^{(i)} \mid z^{(i)}; \mu, \Sigma)\, p(z^{(i)}; \phi) ]</p>
+<p>The sum sits <strong>inside</strong> the log. Setting derivatives to zero gives no closed form. But notice: if the (z^{(i)}) values were known, the problem would collapse to fitting one Gaussian per class, nearly identical to Gaussian discriminant analysis from Lesson 5. The entire difficulty is the missing labels. <a href="ts:2705">45:05</a></p>
+<h2 id="em-guess-the-labels-fit-the-model-repeat">EM: guess the labels, fit the model, repeat</h2>
+<p>The EM algorithm alternates between the two halves of that observation. <a href="ts:3005">50:05</a></p>
+<p><strong>E-step.</strong> For each point and each source, compute the posterior probability that the point came from that source, using the current parameters and Bayes&rsquo; rule:</p>
+<p>[ w^{(i)}<em>j := p(z^{(i)} = j \mid x^{(i)}; \phi, \mu, \Sigma) = \frac{p(x^{(i)} \mid z^{(i)}=j)\, \phi_j}{\sum</em>{l=1}^{k} p(x^{(i)} \mid z^{(i)}=l)\, \phi_l} ]</p>
+<p>These (w^{(i)}_j) are soft assignments: &ldquo;60% source 1, 40% source 2.&rdquo; The mixture weight (\phi) plays its role here exactly as intuition suggests. A point sitting between two sources is more likely from the one that emits more points overall. That inference is Bayes&rsquo; rule. <a href="ts:3062">51:02</a></p>
+<p><strong>M-step.</strong> Update the parameters as if the soft guesses were the true labels. The mixture weight (\phi_j) becomes the average soft count. Each mean becomes the <strong>weighted</strong> average of the points. Each covariance becomes the weighted empirical covariance:</p>
+<p>[ \phi_j := \frac{1}{n}\sum_i w^{(i)}_j, \quad \mu_j := \frac{\sum_i w^{(i)}_j x^{(i)}}{\sum_i w^{(i)}_j}, \quad \Sigma_j := \frac{\sum_i w^{(i)}_j (x^{(i)}-\mu_j)(x^{(i)}-\mu_j)^\top}{\sum_i w^{(i)}_j} ]</p>
+<p>Then repeat: re-estimate the soft assignments with the new parameters, refit, and so on. <a href="ts:3241">54:01</a></p>
+<div class="mermaid">flowchart TB
+    P["current parameters φ, μ, Σ"] --> E["E-step: soft assignments w⁽ⁱ⁾ⱼ<br/>via Bayes' rule"]
+    E --> M["M-step: weighted means,<br/>covariances, mixture weights"]
+    M --> C{"converged?"}
+    C -->|"no"| P
+    C -->|"yes"| D["final clustering"]
+</div>
+<p>If every (w^{(i)}_j) were 0 or 1, the M-step would be exactly the k-means centroid update. GMM is k-means with the hard assignments relaxed into probabilities. Like k-means, it is vulnerable to local optima, so multiple restarts help. <a href="ts:3351">55:51</a></p>
+<h2 id="the-detour-that-makes-em-work-jensens-inequality">The detour that makes EM work: Jensen&rsquo;s inequality</h2>
+<p>To see why alternating E and M steps is principled rather than ad hoc, the lecture takes a detour through convexity. A set is convex if the line segment between any two of its points stays inside the set. A function is convex if its epigraph (the region above the graph) is a convex set. Geometrically: the chord between any two points on the graph lies above the graph. The twice-differentiable test is (f&rsquo;&lsquo;(x) \ge 0) everywhere. <a href="ts:3640">60:40</a></p>
+<p><strong>Jensen&rsquo;s inequality</strong> is the definition of convexity restated for expectations:</p>
+<p>[ \mathbb{E}[f(X)] \ge f(\mathbb{E}[X]) ]</p>
+<p>Moving the function inside the expectation can only decrease the value. For <strong>concave</strong> functions (like (\log)) the inequality flips: (\mathbb{E}[\log X] \le \log \mathbb{E}[X]). The log case is the one EM needs, because likelihoods are logs of probabilities. <a href="ts:4029">67:09</a></p>
+<h2 id="em-as-maximizing-a-lower-bound">EM as maximizing a lower bound</h2>
+<p>Now the picture that justifies the algorithm. Let (\ell(\theta)) be the log-likelihood, the hard object with the sum inside the log. EM constructs a surrogate (L_t(\theta)) with two properties: it always lies <strong>below</strong> (\ell(\theta)), and it touches (\ell) exactly at the current parameters (\theta_t). Because it is built with Jensen&rsquo;s inequality, the surrogate is easy to maximize. <a href="ts:4176">69:36</a></p>
+<div class="mermaid">flowchart TB
+    subgraph Iteration t
+    T0["θ_t"] --> S["build surrogate L_t(θ)<br/>lower bound, tight at θ_t"]
+    S --> T1["θ_{t+1} = argmax L_t(θ)"]
+    end
+    T1 --> N["build L_{t+1}, repeat"]
+</div>
+<p>The E-step builds the surrogate. The M-step maximizes it. Since the surrogate touches the true likelihood at (\theta_t) and (\theta_{t+1}) maximizes the surrogate, the true likelihood cannot decrease. This is the convergence guarantee the next lecture proves in full. It does <strong>not</strong> promise a global maximum: the same local-optima problem as k-means survives, which is expected, since hard-assignment k-means is the 0/1 special case. <a href="ts:4348">72:28</a></p>
+<blockquote>
+<p><strong>Interview line:</strong> Explain k-means as coordinate descent on the distortion function, which is why it converges but only to a local minimum. Then present GMM as the probabilistic relaxation: latent source labels, E-step computes soft responsibilities with Bayes&rsquo; rule, M-step does weighted maximum likelihood. If asked why EM converges, sketch the lower-bound picture: each iteration maximizes a surrogate that touches the likelihood at the current parameters, so the likelihood rises monotonically.</p>
+</blockquote>
+<h2 id="sources">Sources</h2>
+<ul>
+<li>Video: <a href="https://www.youtube.com/watch?v=bSmIGBCoffA">Lecture 9: K-Means and GMM (non-EM)</a> (1:16:30)</li>
+<li>Notes: CS229 Spring 2026 lecture notes, Chapter 10 (K-means) and Chapter 11.1 (EM for mixture of Gaussians)</li>
+</ul>
+      
+      <nav class="pager"><a href="cs229/l08-neural-networks-2.html"><span class="lbl">← Previous</span>L08: Neural Networks 2 (Backprop)</a><a href="cs229/l10-em-pca-ica.html"><span class="lbl">Next →</span>L10: EM, PCA, ICA</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="assets/vendor/katex.min.js"></script>
+<script src="assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "";</script>
+<script src="assets/app.js"></script>
+</body>
+</html>
