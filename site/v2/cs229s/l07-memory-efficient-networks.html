@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 7: Memory-Efficient Neural Networks — Stanford Frontier AI</title>
+<meta name="description" content="Shrink the model three ways: pruning and sparsity, quantization from FP32 down to integers, and knowledge distillation. All numbers worked by hand.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229s-l07" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07" class="active">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229S: Systems for Machine Learning</a> / Lecture 7: Memory-Efficient Neural Networks</nav>
+      <h1>Lecture 7: Memory-Efficient Neural Networks</h1>
+      <p class="meta-line">2024-10-14 · Instructor: Azalia Mirhoseini · Fall 2024</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p><strong>Level 1 (Core)</strong> gives the three shrink methods and their
+tradeoffs: pruning, quantization, distillation. <strong>Level 2 (Deep)</strong>
+works the numbers: the FP32 bit layout, k-means storage math, and
+the linear-quantization scale equations. The lecture draws on MIT
+6.5940 (Song Han); the classical schemes here complement
+<a href="../cs336/l02-resource-accounting.html">CS336 L02</a>&rsquo;s precision
+ladder.</p>
+<p>Note: the Fall 2024 calendar lists &ldquo;Butterfly and Monarch matrices&rdquo;
+under this lecture&rsquo;s sparsity topics. The shipped slide deck (Fall
+2023) does not cover them. They are flagged below, not taught.</p>
+<h2 id="level-1-three-ways-to-shrink-a-model">Level 1: Three ways to shrink a model</h2>
+<p>Memory is expensive. Lecture 5 taught reducing memory <em>accesses</em>;
+this lecture reduces the memory <em>required</em>.</p>
+<p><strong>Pruning and sparsity.</strong> Discard a subset of parameters after
+training. The result is a sparse network.</p>
+<p><strong>Quantization.</strong> Use a subset of the real numbers: fewer bits per
+value instead of the full 32-bit float.</p>
+<p><strong>Knowledge distillation.</strong> Train a small student model to mimic a
+large teacher.</p>
+<p>Pruning and quantization compose: the Deep Compression results show
+the combination beats either alone, with accuracy falling as
+compression rises.</p>
+<figure><img alt="Memory chapter plate" src="assets/media-generation-plate-chapter-l07-memory-0-e99a1302-0e56-463a-917c-27764af8b66a.webp"><figcaption>Shell: synthesis. Prune, quantize, distill: three cuts, one smaller model. Source: original chapter plate.</figcaption></figure>
+<h2 id="level-1-pruning">Level 1: Pruning</h2>
+<p>Formal goal: given original weights W, find pruned weights Wp
+minimizing loss L(x; Wp) subject to ||Wp||_0 &lt; T, where ||.||_0
+counts nonzeros and T is the target parameter count. An ideal
+pruning process accelerates training or inference on real hardware,
+retains accuracy, and generalizes across models.</p>
+<p><strong>Patterns decide hardware value.</strong> Unstructured (fine-grained)
+pruning removes individual weights: higher accuracy, but the
+surviving nonzeros scatter randomly, so you still read and write
+every block. Structured (coarse-grained) pruning removes whole
+rows, channels, or blocks: lower accuracy, but memory access stays
+regular and hardware stays fast.</p>
+<figure><img alt="N:M sparsity" src="assets/slide-l07-nm-sparsity.png"><figcaption>2:4 structured sparsity: 2 of every 4 contiguous values are zero. Ampere sparse tensor cores exploit it. Source: Stanford slides.</figcaption></figure>
+<p>NVIDIA Ampere&rsquo;s sparse tensor cores exploit <strong>2:4 structured
+sparsity</strong>: in every contiguous group of 4 values, exactly 2 are
+zero. The pattern is regular enough for low metadata overhead, and
+50% of weights disappear while accuracy holds. The interview point:
+sparsity only speeds up inference if the pattern matches what the
+hardware accelerates.</p>
+<p><strong>How to choose what to remove.</strong> Direct one-shot pruning is hard;
+iterative prune-and-fine-tune works better (Han et al., 2015).
+Heuristics: fine-grained magnitude pruning keeps weights with
+large absolute values (W = [5, 0.3, -0.4] keeps 5); coarse-grained
+magnitude pruning keeps rows with large sums of absolute values.
+Regression-based pruning (He et al., 2017) picks rows to minimize
+the layer-output reconstruction error ||Z - Zhat||_F^2 subject to a
+nonzero budget, then relearns the remaining weights.</p>
+<p><strong>Sensitivity analysis</strong> sets the per-layer ratio: layers differ,
+so prune each layer at increasing ratios in magnitude order and
+measure accuracy. Early layers tend to be sensitive; fully
+connected layers tend not to be. One global sparsity number is
+wrong; per-layer numbers are right.</p>
+<div class="qa"><div class="q">Why does unstructured pruning often fail to speed up inference?</div><div class="a"><p>Because the surviving weights scatter randomly across memory. The hardware still reads and writes every block to find the nonzeros, so the memory traffic barely drops. Structured patterns like 2:4 N:M keep accesses regular, which is what sparse tensor cores need. Accuracy favors fine-grained; speed favors structured.
+Sensitivity analysis: prune each layer at increasing ratios in magnitude order and measure accuracy. Layers have different sensitivity, with early layers usually more fragile. Assign aggressive ratios only where accuracy survives.</p><div class="followup"><strong>Follow-up:</strong> How do you pick the sparsity ratio per layer?</div></div></div>
+<h2 id="level-1-quantization-the-idea">Level 1: Quantization, the idea</h2>
+<p>Quantization maps values from a large set to a smaller set. The
+quantization error is |true value - quantized value|. Motivation in
+two lines:</p>
+<pre><code>Storage = number of parameters x bits per parameter
+Add cost: O(N) in bit-width N | Multiply cost: O(N^2)
+</code></pre>
+<p>Halving the bits halves the storage and quarters the multiply
+cost. That is the whole economic case.</p>
+<h2 id="level-1-how-numbers-live-in-bits">Level 1: How numbers live in bits</h2>
+<p><strong>Integers.</strong> Unsigned n-bit: 0 to 2^n - 1. Signed: one bit for
+sign. Two common signed layouts: sign-magnitude (a sign bit plus
+magnitude) and two&rsquo;s complement (negation by bit-flip plus one;
+-70 as 10111010 versus sign-magnitude&rsquo;s 11000110 for the same
+magnitude pattern the slides show).</p>
+<p><strong>Fixed point.</strong> Fixed split between integer and fraction bits.
+The slides&rsquo; 8-bit example with 4 fraction bits reads -4.375.</p>
+<p><strong>Floating point (IEEE 754).</strong> Value = (-1)^sign x (1 + fraction)
+x 2^(exponent - bias). The exponent buys dynamic range: the gap
+between the largest and smallest representable values. Bias
+(127 for FP32&rsquo;s 8-bit exponent) shifts the exponent range to cover
+small values.</p>
+<p>Worked FP32 example from the slides: exponent bits sum to 120,
+bias 127, fraction 2^-2 = 0.25. Value = 1.25 x 2^(120-127) =
+1.25 x 2^-7 = 0.0097656.</p>
+<figure><img alt="FP32 example" src="assets/slide-l07-fp32-example.png"><figcaption>Sign, 8-bit exponent, 23-bit mantissa. The worked value is 0.0097656. Source: Stanford slides.</figcaption></figure>
+<p>Edge cases: exponent all zeros gives subnormals (value =
+(-1)^sign x fraction x 2^(1-127)); all-ones exponent with zero
+fraction is infinity; nonzero fraction is NaN. You cannot
+represent infinitely small values: the format has a floor.</p>
+<p><strong>FP16 versus BF16.</strong> FP16: 5 exponent bits, 10 fraction bits.
+BF16: 8 exponent bits, 7 fraction bits. BF16 trades precision for
+dynamic range, which stabilizes training: gradients span many
+orders of magnitude, and range matters more than fine resolution.
+This is why BF16 is the default training format.</p>
+<h2 id="level-1-k-means-quantization">Level 1: K-means quantization</h2>
+<p>Han et al., Deep Compression (ICLR 2016 best paper). Inference
+procedure:</p>
+<ol>
+<li>Cluster the FP32 weight values into S clusters.</li>
+<li>Store per weight a log2(S)-bit cluster index, plus the S
+   FP32 centroids.</li>
+<li>At compute time, reconstruct weights through the index map.
+   Computation stays FP32.</li>
+</ol>
+<figure><img alt="K-means quantization" src="assets/slide-l07-kmeans-quant.png"><figcaption>Cluster FP32 weights, store 2-bit indices plus 4 centroids, reconstruct at compute time. Source: Stanford slides, Han et al. 2016.</figcaption></figure>
+<p>Storage math for a D by D FP32 matrix: 32 x D^2 bits originally.
+After: log2(S) x D^2 index bits + S x 32 centroid bits. At D = 4,
+S = 4: 64 bytes become 20 bytes, 3.2x compression, and the ratio
+improves as S stays small relative to D. There are no compute
+savings: the math is still FP32.</p>
+<p>Fine-tuning trains the shared centroids, not individual weights:
+dL/dCk sums dL/dWij over all weights assigned to centroid k, then
+C updates by gradient descent. Huffman coding on the indices
+exploits nonuniform cluster frequencies for 20%+ further savings
+on AlexNet&rsquo;s last layer.</p>
+<div class="qa"><div class="q">Work out the k-means storage saving for a 4x4 FP32 matrix with 4 clusters.</div><div class="a"><p>Original: 32 bits x 16 weights = 64 bytes. After: each weight stores a 2-bit cluster index (log2 4), so 16 x 2 bits = 4 bytes, plus 4 FP32 centroids = 16 bytes. Total 20 bytes. Saving: 64 - 20 = 44 bytes, 3.2x compression. Compute is unchanged because weights reconstruct to FP32 before the matmul.
+When you also want faster math. K-means only shrinks storage; the compute stays floating point. Linear quantization maps values to integers with a scale and zero-point, so the matmul itself runs in integer arithmetic.</p><div class="followup"><strong>Follow-up:</strong> When would you prefer linear quantization instead?</div></div></div>
+<h2 id="level-1-linear-quantization">Level 1: Linear quantization</h2>
+<p>Jacob et al. (2017). Map real values r to integers q with a scale
+S and zero-point Z:</p>
+<p>r = S (q - Z)</p>
+<p>Given rmin and rmax from the weight matrix and qmin, qmax from the
+bit-width (for N bits, -2^(N-1) to 2^(N-1) - 1), solve the two
+equations rmax = S(qmax - Z) and rmin = S(qmin - Z) for S and Z.
+The slides&rsquo; 2-bit example maps weights like 2.09 to integer 1
+with S = 1.07.</p>
+<p>Integer-only matmul follows by substitution. With Y = Sy(qY - ZY),
+W = Sw(qW - Zw), X = Sx(qX - Zx):</p>
+<p>qY = (Sw Sx / Sy) (qW - Zw)(qX - Zx) + Zy</p>
+<p>All integer math, with one rescale to N bits. Weights and compute
+are both integer: storage and speed improve together.</p>
+<figure><img alt="Linear quantization" src="assets/slide-l07-linear-quant-sz.png"><figcaption>Solve for scale S and zero-point Z from the value ranges, then run the matmul in integers. Source: Stanford slides, Jacob et al. 2017.</figcaption></figure>
+<h2 id="level-1-knowledge-distillation">Level 1: Knowledge distillation</h2>
+<p>Small models are wanted (phones, IoT, laptops) but hard to train:
+they underfit. Distillation trains a small student against a large
+teacher that already learned well.</p>
+<p>The design space aligns student and teacher on: output logits
+(Hinton et al., 2014), intermediate weights, intermediate
+features, gradients of feature maps, or sparsity patterns.</p>
+<p>Logits matching, worked: teacher says plane 5, car 1, giving
+softmax probabilities 0.982 and 0.017. Student says plane 3, car
+2: 0.731 and 0.269. The distillation loss (cross-entropy
+E(-pt log ps) or L2 on probabilities) pulls the student&rsquo;s
+distribution toward the teacher&rsquo;s. The student learns the
+teacher&rsquo;s uncertainty, not just the hard label: that dark
+knowledge is the point.</p>
+<figure><img alt="Distillation logits" src="assets/slide-l07-distill-logits.png"><figcaption>Teacher 5 vs 1, student 3 vs 2: the loss aligns the probability distributions. Source: Stanford slides.</figcaption></figure>
+<h2 id="level-2-butterfly-and-monarch-matrices-uncertain">Level 2: Butterfly and Monarch matrices [uncertain]</h2>
+<p>The Fall 2024 calendar lists &ldquo;Butterfly and Monarch Matrices&rdquo;
+under this lecture&rsquo;s sparsity bullets. The shipped deck does not
+contain them, so this is a pointer, not a derivation. The idea, at
+the level the calendar implies: structured matrix families that
+represent dense transforms with far fewer parameters than a full
+matrix, giving the hardware-friendly regularity that unstructured
+sparsity lacks. Treat any interview claim about them as
+[uncertain] until checked against the 2024 lecture recording.</p>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/slide-l07-nm-sparsity.png" alt="N:M sparsity">
+<div class="rc-body">
+<strong>1. Patterns decide sparsity value</strong>
+<p>Unstructured pruning keeps accuracy but scatters memory access.
+2:4 structured sparsity matches Ampere tensor cores: 50% fewer
+weights, real speedup.</p>
+<p class="rc-num">Key: 2 of every 4 are zero</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l07-nm-sparsity.png" alt="Pruning method">
+<div class="rc-body">
+<strong>2. Prune iteratively, per layer</strong>
+<p>Iterative prune-and-fine-tune beats one-shot. Magnitude and
+regression heuristics pick victims; sensitivity analysis sets
+per-layer ratios.</p>
+<p class="rc-num">Key: min L s.t. nonzeros below T</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l07-fp32-example.png" alt="FP32">
+<div class="rc-body">
+<strong>3. FP32 is sign, exponent, mantissa</strong>
+<p>Value = (-1)^s (1+f) 2^(e-127). The exponent buys dynamic
+range. Worked value: 0.0097656. BF16 trades precision for range.</p>
+<p class="rc-num">Key: 1 + 8 + 23 bits</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l07-kmeans-quant.png" alt="K-means quantization">
+<div class="rc-body">
+<strong>4. K-means shrinks storage, not compute</strong>
+<p>Cluster weights, store log2(S)-bit indices plus centroids.
+4x4 FP32 with 4 clusters: 64 to 20 bytes, 3.2x. Math stays FP32.</p>
+<p class="rc-num">Key: indices + centroids</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l07-kmeans-quant.png" alt="Storage math">
+<div class="rc-body">
+<strong>5. Storage math: 32D^2 minus the map</strong>
+<p>Saving = 32D^2 - (log2(S) D^2 + 32S). Huffman on skewed
+indices adds 20%+. Fine-tune centroids via summed gradients.</p>
+<p class="rc-num">Key: 64B - 20B = 44B</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l07-linear-quant-sz.png" alt="Linear quantization">
+<div class="rc-body">
+<strong>6. Linear quantization runs integer math</strong>
+<p>r = S(q - Z). Solve S, Z from the ranges. The matmul becomes
+qY = (SwSx/Sy)(qW-Zw)(qX-Zx) + Zy: all integer.</p>
+<p class="rc-num">Key: scale and zero-point</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l07-distill-logits.png" alt="Distillation">
+<div class="rc-body">
+<strong>7. Distillation teaches uncertainty</strong>
+<p>The student matches the teacher's probability distribution,
+not just labels. Align on logits, features, or gradients.</p>
+<p class="rc-num">Key: dark knowledge transfers</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/media-generation-plate-chapter-l07-memory-0-e99a1302-0e56-463a-917c-27764af8b66a.webp" alt="Chapter plate">
+<div class="rc-body">
+<strong>8. Shrink three ways, compose them</strong>
+<p>Prune structure, quantize values, distill knowledge. Each
+trades a little accuracy for a lot of memory. Together they win.</p>
+<p class="rc-num">Key: pruning + quantization compose</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Memory-Efficient Neural Networks slide deck (Fall 2023 headers).
+- MIT 6.5940 TinyML (Song Han): the lecture&rsquo;s stated inspiration.</p>
+<p><strong>Further reading:</strong>
+- Han et al., &ldquo;Deep Compression&rdquo; (ICLR 2016): k-means plus pruning plus Huffman.
+- Jacob et al., &ldquo;Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference&rdquo; (2017).
+- Dettmers et al., &ldquo;LLM.int8()&rdquo; (2022): what breaks at LLM scale and the outlier fix.
+- Xiao et al., &ldquo;SmoothQuant&rdquo; (2022): the deck&rsquo;s motivating LLM quantization figure.</p>
+<p><strong>Caveats from these sources.</strong> The deck&rsquo;s quantization examples
+are small-matrix illustrations; LLM-scale behavior adds outlier
+features that break naive schemes (see LLM.int8()). The 2:4
+sparsity speedup needs Ampere-or-newer sparse tensor cores and
+TensorRT-style kernels; unstructured sparsity rarely speeds up
+dense GEMM. Butterfly and Monarch matrices are calendar-listed but
+not in the shipped deck: [uncertain].</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 L02:</strong> the precision ladder (FP32 to FP4) and what each format costs.</li>
+<li><strong>CS229S L04:</strong> quantization shrinks the weights that memory-bound decoding re-reads.</li>
+<li><strong>CS229S L08:</strong> LoRA as an alternative to full fine-tuning memory cost.</li>
+<li><strong>CS229S L01:</strong> the memory wall: why shrinking matters at all.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Memory efficiency cheatsheet.</strong> Prune: min L(x;Wp) s.t. ||Wp||0 &lt; T. Ideal: faster on HW, keeps accuracy, generalizes. Unstructured: accurate, slow. Structured: fast, coarser. 2:4 N:M: 2 of 4 zero, Ampere sparse tensor cores, 50% weights gone. Iterative prune + fine-tune &gt; one-shot. Magnitude (fine/coarse), regression (min ||Z-Zhat||F^2), sensitivity per layer. Quantization: storage = params x bits; add O(N), multiply O(N^2) in bit-width. FP32: (-1)^s(1+f)2^(e-127), bias 127. Subnormal: e=0; Inf/NaN: e=all-1. FP16: 5+10; BF16: 8+7 (range for training). K-means: store log2(S)-bit idx + S centroids; 4x4/S=4: 64B-&gt;20B, 3.2x; compute stays FP32; Huffman +20%. Linear: r=S(q-Z); qY=(SwSx/Sy)(qW-Zw)(qX-Zx)+Zy, integer-only. Distillation: student matches teacher logits/features/gradients; loss E(-pt log ps) or L2.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Shrink in one line.</strong> Remove weights that do not matter, spend fewer bits on the rest, and teach a small model what the big one knows.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Memory-Efficient Neural Networks slide deck (Fall 2023 headers)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1506.02626" target="_blank" rel="noopener">Han et al., Learning both Weights and Connections for Efficient Neural Networks (2015)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1510.00149" target="_blank" rel="noopener">Han et al., Deep Compression (ICLR 2016)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1712.05877" target="_blank" rel="noopener">Jacob et al., Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference (2017)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1503.02531" target="_blank" rel="noopener">Hinton et al., Distilling the Knowledge in a Neural Network (2014)</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://hanlab.mit.edu/courses/2023-fall-65940" target="_blank" rel="noopener">MIT 6.5940 TinyML and Efficient Deep Learning Computing (Prof. Song Han)</a></li></ul></section>
+      <nav class="pager"><a href="../cs229s/l06-flash-attention.html"><span class="lbl">← Previous</span>Lecture 6: Efficient Attention and FlashAttention</a><a href="../cs229s/l08-finetuning-and-peft.html"><span class="lbl">Next →</span>Lecture 8: Fine-Tuning Large Language Models and PEFT</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
