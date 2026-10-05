@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 8: Fine-Tuning Large Language Models and PEFT — Stanford Frontier AI</title>
+<meta name="description" content="From base model to assistant: instruction tuning, RLHF, Constitutional AI, then the systems answer to fine-tuning cost, parameter-efficient fine-tuning.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs229s-l08" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive Learning and RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Transformers, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08" class="active">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech BCI</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">Mathematical Foundations of Machine Learning · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Mathematical Foundations of Generative Models · Overview</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229S: Systems for Machine Learning</a> / Lecture 8: Fine-Tuning Large Language Models and PEFT</nav>
+      <h1>Lecture 8: Fine-Tuning Large Language Models and PEFT</h1>
+      <p class="meta-line">2024-10-21 · Instructor: Azalia Mirhoseini · Fall 2024</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p><strong>Level 1 (Core)</strong> follows the lecture&rsquo;s arc: base models need
+fine-tuning to be useful, RLHF and Constitutional AI supply the
+fine-tuning, and PEFT supplies the systems answer to its cost.
+<strong>Level 2 (Deep)</strong> derives LoRA&rsquo;s merge math and the PEFT
+taxonomy. The alignment theory continues in <a href="../cs329h/">CS329H</a>
+(preference pairs) and <a href="../cs336/l15-post-training.html">CS336 L15</a>;
+this lecture is the systems framing.</p>
+<h2 id="level-1-base-models-do-not-follow-instructions">Level 1: Base models do not follow instructions</h2>
+<p>A pretrained LLM predicts the next token on web text. Ask it to
+translate &ldquo;cheese&rdquo; to French and it may continue the prompt with
+more translation examples instead of answering. It completes; it
+does not follow instructions.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Prompt &ldquo;Translate cheese to French&rdquo;</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base (pretrained)</td>
+<td>Continues with more examples</td>
+<td>Completes the text</td>
+</tr>
+<tr>
+<td>Instruction-tuned</td>
+<td>Answers: &ldquo;fromage&rdquo;</td>
+<td>Follows the instruction</td>
+</tr>
+</tbody>
+</table>
+<p>Instruction tuning fixes this. Take the pretrained model and
+fine-tune it on collections of tasks, up to millions of tokens
+against trillions of pretraining tokens. The tuned model gains
+zero-shot and few-shot performance and becomes more useful,
+harmless, and truthful. Every commercial assistant (GPT-4, Claude,
+Bard) is extensively fine-tuned this way.</p>
+<p>Instruction data comes from three sources: human workers writing
+QA, style transfer, and summarization examples; templates over
+existing labeled data; and AI-generated data from an already
+instruction-tuned model.</p>
+<h2 id="level-1-rlhf-in-three-steps">Level 1: RLHF in three steps</h2>
+<p>Instruction tuning is supervised. Reinforcement learning goes
+further: reward the model for useful and safe samples and optimize
+the reward directly.</p>
+<figure><img alt="RLHF pipeline" src="assets/slide-l08-rlhf-pipeline.png"><figcaption>Collect human preferences, train a reward model, RL-fine-tune the LLM. Source: Stanford slides, Bai et al. 2022.</figcaption></figure>
+<ol>
+<li><strong>Collect human preferences.</strong> Humans rank model outputs by
+   usefulness, harmfulness, and truthfulness (Stiennon et al.,
+   2020). The key trick from Christiano et al. (2017): train on
+   preferences, not demonstrations. Ranking two summaries is far
+   cheaper than writing one, and they needed labels on under 1% of
+   interactions.</li>
+<li><strong>Train a reward model.</strong> A model that predicts the human label:
+   given summaries A and B, which would a human prefer?</li>
+<li><strong>RL-fine-tune the LLM.</strong> Generate samples that maximize the
+   reward model&rsquo;s score.</li>
+</ol>
+<p>RLHF drastically improves scaling on summarization and on code
+tasks (Bai et al., 2022). But it is not itself scalable: human
+labels are costly and slow, and optimizing against human raters can
+produce evasive responses that trade helpfulness for harmlessness.</p>
+<h2 id="level-1-constitutional-ai-replaces-labels-with-principles">Level 1: Constitutional AI replaces labels with principles</h2>
+<p>Constitutional AI (Bai et al., 2022, used in Claude) replaces tens
+of thousands of human labels with about ten human-written
+principles: a constitution describing desired behavior. Humans
+write the constitution; AI does the rest.</p>
+<p>Phase 1, supervised: the model critiques its own responses against
+the constitution (&ldquo;identify specific ways this response is
+harmful&hellip;&rdquo;) and revises them. Fine-tune on the revisions.
+Harmlessness rises with more revisions while helpfulness dips;
+the sum improves monotonically.</p>
+<p>Phase 2, RLAIF: train a preference model on the phase-1 model&rsquo;s
+responses judged against the constitution, then RL-fine-tune the
+LLM to maximize that AI preference model. No humans in the loop.</p>
+<p>Why it matters: higher-quality supervision (AI already beats humans
+at judging in some domains), more transparency (the constitution is
+inspectable), scalability (AI labels in parallel), and cost. On the
+scaling plots it matches or beats RLHF for helpfulness and
+harmlessness, especially with chain-of-thought judging.</p>
+<p>The full development flow: pretrain unsupervised, prompt
+(zero/few-shot, chain-of-thought), instruction-tune supervised,
+RLHF or RLAIF, evaluate on downstream tasks. Fine-tuning quality
+also rises with more tasks, larger models, and chain-of-thought in
+the tuning mix (Chung et al., 2022).</p>
+<div class="qa"><div class="q">Contrast RLHF and Constitutional AI in one breath each.</div><div class="a"><p>RLHF trains a reward model on human preference rankings, then RL-optimizes the LLM against it; it works but needs costly human labels. Constitutional AI replaces the labels with a short human-written constitution: the model critiques and revises its own outputs against the principles, then a preference model trained on AI judgments drives the RL step. Same three-stage shape, AI feedback instead of human feedback.
+Because the AI judge can already surpass humans on the task being judged, as in games or specialized domains, and it applies the constitution consistently at scale. Humans are expensive, slow, and inconsistent. The risk is that the AI judge&rsquo;s blind spots become the model&rsquo;s blind spots, which is why the constitution stays human-written.</p><div class="followup"><strong>Follow-up:</strong> Why is AI feedback higher quality than human feedback in some cases?</div></div></div>
+<h2 id="level-1-fine-tuning-is-a-systems-problem">Level 1: Fine-tuning is a systems problem</h2>
+<p>Two costs motivate parameter-efficient fine-tuning.</p>
+<p><strong>Cost.</strong> Fine-tuning memory can exceed 10x the trainable
+parameters: the parameters themselves, activations, gradients, and
+optimizer state (Adam keeps fp32 copies, momentum, and variance).
+A 7B model at full fine-tune needs far more than 14 GB.</p>
+<figure><img alt="Fine-tune memory" src="assets/slide-l08-finetune-memory.png"><figcaption>Fine-tuning can cost over 10x the trainable parameters: weights, activations, gradients, optimizer state. Source: Stanford slides.</figcaption></figure>
+<p><strong>Deployability.</strong> A separate full-size model per task is
+prohibitive to store and serve. Ten tasks means ten models.</p>
+<p>PEFT&rsquo;s key idea: fine-tune a small number of parameters instead of
+all of them. Cost falls, the base model&rsquo;s capabilities stay intact
+(less forgetting), and per-task artifacts shrink to megabytes.</p>
+<h2 id="level-1-the-peft-taxonomy">Level 1: The PEFT taxonomy</h2>
+<figure><img alt="PEFT categories" src="assets/slide-l08-peft-categories.png"><figcaption>Selective, additive/adaptive, and hybrid: the three PEFT families. Source: Stanford slides, Lialin et al. 2023.</figcaption></figure>
+<p><strong>Selective.</strong> Tune a subset of existing parameters. Common:
+freeze the bottom layers, update only the top layers. Or select
+sparsely and adaptively.</p>
+<p><strong>Additive or adaptive.</strong> Add new parameters and tune only those.
+Soft prompts: trainable embeddings prepended to the input.
+Reparametrization: exploit low-rank structure of the updates to
+minimize the footprint.</p>
+<p><strong>Hybrid.</strong> Combine the above.</p>
+<h2 id="level-1-soft-prompts">Level 1: Soft prompts</h2>
+<p>Prompt tuning (Lester et al., 2021): prepend m tunable tokens to
+the input embeddings. Each prompt token has a learnable embedding;
+the base model stays frozen. The tuned parameters are a single
+m by e matrix, where e is the embedding size. Backprop trains only
+the soft prompt.</p>
+<pre><code>P_theta_p(Y | p1, ..., pm, x1, ..., xt)
+theta_p : m x e matrix (m prompt tokens, e embedding size)
+</code></pre>
+<p>Model tuning trains one full model per task. Prompt tuning trains
+one tiny prompt per task on one frozen model. P-Tuning v2 extends
+prompts to deeper layers with reparametrization, matching
+fine-tuning across scales on many tasks. LLaMA-Adapter prepends
+trainable prompts with zero-init gating: the attention scores
+split into adapter and text parts, and a learnable gate g starting
+at zero scales the adapter&rsquo;s contribution up gradually, so the
+model starts from its pretrained behavior and absorbs instructions
+over training.</p>
+<h2 id="level-1-lora">Level 1: LoRA</h2>
+<p>LoRA (Hu et al., 2021) is reparametrization: add trainable
+low-rank matrices A and B to a frozen weight, with inner
+dimension r much smaller than d. Only A and B train.</p>
+<figure><img alt="LoRA" src="assets/slide-l08-lora.png"><figcaption>Freeze W, train low-rank A and B with r much smaller than d. Source: Stanford slides, Hu et al. 2021.</figcaption></figure>
+<p>The forward pass: h = Wx + BAx = (W + BA)x. After fine-tuning,
+merge once: W_LoRA = W + BA. Merged, inference is exactly one
+matmul: <strong>LoRA adds zero latency</strong>. Per task, swap in that task&rsquo;s
+(A, B) pair; the base model never changes.</p>
+<figure><img alt="LoRA merge" src="assets/slide-l08-lora-merge.png"><figcaption>h = Wx + BAx merges to a single updated weight. No inference overhead. Source: Stanford slides.</figcaption></figure>
+<p>Applied to transformers, LoRA targets the self-attention weights;
+Wq and Wv work best empirically. Rank r is tuned per task, and
+small r suffices for many tasks. The systems win is deployability:
+one frozen base model plus tiny per-task adapters, switchable at
+request time.</p>
+<div class="qa"><div class="q">Why does LoRA add no inference latency?</div><div class="a"><p>Because the adapter merges into the weights. During training the layer computes h = Wx + BAx, but after fine-tuning you add BA into W once: W_LoRA = W + BA. Inference then runs a single matmul with the merged weight, exactly as fast as the original model. The adapter exists only at training and storage time.
+Full fine-tuning stores 50 copies of 14 GB: 700 GB. LoRA stores one 14 GB base plus 50 adapters of a few megabytes each: roughly 14 GB total. Serving can also batch requests across tasks on the shared base and swap adapters per request.</p><div class="followup"><strong>Follow-up:</strong> A team serves 50 fine-tuned variants of one 7B model. Compare full fine-tuning versus LoRA storage.</div></div></div>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<div class="recap-grid">
+<div class="recap-card">
+<img src="assets/slide-l08-rlhf-pipeline.png" alt="RLHF pipeline">
+<div class="rc-body">
+<strong>1. Base models complete; assistants follow</strong>
+<p>Pretraining teaches next-token prediction. Instruction tuning
+on task collections teaches following instructions.</p>
+<p class="rc-num">Key: trillions pretrain, millions tune</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l08-rlhf-pipeline.png" alt="RLHF steps">
+<div class="rc-body">
+<strong>2. RLHF: preferences, reward, optimize</strong>
+<p>Humans rank outputs. A reward model learns the ranking. RL
+maximizes the reward. Preferences beat demonstrations on cost.</p>
+<p class="rc-num">Key: under 1% labeled</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l08-rlhf-pipeline.png" alt="Constitutional AI">
+<div class="rc-body">
+<strong>3. Constitutional AI swaps labels for principles</strong>
+<p>Ten human principles replace ten thousand labels. Self-critique
+plus revisions, then RLAIF. Scalable, inspectable, cheap.</p>
+<p class="rc-num">Key: AI feedback, human constitution</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l08-finetune-memory.png" alt="Fine-tune memory">
+<div class="rc-body">
+<strong>4. Fine-tuning costs over 10x the weights</strong>
+<p>Parameters plus activations plus gradients plus optimizer
+state. And one full model per task is undeployable.</p>
+<p class="rc-num">Key: memory is the tax</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l08-peft-categories.png" alt="PEFT categories">
+<div class="rc-body">
+<strong>5. PEFT tunes a few parameters</strong>
+<p>Selective (subset of weights), additive (soft prompts,
+adapters), reparametrization (low-rank). Or hybrids.</p>
+<p class="rc-num">Key: small updates, kept capabilities</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l08-peft-categories.png" alt="Soft prompts">
+<div class="rc-body">
+<strong>6. Soft prompts: train the input</strong>
+<p>Prepend m tunable embeddings; freeze the model. One m-by-e
+matrix per task. P-Tuning v2 and LLaMA-Adapter extend it.</p>
+<p class="rc-num">Key: one frozen model, many prompts</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l08-lora.png" alt="LoRA">
+<div class="rc-body">
+<strong>7. LoRA: low-rank updates, zero latency</strong>
+<p>Train A and B with r much smaller than d; merge into W after.
+Applies best to Wq and Wv. Swap adapters per task.</p>
+<p class="rc-num">Key: W_LoRA = W + BA</p>
+</div>
+</div>
+<div class="recap-card">
+<img src="assets/slide-l08-lora-merge.png" alt="LoRA merge">
+<div class="rc-body">
+<strong>8. The merge is the trick</strong>
+<p>h = Wx + BAx becomes one matmul. Training-time structure,
+inference-time invisibility. That is why LoRA won.</p>
+<p class="rc-num">Key: merge once, serve fast</p>
+</div>
+</div>
+</div>
+
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- Fine-tuning Large Language Models slide deck (Fall 2023 headers).</p>
+<p><strong>Further reading:</strong>
+- Bai et al., &ldquo;Training a Helpful and Harmless Assistant with RLHF&rdquo; (2022).
+- Bai et al., &ldquo;Constitutional AI: Harmlessness from AI Feedback&rdquo; (2022).
+- Hu et al., &ldquo;LoRA&rdquo; (2021).
+- Lester et al., &ldquo;The Power of Scale for Parameter-Efficient Prompt Tuning&rdquo; (2021).
+- Lialin et al., &ldquo;Scaling Down to Scale Up&rdquo; (2023): the PEFT survey behind the taxonomy.
+- <a href="../cs336/l15-post-training.html">CS336 L15</a>: post-training in full.
+- <a href="../cs329h/">CS329H</a>: preference pairs and alignment theory.</p>
+<p><strong>Caveats from these sources.</strong> The &ldquo;10x&rdquo; fine-tuning memory
+figure is an order-of-magnitude rule; exact ratios depend on
+optimizer, precision, and activation checkpointing. LoRA&rsquo;s &ldquo;Wq and
+Wv best&rdquo; is empirical on the paper&rsquo;s tasks. Constitutional AI&rsquo;s
+scaling plots compare specific model sizes; the harmlessness-helpfulness
+tradeoff shape is the finding that holds.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 L15:</strong> post-training: instruction tuning and RLHF derived in full.</li>
+<li><strong>CS329H:</strong> preference pairs: the alignment object, defined there and reused in RLHF.</li>
+<li><strong>CS229S L07:</strong> quantization as an orthogonal shrink for fine-tuned models.</li>
+<li><strong>CS229S L10:</strong> FSDP and ZeRO: the distributed-systems answer to the same memory tax.</li>
+</ul>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Fine-tuning cheatsheet.</strong> Base model: completes, does not follow instructions. Instruction tuning: fine-tune on task collections (millions of tokens); improves zero/few-shot, usefulness, harmlessness, truthfulness. Data: human, template, AI-generated. RLHF: 1) human preference ranks, 2) reward model, 3) RL optimize. Christiano 2017: &lt;1% labels. Not scalable: costly, evasive. Constitutional AI: ~10 principles replace ~10k labels; phase 1 SL on self-critique+revisions; phase 2 RLAIF on AI preference model. Flow: pretrain -&gt; prompt -&gt; instruct-tune -&gt; RLHF/RLAIF -&gt; eval. PEFT: fine-tune few params; memory &gt;10x trainable (params+activations+grads+optimizer). Selective / additive-adaptive / hybrid. Prompt tuning: m tunable tokens, m-by-e matrix, frozen base. LLaMA-Adapter: zero-init gate on adapter attention. LoRA: h=Wx+BAx=(W+BA)x; merge W_LoRA=W+BA; r&lt;&lt;d; Wq,Wv best; zero inference latency; swap adapters per task.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Adaptation in one line.</strong> Teach the model to follow instructions with feedback, then teach it cheaply by training almost nothing.</p></div>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Fine-tuning Large Language Models slide deck (Fall 2023 headers)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2204.05862" target="_blank" rel="noopener">Bai et al., Training a Helpful and Harmless Assistant with RLHF (2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2212.08073" target="_blank" rel="noopener">Bai et al., Constitutional AI: Harmlessness from AI Feedback (2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2106.09685" target="_blank" rel="noopener">Hu et al., LoRA: Low-Rank Adaptation of Large Language Models (2021)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2104.08691" target="_blank" rel="noopener">Lester et al., The Power of Scale for Parameter-Efficient Prompt Tuning (2021)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2303.15647" target="_blank" rel="noopener">Lialin et al., Scaling Down to Scale Up: A Guide to Parameter-Efficient Fine-Tuning (2023)</a></li></ul></section>
+      <nav class="pager"><a href="../cs229s/l07-memory-efficient-networks.html"><span class="lbl">← Previous</span>Lecture 7: Memory-Efficient Neural Networks</a><a href="../cs229s/l09-efficient-architectures.html"><span class="lbl">Next →</span>Lecture 9: Efficient Attention-Free Architectures</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
