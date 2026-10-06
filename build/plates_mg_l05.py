@@ -64,7 +64,10 @@ p.arrow(228, y + 156, 292, y + 156, label="Inception")
 p.rect(300, y, 200, 200, PANEL, label="feature layer L", size=14, rx=12)
 p.text(340, y + 120, "deep features", size=13, color=MUTED)
 p.arrow(516, y + 100, 580, y + 100, label="fit")
-p.rect(588, y, 340, 200, YELLOW, label="two Gaussians", size=14, rx=12)
+# "two Gaussians" drawn as a panel label at top: the centered rect label
+# collided with the "(mu_hat, Sigma_hat) fake" line.
+p.rect(588, y, 340, 200, YELLOW, size=14, rx=12)
+p.text(612, y + 24, "two Gaussians", size=14, bold=True, color=MUTED)
 p.text(612, y + 64, "(mu, Sigma) real", size=14)
 p.text(612, y + 96, "(mu_hat, Sigma_hat) fake", size=14)
 p.text(612, y + 140, "assumption: features", size=13, color=MUTED)
