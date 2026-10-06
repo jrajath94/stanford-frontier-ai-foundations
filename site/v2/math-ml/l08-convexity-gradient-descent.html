@@ -219,7 +219,7 @@
       <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Machine Learning</a> / Lecture 8: Convexity and Gradient Descent</nav>
       <h1>Lecture 8: Convexity and Gradient Descent</h1>
       <p class="meta-line">2026-10-05 · Instructor: Prof. Sanjeev Kumar and Prof. S. K. Gupta · NPTEL (IIT Roorkee)</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h2 id="the-task-walk-downhill-without-getting-trapped">The task: walk downhill without getting trapped</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="RmobQRYxu0g"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/RmobQRYxu0g" title="Lecture 44: Steepest Descent method (NPTEL)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=RmobQRYxu0g" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=RmobQRYxu0g" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">The NPTEL lecture this chapter follows: the steepest descent method, worked as an algorithm.</p></div><h2 id="the-task-walk-downhill-without-getting-trapped">The task: walk downhill without getting trapped</h2>
 <p>L07 built the gradient: a compass pointing uphill. Training a
 model means walking the other way, downhill, until the loss
 bottoms out. But downhill walks can end in a shallow dip while a
@@ -231,17 +231,33 @@ above the graph. One valley, no traps. For convex functions, every
 local minimum is the global minimum, and gradient descent with a
 sane step size finds it. Logistic regression&rsquo;s loss is convex.
 That is why it trains reliably.</p>
-<p>A <strong>convex set</strong> is the domain version: a set containing the whole
-segment between any two of its points. A solid disk is convex; a
-crescent moon is not. Constraints in optimization are usually
-convex sets (Lecture 37) [uncertain: exact lecture examples
-unknown].</p>
+<h3 id="subchapter-convex-sets-the-domain-version">Subchapter: convex sets, the domain version</h3>
+<p>A <strong>convex set</strong> contains the whole segment between any two of its
+points. A solid disk is convex. A crescent moon is not. Why care?
+Constraints in optimization are usually convex sets: &ldquo;weights with
+norm at most 1&rdquo; is a disk, convex. Projecting back onto a convex
+set after each gradient step keeps the walk inside the allowed
+region without breaking convergence. Non-convex constraints create
+traps at the boundary.</p>
+<h3 id="subchapter-the-second-derivative-test">Subchapter: the second-derivative test</h3>
+<p>Test for convex functions of one variable: f&rsquo;&lsquo;(x) &gt;= 0
+everywhere. f(x) = (x-3)^2 has f&rsquo;&rsquo; = 2 &gt; 0: convex. f(x) = x^3 has
+f&rsquo;&rsquo; = 6x, negative for x &lt; 0: not convex.</p>
+<p>In higher dimensions the test uses the Hessian, the matrix of
+second derivatives: convex means the Hessian never has a negative
+eigenvalue (L03&rsquo;s eigenvalues return as curvature detectors).
+Gradient descent on a convex function with eta &lt; 2/L, where L is
+the maximum curvature, converges to the global minimum. No traps,
+one theorem, and the step-size rule that explains the disaster in
+the next section: L = 2, so eta must stay below 1.</p>
+<figure><img alt="Convex: one bowl, no traps" src="assets/plate-l08-convex.svg"><figcaption>f'' &gt;= 0 everywhere. Every local minimum is the global minimum. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="first-attempt-follow-the-slope-with-fixed-steps">First attempt: follow the slope with fixed steps</h2>
 <p>The algorithm is three lines. Start somewhere. Repeat: step
 opposite the gradient. The step length is the <strong>learning rate</strong>,
 eta.</p>
 <pre class="ascii">x_new = x_old - eta * f'(x_old)
 </pre>
+<h3 id="subchapter-the-trace-by-hand">Subchapter: the trace, by hand</h3>
 <p>Watch it on the simplest bowl: f(x) = (x - 3)^2, minimum at x =
 3. f&rsquo;(x) = 2(x - 3). Start at x0 = 0, eta = 0.1:</p>
 <pre class="ascii">x0 = 0.0     f = 9.0
@@ -255,36 +271,56 @@ x4 = 1.464 - 0.1 * 2(1.464-3) = 1.771 f = 1.51
 0.0115 of the original 3: x is within 0.035 of the minimum.
 Geometric convergence, visible in the numbers: 9.0, 5.76, 3.69,
 2.36, 1.51. Every step multiplies the loss by 0.64.</p>
-<h2 id="where-it-breaks-the-step-size">Where it breaks: the step size</h2>
+<figure><img alt="Gradient descent converges geometrically" src="assets/plate-l08-gd-trace.svg"><figcaption>eta=0.1: x closes 20% of the gap per step. Loss x0.64 per step. Shell 3. Source: original trace. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-step-size-that-blows-up">Subchapter: the step size that blows up</h3>
 <p>Now eta = 1.1, slightly too large. The curvature here is f&rsquo;&rsquo; = 2,
 and stability needs eta &lt; 1 (half the inverse curvature, in
 general: eta &lt; 2 / max curvature):</p>
 <pre class="ascii">x0 = 0.0
 x1 = 0 - 1.1 * 2(0-3)    = 6.6     f = 12.96
 x2 = 6.6 - 1.1 * 2(6.6-3) = -1.32  f = 18.66
-x3 = -1.32 - 1.1 * 2(-1.32-3) = 8.18  f = 26.86
+x3 = -1.32 - 1.1 * 2(-1.32-3) = 8.18  f = 26.87
 </pre>
 <p>Each step overshoots the valley and lands further out. The loss
-grows: 9.0, 12.96, 18.66, 26.86. Divergence, from a step size 11x
-instead of 10x too small a change to eyeball. The learning rate is
+grows: 9.0, 12.96, 18.66, 26.87. Divergence, from a step size 11x
+instead of 10x: too small a change to eyeball. The learning rate is
 the most consequential hyperparameter in ML because the boundary
 between convergence and explosion is this sharp. (Newton&rsquo;s method,
-Lecture 45, adapts the step using curvature; steepest descent,
+Lecture 45, adapts the step using curvature. Steepest descent,
 Lecture 44, is this fixed-step walk.)</p>
+<figure><img alt="eta = 1.1 diverges: the sharp boundary" src="assets/plate-l08-diverge.svg"><figcaption>Loss 9.0 -&gt; 12.96 -&gt; 18.66 -&gt; 26.87. Each step overshoots further. Shell 3. Source: original trace. Project: Stanford Frontier AI.</figcaption></figure>
+<figure><img alt="The step-size rule: eta &lt; 2/L" src="assets/plate-l08-lr-rule.svg"><figcaption>Curvature L = 2 here, so eta &lt; 1. eta=0.1 converges. Eta=1.1 explodes. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-key-question">The key question</h2>
 <p>Which losses guarantee that downhill walking ends at the global
 best, and how do you recognize them?</p>
 <h2 id="the-new-idea-convex-means-one-valley">The new idea: convex means one valley</h2>
-<p>Test for convex functions of one variable: f&rsquo;&lsquo;(x) &gt;= 0
-everywhere. f(x) = (x-3)^2 has f&rsquo;&rsquo; = 2 &gt; 0: convex. f(x) = x^3 has
-f&rsquo;&rsquo; = 6x, negative for x &lt; 0: not convex.</p>
-<p>In higher dimensions the test uses the Hessian, the matrix of
-second derivatives: convex means the Hessian never has a negative
-eigenvalue (L03&rsquo;s eigenvalues return as curvature detectors).
-Gradient descent on a convex function with eta &lt; 2/L, where L is
-the maximum curvature, converges to the global minimum. No traps,
-one theorem, and the step-size rule that explains the 1.1
-disaster: L = 2, so eta must stay below 1.</p>
+<p>The test is the Hessian: no negative eigenvalues, no traps. The
+guarantee: gradient descent with eta &lt; 2/L converges to the global
+minimum. The recognition rule: sums of convex functions are
+convex, so a loss that sums per-example convex losses over the
+dataset is convex. Logistic regression&rsquo;s loss is exactly such a
+sum.</p>
+<h3 id="subchapter-the-gd-family-beyond-vanilla">Subchapter: the GD family, beyond vanilla</h3>
+<p>Vanilla GD uses the full dataset per step: accurate, slow. The
+family trades accuracy for speed:</p>
+<ul>
+<li><strong>SGD</strong> (stochastic GD): one example (or mini-batch) per step.
+  The gradient is noisy but each step is cheap. The noise can even
+  kick the walk out of shallow dips. The price: the loss jitters,
+  and the learning rate usually must shrink over time.</li>
+<li><strong>Momentum</strong>: keep a running average of past gradients and step
+  with that. Ravines get traversed faster (consistent directions
+  accumulate), oscillations cancel. One new hyperparameter: the
+  averaging weight, typically 0.9.</li>
+<li><strong>Adam</strong>: per-coordinate adaptive step sizes. Each weight gets
+  its own effective learning rate from its gradient history:
+  frequent large gradients get smaller steps, rare small ones get
+  larger steps. The default optimizer for deep networks, and the
+  reason most practitioners rarely hand-tune eta.</li>
+</ul>
+<p>None of them fix a too-large base step: the 1.1 lesson applies to
+every variant. They change the walk&rsquo;s character, not the
+stability boundary.</p>
 <h2 id="the-payoff-logistic-regression-is-convex">The payoff: logistic regression is convex</h2>
 <p><strong>Logistic regression</strong> classifies with probabilities. For label y
 in {0, 1} and score z = w . x, it predicts P(y=1) = 1 / (1 +
@@ -297,15 +333,18 @@ positive, so its eigenvalues are nonnegative (L02&rsquo;s transpose
 fact: M^T M never has negative eigenvalues). One bowl. Gradient
 descent from any start, with a sane eta, reaches the single global
 minimum. That reliability is why logistic regression is the first
-classifier every ML course teaches (CS229 L05) and why the
-playlist pairs it with convexity (L24 before L37 in numbering, but
-the ideas interlock).</p>
-<p>Classification <strong>metrics</strong> (Lecture 26) judge the result: accuracy
-(fraction correct), precision (of predicted positives, how many
-were truly positive), recall (of true positives, how many were
-found). A rare-disease classifier that always says &ldquo;healthy&rdquo; has
-99% accuracy and 0% recall: L05&rsquo;s base-rate lesson wearing a new
-hat.</p>
+classifier every ML course teaches (CS229 L05).</p>
+<figure><img alt="Logistic regression: convex by construction" src="assets/plate-l08-logreg.svg"><figcaption>Hessian = X^T D X with D &gt; 0: eigenvalues &gt;= 0. One bowl, any start works. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-metrics-because-accuracy-lies">Subchapter: metrics, because accuracy lies</h3>
+<p>Classification <strong>metrics</strong> judge the result: accuracy (fraction
+correct), precision (of predicted positives, how many were truly
+positive), recall (of true positives, how many were found). A
+rare-disease classifier that always says &ldquo;healthy&rdquo; has 99%
+accuracy and 0% recall: L05&rsquo;s base-rate lesson wearing a new hat.</p>
+<p>The decision rule: on balanced classes, accuracy suffices. On rare
+classes, report precision and recall always. On ranked lists
+(search, recommendations), precision-at-k. The metric is part of
+the model specification: choose it before training, not after.</p>
 <table>
 <thead>
 <tr>
@@ -328,7 +367,12 @@ hat.</p>
 <tr>
 <td>Too-large eta</td>
 <td>toy: 1.1 vs stability limit 1</td>
-<td>overshoot, divergence: 9.0 -&gt; 26.86</td>
+<td>overshoot, divergence: 9.0 -&gt; 26.87</td>
+</tr>
+<tr>
+<td>SGD / momentum / Adam</td>
+<td>noisy / averaged / adaptive steps</td>
+<td>speed and character, not the stability boundary</td>
 </tr>
 <tr>
 <td>Logistic loss</td>
@@ -342,41 +386,97 @@ hat.</p>
 </tr>
 </tbody>
 </table>
+<h2 id="what-is-used-where-the-real-systems">What is used where: the real systems</h2>
+<table>
+<thead>
+<tr>
+<th>Math idea</th>
+<th>Where it appears</th>
+<th>Why there</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Convexity</td>
+<td>Logistic regression, SVM</td>
+<td>global optimum guaranteed</td>
+</tr>
+<tr>
+<td>eta &lt; 2/L</td>
+<td>All training runs</td>
+<td>the boundary every tuner respects</td>
+</tr>
+<tr>
+<td>Adam</td>
+<td>Deep network training</td>
+<td>default: adaptive per-coordinate steps</td>
+</tr>
+<tr>
+<td>Momentum</td>
+<td>Ravine-heavy losses</td>
+<td>accumulates consistent directions</td>
+</tr>
+<tr>
+<td>Precision/recall</td>
+<td>Rare-class eval</td>
+<td>accuracy lies; these do not</td>
+</tr>
+</tbody>
+</table>
+<figure><img alt="Convexity: what is used where" src="assets/plate-l08-used-where.svg"><figcaption>Convex losses train reliably. The rest need the optimizer zoo. Shell 5. Source: standard ML practice. Project: Stanford Frontier AI.</figcaption></figure>
 <div class="qa"><div class="q">Why does convexity matter for training?</div><div class="a"><p>It guarantees the valley you walk into is the only valley. For a convex loss, every local minimum is the global minimum, and gradient descent with eta below 2/L converges to it. Logistic regression&rsquo;s loss is convex (its Hessian X^T D X has nonnegative eigenvalues), so it trains reliably from any start. Non-convex losses like deep networks offer no such promise: hence restarts, schedules, and momentum.
 Rarely directly: L, the maximum curvature, is unknown and changes during training. Practitioners tune eta by search or use adaptive methods (Adam scales each coordinate by its history). But the bound explains every divergence you will ever see: the toy blew up at eta = 1.1 against a limit of 1.0. When loss explodes, the step was too big. Always.</p><div class="followup"><strong>Follow-up:</strong> Is the step-size bound eta &lt; 2/L usable in practice?</div></div></div>
-<div class="qa"><div class="q">Work one gradient descent trace by hand.</div><div class="a"><p>f(x) = (x-3)^2, x0 = 0, eta = 0.1. Gradient 2(x-3). Steps: 0 -&gt; 0.6 -&gt; 1.08 -&gt; 1.464 -&gt; 1.771, losses 9.0 -&gt; 5.76 -&gt; 3.69 -&gt; 2.36 -&gt; 1.51. Each step closes 20% of the gap; the loss multiplies by 0.64 per step. After 20 steps x is within 0.035 of the minimum 3. Geometric convergence you can watch.
-Stability needs eta &lt; 2/L with L = max curvature = f&rsquo;&rsquo; = 2, so eta &lt; 1. At 1.1 each step overshoots: 0 -&gt; 6.6 -&gt; -1.32 -&gt; 8.18, losses 9.0 -&gt; 12.96 -&gt; 18.66 -&gt; 26.86. The overshoot grows because the gradient at the landing point is larger than at takeoff. Eleven percent over the limit is enough.</p><div class="followup"><strong>Follow-up:</strong> Why did eta = 1.1 diverge?</div></div></div>
+<div class="qa"><div class="q">Work one gradient descent trace by hand.</div><div class="a"><p>f(x) = (x-3)^2, x0 = 0, eta = 0.1. Gradient 2(x-3). Steps: 0 -&gt; 0.6 -&gt; 1.08 -&gt; 1.464 -&gt; 1.771, losses 9.0 -&gt; 5.76 -&gt; 3.69 -&gt; 2.36 -&gt; 1.51. Each step closes 20% of the gap. The loss multiplies by 0.64 per step. After 20 steps x is within 0.035 of the minimum 3. Geometric convergence you can watch.
+Stability needs eta &lt; 2/L with L = max curvature = f&rsquo;&rsquo; = 2, so eta &lt; 1. At 1.1 each step overshoots: 0 -&gt; 6.6 -&gt; -1.32 -&gt; 8.18, losses 9.0 -&gt; 12.96 -&gt; 18.66 -&gt; 26.87. The overshoot grows because the gradient at the landing point is larger than at takeoff. Eleven percent over the limit is enough.</p><div class="followup"><strong>Follow-up:</strong> Why did eta = 1.1 diverge?</div></div></div>
 <div class="qa"><div class="q">Why is logistic regression the canonical first classifier?</div><div class="a"><p>Because its loss is convex: one bowl, one minimum, gradient descent cannot get trapped. The model outputs calibrated probabilities via the sigmoid, and the cross-entropy loss penalizes confident wrong answers heavily. It is the simplest model where probability (L05), calculus (L07), and optimization (this lesson) meet.
 Rare classes. A disease classifier that always predicts &ldquo;healthy&rdquo; scores 99% accuracy on 1% prevalence with 0% recall: it finds no patients. Report precision and recall alongside accuracy, always. This is L05&rsquo;s base-rate fallacy as a metric.</p><div class="followup"><strong>Follow-up:</strong> Accuracy 99% but the model is useless. How?</div></div></div>
+<div class="qa"><div class="q">SGD vs full-batch GD: what changes, exactly?</div><div class="a"><p>Full-batch GD computes the exact gradient over all data: one accurate, expensive step. SGD estimates it from one example or mini-batch: noisy, cheap steps. The noise means the loss jitters instead of decreasing monotonically, but you take thousands of steps in the time of one full-batch step. On convex losses both converge. SGD usually needs a shrinking learning rate to settle.
+Hardware. A mini-batch of 32 or 256 is still one matrix multiply (L02): the GPU parallelizes it for free. Single examples waste the hardware. Full batches waste time. Mini-batch SGD is the economic optimum, not a mathematical one.</p><div class="followup"><strong>Follow-up:</strong> Why mini-batches and not single examples?</div></div></div>
+<div class="qa"><div class="q">What does momentum do, mechanically?</div><div class="a"><p>It keeps a running average of past gradients: v = 0.9 * v + gradient, then steps with v instead of the raw gradient. Consistent directions accumulate (ravines get crossed faster). Oscillating directions cancel (less zigzag). On the toy bowl it would reach x = 3 in fewer steps. The 0.9 is the memory: higher remembers longer, lower reacts faster.
+Yes, and for the same reason: the effective step grows as consistent gradients accumulate. Momentum 0.9 with eta 0.1 behaves like a larger eta in steady directions. Tune them together. Raising one usually means lowering the other.</p><div class="followup"><strong>Follow-up:</strong> Can momentum overshoot like a too-large eta?</div></div></div>
+<div class="qa"><div class="q">What does Adam do that SGD does not?</div><div class="a"><p>Per-coordinate adaptive step sizes. Adam tracks each weight&rsquo;s gradient history: weights with consistently large gradients get smaller effective steps, weights with rare small gradients get larger ones. SGD uses one global eta for all weights. Adam is the default for deep networks because different layers live at different scales, and one eta cannot serve them all.
+On convex problems where you want the exact optimum: Adam&rsquo;s adaptivity can converge to worse solutions than well-tuned SGD with momentum. Practitioners often train with Adam then fine-tune with SGD. And Adam has more hyperparameters to mis-set: the defaults are good, but they are still hyperparameters.</p><div class="followup"><strong>Follow-up:</strong> When would you NOT use Adam?</div></div></div>
+<div class="qa"><div class="q">Training loss explodes to NaN at step 10,000. Walk me through the debug.</div><div class="a"><p>Step 1: suspect the learning rate first: it is the most common cause, and the 1.1 toy shows how sharp the boundary is. Halve eta and rerun: if it survives, that was it. Step 2: check for gradient explosion: log the gradient norm per step (L01&rsquo;s norm as fuse box). A sudden spike before the NaN confirms it. Step 3: add gradient clipping as the guardrail. Step 4: check the data: one corrupt batch (NaN inputs, extreme values) can detonate any eta.
+Yes: that is not divergence, it is a metric/loss mismatch or overfitting. The optimizer is working. The objective or the data split is wrong. Check class balance (precision/recall, not accuracy), then check for train/test leakage or distribution shift.</p><div class="followup"><strong>Follow-up:</strong> Loss decreases but validation accuracy is flat. Different problem?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
 <li><strong>The task.</strong> Walk downhill to the loss minimum without getting trapped in a dip.</li>
-<li><strong>Convexity.</strong> Bowl-shaped: segment between any two graph points sits above the graph. One valley.</li>
-<li><strong>Gradient descent.</strong> x -= eta * grad. Toy trace: 0 -&gt; 0.6 -&gt; 1.08 -&gt; 1.464 -&gt; 1.771; loss 9.0 -&gt; 1.51 in four steps.</li>
-<li><strong>Where it breaks.</strong> eta = 1.1 against stability limit 1.0: overshoot grows, loss 9.0 -&gt; 26.86. The learning rate boundary is sharp.</li>
-<li><strong>The key question.</strong> Which losses guarantee the global best?</li>
-<li><strong>The test.</strong> f&rsquo;&rsquo; &gt;= 0; Hessian eigenvalues &gt;= 0. Converges for eta &lt; 2/L.</li>
+<li><strong>Convexity.</strong> Bowl-shaped: segment between any two graph points sits above the graph. One valley. Sets too: disks yes, crescents no.</li>
+<li><strong>The test.</strong> f&rsquo;&rsquo; &gt;= 0. Hessian eigenvalues &gt;= 0. Converges for eta &lt; 2/L.</li>
+<li><strong>Gradient descent.</strong> x -= eta * grad. Toy trace: 0 -&gt; 0.6 -&gt; 1.08 -&gt; 1.464 -&gt; 1.771. Loss 9.0 -&gt; 1.51 in four steps. X0.64 per step.</li>
+<li><strong>Where it breaks.</strong> eta = 1.1 against stability limit 1.0: overshoot grows, loss 9.0 -&gt; 26.87. The learning rate boundary is sharp.</li>
+<li><strong>The family.</strong> SGD (noisy, cheap), momentum (running average, 0.9), Adam (per-coordinate adaptive). They change the walk, not the stability boundary.</li>
 <li><strong>The payoff.</strong> Logistic regression&rsquo;s loss is convex (Hessian X^T D X, D positive). Reliable training from any start. Metrics: precision and recall, because accuracy lies on rare classes.</li>
-<li><strong>The price and the bridge.</strong> Deep networks are not convex: no guarantees, hence the optimizer zoo. L09 applies least squares&rsquo; closed form where no walking is needed; L10 explains the cross-entropy loss logistic regression minimizes.</li>
+<li><strong>The price and the bridge.</strong> Deep networks are not convex: no guarantees, hence the optimizer zoo. L09 applies least squares&rsquo; closed form where no walking is needed. L10 explains the cross-entropy loss logistic regression minimizes.</li>
 </ol>
+<h2 id="go-deeper">Go deeper</h2>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/IHZwWFHWa-w" title="3Blue1Brown: Gradient descent, how neural networks learn (Deep Learning, chapter 2)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+<ul>
+<li>3Blue1Brown, &ldquo;Gradient descent, how neural networks learn&rdquo; (Deep Learning, ch. 2; the embed above): https://www.youtube.com/watch?v=IHZwWFHWa-w</li>
+<li>The NPTEL lecture for this lesson (frontmatter video): https://www.youtube.com/watch?v=RmobQRYxu0g</li>
+<li>Boyd and Vandenberghe, &ldquo;Convex Optimization&rdquo;, ch. 2-3 (free): https://web.stanford.edu/~boyd/cvxbook/: convex sets, functions, optimality.</li>
+<li>Deisenroth, Faisal, Ong, &ldquo;Mathematics for Machine Learning&rdquo;, ch. 7 (free): https://mml-book.github.io: continuous optimization, gradient descent.</li>
+</ul>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
-- &ldquo;Essential Mathematics for Machine Learning&rdquo; playlist, Lectures 24-26, 37-40, 44:
-  https://www.youtube.com/playlist?list=PLLy_2iUCG87D1CXFxE-SxCFZUiJzQ3IvE
-- NPTEL course page (111107137): https://archive.nptel.ac.in/courses/111/107/111107137/</p>
+- &ldquo;Essential Mathematics for Machine Learning&rdquo; playlist, Lecture 44 (this lesson&rsquo;s video): <a href="https://www.youtube.com/watch?v=RmobQRYxu0g">paper</a>
+- NPTEL course page (111107137): https://nptel.ac.in/courses/111107137</p>
 <p><strong>Further reading:</strong>
 - Boyd and Vandenberghe, &ldquo;Convex Optimization&rdquo;, ch. 2-3 (free):
-  https://web.stanford.edu/~boyd/cvxbook/ — convex sets, functions, optimality.
+  - <a href="https://web.stanford.edu/~boyd/cvxbook/">convex sets, functions, optimality.</a>
 - Deisenroth, Faisal, Ong, &ldquo;Mathematics for Machine Learning&rdquo;, ch. 7 (free):
-  https://mml-book.github.io — continuous optimization, gradient descent.</p>
+  - <a href="https://mml-book.github.io">continuous optimization, gradient descent.</a></p>
 <p><strong>Caveats.</strong> The GD traces, the stability numbers, and the metric examples are the lesson&rsquo;s own. The lecture&rsquo;s exact demos (L44 steepest descent, L24-26 logistic regression) are [uncertain] (transcripts not recovered).</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
-<li><strong>CS229 L05:</strong> logistic regression and Newton&rsquo;s method; this lesson is why its training converges.</li>
-<li><strong>CS229 L08:</strong> deep networks abandon convexity; backprop (L07) plus the optimizer zoo takes over.</li>
-<li><strong>CS229S:</strong> learning-rate tuning at scale; the eta boundary governs thousand-GPU training runs.</li>
+<li><strong>CS229 L05:</strong> logistic regression and Newton&rsquo;s method. This lesson is why its training converges.</li>
+<li><strong>CS229 L08:</strong> deep networks abandon convexity. Backprop (L07) plus the optimizer zoo takes over.</li>
+<li><strong>CS229S:</strong> learning-rate tuning at scale. The eta boundary governs thousand-GPU training runs.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/playlist?list=PLLy_2iUCG87D1CXFxE-SxCFZUiJzQ3IvE" target="_blank" rel="noopener">Essential Mathematics for Machine Learning — Lectures 24-26 (Logistic Regression, Classification Metrics), 37-40 (Convex Sets and Functions), 44 (Steepest Descent)</a></li><li><span class="src-tag">SUPPLEMENT</span>Boyd and Vandenberghe, Convex Optimization, ch. 2-3</li><li><span class="src-tag">SUPPLEMENT</span><a href="https://mml-book.github.io" target="_blank" rel="noopener">Deisenroth, Faisal, Ong, Mathematics for Machine Learning, ch. 7</a></li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=RmobQRYxu0g" target="_blank" rel="noopener">Essential Mathematics for Machine Learning: Lecture 44 (Steepest Descent method)</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://web.stanford.edu/~boyd/cvxbook/" target="_blank" rel="noopener">Boyd and Vandenberghe, Convex Optimization, ch. 2-3</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://mml-book.github.io" target="_blank" rel="noopener">Deisenroth, Faisal, Ong, Mathematics for Machine Learning, ch. 7</a></li></ul></section>
       <nav class="pager"><a href="../math-ml/l07-calculus-gradients-chainrule.html"><span class="lbl">← Previous</span>Lecture 7: Gradients, Jacobians, and the Chain Rule</a><a href="../math-ml/l09-least-squares-regression.html"><span class="lbl">Next →</span>Lecture 9: Least Squares and Linear Regression</a></nav>
     </article>
     <footer class="pagefoot">
