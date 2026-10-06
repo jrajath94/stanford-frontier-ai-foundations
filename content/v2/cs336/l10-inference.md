@@ -171,10 +171,9 @@ The asymmetry in one place.
 | Batching | already parallel | helps MLP, not attention |
 | Metric it sets | TTFT | latency, throughput |
 
-Read it as two different machines sharing one model. Prefill wants
-FLOPs: faster chips, bigger batches of prompt tokens. Decode wants
+Prefill wants FLOPs: faster chips, bigger batches of prompt tokens. Decode wants
 bytes: faster HBM, smaller caches, fewer bits. Optimizing one does
-not help the other. TTFT is a prefill number; tokens per second is
+not help the other. TTFT is a prefill number. Tokens per second is
 a decode number. Name the metric first, then pick the machine.
 
 ![Prefill vs decode](assets/media-generation-cs336-l10-prefill-decode-0-99b7ccdc-6ffa-4e24-9fbb-3dab82879738.webp "Same model, different workload shape, different bound. Source: original. Project: Stanford Frontier AI.")
@@ -275,7 +274,7 @@ r. Speedup: (K x r) / (1 + K x c).
 Work the lecture's numbers. K=4, c=1/20: cost 1.2 passes. Accept
 all 4: 4/1.2 = 3.3x. Accept 2: 2/1.2 = 1.7x. Accept 0: the round
 still yields 1 token (the correction): 1/1.2 = 0.83x, slower than
-baseline. The plate shows the three outcomes.
+baseline: accept 4, accept 2, accept 0.
 
 Two levers, one tradeoff. Cheaper draft (smaller c) raises every
 outcome. Closer draft (higher r) raises the numerator: distillation
@@ -290,7 +289,7 @@ target's distribution, so speed is the only variable.
 > Q: Work the speculative decoding math. K=4, draft cost 1/20, acceptance 50%.
 > A: Cost per round: 1 target pass + 4 x 1/20 = 1.2 passes. Expected tokens: 4 x 0.5 = 2, plus the correction token on reject keeps it near 2. Speedup: 2/1.2 = 1.7x. Now distill the draft so acceptance hits 90%: 3.6/1.2 = 3x. The draft quality is the whole game: at 50% you get 1.7x, at 90% you get 3x, at 10% you lose. K=4 is the sweet spot because longer drafts drift and shorter ones waste the parallel check.
 > Follow-up: Why is the output exactly the target's distribution?
-> A: Rejection sampling. Accept each draft token with probability min(1, q/p): where the draft overproposes, the target downweights; on reject, sample from the residual (q - p normalized). The math guarantees the accepted stream matches q exactly. Speed changes, quality does not. That guarantee is what makes it safe to deploy: it is an optimization, not an approximation.
+> A: Rejection sampling. Accept each draft token with probability min(1, q/p): where the draft overproposes, the target downweights. On reject, sample from the residual (q - p normalized). The math guarantees the accepted stream matches q exactly. Speed changes, quality does not. That guarantee is what makes it safe to deploy: it is an optimization, not an approximation.
 
 ## Serving the chaos
 
@@ -339,14 +338,13 @@ The lecture's ideas, production-hardened.
 
 The stack is the same ideas with harder edges: the cache is paged,
 the batch is continuous, the draft is distilled, the kernels are
-autotuned. Nothing here contradicts the lecture. It is the lecture
-at 3am under load.
+autotuned.
 
 ![Serving stack](assets/media-generation-cs336-l10-serving-stack-0-8058c828-1dd9-473f-8c99-31db93879615.webp "vLLM, SGLang, TensorRT-LLM, DeepSeek: the same ideas, production-hardened. Source: original. Project: Stanford Frontier AI.")
 
 > [!QA]
 > Q: Size the GPUs for serving Llama-3-70B at 1000 tok/s. H100s, bf16, 4K context.
-> A: Per GPU, one decode step reads 140GB of parameters. At 3.35 TB/s that is 42ms per step. Per step, batch B produces B tokens, so throughput is B / 0.042s, minus the cache traffic. Cache per sequence at 4K: 80 layers x 8 KV heads x 128 x 2 x 2B x 4096 = 1.3GB. At batch 64: per step read = 140 + 64 x 1.3 = 223GB, 67ms per step, 64 tokens per 67ms = 955 tok/s per GPU. So one H100 nearly does it at batch 64; take two for headroom, TTFT, and the chatbot's latency needs. The cache at batch 64 is 85GB: it fits in the remaining HBM after the 140GB of weights. That is the sizing loop: batch for throughput, cache for memory, GPUs for headroom.
+> A: Per GPU, one decode step reads 140GB of parameters. At 3.35 TB/s that is 42ms per step. Per step, batch B produces B tokens, so throughput is B / 0.042s, minus the cache traffic. Cache per sequence at 4K: 80 layers x 8 KV heads x 128 x 2 x 2B x 4096 = 1.3GB. At batch 64: per step read = 140 + 64 x 1.3 = 223GB, 67ms per step, 64 tokens per 67ms = 955 tok/s per GPU. So one H100 nearly does it at batch 64. Take two for headroom, TTFT, and the chatbot's latency needs. The cache at batch 64 is 85GB: it fits in the remaining HBM after the 140GB of weights. That is the sizing loop: batch for throughput, cache for memory, GPUs for headroom.
 > Follow-up: What changes at 128K context?
 > A: Everything. The cache per sequence grows 32x to 42GB: batch 64 no longer fits. You drop to batch ~8 per GPU, throughput collapses, and the cache dominates the parameter read. The fixes: MLA-style compression, context parallel across GPUs, or sliding-window attention to bound the cache. Long context is a cache problem wearing a serving problem's clothes.
 
@@ -399,6 +397,16 @@ The story in eight steps. Each step answers the one before it.
    accept with min(1,q/p). Exact samples. K=3-4. Distill the draft.
 8. **Batch the chaos.** Continuous batching fills gaps. PagedAttention
    defrags the cache and shares prefixes. OS ideas, reused.
+
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/emZxqRScfc0" title="Build KV Cache Layer From Scratch" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- Build KV Cache Layer From Scratch (the embed above): https://www.youtube.com/watch?v=emZxqRScfc0
+- Kwon et al., PagedAttention: https://arxiv.org/abs/2305.13245
+- Leviathan et al., Speculative Decoding: https://arxiv.org/abs/2211.05102
+- vLLM project: https://github.com/vllm-project/vllm
 
 ## Official sources and further reading
 
