@@ -219,7 +219,7 @@
       <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Machine Learning</a> / Lecture 9: Least Squares and Linear Regression</nav>
       <h1>Lecture 9: Least Squares and Linear Regression</h1>
       <p class="meta-line">2026-10-05 · Instructor: Prof. Sanjeev Kumar and Prof. S. K. Gupta · NPTEL (IIT Roorkee)</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h2 id="the-task-draw-the-best-line-through-noisy-points">The task: draw the best line through noisy points</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="0Dg_yvVgmQo"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/0Dg_yvVgmQo" title="Lecture 21: Least Square Approximation and Minimum Normed Solution (NPTEL)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=0Dg_yvVgmQo" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=0Dg_yvVgmQo" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">The NPTEL lecture this chapter follows: least squares, the normal equation, and the minimum-norm solution.</p></div><h2 id="the-task-draw-the-best-line-through-noisy-points">The task: draw the best line through noisy points</h2>
 <p>Three measurements of a spring: force x (newtons), stretch y (cm).</p>
 <pre class="ascii">(1, 1.1), (2, 1.9), (3, 3.2)
 </pre>
@@ -228,52 +228,68 @@ the w that best explains the data. &ldquo;Best&rdquo; needs a definition
 first: minimize the sum of squared errors.</p>
 <pre class="ascii">loss(w) = (w*1 - 1.1)^2 + (w*2 - 1.9)^2 + (w*3 - 3.2)^2
 </pre>
-<p>Why squares? Three reasons: they punish large errors more, they
-are smooth (differentiable, unlike absolute value), and under
-Gaussian noise they are the maximum likelihood estimator (L06).
-Least squares is the oldest learning algorithm in statistics, and
-it is still the first model every ML course fits (CS229 L02).</p>
+<h3 id="subchapter-why-squares">Subchapter: why squares</h3>
+<p>Three reasons: they punish large errors more, they are smooth
+(differentiable, unlike absolute value), and under Gaussian noise
+they are the maximum likelihood estimator (L06). Least squares is
+the oldest learning algorithm in statistics, and it is still the
+first model every ML course fits (CS229 L02).</p>
+<p>The third reason is the deep one. If each measurement has Gaussian
+noise, the likelihood of the data given w is a product of
+Gaussians, and maximizing it is exactly minimizing the sum of
+squared errors. The loss function is a noise model in disguise:
+squares mean &ldquo;I believe the noise is Gaussian.&rdquo; L06&rsquo;s warning
+applies: outliers break this belief, and the fit chases them.</p>
+<figure><img alt="Least squares: the best line through noisy points" src="assets/plate-l09-spring.svg"><figcaption>y = 1.0357 x: normal equation X^T X w = X^T y gives 14 w = 14.5. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="first-attempt-guess-and-check">First attempt: guess and check</h2>
-<p>Try w = 1.0: errors -0.1, -0.1, -0.2; squared sum = 0.01 + 0.01 +
-0.04 = 0.06. Try w = 1.05: predictions 1.05, 2.1, 3.15; errors
--0.05, -0.2, -0.05; squared sum = 0.0025 + 0.04 + 0.0025 = 0.045.
-Better. Try w = 1.1: 0.0025 + 0.09 + 0.0025&hellip; wait, predictions
-1.1, 2.2, 3.3; errors 0, -0.3, -0.1; squared sum = 0 + 0.09 + 0.01
-= 0.10. Worse. The best w sits near 1.05. Guessing works on one
-parameter. With 50 features it is hopeless.</p>
+<p>Try w = 1.0: errors -0.1, -0.1, -0.2. Squared sum = 0.01 + 0.01 +
+0.04 = 0.06. Try w = 1.05: predictions 1.05, 2.1, 3.15. Errors
+-0.05, -0.2, -0.05. Squared sum = 0.0025 + 0.04 + 0.0025 = 0.045.
+Better. Try w = 1.1: predictions 1.1, 2.2, 3.3. Errors 0, -0.3,
+-0.1. Squared sum = 0 + 0.09 + 0.01 = 0.10. Worse. The best w sits
+near 1.05. Guessing works on one parameter. With 50 features it is
+hopeless.</p>
 <h2 id="the-key-question">The key question</h2>
 <p>Is there a formula for the best w, no guessing, no iteration?</p>
-<h2 id="the-new-idea-differentiate-and-set-to-zero">The new idea: differentiate and set to zero</h2>
-<p>The loss is convex in w (a sum of squares, L08&rsquo;s bowl). So the
-minimum is where the derivative is zero. For the general problem,
-write it in matrix form. X is the n x d feature matrix, y the n
-targets:</p>
+<h3 id="subchapter-the-loss-in-matrix-form">Subchapter: the loss in matrix form</h3>
+<p>For the general problem, write it in matrix form. X is the n x d
+feature matrix, y the n targets:</p>
 <pre class="ascii">loss(w) = ||Xw - y||^2
-
-gradient:  2 X^T (Xw - y) = 0
+</pre>
+<p>Xw is the prediction vector: each row of X dots w (L02). The loss
+is the squared norm of the error vector (L01). Two lessons
+collide in one formula: matrices make the predictions, the norm
+scores them.</p>
+<h3 id="subchapter-differentiate-and-set-to-zero">Subchapter: differentiate and set to zero</h3>
+<p>The loss is convex in w (a sum of squares, L08&rsquo;s bowl). So the
+minimum is where the derivative is zero:</p>
+<pre class="ascii">gradient:  2 X^T (Xw - y) = 0
 normal equation:  X^T X w = X^T y
 </pre>
 <p>One linear system solves all of regression. If X^T X is
 invertible: w = (X^T X)^-1 X^T y. No iteration, no learning rate,
 exact answer.</p>
-<p>Solve the spring toy. X = [1, 2, 3]^T, y = [1.1, 1.9, 3.2]^T:</p>
+<h3 id="subchapter-the-spring-toy-solved">Subchapter: the spring toy, solved</h3>
+<p>X = [1, 2, 3]^T, y = [1.1, 1.9, 3.2]^T:</p>
 <pre class="ascii">X^T X = 1 + 4 + 9 = 14
 X^T y = 1*1.1 + 2*1.9 + 3*3.2 = 1.1 + 3.8 + 9.6 = 14.5
 w = 14.5 / 14 = 1.0357
 </pre>
 <p>Best slope: 1.036 cm per newton. Squared error at this w:
-predictions 1.036, 2.071, 3.107; errors 0.064, -0.171, -0.093;
+predictions 1.036, 2.071, 3.107. Errors 0.064, -0.171, -0.093.
 sum of squares = 0.0041 + 0.0294 + 0.0086 = 0.0421. Lower than
 every guess. The formula beat the guessing.</p>
+<figure><img alt="The normal equation: differentiate, set to zero" src="assets/plate-l09-normal.svg"><figcaption>X^T X w = X^T y. Toy: 14 w = 14.5, w = 1.0357, error 0.0421. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-geometry-it-was-projection-all-along">The geometry: it was projection all along</h2>
 <p>L02 promised this. The vector y = [1.1, 1.9, 3.2] lives in R^3.
 The model&rsquo;s predictions Xw live in the column space of X: here,
 the line spanned by [1, 2, 3]. y is not on that line (the points
 are noisy). Least squares projects y onto the line. The projection
-is the prediction; the leftover is perpendicular to the line.</p>
-<p>Verify perpendicularity. Prediction p = 1.0357 * [1, 2, 3] =
-[1.036, 2.071, 3.107]. Leftover r = y - p = [0.064, -0.171,
-0.093]. Dot with the line direction [1, 2, 3]:</p>
+is the prediction. The leftover is perpendicular to the line.</p>
+<h3 id="subchapter-verify-the-perpendicularity">Subchapter: verify the perpendicularity</h3>
+<p>Prediction p = 1.0357 * [1, 2, 3] = [1.036, 2.071, 3.107].
+Leftover r = y - p = [0.064, -0.171, 0.093]. Dot with the line
+direction [1, 2, 3]:</p>
 <pre class="ascii">r . [1,2,3] = 0.064*1 + (-0.171)*2 + 0.093*3
             = 0.064 - 0.342 + 0.279 = 0.001 ~ 0
 </pre>
@@ -281,22 +297,35 @@ is the prediction; the leftover is perpendicular to the line.</p>
 the model can express. That is the normal equation&rsquo;s geometric
 meaning: X^T (Xw - y) = 0 says the residual is orthogonal to every
 column of X.</p>
+<figure><img alt="Least squares IS projection" src="assets/plate-l09-projection.svg"><figcaption>Residual dots the column space to ~0. Prediction is the shadow. Error is perpendicular. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="where-it-breaks-more-features-than-sense">Where it breaks: more features than sense</h2>
 <p>Two failure modes, both with numbers.</p>
-<p><strong>Dependent features.</strong> Add a second feature that is twice the
-first: X = [[1, 2], [2, 4], [3, 6]]. Then X^T X = [[14, 28], [28,
-56]]: row 2 is twice row 1. Determinant zero. Not invertible. The
+<h3 id="subchapter-dependent-features">Subchapter: dependent features</h3>
+<p>Add a second feature that is twice the first: X = [[1, 2], [2, 4],
+[3, 6]]. Then X^T X = [[14, 28], [28, 56]]: row 2 is twice row 1.
+Determinant: 14<em>56 - 28</em>28 = 784 - 784 = 0. Not invertible. The
 normal equation has infinitely many solutions: w = [1.036, 0] and
 w = [0, 0.518] fit identically. L01&rsquo;s linear dependence returns as
-a singular matrix. Fix: drop the duplicate, or regularize (CS229
-L03).</p>
-<p><strong>More features than examples.</strong> 100 features, 10 examples. X^T X
-is 100x100 but built from 10 outer products: rank at most 10 (L04).
-Ninety directions are unconstrained; infinite solutions fit the
-training data perfectly and generalize terribly. This is
-overfitting in its purest form. The playlist&rsquo;s &ldquo;minimum normed
-solution&rdquo; (Lecture 21) picks the shortest w among the infinite
-candidates [uncertain: exact lecture treatment unknown].</p>
+a singular matrix.</p>
+<h3 id="subchapter-more-features-than-examples">Subchapter: more features than examples</h3>
+<p>100 features, 10 examples. X^T X is 100x100 but built from 10
+outer products: rank at most 10 (L04). Ninety directions are
+unconstrained. Infinite solutions fit the training data perfectly
+and generalize terribly. This is overfitting in its purest form.
+The playlist&rsquo;s &ldquo;minimum normed solution&rdquo; (Lecture 21) picks the
+shortest w among the infinite candidates [uncertain: exact lecture
+treatment unknown].</p>
+<h3 id="subchapter-the-fixes">Subchapter: the fixes</h3>
+<p>Three fixes, in order of preference. Drop the duplicate: the
+cheapest, when you can identify it. <strong>Regularize</strong> (ridge): solve
+(X^T X + lambda I) w = X^T y instead. The lambda I term makes the
+matrix invertible no matter what: it adds lambda to every
+eigenvalue (L03), so none can be zero. The price: the solution is
+biased toward small weights. Take the <strong>minimum-norm</strong> solution:
+among all perfect fits, pick the shortest w. This is what the
+Moore-Penrose pseudoinverse computes, and it is gradient descent&rsquo;s
+implicit choice too.</p>
+<figure><img alt="Duplicate features break the formula" src="assets/plate-l09-singular.svg"><figcaption>X^T X = [14 28. 28 56], det = 0. Infinite solutions fit identically. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <table>
 <thead>
 <tr>
@@ -327,46 +356,107 @@ candidates [uncertain: exact lecture treatment unknown].</p>
 <td>infinite solutions; drop or regularize</td>
 </tr>
 <tr>
+<td>Ridge</td>
+<td>(X^T X + lambda I) w = X^T y</td>
+<td>lambda per eigenvalue: always invertible</td>
+</tr>
+<tr>
 <td>Min-norm solution</td>
 <td>shortest w among fits</td>
 <td>the tie-breaker when data underdetermines w</td>
 </tr>
 </tbody>
 </table>
+<h2 id="what-is-used-where-the-real-systems">What is used where: the real systems</h2>
+<table>
+<thead>
+<tr>
+<th>Math idea</th>
+<th>Where it appears</th>
+<th>Why there</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Normal equation</td>
+<td>Small-d regression</td>
+<td>exact solution, O(d^3)</td>
+</tr>
+<tr>
+<td>Gradient descent</td>
+<td>Large-d regression</td>
+<td>iterate instead of inverting (L08)</td>
+</tr>
+<tr>
+<td>Ridge</td>
+<td>CS229 L03</td>
+<td>lambda I fixes singularity</td>
+</tr>
+<tr>
+<td>Gaussian MLE</td>
+<td>Probabilistic view</td>
+<td>squares = Gaussian noise (L06)</td>
+</tr>
+<tr>
+<td>Projection</td>
+<td>Residual analysis</td>
+<td>error orthogonal to the model&rsquo;s reach</td>
+</tr>
+</tbody>
+</table>
+<figure><img alt="Least squares: what is used where" src="assets/plate-l09-used-where.svg"><figcaption>The oldest learning algorithm, still the first fit. Shell 5. Source: standard ML practice. Project: Stanford Frontier AI.</figcaption></figure>
 <div class="qa"><div class="q">Derive the normal equation.</div><div class="a"><p>Start from loss(w) = ||Xw - y||^2. Differentiate with respect to w: the gradient is 2 X^T (Xw - y). The loss is convex, so the minimum is where the gradient is zero: X^T X w = X^T y. In the spring toy, X^T X = 14 and X^T y = 14.5, giving w = 1.0357 directly. No iteration needed.
 When X^T X is singular: dependent columns (a duplicate feature makes the determinant zero, as in the [[14,28],[28,56]] toy) or more features than examples (rank at most n &lt; d). Then infinite weight vectors fit equally well. The standard fixes are dropping redundant features, regularization, or the minimum-norm solution.</p><div class="followup"><strong>Follow-up:</strong> When does the normal equation have no unique solution?</div></div></div>
-<div class="qa"><div class="q">What does least squares have to do with projection?</div><div class="a"><p>Everything: least squares IS projection. The target y rarely lies in the feature matrix&rsquo;s column space, so you project it there; the projection is the prediction. In the toy, the residual [0.064, -0.171, 0.093] dots with the column [1, 2, 3] to give ~0: the error is perpendicular to the model&rsquo;s reach. The normal equation X^T(Xw - y) = 0 is exactly this orthogonality statement.
-Three reasons: squares punish large errors more, squares are smooth (absolute value has a kink at zero, breaking gradient methods), and under Gaussian noise least squares is the MLE (L06). Absolute error is more robust to outliers but harder to optimize: the classic accuracy-robustness trade.</p><div class="followup"><strong>Follow-up:</strong> Why minimize squared error rather than absolute error?</div></div></div>
+<div class="qa"><div class="q">What does least squares have to do with projection?</div><div class="a"><p>Everything: least squares IS projection. The target y rarely lies in the feature matrix&rsquo;s column space, so you project it there. The projection is the prediction. In the toy, the residual [0.064, -0.171, 0.093] dots with the column [1, 2, 3] to give ~0: the error is perpendicular to the model&rsquo;s reach. The normal equation X^T(Xw - y) = 0 is exactly this orthogonality statement.
+Three reasons: squares punish large errors more, squares are smooth (absolute value has a kink at zero, breaking gradient methods), and under Gaussian noise least squares is the MLE (L06). Absolute error handles outliers better but is harder to optimize: the classic accuracy-robustness trade.</p><div class="followup"><strong>Follow-up:</strong> Why minimize squared error rather than absolute error?</div></div></div>
 <div class="qa"><div class="q">100 features, 10 examples. What goes wrong?</div><div class="a"><p>X^T X is 100x100 with rank at most 10: 90 directions unconstrained. Infinite weight vectors fit the 10 training points perfectly, most of them wild. Training error zero, test error catastrophic: overfitting in pure form. The minimum-norm solution picks the shortest such w, and regularization (CS229 L03) penalizes large weights to choose among the candidates sensibly.
 Compare n and d. If d &gt; n, expect singularity. Numerically, check the smallest eigenvalue of X^T X (L03): near zero means trouble. In practice, regularize by default when features outnumber examples.</p><div class="followup"><strong>Follow-up:</strong> How do you detect this before training?</div></div></div>
+<div class="qa"><div class="q">How does ridge regression fix a singular X^T X?</div><div class="a"><p>It solves (X^T X + lambda I) w = X^T y instead. Adding lambda I adds lambda to every eigenvalue of X^T X (L03&rsquo;s shift rule), so no eigenvalue can be zero: the matrix is always invertible. The price is bias: the solution shrinks toward zero, trading a little bias for a lot of stability. Lambda is the knob.
+Lambda to 0 recovers ordinary least squares (and its singularity). Lambda to infinity drives w to zero: the model predicts the mean of y. Somewhere between is the bias-variance sweet spot, found by cross-validation.</p><div class="followup"><strong>Follow-up:</strong> What happens as lambda goes to 0? To infinity?</div></div></div>
+<div class="qa"><div class="q">Normal equation or gradient descent: which do you use?</div><div class="a"><p>The normal equation inverts a d x d matrix: O(d^3). For d = 50, instant and exact. For d = 1,000,000, impossible: iterate with gradient descent instead. The decision rule is pure economics: closed form below a few thousand features, iteration above. Ridge keeps the closed form alive a bit longer by guaranteeing invertibility.
+Yes: conjugate gradient and other iterative linear solvers. They solve X^T X w = X^T y without forming the inverse, in O(d^2) per iteration, and converge in at most d iterations (fewer in practice). The SVD (L04) is the exact middle: stable for singular cases, slower than Cholesky.</p><div class="followup"><strong>Follow-up:</strong> Is there a middle ground?</div></div></div>
+<div class="qa"><div class="q">Walk me through the perpendicularity check. Why does it matter?</div><div class="a"><p>Prediction p = [1.036, 2.071, 3.107], residual r = y - p = [0.064, -0.171, 0.093]. Dot r with the column [1, 2, 3]: 0.064 - 0.342 + 0.279 = 0.001, zero up to rounding. It matters because it is the normal equation in disguise: X^T(Xw - y) = 0 is exactly &ldquo;residual perpendicular to every column.&rdquo; If your residual is not perpendicular, your &ldquo;solution&rdquo; is not the least-squares one: the check catches implementation bugs.
+That you stopped short of the projection: sliding the prediction along the column space would still reduce the error. The perpendicular foot is the unique closest point. Anywhere else leaves reducible error on the table.</p><div class="followup"><strong>Follow-up:</strong> What does a non-perpendicular residual mean geometrically?</div></div></div>
+<div class="qa"><div class="q">You fit y = w x and get w = 1.0357, but the residuals grow with x. Diagnose.</div><div class="a"><p>Heteroscedasticity: the noise variance grows with x, violating the constant-variance assumption behind ordinary least squares. The fit over-weights the noisy large-x points. Diagnose with a residual-vs-x plot: a fan shape confirms it. Fix: weighted least squares (weight each point by 1/variance), or transform y (log) to stabilize the variance. The normal equation generalizes: X^T W X w = X^T W y with a weight matrix W.
+Then the model is wrong, not the noise: y = w x cannot bend, and the data bends. Add features (x^2: polynomial regression) or admit nonlinearity. Fan means noise problem. Curve means model problem. The residual plot distinguishes them.</p><div class="followup"><strong>Follow-up:</strong> The residuals curve instead of fanning. Different diagnosis?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
-<li><strong>The task.</strong> Fit y = w x to three spring measurements. Loss: sum of squared errors.</li>
+<li><strong>The task.</strong> Fit y = w x to three spring measurements. Loss: sum of squared errors. Squares = Gaussian noise MLE.</li>
 <li><strong>First attempt.</strong> Guess w: 1.0 gives 0.06, 1.05 gives 0.045, 1.1 gives 0.10. Works for one parameter.</li>
 <li><strong>The key question.</strong> A formula, no guessing?</li>
 <li><strong>The new idea.</strong> Differentiate, set to zero: X^T X w = X^T y. Toy: w = 14.5/14 = 1.0357, error 0.0421, beating every guess.</li>
-<li><strong>The geometry.</strong> Projection: residual dots the column space to ~0. Prediction is the shadow; error is perpendicular.</li>
+<li><strong>The geometry.</strong> Projection: residual dots the column space to ~0. Prediction is the shadow. Error is perpendicular.</li>
 <li><strong>Where it breaks.</strong> Dependent features: det = 0, infinite solutions. More features than examples: rank &lt;= n &lt; d, overfitting in pure form.</li>
-<li><strong>The fixes.</strong> Drop duplicates, regularize, or take the minimum-norm solution.</li>
-<li><strong>The price and the bridge.</strong> Closed form costs O(d^3) via matrix inversion; with millions of features, iterate (L08) instead. L10 names the loss logistic regression minimizes when squares are the wrong noise model.</li>
+<li><strong>The fixes.</strong> Drop duplicates, ridge (lambda I: always invertible), or the minimum-norm solution.</li>
+<li><strong>The price and the bridge.</strong> Closed form costs O(d^3) via matrix inversion. With millions of features, iterate (L08) instead. L10 names the loss logistic regression minimizes when squares are the wrong noise model.</li>
 </ol>
+<h2 id="go-deeper">Go deeper</h2>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/7ArmBVF2dCs" title="StatQuest: Linear Regression, Clearly Explained" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+<ul>
+<li>StatQuest, &ldquo;Linear Regression, Clearly Explained&rdquo; (the embed above): https://www.youtube.com/watch?v=7ArmBVF2dCs</li>
+<li>The NPTEL lecture for this lesson (frontmatter video): https://www.youtube.com/watch?v=0Dg_yvVgmQo</li>
+<li>Strang, &ldquo;Introduction to Linear Algebra&rdquo;, ch. 4.3-4.4: least squares as projection.</li>
+<li>Deisenroth, Faisal, Ong, &ldquo;Mathematics for Machine Learning&rdquo;, ch. 9 (free): https://mml-book.github.io: linear regression, MLE view.</li>
+</ul>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
-- &ldquo;Essential Mathematics for Machine Learning&rdquo; playlist, Lectures 21-23:
-  https://www.youtube.com/playlist?list=PLLy_2iUCG87D1CXFxE-SxCFZUiJzQ3IvE
-- NPTEL course page (111107137): https://archive.nptel.ac.in/courses/111/107/111107137/</p>
+- &ldquo;Essential Mathematics for Machine Learning&rdquo; playlist, Lecture 21 (this lesson&rsquo;s video): <a href="https://www.youtube.com/watch?v=0Dg_yvVgmQo">paper</a>
+- NPTEL course page (111107137): https://nptel.ac.in/courses/111107137</p>
 <p><strong>Further reading:</strong>
-- Strang, &ldquo;Introduction to Linear Algebra&rdquo;, ch. 4.3-4.4 — least squares as projection.
+- Strang, &ldquo;Introduction to Linear Algebra&rdquo;, ch. 4.3-4.4: least squares as projection.
 - Deisenroth, Faisal, Ong, &ldquo;Mathematics for Machine Learning&rdquo;, ch. 9 (free):
-  https://mml-book.github.io — linear regression, MLE view.</p>
+  - <a href="https://mml-book.github.io">linear regression, MLE view.</a></p>
 <p><strong>Caveats.</strong> The spring toy and all numbers are the lesson&rsquo;s own. The lecture&rsquo;s exact examples (L21-L23) are [uncertain] (transcripts not recovered).</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
 <li><strong>CS229 L02/L03:</strong> linear regression, the normal equation, regularization, and the probabilistic (Gaussian MLE) interpretation.</li>
 <li><strong>CS229 L10:</strong> PCA uses the same projection machinery on the covariance matrix.</li>
-<li><strong>CS336:</strong> linear layers solve least-squares-like problems at every step; the projection view explains residual streams.</li>
+<li><strong>CS336:</strong> linear layers solve least-squares-like problems at every step. The projection view explains residual streams.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/playlist?list=PLLy_2iUCG87D1CXFxE-SxCFZUiJzQ3IvE" target="_blank" rel="noopener">Essential Mathematics for Machine Learning — Lectures 21 (Least Square Approximation), 22-23 (Linear and Multiple Regression)</a></li><li><span class="src-tag">SUPPLEMENT</span>Strang, Introduction to Linear Algebra, ch. 4.3-4.4</li><li><span class="src-tag">SUPPLEMENT</span><a href="https://mml-book.github.io" target="_blank" rel="noopener">Deisenroth, Faisal, Ong, Mathematics for Machine Learning, ch. 9</a></li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=0Dg_yvVgmQo" target="_blank" rel="noopener">Essential Mathematics for Machine Learning: Lecture 21 (Least Square Approximation)</a></li><li><span class="src-tag">SUPPLEMENT</span>Strang, Introduction to Linear Algebra, ch. 4.3-4.4</li><li><span class="src-tag">SUPPLEMENT</span><a href="https://mml-book.github.io" target="_blank" rel="noopener">Deisenroth, Faisal, Ong, Mathematics for Machine Learning, ch. 9</a></li></ul></section>
       <nav class="pager"><a href="../math-ml/l08-convexity-gradient-descent.html"><span class="lbl">← Previous</span>Lecture 8: Convexity and Gradient Descent</a><a href="../math-ml/l10-information-theory.html"><span class="lbl">Next →</span>Lecture 10: Information Theory Basics</a></nav>
     </article>
     <footer class="pagefoot">
