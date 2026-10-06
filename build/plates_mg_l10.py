@@ -24,7 +24,9 @@ for xv, strength in [(3.0, 0.6), (3.5, 1.0), (3.9, 1.578), (4.5, 0.8), (5.0, 0.4
     direction = 1 if xv < 4.0 else -1
     L = 30 + strength * 40
     p.arrow(xx, yy2, xx + direction * L, yy2, color=FOCUS, width=3)
-p.text(X(3.9) - 60, 200, "at 3.9: arrow left, strength 1.578", size=14, bold=True, color=FOCUS)
+# Callout sits just under the 3.9 arrow: the old spot at y=200 was crossed
+# by the 3.5 and 4.5 arrows and the curve.
+p.text(340, 114, "at 3.9: arrow left, strength 1.578", size=14, bold=True, color=FOCUS)
 p.text(80, y0 + 60, "the denoiser learned this whole arrow field: one score per point", size=14)
 p.text(80, y0 + 88, "Langevin walks the arrows: 3.9 -> 3.947 in one step (delta = 0.1, z = 0.4)", size=14)
 p.save("l10-score-field.webp")
@@ -52,7 +54,7 @@ p.save("l10-ddim-stride.webp")
 # 3. Latent diffusion compression
 p = Plate("Latent diffusion: shrink the space, keep the process",
           "512x512x3 = 786,432 numbers become 64x64x4 = 16,384: 48x smaller.",
-          "Shell 2. Every diffusion step costs 48x less. The VAE bottleneck is the price. Source: original computation.",
+          "Shell 2. Every diffusion step costs 48x less. The VAE bottleneck is the price.",
           source="original computation", inner_h=400)
 p.panel(32, p.top, 380, 280, label="pixel space", fill=PINK)
 p.text(56, p.top + 80, "512 x 512 x 3", size=18, bold=True)
