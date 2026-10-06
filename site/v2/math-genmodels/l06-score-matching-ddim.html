@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.classList.remove('no-js');</script>
-<title>Lecture 6: Score Matching and Diffusion II — Reading the Slope — Stanford Frontier AI</title>
+<title>Lecture 6: Score Matching and Diffusion II: Reading the Slope — Stanford Frontier AI</title>
 <meta name="description" content="A new lens on the restorer: learn the slope of the log-density (the score) by denoising, then walk uphill with Langevin dynamics. DDPM&#x27;s noise predictor is a sc">
 <link rel="stylesheet" href="../assets/vendor/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
@@ -216,15 +216,15 @@
   </nav>
   <main class="content" id="main">
     <article>
-      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative Models</a> / Lecture 6: Score Matching and Diffusion II — Reading the Slope</nav>
-      <h1>Lecture 6: Score Matching and Diffusion II — Reading the Slope</h1>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative Models</a> / Lecture 6: Score Matching and Diffusion II: Reading the Slope</nav>
+      <h1>Lecture 6: Score Matching and Diffusion II: Reading the Slope</h1>
       <p class="meta-line">2026-10-05 · Instructor: Prof. Prathosh A P · 2025</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="2Sp0BqAWWXY"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/2Sp0BqAWWXY" title="Lecture 6: Score Matching and Diffusion II — Reading the Slope" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original Stanford lecture. Timestamps in the text link to the exact moment.</p></div><h2 id="the-question-through-a-new-lens">The question, through a new lens</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="2Sp0BqAWWXY"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/2Sp0BqAWWXY" title="W9L35: DDPMs as score-predictors (IIT Madras)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">The lecture this chapter follows. The punchline: DDPM predicts scores.</p></div><h2 id="the-question-through-a-new-lens">The question, through a new lens</h2>
 <p>Restate the one question: learn the rule behind samples, draw
 fresh samples from it. L05&rsquo;s restorer learns to remove noise step
 by step. This lesson re-reads the same machine through a new
 lens: at every noise level, the denoiser points uphill on the
-probability landscape. Learn the slope, walk uphill, and you
+probability surface. Learn the slope, walk uphill, and you
 sample. The slope has a name: the <strong>score</strong>, the gradient of the
 log-density, s(x) = grad log p(x). It points toward higher
 probability, with length equal to the steepness.</p>
@@ -233,6 +233,7 @@ a constant. Differentiate: s(x) = -x. At x = 2.3, the score is
 -2.3: pointing left, back toward the mean, with strength 2.3. At
 x = 0 the score is 0: the peak, no slope. The score is a vector
 field that always says &ldquo;higher probability is that way.&rdquo;</p>
+<figure><img alt="The score always points uphill" src="assets/plate-l06-score-field.webp"><figcaption>s(x) = -x for N(0,1). At x = 2.3 the slope is -2.3, back toward the mean. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="first-attempt-differentiate-a-learned-density">First attempt: differentiate a learned density</h2>
 <p>The naive route: learn the density p(x) from samples, then
 differentiate it to get the score. Watch it fail. True
@@ -293,6 +294,21 @@ small, which is where probability is high. Run it at decreasing
 noise levels (annealed Langevin): coarse scores first, fine
 scores later. That annealing schedule is exactly DDPM&rsquo;s reverse
 chain from L05, wearing different notation.</p>
+<h3 id="subchapter-the-sde-view-one-equation-to-rule-them">Subchapter: the SDE view: one equation to rule them</h3>
+<p>Discrete steps become a continuous story. The <strong>forward SDE</strong>
+(stochastic differential equation) destroys data in continuous
+time: dx = f(x,t) dt + g(t) dw, drift plus noise. Anderson&rsquo;s
+theorem gives the <strong>reverse SDE</strong>: it runs backward in time and
+needs exactly one learned object, the score s(x,t). Drop the
+randomness and the same score drives the <strong>probability-flow
+ODE</strong>: a deterministic path from noise to data.</p>
+<figure><img alt="One score drives three machines" src="assets/plate-l06-sde.webp"><figcaption>Forward SDE destroys, reverse SDE restores, the probability-flow ODE walks straight. Shell 4. Source: original (Song et al., 2021). Project: Stanford Frontier AI.</figcaption></figure>
+<p>Three machines, one score. DDPM is the reverse SDE discretized
+into 1,000 steps. DDIM (below) is the probability-flow ODE
+discretized into jumps. The score view is what unifies them:
+learn s(x,t) once, then choose your sampler. (Song et al., 2021,
+arxiv 2011.13456, carries the full unification. Here the working
+fact is the trio and the shared score.)</p>
 <h2 id="the-lectures-punchline-ddpm-predicts-scores">The lecture&rsquo;s punchline: DDPM predicts scores</h2>
 <p>W9L35 reframes L05&rsquo;s denoiser: predicting the noise epsilon is
 predicting the score. The relation is one division:</p>
@@ -307,6 +323,8 @@ predicted noise was epsilon-hat = 0.42:</p>
 saying &ldquo;the log-density slopes downward with steepness 4.2
 here.&rdquo; DDPM training (MSE on noise) is denoising score matching
 at every noise level simultaneously. Two lectures, one machine.</p>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/B4oHJpEJBAA" title="Diffusion Models From Scratch: Score-Based Generative Models Explained" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: Diffusion Models From Scratch, score-based generative models. Score, score matching, denoising score matching, sampling, and the link to DDPM, DDIM, and EDM. Watch after the DDPM-predicts-scores section.</p></div>
+
 <h2 id="mapping-back-what-each-property-fixes">Mapping back: what each property fixes</h2>
 <table>
 <thead>
@@ -320,17 +338,17 @@ at every noise level simultaneously. Two lectures, one machine.</p>
 <tr>
 <td>Differentiation amplifies density wobbles: -3 estimated as -1.793</td>
 <td>Learn the score directly</td>
-<td>Denoising target; no density estimated, nothing to differentiate</td>
+<td>Denoising target. No density estimated, nothing to differentiate</td>
 </tr>
 <tr>
 <td>Empty regions have the worst scores</td>
 <td>Corrupt with noise during training</td>
-<td>Corrupted samples blanket the space; return directions learned everywhere</td>
+<td>Corrupted samples blanket the space. Return directions learned everywhere</td>
 </tr>
 <tr>
 <td>One noise level gives one blurred view</td>
 <td>Many noise levels (annealed)</td>
-<td>Coarse-to-fine schedule; equals DDPM&rsquo;s reverse chain</td>
+<td>Coarse-to-fine schedule. Equals DDPM&rsquo;s reverse chain</td>
 </tr>
 </tbody>
 </table>
@@ -349,34 +367,120 @@ z = 0:</p>
 estimated for. Repeated overshooting oscillates or diverges.
 Delta = 0.1 crept safely to 2.059. The sampler needs small steps
 and many of them: the serial bill again.</p>
-<p><strong>Paying less, way 1: DDIM.</strong> L05&rsquo;s sampler takes all 1,000
-steps because each reverse step was derived for the full chain.
-DDIM reuses the same trained denoiser but jumps: from t = 1000
-directly to t = 800, then 600, and so on. The update uses the
-predicted noise to estimate x_0, then re-noises to the target
-level, deterministically (no added z). Fifty jumps replace a
-thousand steps: a 20x speedup from the same network, with a small
-quality cost. The price becomes optional.</p>
-<p><strong>Paying less, way 2: guidance.</strong> To steer sampling toward a
-condition (a text prompt, a class label), train the denoiser twice
-in one: conditional epsilon_c and unconditional epsilon_u
-(trained by randomly dropping the condition). Sample with the
-extrapolated noise:</p>
+<h3 id="subchapter-ddim-derived-skip-steps-keep-the-denoiser">Subchapter: DDIM derived: skip steps, keep the denoiser</h3>
+<p>L05&rsquo;s sampler needs all 1,000 steps because each reverse step
+was derived for the full Markov chain. DDIM (Song, Meng and
+Ermon, 2020) generalizes the forward process to a non-Markovian
+one with the same per-step marginals, which frees the sampler
+to jump. The update at each jump: use epsilon-hat to estimate
+x_0, then re-noise to the target level:</p>
+<pre class="ascii">x_0-hat = (x_t - sqrt(1 - alpha-bar_t) eps-hat) / sqrt(alpha-bar_t)
+x_s     = sqrt(alpha-bar_s) x_0-hat + sqrt(1 - alpha-bar_s) eps-hat
+</pre>
+<p>No new noise is added (eta = 0): the jumps are deterministic.
+Fifty jumps (t = 1000 -&gt; 980 -&gt; &hellip; or 1000 -&gt; 800 -&gt; 600)
+replace a thousand steps: a 20x speedup from the same trained
+network, with a small quality cost. The plate shows the shape:
+ten dots become six jumps.</p>
+<figure><img alt="DDIM: 50 jumps replace 1000 steps" src="assets/plate-l06-ddim.webp"><figcaption>Same trained denoiser. Jump t = 1000 -&gt; 800 -&gt; 600: estimate x_0, re-noise, repeat. Shell 3. Source: original toy (Song, Meng and Ermon, 2020). Project: Stanford Frontier AI.</figcaption></figure>
+<p>The decision rule: DDIM is the first tool whenever sampling is
+too slow, because it needs no retraining. Eta = 0 gives
+deterministic, reproducible samples (same x_T, same image).
+Eta = 1 recovers DDPM-like stochasticity. Between them, eta
+trades diversity for determinism.</p>
+<h3 id="subchapter-classifier-guidance-vs-classifier-free-guidance">Subchapter: classifier guidance vs classifier-free guidance</h3>
+<p>To steer sampling toward a condition (a text prompt, a class),
+add the condition&rsquo;s score to the mix. <strong>Classifier guidance</strong>
+trains a separate classifier on noisy images and adds w times
+grad log p(y|x_t) to the score. It works, but it needs a
+noise-conditional classifier trained at every noise level: a whole
+second model.</p>
+<p><strong>Classifier-free guidance</strong> (Ho and Salimans, 2022) skips the
+classifier. Train the denoiser twice in one: conditional
+epsilon_c and unconditional epsilon_u (trained by randomly
+dropping the condition). Sample with the extrapolated noise:</p>
 <pre class="ascii">epsilon-tilde = epsilon_u + w (epsilon_c - epsilon_u)
 </pre>
-<p>Work it: epsilon_u = 0.42, epsilon_c = 0.60, w = 3:</p>
-<pre class="ascii">epsilon-tilde = 0.42 + 3 x 0.18 = 0.96
-</pre>
-<p>The guidance scale w pushes the sample toward the condition.
-Higher w means stronger prompt match but shrinking diversity and,
-past a point, artifacts. This <strong>classifier-free guidance</strong> needs
-no separate classifier: the conditional model guides itself.</p>
-<div class="qa"><div class="q">What is the score, in plain terms?</div><div class="a"><p>The gradient of the log-density: s(x) = grad log p(x). It points toward higher probability with strength equal to the steepness. For N(0,1), s(x) = -x: at x = 2.3 the score is -2.3, pointing back toward the mean. A sampler that follows the score walks uphill on the probability landscape.
-The log turns products into sums (the chain rule of L02 becomes addition) and, crucially, the normalizing constant vanishes under differentiation. The score sees the shape of p but not its scale, which is why score models sample well yet cannot report likelihoods.</p><div class="followup"><strong>Follow-up:</strong> Why the log-density and not the density itself?</div></div></div>
+<figure><img alt="Guidance extrapolates toward the condition" src="assets/plate-l06-guidance.webp"><figcaption>eps_u = 0.42, eps_c = 0.60, w = 3: eps-tilde = 0.42 + 3 x 0.18 = 0.96. Shell 3. Source: original toy (Ho and Salimans, 2022). Project: Stanford Frontier AI.</figcaption></figure>
+<p>Work it: epsilon_u = 0.42, epsilon_c = 0.60, w = 3 gives
+epsilon-tilde = 0.42 + 3 x 0.18 = 0.96. The guidance scale w
+pushes the sample past the conditional prediction, toward
+stronger prompt match. Higher w means stronger match but
+shrinking diversity and, past a point, artifacts (oversaturated
+colors, melted textures). The decision rule: w around 7 is the
+production default for text-to-image. Raise it for prompt
+fidelity, lower it for variety. Classifier-free won because it
+needs no second model: the conditional model guides itself.</p>
+<h3 id="subchapter-flow-matching-the-straight-line-cousin">Subchapter: flow matching: the straight-line cousin</h3>
+<p>Diffusion paths curve: the forward process adds noise gradually,
+and the reverse path bends. <strong>Flow matching</strong> (Lipman et al.,
+2022) draws straight lines instead: x_t = (1 - t) x_0 + t eps,
+and trains the network to predict the <strong>velocity</strong> v = eps -
+x_0, the straight-line direction. The loss is the same plain
+regression. The target is simpler.</p>
+<figure><img alt="Flow matching: straight lines from noise to data" src="assets/plate-l06-flow.webp"><figcaption>x_t = (1 - t) x_0 + t eps. The target is the velocity, not the noise. Shell 3. Source: original (Lipman et al., 2022). Project: Stanford Frontier AI.</figcaption></figure>
+<p>Straight paths need fewer steps to integrate: this is why
+<strong>Stable Diffusion 3</strong> trains on rectified flow (Esser et al.,
+2024). The ODE view from the SDE subchapter is the bridge: flow
+matching learns the velocity field of the probability-flow ODE
+directly, without simulating any SDE. The decision rule: when
+few-step sampling matters most, straighten the path. Diffusion
+curves, flow matching draws the chord.</p>
+<h2 id="what-is-used-where-scores-and-shortcuts-in-production">What is used where: scores and shortcuts in production</h2>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Where it runs</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Classifier-free guidance</td>
+<td>Stable Diffusion, DALL-E 2, Imagen: the prompt-following knob (w ~ 7)</td>
+<td>Public: Ho and Salimans, 2022, arxiv 2207.12598, model cards</td>
+</tr>
+<tr>
+<td>DDIM / DPM-Solver schedulers</td>
+<td>HuggingFace diffusers: the default few-step samplers</td>
+<td>Public: diffusers library, open source</td>
+</tr>
+<tr>
+<td>Rectified flow</td>
+<td>Stable Diffusion 3: straight-line training objective</td>
+<td>Public: Esser et al., 2024, arxiv 2403.03206</td>
+</tr>
+<tr>
+<td>Flow matching</td>
+<td>Meta&rsquo;s Movie Gen and recent video models [uncertain]</td>
+<td>Research direction. Exact production use varies</td>
+</tr>
+<tr>
+<td>EDM (Karras et al.)</td>
+<td>The preconditioning recipe behind many tuned samplers</td>
+<td>Public research: arxiv 2206.00364</td>
+</tr>
+</tbody>
+</table>
+<p>The pattern: nobody samples DDPM&rsquo;s raw 1,000 steps in
+production. The stack is latent diffusion (L05) plus a
+few-step ODE sampler (DDIM/DPM-Solver) plus classifier-free
+guidance. The score view is what made that stack composable.</p>
+<div class="qa"><div class="q">What is the score, in plain terms?</div><div class="a"><p>The gradient of the log-density: s(x) = grad log p(x). It points toward higher probability with strength equal to the steepness. For N(0,1), s(x) = -x: at x = 2.3 the score is -2.3, pointing back toward the mean. A sampler that follows the score walks uphill on the probability surface.
+The log turns products into sums (the chain rule of L02 becomes addition) and the normalizing constant vanishes under differentiation. The score sees the shape of p but not its scale, which is why score models sample well yet cannot report likelihoods.</p><div class="followup"><strong>Follow-up:</strong> Why the log-density and not the density itself?</div></div></div>
 <div class="qa"><div class="q">How does denoising teach the score without a density?</div><div class="a"><p>Corrupt x to x-tilde = x + sigma x epsilon and train the network to output (x - x-tilde)/sigma^2. On the toy: x = 2.0, sigma = 0.5, epsilon = 0.6 gives x-tilde = 2.3 and target -1.2. Averaged over corruptions, this target equals the score of the noise-perturbed distribution, which approaches the true score as sigma shrinks. The network never estimates a density, so there is nothing to differentiate and no wobble to amplify.
 One small sigma leaves distant regions empty: a corruption of width 0.01 never reaches x = 3 from data near 0, so the score there stays unlearned. Large sigmas blanket the space and teach coarse return directions. Small sigmas refine them. The multi-level schedule is the annealed Langevin chain, which is DDPM&rsquo;s reverse process.</p><div class="followup"><strong>Follow-up:</strong> Why corrupt at many noise levels instead of one small sigma?</div></div></div>
 <div class="qa"><div class="q">What is the exact relation between DDPM&#x27;s noise prediction and the score?</div><div class="a"><p>s(x_t) = -epsilon-hat(x_t, t) / sqrt(1 - alpha-bar_t). On the L05 toy at t = 1: epsilon-hat = 0.42, sqrt(1 - 0.99) = 0.1, so s = -4.2. DDPM&rsquo;s MSE-on-noise training is denoising score matching at every noise level at once. Same machine, two notations.
-The DDPM view gives the ELBO, the sampling loop, and DDIM&rsquo;s shortcuts. The score view gives Langevin sampling, the SDE unification (Song et al. 2021), and guidance as score arithmetic. Each view unlocks different tools. The lecture&rsquo;s point is that the tools compose because the object is one.</p><div class="followup"><strong>Follow-up:</strong> If they are the same, why have both views?</div></div></div>
+The DDPM view gives the ELBO, the sampling loop, and DDIM&rsquo;s shortcuts. The score view gives Langevin sampling, the SDE unification (Song et al. 2021), and guidance as score arithmetic. Each view gives different tools. The lecture&rsquo;s point is that the tools compose because the object is one.</p><div class="followup"><strong>Follow-up:</strong> If they are the same, why have both views?</div></div></div>
+<div class="qa"><div class="q">Walk me through one DDIM jump.</div><div class="a"><p>Start at t = 1000 with x_1000 (pure noise). The network predicts eps-hat. Estimate the clean image: x_0-hat = (x_1000 - sqrt(1 - alpha-bar_1000) eps-hat) / sqrt(alpha-bar_1000). Pick the target s = 800. Re-noise the estimate to that level: x_800 = sqrt(alpha-bar_800) x_0-hat + sqrt(1 - alpha-bar_800) eps-hat. No fresh noise added (eta = 0). Repeat: 800 -&gt; 600 -&gt; &hellip; -&gt; 0. Fifty jumps, same network, 20x fewer calls than DDPM.
+Because every jump is a fixed function of x_t and the network&rsquo;s prediction: estimate x_0, re-noise with the predicted (not random) noise. Same starting x_T gives the same final image, exactly. Eta = 1 adds fresh Gaussian noise at each jump, recovering DDPM-like stochasticity and diversity.</p><div class="followup"><strong>Follow-up:</strong> Why is eta = 0 deterministic?</div></div></div>
+<div class="qa"><div class="q">Classifier guidance vs classifier-free guidance: which and when?</div><div class="a"><p>Classifier guidance adds w times a separately trained noisy classifier&rsquo;s gradient to the score. It works but needs a second model trained at every noise level. Classifier-free guidance trains one denoiser with random condition-dropout, giving conditional and unconditional predictions, then extrapolates: eps_u + w(eps_c - eps_u). On the toy: 0.42 + 3 x 0.18 = 0.96. Classifier-free won in production because there is no second model to train and maintain.
+The extrapolation overshoots: colors oversaturate, textures melt, diversity collapses. The sample obeys the prompt but leaves the data manifold. Production default w ~ 7 balances fidelity and realism. Past w ~ 15 the artifacts dominate.</p><div class="followup"><strong>Follow-up:</strong> What goes wrong at very high guidance scale?</div></div></div>
+<div class="qa"><div class="q">What is flow matching, and why does Stable Diffusion 3 use it?</div><div class="a"><p>Instead of diffusion&rsquo;s curved noising path, flow matching draws straight lines: x_t = (1 - t) x_0 + t eps, and trains the network to predict the velocity v = eps - x_0. Straight paths need fewer integration steps to follow accurately. SD3 uses rectified flow (the same straight-line idea) because few-step sampling matters for a product: straighter paths mean better images at 28 steps than curved paths give.
+It is the ODE cousin. Diffusion learns the score of a stochastic process. Flow matching learns the velocity of a deterministic one. Both train by plain regression, both sample by integrating a learned field. The SDE trio plate shows the family: same score/velocity idea, different integrators.</p><div class="followup"><strong>Follow-up:</strong> Is flow matching still diffusion?</div></div></div>
+<div class="qa"><div class="q">Applied: your text-to-image product gets &quot;ignores the prompt&quot; complaints at 20 DDIM steps. What do you change?</div><div class="a"><p>Raise the guidance scale first: w from 7 toward 10-12 strengthens prompt adherence without touching the sampler. If faces still melt, the steps are too few for the curvature: switch the scheduler to DPM-Solver (fewer steps, better accuracy) or raise to 30 steps. If latency forbids it, distill the model into a few-step student. The interview signal: diagnose in order (guidance, then sampler, then distillation), and name what each costs: artifacts, then latency, then training.
+A bigger model does not fix a sampler problem: 20 curved steps still undershoot. Guidance and the integrator are the levers that act on few-step quality. Capacity helps the per-step prediction, not the path error.</p><div class="followup"><strong>Follow-up:</strong> Why not just train a bigger model?</div></div></div>
 <figure><img alt="Chapter plate: DDPM noise is score in disguise" src="assets/plate-l06.png"><figcaption>Chapter plate. DDPM noise is score in disguise: s = -eps / sqrt(1 - alpha-bar). Source: original plate for Stanford Frontier AI.</figcaption></figure>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
@@ -386,17 +490,24 @@ The DDPM view gives the ELBO, the sampling loop, and DDIM&rsquo;s shortcuts. The
 <li><strong>The key question.</strong> What if we learn the score directly by denoising, never estimating a density?</li>
 <li><strong>Denoising score matching, by hand.</strong> x = 2.0, sigma = 0.5, epsilon = 0.6: x-tilde = 2.3, target -1.2. Averages to the perturbed score.</li>
 <li><strong>Langevin, by hand.</strong> delta = 0.1, z = -0.4: 2.3 -&gt; 2.059. Score pulls in, noise explores. Annealed schedule equals DDPM&rsquo;s chain.</li>
+<li><strong>The SDE trio.</strong> Forward SDE destroys, reverse SDE restores, probability-flow ODE walks straight. One score drives all three.</li>
 <li><strong>DDPM predicts scores.</strong> s = -0.42/0.1 = -4.2 on the L05 toy. One machine, two notations.</li>
-<li><strong>Prices and payments.</strong> No likelihoods (constant discarded). Step-size fragility: delta = 1.0 overshoots 2.3 -&gt; 1.15. DDIM: 1,000 steps -&gt; 50, 20x speedup. Guidance: 0.42 + 3 x 0.18 = 0.96.</li>
+<li><strong>DDIM.</strong> 1,000 steps -&gt; 50 jumps, same network, eta = 0 deterministic. 20x speedup.</li>
+<li><strong>Guidance.</strong> Classifier vs classifier-free. eps-tilde = 0.42 + 3 x 0.18 = 0.96. w ~ 7 in production.</li>
+<li><strong>Flow matching.</strong> Straight lines, velocity targets. SD3&rsquo;s rectified flow.</li>
+<li><strong>Prices and payments.</strong> No likelihoods (constant discarded). Step-size fragility: delta = 1.0 overshoots 2.3 -&gt; 1.15.</li>
+<li><strong>In production.</strong> Latent diffusion plus DDIM-family samplers plus classifier-free guidance. Nobody ships raw DDPM.</li>
 </ol>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - W9L35: DDPMs as score-predictors (video 2Sp0BqAWWXY) and W9L38: DDIMs (video qiMJBB8chzI): the lectures this chapter follows. [uncertain]: the exact toy numbers in the lectures are not verified. The worked values here are original toys built to the lectures&rsquo; topics.
-- Song &amp; Ermon (2019): https://arxiv.org/abs/1907.05600 — score-based modeling with annealed Langevin.
-- Song et al. (2021): https://arxiv.org/abs/2010.02502 — the SDE unification of DDPM and score matching.</p>
+- Song &amp; Ermon (2019): https://arxiv.org/abs/1907.05600 (score-based modeling with annealed Langevin).
+- Song et al. (2021): https://arxiv.org/abs/2011.13456 (the SDE unification of DDPM and score matching).
+- Song, Meng &amp; Ermon, DDIM (2020): https://arxiv.org/abs/2010.02502 (deterministic few-step sampling).</p>
 <p><strong>Further reading:</strong>
-- Ho &amp; Salimans (2022), classifier-free guidance: the epsilon_u + w(epsilon_c - epsilon_u) formula.
-- Song, Meng &amp; Ermon, DDIM (2020): https://arxiv.org/abs/2010.02502 — deterministic few-step sampling.</p>
+- Ho &amp; Salimans (2022), classifier-free guidance: https://arxiv.org/abs/2207.12598 (the epsilon_u + w(epsilon_c - epsilon_u) formula).
+- Lipman et al., Flow Matching (2022): https://arxiv.org/abs/2210.02747 (straight lines, velocity targets).
+- Yang Song&rsquo;s blog on score matching: https://yang-song.net/blog/2021/score/ (the long-form reference).</p>
 <p><strong>Caveats from these sources.</strong> The 1-D toys are illustrative. Real score models estimate high-dimensional score fields with U-Nets. The denoising target equals the perturbed score only in expectation over corruptions. Single targets are noisy. DDIM&rsquo;s quality at 50 steps depends on the data and the schedule. The 20x figure is representative, not guaranteed.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
@@ -404,9 +515,10 @@ The DDPM view gives the ELBO, the sampling loop, and DDIM&rsquo;s shortcuts. The
 <li><strong>CS229 L11:</strong> annealed Langevin as the conceptual parent of the reverse chain.</li>
 <li><strong>math-genai (sibling):</strong> guided diffusion (W9 lectures): classifier and classifier-free guidance in the lecture&rsquo;s own framing.</li>
 <li><strong>CS336:</strong> the denoiser architecture: the U-Net/transformer that predicts epsilon at every scale, and how t conditions it.</li>
+<li><strong>L04 (this course):</strong> flow matching reunites the warper with the restorer: the velocity field is a continuous flow&rsquo;s drift.</li>
 </ul>
       <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">W9L35: DDPMs as score-predictors (video 2Sp0BqAWWXY)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=qiMJBB8chzI" target="_blank" rel="noopener">W9L38: DDIMs (video qiMJBB8chzI)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1907.05600" target="_blank" rel="noopener">Song &amp; Ermon, Generative Modeling by Estimating Gradients of the Data Distribution (2019)</a></li></ul></section>
-      <nav class="pager"><a href="../math-genmodels/l05-diffusion-ddpm.html"><span class="lbl">← Previous</span>Lecture 5: Diffusion I — The Restorer (DDPM)</a><a href="../math-genmodels/l07-energy-based-models.html"><span class="lbl">Next →</span>Lecture 7: Energy-Based Models — The Critic</a></nav>
+      <nav class="pager"><a href="../math-genmodels/l05-diffusion-ddpm.html"><span class="lbl">← Previous</span>Lecture 5: Diffusion I: The Restorer (DDPM)</a><a href="../math-genmodels/l07-energy-based-models.html"><span class="lbl">Next →</span>Lecture 7: Energy-Based Models: The Critic</a></nav>
     </article>
     <footer class="pagefoot">
       <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
