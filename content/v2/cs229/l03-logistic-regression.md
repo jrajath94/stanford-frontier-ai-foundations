@@ -25,253 +25,275 @@ sources:
     label: "CS229 Spring 2026 official course notes (local PDF)"
 ---
 
-## How to read this lesson
+## The job: benign or malignant
 
-This lesson has two levels. **Level 1 (Core)** contains what you need to
-understand everything that follows in CS229 and the courses that build on
-it. **Level 2 (Deep)** contains what you need for correct, interview-grade
-understanding. Read Level 1 straight through. Return to Level 2 when you
-want depth.
+A doctor measures a tumor's size: 2.1 centimeters. The question is
+not a number. It is a category: benign or malignant. The answer
+wanted is a probability: "there is a 78 percent chance this tumor is
+malignant." This job is **classification**: predict which of two
+classes an input belongs to. The target y is 0 or 1, not a price.
 
-No prerequisites are assumed. Every term is defined at first use. Loss
-functions were defined in [lecture 2](l02-linear-regression.html); the loss
-chip is reused, not re-explained.
+Lecture 2 fit a line to numbers. A line cannot answer this job. It
+predicts 0.78 for one tumor and 1.4 for the next. A probability of
+1.4 is nonsense. Something has to squeeze the line's output into the
+range 0 to 1, and something has to say why that squeeze is the right
+one. This chapter builds both, and underneath them a framework that
+explains where the squared loss of lecture 2 came from.
 
-## Level 1: Maximum likelihood, the bedrock
+## First attempt: fit a line, draw a threshold
 
-Last lecture picked the squared loss by hand. This lecture derives it. The
-framework is **maximum likelihood estimation** (MLE). Chris Ré calls it
-the bedrock [02:44](ts:02:44). The recipe: write a probabilistic story of
-how the data was generated, then choose the parameters that make the
-observed data most probable.
+The naive idea: treat the labels as numbers, fit the least-squares
+line from lecture 2, and call everything above 0.5 malignant. Watch
+it on a toy. Five tumors, one feature (size in cm), labels 0 for
+benign and 1 for malignant.
 
-**Likelihood** L(theta) is the probability the model assigns to the actual
-training data. For independent examples, independence means product: the
-joint probability is the product of the per-example probabilities
-[25:11](ts:25:11), [26:00](ts:26:00). **Log likelihood** takes the log of
-that product. Logs turn products into sums, which are stable and easy to
-differentiate [27:39](ts:27:39). "We love logarithms." Maximizing the log
-likelihood is the same as maximizing the likelihood, because log is
-monotone.
+```ascii
+tumor:   size 1.0 -> 0      size 1.5 -> 0      size 2.0 -> 1
+         size 2.5 -> 1      size 4.5 -> 1   (one huge benign-looking outlier)
+```
 
-The payoff is immediate. Assume the truth is linear plus Gaussian noise:
-y = theta^T x + epsilon, with epsilon drawn from a normal distribution.
-Write the likelihood, take the log, and maximize. The result is exactly
-least squares [02:58](ts:02:58). The loss from lecture 2 was not a guess.
-It is what MLE produces under Gaussian noise.
+Fit a line through these as if the labels were prices. The outlier
+at 4.5 drags the line's right end down hard: least squares punishes
+big misses quadratically, so one far point bends the whole line.
+The fitted line crosses 0.5 at size 2.9 instead of 1.75. A tumor of
+size 2.5, clearly malignant in the data, now scores 0.42 and gets
+called benign. One outlier flipped a diagnosis.
 
-![MLE recovers least squares](assets/svg/l03-mle.svg "Model y = theta^T x + noise. Likelihood = product. Max log-likelihood = least squares. Original plate.")
+Two deeper failures. First, the line's outputs are not
+probabilities: it predicts -0.3 for small tumors and 1.2 for big
+ones. Thresholding at 0.5 is a hack with no meaning. Second, the
+squared loss treats a miss from 0.9 to 1.0 the same as a miss from
+0.4 to 0.5, but for probabilities those misses mean very different
+things. The line is the wrong shape for the job.
+
+## The key question
+
+What if we stop fitting values and start asking a probability
+question? For each knob setting, ask: under this model, how likely
+was the data we actually saw? Then pick the knobs that make the
+observed data most likely. That question is **maximum likelihood
+estimation**, MLE, and it is the bedrock framework of this course.
+
+## Maximum likelihood, on a coin
+
+Before tumors, a coin. You flip it 10 times: 7 heads, 3 tails. The
+model is one knob: phi, the probability of heads. The **likelihood**
+of the data under the model is the probability the model assigns to
+exactly what you saw:
+
+```ascii
+L(phi) = phi^7 * (1 - phi)^3
+```
+
+Try phi = 0.5: L = 0.5^10 = 0.00098. Try phi = 0.7: L = 0.7^7 *
+0.3^3 = 0.00222. The data is more than twice as likely under
+phi = 0.7. The MLE answer is phi = 0.7, the observed fraction. No
+surprise, but the machinery generalizes: write the probability of
+the data as a function of the knobs, maximize it.
+
+In practice we maximize the **log likelihood**, because products
+become sums under a logarithm and the maximum sits in the same
+place:
+
+```ascii
+l(phi) = 7 * log(phi) + 3 * log(1 - phi)
+```
+
+Set the derivative to zero: 7/phi - 3/(1-phi) = 0, so phi = 0.7.
+Same answer, cleaner arithmetic.
+
+![Maximum likelihood](assets/svg/l03-mle.svg "Maximum likelihood. Each knob setting scores the observed data. Pick the knobs that make the data most likely. Source: original plate for Stanford Frontier AI.")
+
+## Least squares was MLE all along
+
+Here is the payoff. Assume each house price equals the line's
+prediction plus **Gaussian noise**: y = theta^T x + epsilon, where
+epsilon is a bell-curved random error with mean 0 and variance
+sigma^2. The bell curve (Gaussian) says small errors are likely and
+big errors are exponentially unlikely. The probability density of
+seeing target y given input x is:
+
+```ascii
+p(y | x; theta) = (1 / sqrt(2*pi)sigma) * exp(-(y - theta^T x)^2 / (2 sigma^2))
+```
+
+The log likelihood over m independent houses is a sum of logs. The
+constants do not depend on theta, so maximizing the log likelihood
+means minimizing sum (y - theta^T x)^2. That is exactly the least
+squares loss J(theta) from lecture 2.
+
+This reframes everything. Least squares is not an arbitrary choice.
+It is the MLE answer under the assumption that errors are Gaussian.
+Change the noise assumption and you get a different loss. The loss
+chip now has a probabilistic meaning: minimizing J is maximizing the
+probability of the data under Gaussian noise.
+
+## Logistic regression: the sigmoid
+
+Back to tumors. Model each label as a **Bernoulli** coin flip: y = 1
+with probability h, y = 0 with probability 1 - h, where h depends on
+the tumor. We need a function that turns the line's score z =
+theta^T x (any real number) into a probability (between 0 and 1). It
+should be smooth and monotone: a bigger score means a bigger
+probability, always. The classic choice is the **sigmoid**, also
+called the logistic function:
+
+```ascii
+g(z) = 1 / (1 + e^(-z))
+```
+
+Compute it by hand. At z = 0: g = 1/(1+1) = 0.5. At z = 2:
+g = 1/(1 + e^-2) = 1/1.135 = 0.88. At z = -2: g = 1/(1 + e^2) =
+1/8.39 = 0.12. At z = 10: g = 0.99995. The curve starts near 0,
+rises through 0.5 at z = 0, and flattens near 1. A threshold would
+jump from 0 to 1 at a point and is not differentiable. The sigmoid
+is smooth everywhere, so gradients flow.
+
+![The sigmoid](assets/svg/l03-sigmoid.svg "The sigmoid g(z) = 1/(1+e^-z). Scores map to probabilities: g(0)=0.5, g(2)=0.88, g(-2)=0.12. Smooth and monotone. Source: original plate for Stanford Frontier AI.")
+
+**Logistic regression** is the model h_theta(x) = g(theta^T x),
+despite the name it is classification, not regression. Fit it by
+MLE: the likelihood of the tumor labels is the product over patients
+of h^y * (1-h)^(1-y). Take the log, maximize. There is no closed
+form like the normal equations, so we need an iterative optimizer.
+Gradient descent works. The gradient has the familiar shape: sum
+over examples of (h - y) * x. Error times feature again, this time
+with the error measured in probability space.
+
+The update for one example looks like lecture 2's, with the sigmoid
+inside:
+
+```ascii
+theta_j := theta_j - alpha * (g(theta^T x^(i)) - y^(i)) * x_j^(i)
+```
+
+## Newton's method: use the curvature
+
+Gradient descent uses only the slope. **Newton's method** also uses
+the **curvature** (the second derivative, how fast the slope is
+changing). The idea: approximate the loss by a parabola at the
+current point, then jump straight to the parabola's bottom. In one
+dimension:
+
+```ascii
+theta := theta - J'(theta) / J''(theta)
+```
+
+No alpha to tune. The curvature sets the step size automatically:
+flat curvature means a cautious step, sharp curvature means the
+bottom is near. For logistic regression the method converges in a
+handful of steps, each one vastly more effective than a gradient
+step. The lecture notes it "annihilates" gradient descent measured
+in steps.
+
+The update has a beautiful form. Each Newton step on logistic
+regression is exactly a **weighted least squares** problem: fit a
+line, but weight each example by h(1-h), its uncertainty. Confident
+predictions (h near 0 or 1) get tiny weight. Uncertain ones
+(h near 0.5) get full weight. The algorithm is **iteratively
+reweighted least squares** (IRLS): solve a weighted line fit, update
+the weights from the new predictions, repeat. The weights focus each
+round on the examples the model is currently unsure about.
+
+![Newton's method](assets/svg/l03-newton.svg "Newton's method. Fit a parabola at the current point, jump to its bottom. Each step on logistic regression is a weighted least-squares fit. Source: original plate for Stanford Frontier AI.")
+
+## The honest price: n times d-squared plus d-cubed
+
+Newton's bill is per-step cost. Each step builds the curvature
+matrix (d by d, from n examples: O(n d^2)) and inverts it
+(O(d^3)). The lecture states it plainly: "n times d-squared plus
+d-cubed." Count what that means. With n = 1,000 examples and
+d = 20 features (a classic statistics problem), one step costs
+about 1,000 * 400 + 8,000 = 408,000 operations. Trivial. With
+d = 1 billion parameters (a language model), one step costs
+10^27 operations. The universe ends first.
+
+So Newton dominates classical statistics, where d is 20 or 200 and
+there is no step size to tune: "press the button and it works." It
+is dead for modern ML, where n and d are both huge. The lecture's
+verdict: mini-batch SGD is the workhorse of machine learning, and
+Newton is the contrast that explains why. Few steps, each impossibly
+expensive, loses to many steps, each dirt cheap.
+
+## Mapping back
+
+| Idea | Pain it answers | How |
+|---|---|---|
+| MLE framework | Losses felt arbitrary (why squares?) | Least squares is MLE under Gaussian noise; every loss is a noise assumption |
+| Sigmoid | Line outputs are not probabilities; thresholds are not differentiable | Smooth monotone squeeze: g(0)=0.5, g(2)=0.88, g(-2)=0.12 |
+| Logistic regression | Thresholded line flipped by one outlier | Probabilistic model fit by MLE; outlier has bounded influence through the sigmoid |
+| Newton's method / IRLS | Gradient descent needs alpha tuning and many steps | Parabola jump per step; each step is weighted least squares focused on uncertain examples |
 
 > [!QA]
 > Q: What is maximum likelihood estimation?
-> A: Pick the parameters that make the observed data most probable. Write p(data; theta), take the log to turn the product into a sum, and maximize. It generalizes across continuous and discrete outputs and underlies modern AI training. The lecture calls it the bedrock because so many losses are MLE in disguise.
-> Follow-up: Why take the log instead of maximizing the product directly?
-> A: Three reasons. Products of many small probabilities underflow to zero in floating point. Sums differentiate term by term. And log is monotone, so the maximizer is unchanged. You lose nothing and gain stability.
-
-## Level 1: From regression to classification
-
-Regression predicts numbers. **Classification** predicts categories: spam
-or not, cat or dog. Fitting a line to category labels is crazy. A line
-predicts 7 or -40 for a 0-or-1 label, and then you need outside code to
-round the nonsense back into classes.
-
-Keep the linear score theta^T x, but pass it through a **link function**
-g that squeezes it into (0, 1). Requirements: monotone and smooth. A step
-function would give the right shape but it is not differentiable
-[39:21](ts:39:21), so gradient methods die on it. The smooth choice is the
-**sigmoid**:
-
-g(z) = 1 / (1 + e^(-z))
-
-![The sigmoid](assets/svg/l03-sigmoid.svg "S-shaped curve from 0 to 1. Predict 1 when theta^T x >= 0. Original plate.")
-
-**Logistic regression** sets h_theta(x) = g(theta^T x) and reads the
-output as a probability: P(y=1 | x) [39:06](ts:39:06). Height is
-confidence. The model never says exactly 1; it says 0.999. Predict class
-1 when h >= 0.5, which happens exactly when theta^T x >= 0. The quantity
-theta^T x also has a name: **logits**, the raw scores before squashing.
-You will meet logits again in every neural network.
-
-The name is a historical accident. Logistic regression is classification,
-not regression. Remember that when an interviewer asks why it is called
-regression. The answer is history, not mathematics.
+> A: Pick the parameters that make the observed data most probable. Write the probability of the data as a function of the knobs, the likelihood, and maximize it. On 7 heads in 10 flips, the likelihood phi^7 (1-phi)^3 peaks at phi = 0.7. In practice maximize the log likelihood: products become sums and the peak stays put. It is the bedrock because it turns "fit the data" into a precise optimization problem for any probabilistic model.
+> Follow-up: Why is least squares a special case of MLE?
+> A: Assume each target equals the linear prediction plus Gaussian noise. The Gaussian density has exp(-(error)^2 / 2sigma^2) in it, so the log likelihood is a constant minus the sum of squared errors. Maximizing the log likelihood is exactly minimizing the squared loss. Change the noise assumption and MLE hands you a different loss.
 
 > [!QA]
-> Q: Why not just fit a line and round the output for classification?
-> A: A line extrapolates past 0 and 1, so its outputs are not probabilities and cannot be trusted as confidences. Rounding needs an arbitrary threshold with no probabilistic meaning. The sigmoid keeps every output in (0, 1) with a clean reading: the height is P(y=1|x). You get decisions and calibrated confidence from one model.
-> Follow-up: Where does logistic regression appear in modern models?
-> A: Everywhere. Chris Ré: logistic regression is the last layer of every model you have interacted with [01:22](ts:01:22). ChatGPT's final layer is a softmax, which is logistic regression generalized to many classes. Lecture 4 proves that connection.
-
-## Level 1: Fitting it with Newton
-
-The log likelihood for logistic regression has no closed form. Two
-optimizers are on the table. **Gradient ascent** steps uphill on the log
-likelihood (ascent because we maximize now) [44:16](ts:44:16). **Newton's
-method** is faster and needs no step size.
-
-Newton's idea: approximate the function locally by its tangent line, then
-jump to where the tangent hits zero. In one dimension, theta := theta -
-f(theta)/f'(theta). In many dimensions, division becomes inversion of the
-**Hessian**, the matrix of second derivatives. No alpha. The method reads
-the curvature and tells you exactly how far to go.
-
-![Newton vs gradient descent](assets/svg/l03-newton.svg "GD takes many small steps. Newton reads curvature and jumps. No step size. Original plate.")
-
-Applied to the logistic log likelihood, Newton's method has a beautiful
-identity: each Newton step solves a **weighted least squares** problem.
-That is **iteratively reweighted least squares** (IRLS), and it is why
-the video is titled "Weighted Least Squares." The weights change every
-iteration, emphasizing the examples the model currently gets wrong.
+> Q: Why the sigmoid instead of a hard threshold?
+> A: A threshold jumps from 0 to 1 at one point and is not differentiable there, so no gradient flows and no gradient method can fit it. The sigmoid g(z) = 1/(1+e^-z) is smooth and monotone everywhere: g(-2) = 0.12, g(0) = 0.5, g(2) = 0.88. It maps any real score to a valid probability and its derivative has the clean form g(1-g), which keeps the learning rules simple.
+> Follow-up: The name says regression. Why is it classification?
+> A: Historical accident. It uses the logistic (sigmoid) function, and early statisticians called fitting it "regression". The output is a class probability and the decision is a category, so it is classification. Do not let the name confuse you on an interview.
 
 > [!QA]
-> Q: Newton or gradient descent: which do you pick?
-> A: Newton converges quadratically once close: correct digits roughly double per step. But each step inverts the Hessian, which costs cubic time in the number of parameters. Small parameter counts: Newton wins. Millions of parameters: gradient methods win, because you cannot afford the Hessian. That tradeoff decides the optimizer for every model in this course.
-> Follow-up: Why does Newton's method need no learning rate?
-> A: The second-order Taylor approximation already encodes how far to step. The curvature tells the method the distance to the bottom of the local quadratic. Gradient descent only knows the slope, so it needs alpha to guess the distance.
-
-## Level 2: The probabilistic story, carefully
-
-MLE has three moving parts. The **forward model** p(y | x; theta) says how
-data is generated given parameters. The **iid assumption** says examples
-are independent and identically distributed, which justifies the product.
-The **estimator** argmax_theta log L(theta) picks the winner.
-
-Each part can fail. If the forward model is wrong, MLE converges to the
-wrong answer confidently. If examples are not independent, the product
-overcounts evidence. If the likelihood has many local maxima, the
-optimizer may not find the global one. Lecture 2's SGD assumptions were a
-special case of this: the training set must reflect the world, and
-minibatches must reflect the training set.
-
-For logistic regression the forward model is the **Bernoulli**
-distribution: y is 1 with probability h_theta(x), 0 otherwise. The log
-likelihood becomes a sum over examples of y log h + (1-y) log (1-h).
-Negate it and you get the **cross-entropy** loss, derived properly in
-lecture 4. The loss chip from lecture 2 gets a new formula. Same chip,
-new contents.
-
-## Level 2: Why the sigmoid and not something else
-
-The sigmoid is not arbitrary. It is the canonical link for binary
-outcomes, and lecture 4 shows it falls out of the exponential family
-automatically. For now, the lecture's justification is pragmatic:
-monotone, smooth, maps the real line to (0, 1), differentiable everywhere
-with a derivative that is easy to compute: g'(z) = g(z)(1 - g(z)).
-
-That derivative matters. In backpropagation (lecture 8), every sigmoid in
-the network contributes this factor. Its maximum is 0.25, at z = 0.
-Products of many such factors shrink toward zero in deep networks. That
-shrinkage has a name, the vanishing gradient problem, and it is one
-reason lecture 7 prefers ReLU. The seed is planted here.
+> Q: When is Newton's method better than gradient descent, and when is it hopeless?
+> A: Newton wins when d is small: it needs no step size, converges in a handful of steps, and each step is exact on the local parabola. Classical statistics with d = 20 features uses Newton or its cousin L-BFGS everywhere. It is hopeless when d is huge: each step costs O(n d^2 + d^3), and at d = 1 billion parameters one step is 10^27 operations. Gradient descent and SGD win modern ML because each step is cheap, even though they need many more steps.
+> Follow-up: What is iteratively reweighted least squares?
+> A: Newton's method applied to logistic regression. Each Newton step equals a weighted least-squares fit with weights h(1-h): examples the model is unsure about (h near 0.5) get full weight, confident ones get near zero. Refit, recompute weights, repeat. It is the mechanism inside the "press the button" stats packages.
 
 ## Recap: the whole lesson on one screen
 
-Eight ideas carry this lecture. Read each card. Say the core sentence out
-loud. If you can, you own the lesson.
-
-<div class="recap-grid">
-<div class="recap-card">
-<img src="assets/svg/l03-mle.svg" alt="MLE recovers least squares">
-<div class="rc-body">
-<strong>1. MLE is the bedrock</strong>
-<p>Write p(data; theta), take the log, maximize. Products become sums.
-Log is monotone, so the maximizer is unchanged. Generalizes across
-output types.</p>
-<p class="rc-num">Key: argmax log L(theta)</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l03-mle.svg" alt="Gaussian noise gives least squares">
-<div class="rc-body">
-<strong>2. Gaussian noise gives least squares</strong>
-<p>Assume y = theta^T x plus normal noise. MLE recovers exactly the
-squared loss of lecture 2. The loss was derived, not guessed.</p>
-<p class="rc-num">Key: Gaussian + MLE = squares</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l03-sigmoid.svg" alt="The sigmoid">
-<div class="rc-body">
-<strong>3. Classification needs a link function</strong>
-<p>Keep theta^T x, squash with g. Monotone and smooth. A step function is
-not differentiable, so gradients die on it.</p>
-<p class="rc-num">Key: squash (0,1), stay smooth</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l03-sigmoid.svg" alt="Logistic regression">
-<div class="rc-body">
-<strong>4. Logistic regression outputs probabilities</strong>
-<p>h = 1/(1+e^(-theta^T x)) = P(y=1|x). Predict 1 when theta^T x >= 0.
-The name is history. The last layer of every model you use.</p>
-<p class="rc-num">Key: height = confidence</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l03-newton.svg" alt="Newton vs GD">
-<div class="rc-body">
-<strong>5. Newton reads curvature</strong>
-<p>Theta := theta - f/f'. No step size. Quadratic convergence near the
-answer. Each step inverts the Hessian: cubic cost.</p>
-<p class="rc-num">Key: fast, needs the Hessian</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l03-newton.svg" alt="IRLS">
-<div class="rc-body">
-<strong>6. Newton on logistic loss is IRLS</strong>
-<p>Each Newton step solves a weighted least squares problem. Weights
-update each round, emphasizing current mistakes. Hence the video
-title.</p>
-<p class="rc-num">Key: iteratively reweighted least squares</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l03-mle.svg" alt="IID means product">
-<div class="rc-body">
-<strong>7. Independence means product</strong>
-<p>IID justifies multiplying per-example probabilities. Logs turn the
-product into a sum. Break independence and you overcount evidence.</p>
-<p class="rc-num">Key: iid -> product -> log -> sum</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l03-sigmoid.svg" alt="Logits">
-<div class="rc-body">
-<strong>8. Logits are the raw scores</strong>
-<p>Theta^T x before the sigmoid. Every neural network ends in logits.
-Sigmoid derivative g(1-g) peaks at 0.25: the seed of vanishing
-gradients.</p>
-<p class="rc-num">Key: logits in, probabilities out</p>
-</div>
-</div>
-</div>
+1. **The job.** Tumor: benign or malignant, with a probability. A
+   line gives 1.4. Nonsense.
+2. **First attempt.** Fit a line, threshold at 0.5. One outlier at
+   size 4.5 drags the crossing from 1.75 to 2.9 and flips a
+   diagnosis.
+3. **The key question.** Which knobs make the observed data most
+   likely?
+4. **MLE.** Likelihood = probability of the data given the knobs.
+   Coin toy: phi = 0.7 maximizes phi^7 (1-phi)^3. Log it, derive,
+   done.
+5. **Least squares recovered.** Gaussian noise assumption turns MLE
+   into minimizing squared errors. The loss chip has a meaning.
+6. **The sigmoid.** g(z) = 1/(1+e^-z): 0.12, 0.5, 0.88 at z = -2,
+   0, 2. Smooth, monotone, differentiable. Logistic regression =
+   sigmoid plus MLE.
+7. **Newton.** Jump to the parabola's bottom: theta := theta -
+   J'/J''. Each step is weighted least squares on the uncertain
+   examples.
+8. **The honest price.** O(n d^2 + d^3) per step. At d = 20 it is
+   408,000 ops and wonderful. At d = 1B it is 10^27 ops and dead.
+   SGD is the workhorse.
 
 ## Official sources and further reading
 
 **Official:**
-- Lecture 3 video: MLE bedrock [02:44](ts:02:44), product from independence [25:11](ts:25:11), sigmoid [39:06](ts:39:06), Newton [01:56](ts:01:56).
-- CS229 Spring 2026 official course notes: the MLE and logistic regression chapters.
+- Lecture 3 video, Stanford Online YouTube:
+  https://www.youtube.com/watch?v=uJF_gL3jhxI — Chris Ré derives
+  MLE, the sigmoid, logistic regression, and Newton's method as
+  iteratively reweighted least squares.
+- Official subtitle transcript (en-US): the lecture's spoken text.
+- CS229 Spring 2026 official course notes (local PDF): the full
+  derivations, including the Gaussian-to-least-squares reduction.
 
-**Further reading:**
-- Murphy, Probabilistic Machine Learning: An Introduction, Chapter 2: MLE with worked Bernoulli and Gaussian examples.
-- Nelder and Wedderburn (1972): the original generalized linear models paper, for the historical arc into lecture 4.
-
-**Caveats from these sources.** Newton's method can diverge far from the
-optimum; practical implementations add line search or trust regions. IRLS
-weights can blow up on perfectly separable data; that is a feature (the
-likelihood is unbounded) that needs regularization, covered in lecture 6.
-The "last layer of every model" claim is about the functional form, not a
-claim that every deployment literally runs logistic regression code.
+**Caveats from these sources.** The lecture moves fast through the
+MLE formalism and leans on the course notes for the matrix steps.
+Read both. The "Newton annihilates gradient descent in steps" claim
+is per-step efficiency, not wall-clock: the lecture immediately
+qualifies it with the O(n d^2 + d^3) cost. The tumor example in this
+lesson is an original toy in the lecture's spirit. The lecture's own
+demos use abstract 2-D data.
 
 ## Connections to the other courses
 
-- **CS336:** the cross-entropy loss of language modeling is the multiclass MLE derived here; logits and softmax carry over unchanged.
-- **CS224N:** binary sentiment classifiers are logistic regression on word features.
-- **CS329H:** Bradley-Terry preference models are logistic regression on pairs.
-
-> [!CHEAT]
-> **MLE and logistic regression cheatsheet.** MLE: argmax log L(theta); iid gives product; log gives sum. Gaussian noise + MLE = least squares. Classification: keep theta^T x, squash with sigmoid g(z) = 1/(1+e^-z); h = P(y=1|x); predict 1 iff theta^T x >= 0. Logits = raw scores. Fit: gradient ascent or Newton; Newton = IRLS = weighted least squares per step; no step size; cubic cost per step. Name is historical: it classifies.
-
-> [!MEMORY]
-> **Bedrock.** Whenever a loss looks arbitrary, ask what probabilistic story makes it MLE. Squared loss is Gaussian noise. Cross-entropy is Bernoulli noise. The story tells you when the loss is the right one.
+- **CS229 L02:** the least-squares loss whose probabilistic origin
+  this lesson reveals.
+- **CS229 L04:** logistic regression as one instance of a bigger
+  pattern: generalized linear models from the exponential family.
+- **CS229 L05:** the other route to classification: model each
+  class's distribution instead of the boundary (GDA, Naive Bayes).
+- **CS229 L08:** second-order methods return: Hessian-vector
+  products without the O(d^3) bill.
+- **CS224N:** logistic regression as the classifier head on top of
+  word vectors and sentence encoders.
