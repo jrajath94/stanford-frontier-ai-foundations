@@ -153,7 +153,7 @@ are dense matmuls: high arithmetic intensity, tensor-core
 friendly. They are not the problem. The problem is the five
 elementwise passes around the N by N matrix: masking,
 dropout, softmax, each reading and writing the full matrix
-for a handful of FLOPs per byte. Fusion deletes the passes;
+for a handful of FLOPs per byte. Fusion deletes the passes.
 tiling deletes the matrix. FlashAttention keeps the matmuls
 and deletes everything around them. The fix targets the
 traffic, not the math.
@@ -176,7 +176,7 @@ At N = 8192, the score matrix in FP16 needs 2 x 8192^2 =
 four copies over. At N = 16,384 it needs 536 MB. The tiles
 do fit: a 64 by 64 tile of scores is 8 KB. FlashAttention's
 plan is a size argument. Nothing about the algorithm
-changed; the matrix simply cannot live where the math
+changed. The matrix simply cannot live where the math
 happens, so it never gets built.
 
 ![The matrix versus the SRAM](assets/plate-l06-sram-fit.webp "134 MB of scores against 20 to 40 MB of SRAM: the matrix cannot live where the math happens. Shell 2. Source: original toy for the SRAM fit. Project: Stanford Frontier AI.")
@@ -212,7 +212,7 @@ One row, two tiles. Tile 1 scores [1, 2], tile 2 scores
 
 Tiled: tile 1 computes max 2, L(1) = e^-1 + 1 = 1.368. Tile
 2 computes max 4, L(2) = e^-1 + 1 = 1.368. Running max
-becomes 4; rescale tile 1's sum by e^(2-4) = 0.1353:
+becomes 4. Rescale tile 1's sum by e^(2-4) = 0.1353:
 1.368 x 0.1353 = 0.185. Add tile 2's 1.368: total 1.553.
 The running statistics converge to the true max and the
 true sum, tile by tile. Each tile's partial output gets the
@@ -278,7 +278,7 @@ it could not use Hopper's new hardware. FlashAttention-3
 (July 2024, arXiv 2407.08608) is written for Hopper, with
 three new ideas.
 
-**Warp specialization.** Some warps only load data; others
+**Warp specialization.** Some warps only load data. Others
 only compute. Loads and math overlap instead of alternating.
 
 **Ping-pong scheduling.** Softmax uses the slow exponential
@@ -349,13 +349,13 @@ the point, but it does not repeal the quadratic.
 
 > [!QA]
 > Q: How does FlashAttention compute an exact softmax without the full row in memory?
-> A: It processes the row in tiles and keeps two running statistics: the sum of exponentials L and the running max m. Each tile's partial output is rescaled by its share of the running totals, so after the last tile the denominator and the max equal the whole-row values. The output is bit-for-bit standard attention; tiling changes the order of operations, not the result.
+> A: It processes the row in tiles and keeps two running statistics: the sum of exponentials L and the running max m. Each tile's partial output is rescaled by its share of the running totals, so after the last tile the denominator and the max equal the whole-row values. The output is bit-for-bit standard attention. Tiling changes the order of operations, not the result.
 > Follow-up: Why does the backward pass not need the N by N matrix either?
 > A: It recomputes the attention tiles from the stored inputs plus the cached L and M vectors, which are only size N. Recomputation adds about 13% more FLOPs but removes the giant read-write of the score matrix. Since the workload is memory bound, trading FLOPs for bandwidth wins: 6x faster runtime in the slides' benchmark.
 
 > [!QA]
 > Q: Why was standard attention memory bound in the first place?
-> A: The profile shows the cost is reads and writes around the N by N score matrix, not the FLOPs: read Q and K, write QK^T, read/write passes for masking, dropout, and softmax, read V, write the output. With d = 768 fixed and N growing, the ops-per-byte ratio falls below the A100 ridge of 161. The math is cheap; the traffic is the bill.
+> A: The profile shows the cost is reads and writes around the N by N score matrix, not the FLOPs: read Q and K, write QK^T, read/write passes for masking, dropout, and softmax, read V, write the output. With d = 768 fixed and N growing, the ops-per-byte ratio falls below the A100 ridge of 161. The math is cheap. The traffic is the bill.
 > Follow-up: Does this analysis apply to the feed-forward blocks too?
 > A: No. The slides scope it to attention explicitly. The feed-forward matmuls are compute bound at large batch: their arithmetic intensity is high. That is why the course optimizes attention and the MLP with different tools.
 
@@ -373,15 +373,15 @@ the point, but it does not repeal the quadratic.
 
 > [!QA]
 > Q: Why is FlashAttention still O(N squared) in compute?
-> A: It computes every one of the N^2 attention scores; it just never stores them all at once. The tiles cover the full matrix, so the arithmetic is unchanged: O(N^2 d). What changed is the memory traffic: O(N^2 d^2 / M) HBM accesses instead of O(Nd + N^2). The quadratic is dodged in traffic, not in math. At extreme N the FLOPs themselves become the wall, and that is when sparse or linear attention returns to the table.
-> Follow-up: If it is still quadratic, why did it unlock long context?
+> A: It computes every one of the N^2 attention scores. It just never stores them all at once. The tiles cover the full matrix, so the arithmetic is unchanged: O(N^2 d). What changed is the memory traffic: O(N^2 d^2 / M) HBM accesses instead of O(Nd + N^2). The quadratic is dodged in traffic, not in math. At extreme N the FLOPs themselves become the wall, and that is when sparse or linear attention returns to the table.
+> Follow-up: If it is still quadratic, why did it make long context practical?
 > A: Because the binding constraint at 8K to 128K was memory traffic, not FLOPs. Deleting 9x of the traffic moved the wall from memory to compute. Long context became a compute problem, which is the cheaper kind: you can buy more FLOPs with more GPUs, but you cannot buy your way out of traffic per GPU.
 
 > [!QA]
 > Q: What did FlashAttention-2 fix over FlashAttention-1?
 > A: Work partitioning. FA1 left parallelism on the table: it parallelized over batch and heads but scheduled sequence-length work suboptimally, causing excess reads and writes. FA2 parallelizes over sequence length too, uses CUTLASS 3 primitives for memory management, and trims the non-matmul overhead like rescaling. Result on A100: 50 to 73 percent of peak versus 25 to 40 percent for FA1, roughly doubling training throughput. FA3 then did the same for Hopper: warp specialization, ping-pong scheduling, FP8, reaching 75 percent of H100 peak.
 > Follow-up: Why does each GPU generation need a new FlashAttention?
-> A: Because each generation's fast path is different: new async copy engines, new matrix instructions, new precisions. The algorithm (tile, rescale, recompute) is stable; the implementation must be rewritten for the new hardware's strengths. FlashAttention is a hardware port as much as an algorithm.
+> A: Because each generation's fast path is different: new async copy engines, new matrix instructions, new precisions. The algorithm (tile, rescale, recompute) is stable. The implementation must be rewritten for the new hardware's strengths. FlashAttention is a hardware port as much as an algorithm.
 
 > [!QA]
 > Q: Applied design: training uses FA2 but attention is still the bottleneck at 64K context. What do you try?
