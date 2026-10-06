@@ -10,10 +10,10 @@ summary: "The predominant image generator: a fixed noising process, a learned de
 date: "2026-05-11"
 instructor: "Tengyu Ma"
 offering: "Spring 2026"
-duration: "1:22:21"
+duration: "1:18:01"
 video_id: dqUMCzWjZSI
 video_title: "Lecture 11: Diffusion Models"
-video_caption: "Original lecture. Tengyu Ma derives diffusion models: forward noising, learned reverse, ELBO training."
+video_caption: "Original lecture. Tengyu Ma builds diffusion models: the fixed forward process, the learned reverse denoiser, and ELBO training."
 concepts: [diffusion-model, generative-model, forward-process, reverse-process, denoising, ELBO, VLA, GAN, VAE]
 sources:
   - tag: video
@@ -25,235 +25,189 @@ sources:
     label: "CS229 Spring 2026 official course notes (local PDF)"
 ---
 
-## How to read this lesson
+## The job: draw a cat that does not exist
 
-This lesson has two levels. **Level 1 (Core)** contains what you need to
-understand everything that follows in CS229 and the courses that build on
-it. **Level 2 (Deep)** contains what you need for correct, interview-grade
-understanding. Read Level 1 straight through. Return to Level 2 when you
-want depth.
+Type "a cat astronaut on the moon" and get a photograph of one. No
+such photo exists. The machine must invent pixels that look real.
+This is **generative modeling** of images: learn p(x), the
+distribution of natural images, then sample new x from it. Lectures
+5 and 10 modeled distributions with Gaussians and mixtures. Images
+have millions of pixels. Bell curves cannot touch them.
 
-No prerequisites are assumed. Every term is defined at first use. The
-ELBO and the generative question were defined in [lecture
-10](l10-em-pca.html); they are reused, not re-explained.
+## First attempt: predict the pixels directly
 
-## Level 1: What diffusion models are
+The naive idea: train a network to output an image in one shot from
+a random seed. This is roughly the GAN story the lecture contrasts
+against. It works, but training is a fight: the generator and the
+discriminator chase each other, modes collapse (the model draws the
+same cat forever), and there is no clean likelihood to optimize.
+The lecture's verdict by placement: the field moved to diffusion,
+which trains on a stable, well-understood objective.
 
-A **diffusion model** is a generative model for images, and now video and
-robot actions. Given many natural images, it learns to generate new
-clean images from the same distribution [00:05](ts:00:05). Not copies of
-training images. New images that look like they came from the same
-source.
+## The key question
 
-The field history matters. Image generation used GANs, then variational
-autoencoders (VAEs). Diffusion is now the predominant approach, better
-than both [01:40](ts:01:40). The course no longer teaches GANs or VAEs;
-the notes keep VAEs only for the curious. When a course drops two
-established topics for one, pay attention.
+What if generation were destruction in reverse? Take a real image
+and destroy it gradually with noise until nothing remains. That
+destruction is easy and needs no learning. Then learn to reverse
+each tiny destruction step. To generate, start from pure noise and
+run the reversals. The hard job (invent an image) becomes many easy
+jobs (remove a little noise).
 
-Two applications beyond images. **VLA** models, vision-language-action,
-use diffusion to generate robot actions [00:39](ts:00:39). And diffusion
-can generate in **parallel** in some sense, making inference potentially
-faster than autoregressive generation [02:33](ts:02:33).
+## The forward process: fixed destruction
 
-![Diffusion chain](assets/svg/l11-diffusion.svg "Forward: fixed noising. Reverse: learned denoising. Original plate.")
+Start with a clean image x_0. Each step shrinks it slightly and adds
+a little Gaussian noise:
+
+```ascii
+x_t = sqrt(1 - beta_t) * x_{t-1} + sqrt(beta_t) * epsilon,  epsilon ~ N(0, I)
+```
+
+**Beta_t** is the noise schedule: small numbers like 10^-4 growing
+to 10^-2. Each step keeps most of the image (sqrt(1-beta) is near 1)
+and adds a whisper of noise. After one step the image is slightly
+blurry. After T steps, with T in the hundreds or thousands, x_T is
+pure static: the original is gone.
+
+The crucial property: the forward process needs no learning. Given
+x_0, you can sample x_t at any t directly in closed form (Gaussians
+compose). So training data for the reverser is free: take real
+images, noise them to any level, and you have (noisy, clean) pairs
+at every noise level.
+
+Toy with numbers. One pixel, x_0 = 0.8, beta_1 = 0.01, sampled
+epsilon_1 = 0.5. x_1 = sqrt(0.99)*0.8 + sqrt(0.01)*0.5 = 0.796 +
+0.05 = 0.846. Barely changed. After 100 such steps the pixel has
+wandered far. After 1,000 it is standard Gaussian noise,
+independent of the 0.8 it started from.
+
+![Diffusion forward process](assets/svg/l11-diffusion.svg "The diffusion forward process. A clean image is destroyed step by step into pure noise. No learning: the destruction is fixed. Source: original plate for Stanford Frontier AI.")
+
+## The reverse process: the learned denoiser
+
+The **reverse process** learns p(x_{t-1} | x_t): given the noisy
+image, predict one step cleaner. A neural network (usually a U-Net)
+takes (x_t, t) and predicts the noise that was added, or
+equivalently the cleaner x_{t-1}. Each single step is easy: the
+noise added per step is tiny, so the reversal is a small correction.
+
+Training is the ELBO from lecture 10, grown up. The latent
+variables are the whole chain x_1 ... x_T. The ELBO decomposes into
+a sum over steps, and each step's term is essentially: how well did
+the network predict the noise at level t? In practice it simplifies
+to a beautifully plain objective: mean squared error between the
+true noise epsilon and the network's prediction. The lecture's
+bottom line: diffusion trains by denoising score matching, which
+walks and talks like a pile of regression problems, one per noise
+level. Stable, no adversary, no mode collapse games.
+
+## Sampling: noise to image
+
+To generate: sample x_T from pure Gaussian noise. Run the learned
+reverser T times: x_T -> x_{T-1} -> ... -> x_0. Each step removes a
+little noise, guided by the network. Out comes an image. Condition
+on text ("a cat astronaut") by feeding the text embedding into the
+denoiser at every step, steering each correction toward the prompt.
+
+## Why T is large
+
+Why not destroy in 10 big steps instead of 1,000 small ones? Two
+reasons. First, each reversal must be easy to learn. A tiny noise
+step has a near-Gaussian reversal the network can fit. A giant leap
+has a complex multimodal reversal it cannot. Second, the ELBO is
+tight only when each step's reversal is close to the true posterior.
+Small steps keep the approximation honest. The price is sampling
+speed: generating one image needs T network evaluations. T = 1,000
+means 1,000 forward passes per image. The field's whole
+distillation and few-step sampler industry exists to pay this price
+down.
+
+## The honest price
+
+Diffusion buys stable training and stunning samples, and pays in
+sampling cost: hundreds to thousands of network evaluations per
+image versus one for a GAN. It pays in likelihood too: the ELBO is
+a bound, not the exact likelihood, so comparing models by ELBO is
+comparing bounds. And it pays in data: the denoiser must see every
+noise level of every kind of image, which takes enormous datasets
+and compute. The lecture contrasts with GANs (fast sampling,
+unstable training) and VAEs (clean latent story, blurrier samples):
+diffusion won image generation by being the most trainable, not the
+most elegant.
+
+## Mapping back
+
+| Idea | Pain it answers | How |
+|---|---|---|
+| Forward process | Learning to invent pixels directly is unstable | Fixed destruction: x_t = sqrt(1-beta_t) x_{t-1} + sqrt(beta_t) eps; free (noisy, clean) pairs at every level |
+| Reverse denoiser | One-shot generation is too hard a job | T easy jobs: predict one step's noise; pixel toy: 0.8 -> 0.846 in one step |
+| ELBO training | GAN training fights; no clean objective | ELBO over the chain simplifies to noise-prediction MSE per level; stable regression |
+| Large T | Big jumps have unlearnable reversals | Hundreds-thousands of tiny steps keep each reversal near-Gaussian and the bound tight |
+| Text conditioning | Unconditional samples ignore the prompt | Feed text embedding into the denoiser every step; each correction steers toward the prompt |
 
 > [!QA]
-> Q: What problem do diffusion models solve?
-> A: Sampling from a complex distribution given only samples. You have many real images and want new ones from the same distribution. The model learns a denoising process: start from pure noise, remove noise step by step, land on a realistic image. Training needs only the real images and the fixed noising process, no labels.
-> Follow-up: Why did diffusion beat GANs?
-> A: Training stability. GANs pit two networks against each other in a game that is notoriously unstable. Diffusion trains a single denoising network on a straightforward regression-like objective. Stable training plus excellent sample quality won the field. The lecture states the outcome without relitigating the war.
-
-## Level 1: The forward process
-
-The **forward process** q destroys images gradually [27:58](ts:27:58).
-Start from a clean image x_0. Each step shrinks it slightly and adds a
-little Gaussian noise:
-
-x_t = (1 - beta_t) x_{t-1} + sqrt(beta_t) eps_t
-
-Beta is small, between 0 and 1, like 1e-4 [07:40](ts:07:40). Eps_t is
-fresh standard Gaussian noise each step. One step barely blurs the
-image. After T steps, around 1000 in the original paper
-[35:20](ts:35:20), the image is pure noise.
-
-The coefficients are chosen to **preserve variance**
-[12:29](ts:12:29). If the data starts with identity covariance, every
-x_t keeps identity covariance: the shrinkage and the added noise balance
-exactly. Normalize the data first and the scale never drifts. This is
-bookkeeping, but the kind that prevents training from exploding.
-
-The forward process is fixed. No learning. It is just a recipe for
-turning images into noise, step by step.
-
-![Clean to noise](assets/figs-notes/notes-diffusion-x0.png "x_0: a clean image. Source: Stanford notes.")
-
-![Noise](assets/figs-notes/notes-diffusion-xT.png "x_T: pure noise after T steps. Source: Stanford notes.")
-
-> [!QA]
-> Q: Why add noise gradually instead of all at once?
-> A: Because denoising gradually is easier to learn than denoising all at once [33:51](ts:33:51). One giant jump from pure noise to a clean image is a brutally hard function to learn. A thousand tiny denoising steps are each easy: remove a little noise, keep the structure. The lecture's intuition: the gradual path gives the learner a curriculum of easy problems instead of one impossible one.
+> Q: What is the forward process in a diffusion model?
+> A: Fixed, learning-free destruction. Start from a clean image x_0 and iterate x_t = sqrt(1-beta_t) x_{t-1} + sqrt(beta_t) epsilon with small betas (10^-4 to 10^-2). Each step barely changes the image. After T = hundreds to thousands of steps, x_T is pure Gaussian noise. Because Gaussians compose, you can sample x_t at any t directly from x_0 in closed form, so training pairs at every noise level are free.
 > Follow-up: Why is the forward process fixed rather than learned?
-> A: A learned noiser is what VAEs do, and it complicates training: the noiser and denoiser must co-adapt. Diffusion is more brute force: fix a simple noising recipe, spend all learning capacity on the denoiser. Fewer moving parts, more stable training. The fixed process is a feature.
-
-## Level 1: The reverse process and training
-
-The **reverse process** p_theta learns to denoise. Given the noisier
-x_t, predict the cleaner x_{t-1}. A neural network does this, one step
-at a time. Chain T steps: start from pure noise x_T, apply the denoiser
-repeatedly, and a clean image x_0 emerges.
-
-Training needs a loss for the denoiser. The answer is the **ELBO** from
-lecture 10: the evidence lower bound over the whole chain
-[39:44](ts:39:44). The latent variables are the intermediate noisy
-images. The bound decomposes per step, so training becomes: pick a
-random clean image, pick a random step t, noise it to x_t with the fixed
-forward process, and train the network to denoise it. Simple, stable,
-scalable.
-
-Sampling reverses the recipe. Draw x_T from a standard Gaussian. For t
-from T down to 1, sample x_{t-1} from p_theta given x_t. Output x_0.
-Every sample is a fresh walk from noise to image.
+> A: Because destruction needs no intelligence: adding noise is trivial. Fixing it makes the training data for the reverser free and the ELBO tractable. All learning concentrates in the reverse process, which is where the intelligence belongs. A learned forward process would add parameters with no benefit.
 
 > [!QA]
-> Q: What does the diffusion network actually predict?
-> A: How to remove the noise added at one step: given x_t, produce a cleaner x_{t-1}. Equivalently, and commonly implemented, it predicts the noise eps_t that was added, and the cleaner image follows by subtraction. Both views describe the same learned denoiser. The network sees the noisy image and the step index t, because the right amount of denoising depends on how noisy the input is.
-> Follow-up: Where does the ELBO from lecture 10 appear?
-> A: As the training objective. The chain x_0..x_T is a latent-variable model: the noisy intermediates are hidden. The ELBO over the chain gives a per-step denoising loss. EM's pattern, bound the hard thing and climb the bound, is literally the training algorithm. Lecture 10 was the rehearsal.
+> Q: What does the diffusion network actually learn to predict?
+> A: The noise. Given a noisy image x_t and the timestep t, the network predicts the Gaussian noise epsilon that was added, or equivalently the slightly cleaner x_{t-1}. The training objective (from the ELBO) simplifies to mean squared error between true and predicted noise, averaged over timesteps and images. Each noise level is one regression problem. The network shares weights across all levels with t as input.
+> Follow-up: Why predict the noise instead of the clean image directly?
+> A: They are equivalent by algebra (x_0 can be recovered from x_t minus the noise), but noise prediction is better conditioned: the target epsilon is always standard Gaussian, same scale at every timestep, while x_0's scale varies. Stable targets train stably. The lecture presents noise prediction as the practical parameterization.
 
-## Level 2: Why T is large
-
-T around 1000 looks wasteful. Each step is cheap, but a thousand steps
-per sample is a thousand network evaluations. The lecture's answer is
-that small steps make each denoising problem easy, and easy problems
-train reliably. Fewer, bigger steps make each step harder and training
-less stable.
-
-The field has since developed shortcuts: fewer-step samplers that skip
-along the chain, and distillation that compresses many steps into few.
-The training still uses the long chain. The sampling need not. This
-split, train long and sample short, is characteristic of deployed
-diffusion systems.
-
-## Level 2: Diffusion versus autoregression
-
-Lecture 14 covers autoregressive generation: predict token by token,
-each depending on all previous. Diffusion differs in two ways. The
-generation order is not fixed: every step refines the whole image at
-once, which is the parallelism the lecture mentions. And the model sees
-the full noisy canvas each step, not just a prefix.
-
-The tradeoff: autoregressive models handle discrete sequences naturally
-and need no fixed length. Diffusion handles continuous data naturally
-and refines globally. The frontier uses both: diffusion for images and
-actions, autoregression for text. Stefano Ermon's work on diffusion
-language models tries to cross that boundary for faster text inference.
+> [!QA]
+> Q: Why does sampling need so many steps, and how is that being fixed?
+> A: Each learned reversal only undoes a tiny noise step accurately. Big jumps have complex reversals the network cannot fit, and the ELBO bound loosens. So generation runs the network T times (hundreds to thousands) per image. The field attacks this with distillation (train a student to do in 4 steps what the teacher does in 1,000), better samplers (DDIM, DPM-Solver take larger principled steps), and noise schedule design. The price is fundamental to the method. The discounts are engineering.
+> Follow-up: Compare diffusion with GANs and VAEs.
+> A: GANs: one forward pass to sample (fast), but adversarial training is unstable and modes collapse. VAEs: clean probabilistic latent story, but samples are blurrier and likelihoods are bounds too. Diffusion: slowest to sample, but the most stable to train (plain regression objectives) and the best sample quality. The field chose trainability.
 
 ## Recap: the whole lesson on one screen
 
-Eight ideas carry this lecture. Read each card. Say the core sentence out
-loud. If you can, you own the lesson.
-
-<div class="recap-grid">
-<div class="recap-card">
-<img src="assets/svg/l11-diffusion.svg" alt="Diffusion chain">
-<div class="rc-body">
-<strong>1. Diffusion generates from noise</strong>
-<p>Learn the distribution of real images. Sample: pure noise in, clean
-image out. Predominant approach, better than GANs and VAEs.</p>
-<p class="rc-num">Key: noise to image, learned</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/figs-notes/notes-diffusion-x0.png" alt="Clean image x_0, Stanford notes">
-<div class="rc-body">
-<strong>2. Forward: fixed noising</strong>
-<p>x_t = (1-beta_t) x_{t-1} + sqrt(beta_t) eps. Small beta, ~1000 steps.
-Variance preserving. No learning here.</p>
-<p class="rc-num">Key: image to noise, fixed</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/figs-notes/notes-diffusion-xT.png" alt="Pure noise x_T, Stanford notes">
-<div class="rc-body">
-<strong>3. After T steps: pure noise</strong>
-<p>The chain ends at a standard Gaussian. Sampling starts here. The
-forward process defines the starting distribution exactly.</p>
-<p class="rc-num">Key: x_T is just noise</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l11-diffusion.svg" alt="Reverse process">
-<div class="rc-body">
-<strong>4. Reverse: learned denoising</strong>
-<p>p_theta(x_{t-1} | x_t): a network removes one step of noise. Chain T
-applications. Gradual beats one-shot: easy problems, not one hard
-one.</p>
-<p class="rc-num">Key: denoise step by step</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l11-diffusion.svg" alt="ELBO training">
-<div class="rc-body">
-<strong>5. Training is the ELBO</strong>
-<p>The chain is a latent-variable model. The bound gives a per-step
-denoising loss. Lecture 10's pattern, deployed.</p>
-<p class="rc-num">Key: bound, then climb</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/figs-notes/notes-diffusion-x0.png" alt="Sampling, Stanford notes">
-<div class="rc-body">
-<strong>6. Sampling walks backward</strong>
-<p>Draw noise, denoise T times, keep x_0. Every run gives a fresh image.
-Shortcuts exist for fewer steps at sample time.</p>
-<p class="rc-num">Key: T denoise evaluations</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l11-diffusion.svg" alt="VLA and parallelism">
-<div class="rc-body">
-<strong>7. Beyond images: VLA and speed</strong>
-<p>Diffusion generates robot actions in VLA models. Parallel refinement
-can beat autoregressive token-by-token inference.</p>
-<p class="rc-num">Key: actions are images too</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/figs-notes/notes-diffusion-xT.png" alt="Fixed forward, Stanford notes">
-<div class="rc-body">
-<strong>8. Fixed forward, learned reverse</strong>
-<p>VAEs learn both directions and co-adaptation hurts. Diffusion fixes
-the noiser, learns only the denoiser. Fewer moving parts win.</p>
-<p class="rc-num">Key: brute force, stable</p>
-</div>
-</div>
-</div>
+1. **The job.** Draw a cat astronaut that never existed. Learn
+   p(x) for images, sample new x.
+2. **First attempt.** One-shot generation (GAN-style): unstable
+   training, mode collapse, no clean objective.
+3. **The key question.** What if generation were destruction in
+   reverse?
+4. **Forward.** x_t = sqrt(1-beta_t) x_{t-1} + sqrt(beta_t) eps.
+   Fixed, free training pairs. Pixel toy: 0.8 -> 0.846.
+5. **Reverse.** Network predicts each step's noise. ELBO becomes
+   noise-prediction MSE per level. Stable.
+6. **Sampling.** Pure noise x_T, run T reversals, steer each with
+   the text prompt.
+7. **Large T.** Tiny steps keep reversals learnable and the bound
+   tight. Price: T network evals per image.
+8. **The honest price.** Slow sampling, bound not likelihood, huge
+   data. Won by trainability, not elegance.
 
 ## Official sources and further reading
 
 **Official:**
-- Lecture 11 video: image generation task [00:05](ts:00:05), VLA [00:39](ts:00:39), predominant approach [01:40](ts:01:40), parallel generation [02:33](ts:02:33), forward process [07:40](ts:07:40), variance preservation [12:29](ts:12:29), one-shot question [33:51](ts:33:51), T ~ 1000 [35:20](ts:35:20), ELBO training [39:44](ts:39:44).
-- CS229 Spring 2026 official course notes: diffusion chapter; the x_0/x_T figures above are from it.
+- Lecture 11 video, Stanford Online YouTube:
+  https://www.youtube.com/watch?v=dqUMCzWjZSI — Tengyu Ma derives
+  the forward process, the ELBO training objective, and sampling,
+  contrasting with GANs and VAEs.
+- Official subtitle transcript (en-US): the lecture's spoken text.
+- CS229 Spring 2026 official course notes (local PDF): the full
+  ELBO derivation for diffusion.
 
-**Further reading:**
-- Ho, Jain, and Abbeel (2020), "Denoising Diffusion Probabilistic Models": the DDPM paper.
-- Sohl-Dickstein et al. (2015): the original diffusion formulation.
-
-**Caveats from these sources.** The "better than GANs and VAEs" claim is
-about image quality and training stability circa 2026; GANs still win on
-single-step sampling speed. The parallelism claim is "in some sense":
-practical speedups need few-step samplers. The notes' VAE chapter is
-retained for interest, not examined.
+**Caveats from these sources.** The lecture's beta schedule values
+(10^-4 to 10^-2) and T in the hundreds-to-thousands are the
+standard DDPM regime the lecture presents. The pixel toy is an
+original miniature of the lecture's per-step arithmetic. Distillation
+and few-step samplers are the field's ongoing answer to the
+sampling price, surveyed but not derived in the lecture.
 
 ## Connections to the other courses
 
-- **CS336:** diffusion language models are the alternative to autoregressive generation; the course compares the paradigms.
-- **CS224N:** the ELBO training pattern matches variational objectives in text generation.
-- **CS329H:** VLA models are diffusion policies: actions sampled like images.
-
-> [!CHEAT]
-> **Diffusion cheatsheet.** Task: sample new images from the data distribution. Forward q: x_t = (1-beta_t)x_{t-1} + sqrt(beta_t) eps_t; fixed; variance preserving; T ~ 1000; ends at pure noise. Reverse p_theta: learned denoiser, one step at a time; gradual beats one-shot. Training: ELBO over the chain, per-step denoising loss. Sampling: noise, denoise T times. Wins: stable training, quality; VLA actions; parallel refinement.
-
-> [!MEMORY]
-> **Easy problems, chained.** One impossible denoising jump becomes a thousand easy ones. When a task looks unlearnable, ask what gradual version of it is learnable. The curriculum is the algorithm.
+- **CS229 L10:** the ELBO, grown from one latent variable to a
+  chain of T.
+- **CS229 L05:** generative modeling's classical roots: from
+  class-conditional Gaussians to learned denoisers.
+- **CS229 L13:** text conditioning: the prompt embeddings that
+  steer each denoising step.
+- **CS229 L14:** the transformer backbones inside modern
+  denoisers (DiT).
+- **CS336:** training diffusion models at scale: the compute
+  behind the samples.
