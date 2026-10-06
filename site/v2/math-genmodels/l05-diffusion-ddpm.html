@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.classList.remove('no-js');</script>
-<title>Lecture 5: Diffusion I — The Restorer (DDPM) — Stanford Frontier AI</title>
+<title>Lecture 5: Diffusion I: The Restorer (DDPM) — Stanford Frontier AI</title>
 <meta name="description" content="The restorer answers the one question by destroying data into noise with a fixed process, then learning to reverse it. The forward step worked by hand on CS229 ">
 <link rel="stylesheet" href="../assets/vendor/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
@@ -216,10 +216,10 @@
   </nav>
   <main class="content" id="main">
     <article>
-      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative Models</a> / Lecture 5: Diffusion I — The Restorer (DDPM)</nav>
-      <h1>Lecture 5: Diffusion I — The Restorer (DDPM)</h1>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative Models</a> / Lecture 5: Diffusion I: The Restorer (DDPM)</nav>
+      <h1>Lecture 5: Diffusion I: The Restorer (DDPM)</h1>
       <p class="meta-line">2026-10-05 · Instructor: Prof. Prathosh A P · 2025</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="N0OOnTKMYJE"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/N0OOnTKMYJE" title="Lecture 5: Diffusion I — The Restorer (DDPM)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=N0OOnTKMYJE" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=N0OOnTKMYJE" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original Stanford lecture. Timestamps in the text link to the exact moment.</p></div><h2 id="the-question-for-restoration">The question, for restoration</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="N0OOnTKMYJE"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/N0OOnTKMYJE" title="W7L26: DDPMs (IIT Madras)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=N0OOnTKMYJE" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=N0OOnTKMYJE" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">The lecture this chapter follows. Forward destruction, the reverse learner, and the sampling loop.</p></div><h2 id="the-question-for-restoration">The question, for restoration</h2>
 <p>Restate the one question: learn the rule behind samples, draw
 fresh samples from it. The restorer&rsquo;s answer: take a photo and
 corrupt it with noise, step by step, until it is pure static.
@@ -245,6 +245,7 @@ it to average the possibilities. This is the same averaging trap
 as the VAE&rsquo;s blur, wearing a new mask: whenever the target given
 the input is multimodal, one point prediction becomes the mushy
 middle.</p>
+<figure><img alt="One leap must average: the mushy middle" src="assets/plate-l05-one-leap.webp"><figcaption>Faces at -5 and +5 both reach x_T = 0.3. The MSE-optimal guess is 0: neither face. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-key-question">The key question</h2>
 <p>What if the corruption happens in a thousand tiny steps, so each
 reverse step only has to remove a speck of noise, with a nearly
@@ -273,6 +274,22 @@ x_0 = 0.8, beta_1 = 0.01, drawn epsilon_1 = 0.5:</p>
 independent of the 0.8 it started from. The signal factor after T
 steps is the product of the shrinkages: with beta = 0.01 each
 step, 0.99^1000 = 0.000043. The original is gone.</p>
+<h3 id="subchapter-the-noise-schedule-why-beta-grows">Subchapter: the noise schedule: why beta grows</h3>
+<p>Beta starts at 10^-4 and grows to 2e-2 linearly (Ho et al.,
+2020). Why not constant? Early steps must be gentle: the image
+still has structure, and a big noise jump would destroy the
+fine details the reverser needs to learn. Late steps can be
+rough: the signal is nearly gone, so larger betas finish the
+job. The schedule is a curriculum: whisper first, shout later.</p>
+<figure><img alt="The noise schedule: from photo to pure static" src="assets/plate-l05-schedule.webp"><figcaption>Linear beta from 1e-4 to 2e-2. Signal left at step 1000: 4e-5. Shell 2. Source: original toy (Ho et al., 2020). Project: Stanford Frontier AI.</figcaption></figure>
+<p>Read the plate: at t = 100, alpha-bar is 0.90 (90% of signal
+variance remains). At t = 500, it is 0.08. At t = 1000, 4e-5:
+pure noise. The <strong>cosine schedule</strong> (Nichol and Dhariwal, 2021)
+is the popular alternative: it keeps the signal alive longer in
+the middle, which helps small images where the linear schedule
+destroys too fast. The decision rule: linear is the default, cosine
+when your images are 64x64 or smaller. Either way, the schedule
+is fixed before training: it is a hyperparameter, not learned.</p>
 <p>The forward process needs no learning, and Gaussians compose, so
 x_t can be sampled from x_0 in closed form, skipping the chain.
 With alpha-bar_t = (1 - beta_1)(1 - beta_2)&hellip;(1 - beta_t):</p>
@@ -291,18 +308,48 @@ the noise epsilon that was added. Training is plain regression:</p>
 <pre class="ascii">true epsilon_1 = 0.5,  predicted epsilon-hat = 0.42
 loss = (0.5 - 0.42)^2 = 0.0064
 </pre>
+<figure><img alt="Training is plain regression on the true noise" src="assets/plate-l05-noise-pred.webp"><figcaption>True epsilon 0.5, predicted 0.42. Loss = (0.5 - 0.42)^2 = 0.0064. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <p>Mean squared error between true and predicted noise, averaged
 over timesteps and images. The lecture&rsquo;s bottom line: diffusion
 trains as a pile of regression problems, one per noise level,
 with weights shared across levels and t as an input. No
 adversary. No mode collapse games.</p>
-<p>Why predict noise instead of the clean image? Algebra: from x_t
-and epsilon, x_0 is determined, since x_t = sqrt(alpha-bar_t)
-x_0 + sqrt(1 - alpha-bar_t) epsilon rearranges to x_0 = (x_t -
-sqrt(1 - alpha-bar_t) epsilon) / sqrt(alpha-bar_t). Predicting
-the noise is predicting the clean image in disguise, but the
-target epsilon is always standard Gaussian, the same scale at
-every timestep. Stable targets train stably.</p>
+<h3 id="subchapter-three-parameterizations-x_0-epsilon-v">Subchapter: three parameterizations: x_0, epsilon, v</h3>
+<p>The network must output something from which x_{t-1} follows.
+Three choices, all algebraically equivalent:</p>
+<ul>
+<li><strong>Predict x_0</strong> (the clean image). Direct, but the target&rsquo;s
+  scale swings with t: near t = T it is a wild guess from pure
+  noise.</li>
+<li><strong>Predict epsilon</strong> (the noise). The target is always standard
+  Gaussian: same scale at every timestep. Stable gradients. The
+  Ho et al. default, and this lesson&rsquo;s choice.</li>
+<li><strong>Predict v</strong> (velocity): v = sqrt(alpha-bar_t) epsilon -
+  sqrt(1 - alpha-bar_t) x_0. Used in Imagen and video models.
+  It behaves well at both ends of the schedule: near t = 0 it
+  looks like epsilon prediction, near t = T like x_0 prediction.</li>
+</ul>
+<p>From x_t and epsilon, x_0 is determined, since x_t =
+sqrt(alpha-bar_t) x_0 + sqrt(1 - alpha-bar_t) epsilon rearranges
+to x_0 = (x_t - sqrt(1 - alpha-bar_t) epsilon) /
+sqrt(alpha-bar_t). Predicting the noise is predicting the clean
+image in disguise, but the target epsilon is always standard
+Gaussian, the same scale at every timestep. Stable targets train
+stably. The decision rule: epsilon by default, v when the
+schedule&rsquo;s ends misbehave (high-resolution images, video).</p>
+<h3 id="subchapter-the-elbo-over-steps-in-one-paragraph">Subchapter: the ELBO over steps, in one paragraph</h3>
+<p>DDPM is a hierarchical VAE with T latent layers (x_1 &hellip; x_T)
+and a fixed encoder. Its ELBO is a sum over timesteps of KL
+terms, one per reverse step, plus a reconstruction term and a
+prior term. Ho et al. simplify it aggressively: drop the
+per-step weights, keep the plain MSE on epsilon. The resulting
+<strong>L_simple</strong> is no longer a true bound, but it trains better
+samples. The weighting it drops emphasized the noisiest
+timesteps, which matter for likelihood but not for looks. The
+decision rule this buys: train on L_simple for sample quality,
+keep the full weighted ELBO when you report likelihoods. The
+two objectives disagree, and L08 explains why the field mostly
+stopped reporting likelihoods for diffusion models.</p>
 <p>Sampling runs the chain backward:</p>
 <pre class="ascii">draw x_T ~ N(0,1)
 for t = T down to 1:
@@ -314,6 +361,22 @@ lecture&rsquo;s framing: a DDPM is a hierarchical VAE with a fixed
 encoder. The latents are the whole chain x_1&hellip;x_T, the encoder
 is the fixed corruption (no parameters), and only the decoder
 (the reverser) is learned.</p>
+<h3 id="subchapter-latent-diffusion-ddpm-in-a-vaes-basement">Subchapter: latent diffusion: DDPM in a VAE&rsquo;s basement</h3>
+<p>Diffusion on 512x512 pixels is 786,432 numbers per step. <strong>Latent
+diffusion</strong> (Rombach et al., 2022) runs the whole DDPM inside a
+VAE&rsquo;s latent room instead. The VAE (the sculptor from L03)
+compresses 512x512x3 to 64x64x4: 16,384 numbers, 48x fewer. The
+denoiser never sees full pixels. After sampling, the VAE decoder
+renders the latent back to pixels.</p>
+<figure><img alt="Latent diffusion: denoise a thumbnail, not the photo" src="assets/plate-l05-latent.webp"><figcaption>512x512x3 becomes 64x64x4: 48x fewer numbers per denoising step. Shell 3. Source: original (Rombach et al., 2022). Project: Stanford Frontier AI.</figcaption></figure>
+<p>This is the architecture behind Stable Diffusion 1 and 2, and
+the reason a 1,000-step sampler became practical: each step
+costs 48x less. The VAE is trained once, frozen, and shared.
+The diffusion model learns the distribution of latents, not
+pixels. Two courses&rsquo; machines compose: the sculptor compresses,
+the restorer dreams. L06&rsquo;s guidance steers the dreaming.</p>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/7juab9uDvJ4" title="How AI Generates Images (Diffusion Models Explained)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: How AI Generates Images, diffusion models explained. DDPM forward and reverse, the noise schedule, the ELBO, latent diffusion, and classifier-free guidance in one pipeline. Watch after the latent-diffusion section.</p></div>
+
 <h2 id="mapping-back-what-each-property-fixes">Mapping back: what each property fixes</h2>
 <table>
 <thead>
@@ -325,19 +388,24 @@ is the fixed corruption (no parameters), and only the decoder
 </thead>
 <tbody>
 <tr>
-<td>One-step target is multimodal; MSE averages to blur (0, not +-5)</td>
+<td>One-step target is multimodal. MSE averages to blur (0, not +-5)</td>
 <td>1,000 tiny steps</td>
-<td>Each reverse step&rsquo;s target is near-unimodal Gaussian; no averaging trap</td>
+<td>Each reverse step&rsquo;s target is near-unimodal Gaussian. No averaging trap</td>
 </tr>
 <tr>
 <td>Learning destruction wastes parameters</td>
 <td>Fixed forward process</td>
-<td>Corruption is arithmetic; all learning concentrates in the reverser</td>
+<td>Corruption is arithmetic. All learning concentrates in the reverser</td>
 </tr>
 <tr>
 <td>Training pairs would need a learned corrupter</td>
 <td>Closed-form jumps</td>
-<td>x_t from x_0 in one formula; free (noisy, clean) pairs at every level</td>
+<td>x_t from x_0 in one formula. Free (noisy, clean) pairs at every level</td>
+</tr>
+<tr>
+<td>Pixel diffusion costs 786k numbers per step</td>
+<td>Latent diffusion</td>
+<td>VAE compresses 48x. DDPM runs in the latent room</td>
 </tr>
 </tbody>
 </table>
@@ -357,31 +425,87 @@ reversal stays close to the true posterior. Small steps keep the
 approximation honest. T large is not a whim. It is what makes the
 reverser learnable. The field&rsquo;s whole few-step sampler industry
 (L06: DDIM) exists to pay this price down.</p>
+<h2 id="what-is-used-where-the-restorer-in-production">What is used where: the restorer in production</h2>
+<table>
+<thead>
+<tr>
+<th>System</th>
+<th>How it uses the restorer</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stable Diffusion 1/2</td>
+<td>Latent diffusion: VAE to 64x64x4, DDPM/DDIM sampling, classifier-free guidance</td>
+<td>Public: Rombach et al., 2022, arxiv 2112.10752</td>
+</tr>
+<tr>
+<td>DALL-E 2</td>
+<td>Diffusion prior over CLIP image embeddings plus diffusion decoder (unCLIP)</td>
+<td>Public: Ramesh et al., 2022, arxiv 2204.06125</td>
+</tr>
+<tr>
+<td>Imagen</td>
+<td>Cascaded diffusion: 64x64 base plus super-resolution diffusion stages</td>
+<td>Public: Saharia et al., 2022, arxiv 2205.11487</td>
+</tr>
+<tr>
+<td>Sora</td>
+<td>Diffusion transformer: patches as tokens, diffusion over video latents</td>
+<td>Public: OpenAI technical report, Feb 2024</td>
+</tr>
+<tr>
+<td>Stable Diffusion 3</td>
+<td>Rectified flow in latent space (the straight-line cousin, L06)</td>
+<td>Public: Esser et al., 2024, arxiv 2403.03206</td>
+</tr>
+</tbody>
+</table>
+<p>The pattern: text-to-image and text-to-video are diffusion
+territory. The sampler varies (DDPM, DDIM, DPM-Solver), the
+guidance is almost always classifier-free, and the diffusion
+runs in a latent room. When someone says &ldquo;diffusion model&rdquo; in
+production, they mean this stack.</p>
 <div class="qa"><div class="q">What is the forward process, exactly?</div><div class="a"><p>Fixed, learning-free destruction: x_t = sqrt(1 - beta_t) x_{t-1} + sqrt(beta_t) epsilon, with betas from 10^-4 to 10^-2. On the worked toy, x_0 = 0.8 becomes x_1 = 0.846 after one step (barely changed) and reaches pure noise after 1,000 steps (signal factor 0.99^1000 = 0.000043). Gaussians compose, so x_t can be sampled from x_0 in closed form: x_t = sqrt(alpha-bar_t) x_0 + sqrt(1 - alpha-bar_t) epsilon.
 Destruction needs no intelligence. Adding noise is arithmetic. Fixing it makes training pairs free at every noise level and keeps the ELBO tractable. A learned forward process would add parameters with zero benefit. All intelligence concentrates in the reverse denoiser.</p><div class="followup"><strong>Follow-up:</strong> Why is the forward process fixed instead of learned?</div></div></div>
 <div class="qa"><div class="q">Why does the network predict noise instead of the clean image?</div><div class="a"><p>The two targets are algebraically equivalent: x_0 = (x_t - sqrt(1 - alpha-bar_t) epsilon) / sqrt(alpha-bar_t), so predicting epsilon determines x_0. But epsilon is always standard Gaussian, the same scale at every timestep, while x_0&rsquo;s scale varies with t. Same-scale targets give stable gradients. The toy loss shows the mechanism: (0.5 - 0.42)^2 = 0.0064, plain regression.
-No. Predicting x_0 or the score (L06) are equivalent reparameterizations of the same reverse step. Noise prediction won in practice because of the stable target scale, and the lecture presents it as the practical parameterization.</p><div class="followup"><strong>Follow-up:</strong> Is noise prediction the only choice?</div></div></div>
+No. Predicting x_0 or the velocity v are equivalent reparameterizations of the same reverse step. Noise prediction won in practice because of the stable target scale, and the lecture presents it as the practical parameterization. v-prediction takes over for high-resolution images and video, where the schedule&rsquo;s ends misbehave.</p><div class="followup"><strong>Follow-up:</strong> Is noise prediction the only choice?</div></div></div>
 <div class="qa"><div class="q">Why does DDPM training avoid the GANs&#x27; instability?</div><div class="a"><p>The objective is mean squared error on noise prediction: a pile of regression problems with a fixed target at each noise level. No adversary, no saddle point, no discriminator to balance. The toy loss 0.0064 is computed against ground-truth noise the forward process itself added, so the supervision is exact. The price moved elsewhere: 1,000 serial sampling steps.
 Sampling speed. A GAN draws a sample in one forward pass. DDPM needs 1,000. For interactive applications the 50-second bill (at 50 ms per step) was disqualifying until few-step samplers (DDIM, distillation) cut it down. The field chose trainability for quality, then spent years buying back speed.</p><div class="followup"><strong>Follow-up:</strong> Then why did anyone use GANs after 2020?</div></div></div>
-<figure><img alt="Chapter plate: tiny steps dodge the averaging trap, sampling pays a thousand steps" src="assets/plate-l05.png"><figcaption>Chapter plate. Tiny steps dodge the averaging trap; sampling pays a thousand sequential steps. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<div class="qa"><div class="q">Walk me through one full training step.</div><div class="a"><p>Pick a real image x_0 and a random timestep t, say t = 1. Jump in closed form: draw epsilon = 0.5, form x_1 = sqrt(0.99) x_0 + sqrt(0.01) x 0.5 = 0.846. Feed (x_1, t = 1) to the network. It predicts epsilon-hat = 0.42. Loss = (0.5 - 0.42)^2 = 0.0064. Backprop. That is the whole step: one image, one timestep, one regression. Repeat millions of times across timesteps and images, and the network learns to denoise at every noise level.
+Cost. T = 1,000 forward passes per image per step is unaffordable. Random t gives an unbiased estimate of the average over timesteps: each step teaches one noise level, and over training all levels get covered. Same logic as minibatches over images, applied to time.</p><div class="followup"><strong>Follow-up:</strong> Why train on random t instead of sweeping t = 1..T per image?</div></div></div>
+<div class="qa"><div class="q">Why does the beta schedule grow instead of staying constant?</div><div class="a"><p>Early steps must whisper: the image still has structure, and a big noise jump would erase the fine details the reverser must learn to restore. Late steps can shout: the signal is nearly gone anyway. The linear schedule (1e-4 to 2e-2) encodes this curriculum. The plate shows the effect: alpha-bar is 0.90 at t = 100, 0.08 at t = 500, 4e-5 at t = 1000. The cosine schedule keeps the middle alive longer for small images.
+Too aggressive early: fine details never get learned, samples look plasticky. Too gentle late: x_T is not really noise, so sampling from pure N(0,1) starts off-distribution and the first reverse steps misbehave. The schedule is the curriculum. A bad curriculum teaches badly.</p><div class="followup"><strong>Follow-up:</strong> What breaks with a bad schedule?</div></div></div>
+<div class="qa"><div class="q">What is latent diffusion, and why 48x?</div><div class="a"><p>Run the DDPM inside a VAE&rsquo;s latent room instead of on pixels. The VAE compresses 512x512x3 = 786,432 numbers to 64x64x4 = 16,384 numbers. 786,432 / 16,384 = 48. Each denoising step costs roughly 48x less. The VAE is trained once and frozen. The diffusion model learns the latent distribution. The decoder renders pixels at the end. This is Stable Diffusion 1 and 2.
+Less than you would fear. The VAE only needs to reconstruct well, not to sample well: the diffusion model handles the distribution. A slightly blurry VAE decoder is acceptable because the latents it decodes are sharp samples from the diffusion model, not averages. The jobs split cleanly: the sculptor compresses, the restorer dreams.</p><div class="followup"><strong>Follow-up:</strong> Does the VAE&#x27;s blur infect the samples?</div></div></div>
+<div class="qa"><div class="q">Applied: you have a 2-second budget per image and a 50 ms denoiser. Design the sampler.</div><div class="a"><p>2 seconds / 50 ms = 40 network calls. DDPM&rsquo;s 1,000 steps do not fit. Use DDIM (L06): 40 jumps from the same trained denoiser, deterministic (eta = 0). Expect a small quality cost vs 1,000 steps. Add classifier-free guidance (w around 7) to keep prompt match strong at few steps. If quality still lags, distill: train a student to mimic 2 DDIM steps in 1, halving the calls again. The interview signal: start from the 50-second bill, divide the budget, name the tool that cuts steps without retraining.
+Because large T is what makes the reversal learnable: each step&rsquo;s target stays near-Gaussian. Train at T = 1,000 for learnability, sample at 40 jumps for speed. DDIM exists precisely to separate the two.</p><div class="followup"><strong>Follow-up:</strong> Why not just train with T = 40 from the start?</div></div></div>
+<figure><img alt="Chapter plate: tiny steps dodge the averaging trap, sampling pays a thousand steps" src="assets/plate-l05.png"><figcaption>Chapter plate. Tiny steps dodge the averaging trap. Sampling pays a thousand sequential steps. Source: original plate for Stanford Frontier AI.</figcaption></figure>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
 <li><strong>The question, for restoration.</strong> Learn the rule. Draw fresh samples. Corrupt data to noise, learn to reverse.</li>
 <li><strong>First attempt: one giant leap.</strong> Faces at +-5 both reach x_T = 0.3. MSE-optimal prediction is 0, the average of the modes. Blur by averaging.</li>
 <li><strong>The key question.</strong> What if corruption runs in a thousand tiny steps, each reverse step nearly unimodal?</li>
 <li><strong>Forward, by hand.</strong> x_0 = 0.8 -&gt; x_1 = 0.846 -&gt; x_2 = 0.80177. Signal factor 0.99^1000 = 0.000043. Closed form: x_t = sqrt(alpha-bar_t) x_0 + sqrt(1 - alpha-bar_t) epsilon.</li>
-<li><strong>Reverse.</strong> Network predicts the added noise. Toy loss (0.5 - 0.42)^2 = 0.0064. Noise prediction equals clean-image prediction by algebra, with stable target scale.</li>
+<li><strong>The schedule.</strong> Beta grows 1e-4 to 2e-2: whisper early, shout late. alpha-bar: 0.90 at t = 100, 0.08 at t = 500, 4e-5 at t = 1000. Cosine for small images.</li>
+<li><strong>Reverse.</strong> Network predicts the added noise. Toy loss (0.5 - 0.42)^2 = 0.0064. Noise, x_0, and v are equivalent targets. Epsilon has the stablest scale.</li>
+<li><strong>The ELBO over steps.</strong> A sum of per-step KL terms. L_simple drops the weights: better samples, no longer a bound.</li>
 <li><strong>Sampling.</strong> x_T ~ N(0,1), then T reverse steps. A hierarchical VAE with a fixed encoder.</li>
+<li><strong>Latent diffusion.</strong> 512x512x3 -&gt; 64x64x4: 48x fewer numbers per step. The sculptor compresses, the restorer dreams. Stable Diffusion&rsquo;s stack.</li>
 <li><strong>The price: serial sampling.</strong> 1,000 steps x 50 ms = 50 seconds per image. T is large because small steps keep the reversal learnable and the ELBO tight.</li>
-<li><strong>Map back.</strong> Tiny steps dodge the averaging trap. The fixed forward makes training pairs free. All learning sits in the reverser.</li>
+<li><strong>In production.</strong> Stable Diffusion, DALL-E 2, Imagen, Sora: latent diffusion plus classifier-free guidance, with DDIM-family samplers.</li>
 </ol>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - W7L26: DDPMs (video N0OOnTKMYJE) and W7L27: DDPM formulation (video P8AiIW0Gg0s): the lectures this chapter follows. The forward-step algebra and the hierarchical-VAE framing are confirmed from the lecture transcripts.
-- Ho, Jain &amp; Abbeel, DDPM (2020): https://arxiv.org/abs/2006.11239 — the original paper.</p>
+- Ho, Jain &amp; Abbeel, DDPM (2020): https://arxiv.org/abs/2006.11239 (the original paper).</p>
 <p><strong>Further reading:</strong>
 - CS229 L11 (this system): the same forward process with beta notation, the 0.846 toy extended here, and the &ldquo;why T is large&rdquo; argument.
-- Sohl-Dickstein et al., &ldquo;Deep Unsupervised Learning using Nonequilibrium Thermodynamics&rdquo; (2015): the original diffusion idea.</p>
+- Sohl-Dickstein et al., &ldquo;Deep Unsupervised Learning using Nonequilibrium Thermodynamics&rdquo; (2015): https://arxiv.org/abs/1503.03585 (the original diffusion idea).
+- Rombach et al., Latent Diffusion (2022): https://arxiv.org/abs/2112.10752 (the 48x trick behind Stable Diffusion).
+- Lilian Weng, &ldquo;What are Diffusion Models?&rdquo;: https://lilianweng.github.io/posts/2021-07-11-diffusion-models/ (the written reference this lesson tracks).
+- Hugging Face, &ldquo;Annotated Diffusion&rdquo;: https://huggingface.co/blog/annotated-diffusion (the code companion: DDPM line by line).</p>
 <p><strong>Caveats from these sources.</strong> The 1-D pixel toys are illustrative. Real DDPMs use T = 1,000 on high-dimensional images with a learned variance schedule. The 50 ms per step is illustrative. Real latency depends on model size and hardware. The noise-prediction equivalence holds exactly only for the Gaussian forward process.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
@@ -391,7 +515,7 @@ Sampling speed. A GAN draws a sample in one forward pass. DDPM needs 1,000. For 
 <li><strong>L06 (this course):</strong> the score view of the same machine, DDIM&rsquo;s shortcut through the 1,000 steps, and guidance.</li>
 </ul>
       <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=N0OOnTKMYJE" target="_blank" rel="noopener">W7L26: DDPMs (video N0OOnTKMYJE)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=P8AiIW0Gg0s" target="_blank" rel="noopener">W7L27: DDPM formulation (video P8AiIW0Gg0s)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2006.11239" target="_blank" rel="noopener">Ho, Jain &amp; Abbeel, Denoising Diffusion Probabilistic Models (2020)</a></li></ul></section>
-      <nav class="pager"><a href="../math-genmodels/l04-normalizing-flows.html"><span class="lbl">← Previous</span>Lecture 4: Normalizing Flows — The Warper</a><a href="../math-genmodels/l06-score-matching-ddim.html"><span class="lbl">Next →</span>Lecture 6: Score Matching and Diffusion II — Reading the Slope</a></nav>
+      <nav class="pager"><a href="../math-genmodels/l04-normalizing-flows.html"><span class="lbl">← Previous</span>Lecture 4: Normalizing Flows: The Warper</a><a href="../math-genmodels/l06-score-matching-ddim.html"><span class="lbl">Next →</span>Lecture 6: Score Matching and Diffusion II: Reading the Slope</a></nav>
     </article>
     <footer class="pagefoot">
       <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
