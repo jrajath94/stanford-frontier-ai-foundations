@@ -19,6 +19,9 @@ sources:
   - tag: video
     label: "Lecture 2 video, Stanford Online YouTube"
     url: https://www.youtube.com/watch?v=cmNIMjPYdgM
+  - tag: video
+    label: "Explainer: StatQuest, Linear Regression Clearly Explained"
+    url: https://www.youtube.com/watch?v=nk2CQITm_eo
   - tag: notes
     label: "Official subtitle transcript (en-US)"
   - tag: notes
@@ -151,6 +154,8 @@ error on a house with big living area pushes the slope knob hard.
 This error-times-something pattern recurs in every learning rule in
 the course. Learn to spot it.
 
+![Error times feature](assets/plate-l02-error-times-feature.webp "The error-times-feature pattern. Linear regression: error times feature, summed. Logistic regression: same shape, sigmoid inside. Backprop: same shape, chain rule outside. One pattern, three lessons. Source: original plate for Stanford Frontier AI.")
+
 Now work it by hand. Three houses, one feature, and the knobs start
 at zero.
 
@@ -179,6 +184,30 @@ gradient descent: many small downhill steps, each one cheap.
 
 ![Gradient descent](assets/svg/l02-gd.svg "Gradient descent. Each knob steps opposite its gradient. Alpha sets the step size. Small alpha crawls, large alpha overshoots. Source: original plate for Stanford Frontier AI.")
 
+### Subchapter: feature scaling, the hidden dial
+
+One more dial hides inside gradient descent: the scale of the
+features. Take two features: living area (1,000 to 3,000 sq ft) and
+bedrooms (1 to 5). One gradient step moves each knob by alpha times
+its gradient, and the living-area gradient is about 1,000 times
+larger than the bedroom gradient. With one shared alpha, the area
+knob leaps while the bedroom knob crawls.
+
+Picture the loss surface. Unscaled, it is a long narrow valley:
+steep across the area direction, flat along bedrooms. Gradient
+descent zigzags across the valley walls, taking hundreds of steps to
+drift down the flat floor. Scale both features to the range 0 to 1
+(subtract the mean, divide by the range), and the valley becomes a
+round bowl. The same alpha now works for every knob, and descent
+walks straight to the bottom in a fraction of the steps.
+
+The decision rule: always scale features before gradient descent.
+The normal equations do not care about scale, but every iterative
+method does. A model that will not converge at any alpha is often a
+model with unscaled features.
+
+![Feature scaling](assets/plate-l02-feature-scaling.webp "Feature scaling. Unscaled features make a narrow valley and zigzag descent. Scaled features make a round bowl and straight descent. Source: original plate for Stanford Frontier AI.")
+
 ## Where it breaks: the learning rate
 
 Alpha is the one dial you must set, and both extremes fail. Watch
@@ -202,6 +231,8 @@ The working range is narrow and problem-dependent. In practice you
 try a few values, watch the loss curve, and pick the largest alpha
 whose loss falls smoothly. The lecture's rule of thumb: when the loss
 bounces instead of falling, your alpha is too high. Turn it down.
+
+![Learning rate traces](assets/plate-l02-alpha-traces.webp "Three learning rates on the bowl J = theta squared from theta = 4. Alpha 0.01 crawls: 100 steps reach 1.47. Alpha 0.1 converges smoothly. Alpha 1.5 explodes: 4, minus 8, 16, minus 48. Source: original plate for Stanford Frontier AI.")
 
 ## The key question
 
@@ -228,7 +259,7 @@ step costs 1,000,000 error computations. One SGD step costs 1.
 
 The price is noise. One example's gradient is a jittery estimate of
 the true downhill direction. The knobs wiggle. The lecture shows the
-trace: batch descent glides smoothly to the bottom; SGD bounces
+trace: batch descent glides smoothly to the bottom. SGD bounces
 around it, sometimes stepping the wrong way. But it bounces *while
 moving*: in the time batch descent takes one exact step, SGD takes
 one million noisy steps and gets much closer. For huge datasets the
@@ -243,6 +274,28 @@ spreadsheet. And a common trick when alpha is large: average the
 knobs over the bouncing trajectory to simulate a steadier estimate.
 
 ![Batch vs SGD](assets/svg/l02-sgd.svg "Batch gradient descent uses all m examples per step: exact direction, slow steps. SGD uses one example: noisy direction, fast steps. Shuffle every epoch. Source: original plate for Stanford Frontier AI.")
+
+### Subchapter: mini-batch, the middle path
+
+Batch descent and SGD are two ends of a dial. The dial is the batch
+size B: how many examples each step uses. Batch is B = m. SGD is
+B = 1. The middle is **mini-batch** SGD: B = 32, 64, 128, or 256.
+
+Count the tradeoff on m = 1,000,000 houses. A batch step costs
+1,000,000 error computations and gives one exact direction. An SGD
+step costs 1 and gives one noisy direction. A mini-batch step with
+B = 64 costs 64 and gives a direction 64 times less noisy than SGD.
+In the time batch descent takes one step, mini-batch takes about
+15,000 steps, each nearly as good as the exact one.
+
+Hardware adds a second reason. Modern chips compute 32 or 64
+examples almost as fast as 1, because the arithmetic runs in
+parallel. B = 32 costs barely more wall-clock time than B = 1 but
+cuts the noise by a factor of 32. This is why every production
+training loop uses mini-batches: the batch size is the one number
+that trades noise against hardware at the same time.
+
+![Mini-batch](assets/plate-l02-minibatch.webp "Mini-batch SGD. Batch size 1 is noisy and cheap. Batch size m is exact and slow. Batch size 32 to 256 is the production middle: parallel hardware eats 32 examples almost as fast as 1. Source: original plate for Stanford Frontier AI.")
 
 ## The normal equations: the exact answer for lines
 
@@ -287,10 +340,37 @@ toward this point. The normal equations jump straight to it.
 | Normal equations | One matrix inverse, exact | O(n^3) to invert, needs X^T X invertible | Small n (hundreds of features), exact answer wanted |
 
 Each answers a different pain. Batch descent is too slow per step on
-huge data; SGD fixes the per-step cost. Iterative methods need alpha
+huge data. SGD fixes the per-step cost. Iterative methods need alpha
 tuning and many steps. The normal equations skip both when the
 problem is small and linear. Nothing here works on neural networks
 except the gradient idea itself, which is why lectures 7 and 8 exist.
+
+## What is used where
+
+**Linear regression runs in production more than any other model.**
+It is the default baseline for pricing, forecasting, and
+calibration layers. Ad systems fit linear models on billions of
+impressions because a linear model scores in microseconds and
+retrains in minutes. Every serious team fits linear regression first:
+if a fancier model cannot beat it, the fancier model ships nothing.
+
+**The normal equations never run at scale.** No production system
+inverts X^T X on millions of rows. The formula survives in
+textbooks and in small-data statistics, where n is hundreds and the
+exact answer is free. Scikit-learn's LinearRegression uses an SVD
+solver under the hood, which is the numerically stable cousin of the
+normal equations, and it is the right call up to about n = 10,000
+features.
+
+**SGD and mini-batch SGD run everything else.** Every neural
+network in production trains on a variant of the mini-batch update
+from this lesson: PyTorch and JAX loops are mini-batch SGD with
+adaptive step sizes (Adam). The step you hand-computed on three
+houses is the great-grandfather of every LLM training run.
+
+## Watch next
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/nk2CQITm_eo" title="StatQuest: Linear Regression, Clearly Explained" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: StatQuest, Linear Regression Clearly Explained. Josh Starmer fits the line by least squares with the same error-times-feature update. Watch after the gradient-descent section.</p></div>
 
 ## The honest price
 
@@ -330,6 +410,24 @@ is a negotiation with these prices.
 > Follow-up: Why not use a huge batch instead, getting exact gradients with parallelism?
 > A: That is mini-batch SGD, the practical middle ground: batches of 32 to 256 examples. Big enough to use hardware well and smooth the noise, small enough to step often. Full-batch on internet-scale data is still one step per eternity.
 
+> [!QA]
+> Q: Walk me through one gradient-descent step on a new toy: houses (x=2, y=4) and (x=4, y=6), theta = (0, 0), alpha = 0.1.
+> A: Predictions are both 0. Errors: (0-4) = -4, (0-6) = -6. J = 1/4 * (16 + 36) = 13. Grad_0 = (1/2)(-4 - 6) = -5. Grad_1 = (1/2)(-4*2 - 6*4) = (1/2)(-32) = -16. Step: theta_0 := 0 - 0.1*(-5) = 0.5, theta_1 := 0 - 0.1*(-16) = 1.6. New predictions: h(2) = 0.5 + 3.2 = 3.7, h(4) = 0.5 + 6.4 = 6.9. Errors: -0.3 and 0.9. J = 1/4 * (0.09 + 0.81) = 0.225. One step cut the loss from 13 to 0.225.
+> Follow-up: Why did this toy converge in one step while the lesson's toy did not?
+> A: Alpha was larger relative to the curvature, and the two points nearly determine the line. It is luck of the numbers, not a property of the method. Do not generalize from one toy: the lesson's toy needed hundreds of steps at alpha = 0.05.
+
+> [!QA]
+> Q: Applied design: you have 2 billion logged ad impressions, 40 features, and a model that must retrain hourly. Batch, SGD, mini-batch, or normal equations?
+> A: Mini-batch SGD, batch size 256 to 1024. Normal equations are dead: X^T X is 40 by 40, which is fine, but forming it over 2 billion rows every hour is the expensive part, and streaming mini-batches adapt to drift. Full-batch GD takes one step per hour, which cannot track a moving target. Pure SGD at B = 1 wastes the hardware: 256 examples cost nearly the same wall-clock as 1 on a GPU. Mini-batch is the only option that is fast, parallel, and adaptive.
+> Follow-up: What breaks first as the feature count grows from 40 to 40,000?
+> A: The O(n) per-step cost grows linearly, so steps get 1,000 times more expensive. At 40,000 dense features you need sparse representations or feature hashing, or the hourly retrain misses its window. The algorithm stays the same. The data plumbing changes.
+
+> [!QA]
+> Q: Why does feature scaling matter for gradient descent but not for the normal equations?
+> A: Gradient descent uses one alpha for every knob. If living area spans 1,000 to 3,000 and bedrooms span 1 to 5, the area gradient is ~1,000 times larger, so one alpha cannot suit both: it either crawls on bedrooms or explodes on area. Scaling both to 0-1 makes the loss bowl round and one alpha works everywhere. The normal equations solve the linear system exactly in one shot. No steps means no step size, so scale is irrelevant. The price of scale-freedom is the O(n^3) inverse.
+> Follow-up: What is the cheapest correct scaling?
+> A: Subtract the mean and divide by the range or standard deviation, per feature, computed on the training set only. Apply the same transform at prediction time. Never compute scaling statistics on the test set: that leaks test information into training.
+
 ## Recap: the whole lesson on one screen
 
 1. **The job.** Price Ames houses from past sales. Find the best
@@ -353,12 +451,18 @@ is a negotiation with these prices.
    invertibility.
 9. **The honest price.** Exact answers need inverses. Inverses need
    small n and full rank. Iterative answers need alpha tuning.
+10. **Feature scaling.** Unscaled features make a narrow valley.
+    Scale to 0-1 and one alpha works for every knob.
+11. **Mini-batch.** B = 32 to 256: 64 times less noise than SGD at
+    nearly the same hardware cost. The production default.
+12. **The pattern.** Error times feature, summed, recurs in logistic
+    regression and backprop. Learn to spot it.
 
 ## Official sources and further reading
 
 **Official:**
 - Lecture 2 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=cmNIMjPYdgM — Chris Ré builds the
+  - [Chris Ré builds the](https://www.youtube.com/watch?v=cmNIMjPYdgM)
   supervised setup on the Ames housing data, derives gradient
   descent and SGD, and sketches the normal equations.
 - Official subtitle transcript (en-US): the lecture's spoken text.
@@ -366,7 +470,7 @@ is a negotiation with these prices.
   rigorous treatment, including the matrix derivation of the normal
   equations.
 - Ames Housing dataset documentation:
-  https://jse.amstat.org/v19n3/decock.pdf — the real dataset behind
+  - [the real dataset behind](https://jse.amstat.org/v19n3/decock.pdf)
   the lecture's example.
 
 **Caveats from these sources.** The lecture presents the normal
