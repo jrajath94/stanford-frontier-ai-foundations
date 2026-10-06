@@ -56,6 +56,21 @@ training error 0.42 and test error 0.51. The flexible model wins
 training 0.00 to 0.42 and loses the real game 4.7 to 0.51. Fitting
 harder made predictions worse. That is overfitting, measured.
 
+### Subchapter: the U-curve, worked
+
+Sweep the polynomial degree on the 12-point toy and watch the U.
+Degree 1 (line): train 0.42, test 0.51. Degree 2: train 0.15, test
+0.22. Degree 3: train 0.08, test 0.18. Degree 9: train 0.01, test
+1.8. Degree 15: train 0.00, test 4.9.
+
+Training error falls monotonically: more knobs always fit the
+training points better. Test error falls then rises: degree 3 is
+the sweet spot, flexible enough to bend with the true curve but
+not flexible enough to chase the noise. The left arm of the U is
+bias falling. The right arm is variance exploding. The bottom is
+the model you want, and only the test (or dev) error can find it:
+training error points at degree 15, the worst choice.
+
 ## Bias and variance: the two enemies
 
 **Bias** is error from wrong assumptions. The line assumes the world
@@ -72,7 +87,7 @@ models: low bias, high variance. The classic picture is a U-curve:
 test error falls as flexibility fixes bias, then rises as variance
 takes over. The bottom of the U is the model you want.
 
-![Bias and variance](assets/svg/l06-biasvar.svg "Bias versus variance. Simple models underfit with high bias. Flexible models overfit with high variance. Test error is U-shaped in the classical picture. Source: original plate for Stanford Frontier AI.")
+![Bias and variance](assets/svg/l06-biasvar.svg "Shell 1. Bias and variance pull test error into a U. Bias versus variance. Simple models underfit with high bias. Flexible models overfit with high variance. Test error is U-shaped in the classical picture. Source: original plate for Stanford Frontier AI.")
 
 ### Subchapter: the decomposition, worked
 
@@ -86,7 +101,9 @@ three parts add up to the whole. When a model fails, this split
 tells you which enemy to fight: shrink bias with flexibility,
 shrink variance with data or penalties.
 
-![Decomposition](assets/plate-l06-decomposition.webp "Three parts, one error. Predictions 0.7, 0.9, 1.1 at truth 1.0: bias squared 0.01, variance 0.027, plus noise. Source: original toy for the decomposition. Project: Stanford Frontier AI.")
+![Decomposition](assets/plate-l06-decomposition.webp "Shell 2. Error splits into bias squared, variance, noise. Three parts, one error. Predictions 0.7, 0.9, 1.1 at truth 1.0: bias squared 0.01, variance 0.027, plus noise. Source: original toy for the decomposition. Project: Stanford Frontier AI.")
+
+![Chapter plate: bias and variance](assets/plate-l06-chap-biasvar.svg "Chapter plate L06-C1. Left: fit harder: the degree-10 polynomial scores 0.00 on training and 4.7 on test, against the line's 0.42 and 0.51. Center: expected test error splits into bias squared, variance, and noise: 0.01 and 0.027 on the toy. Right: the U-curve: degree 3 wins at 0.18, degree 15 falls to 4.9, and only dev finds the bottom. Bottom: data fights variance; flexibility fights bias. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 ## Where the canon breaks: double descent
 
@@ -112,7 +129,45 @@ parameters. The second descent is why modern models are enormous:
 past the peak, bigger keeps helping. The canon is not wrong, it is
 incomplete: it describes the left of the peak.
 
-![Double descent](assets/svg/l06-dd.svg "Double descent. Test error falls, spikes at the interpolation threshold, then falls again as overparameterization lets the optimizer find smooth zero-loss solutions. Source: original plate for Stanford Frontier AI.")
+### Subchapter: where the peak sits
+
+The interpolation threshold is where the parameter count roughly
+equals the data count: p ~ n. Below it, the model cannot fit
+training exactly. Above it, it can, many ways. At p ~ n the fit is
+knife-edge: exactly one way to thread every point, so tiny data
+changes swing the fit wildly. That knife-edge is the peak.
+
+On the 12-point toy: degree 11 gives 12 knobs for 12 points, the
+threshold. Test error climbs to its maximum there (about 8 in the
+toy), then degree 100 gives test error 0.4 and degree 1,000 gives
+0.25. The peak is narrow and nasty. The practical warning: the
+region just past the classical sweet spot, big enough to be
+sensitive but not big enough to be smooth, is the worst place to
+sit. Modern practice jumps over it entirely.
+
+### Subchapter: flat minima, the optimizer's bias
+
+Among the many zero-training-loss solutions past the peak, why
+does the optimizer find a smooth one? Part of the answer is the
+shape of the minimum. A **flat minimum** is a wide valley: moving
+the knobs a little barely changes the loss. A sharp minimum is a
+narrow pit: tiny knob changes spike the loss. The hypothesis: flat
+minima generalize better, because test data shifts the loss surface
+slightly, and a flat valley survives the shift while a sharp pit
+does not.
+
+SGD's noise biases the search toward flat minima: the bouncing
+kicks the optimizer out of narrow pits but not out of wide
+valleys. [uncertain] whether flatness causes generalization or
+merely correlates with it: the debate is live, with
+counterexamples on both sides. What the lecture uses it for is
+narrower: it is one plausible mechanism for the second descent,
+and it motivates the modern preference for SGD-flavored optimizers
+over exact ones.
+
+![Double descent](assets/svg/l06-dd.svg "Shell 3. Past the interpolation spike, error falls again. Double descent. Test error falls, spikes at the interpolation threshold, then falls again as overparameterization lets the optimizer find smooth zero-loss solutions. Source: original plate for Stanford Frontier AI.")
+
+![Chapter plate: double descent](assets/plate-l06-chap-doubledescent.svg "Chapter plate L06-C2. Left: the U-canon: test error must rise past the classical sweet spot. Center: the interpolation threshold p ~ n: the fit is knife-edge, peaking at degree 11 on the 12-point toy. Right: the second descent: 15% spikes to 25% then falls to 8%; past the peak, bigger helps. Bottom: the worst place to sit is just past the sweet spot. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 ## The key question
 
@@ -137,13 +192,64 @@ decide anything with it. The lecture's warning: every decision made
 on a dataset contaminates it. The test set is the one dataset you
 decide nothing with.
 
-![Three splits](assets/plate-l06-dev-test.webp "One dataset you never touch. Train fits the knobs. Dev decides between models. Test reports once and decides nothing. Source: original diagram for the split discipline. Project: Stanford Frontier AI.")
+### Subchapter: the three-way split, worked
+
+Split 10,000 housing examples: 6,000 train, 2,000 dev, 2,000 test.
+Fit polynomial degrees 1 through 100 on the 6,000. Score each on
+dev: degree 3 wins at 0.18. Report degree 3 on test, once: 0.21.
+The 0.03 gap is the honest price of the dev selection: the winner
+was partly lucky on dev.
+
+Now the contamination arithmetic. Picking the best of 100 models on
+2,000 dev examples: the winner's dev score is optimistic by
+roughly the luck of the best of 100 draws. If you then reported
+0.18 as the final number, you would be lying by the luck margin.
+The test set's 0.21 has no selection behind it: it is the number
+you can quote. The discipline in one line: decide on dev, report
+on test, and the test set decides nothing, ever.
+
+### Subchapter: learning curves, more data or better model
+
+Dev error is 15%. Two cures compete: more data or a better model.
+The learning curve decides. Plot dev error against training size:
+1,000 examples -> 22%, 4,000 -> 17%, 16,000 -> 15.5%. The curve is
+flattening: quadrupling data bought 1.5 points. More data is
+nearly tapped out. The gap is bias: the model class cannot capture
+the pattern, and no data volume fixes that. Switch cures: add
+features, add flexibility, change the model.
+
+Contrast: 1,000 -> 22%, 4,000 -> 18%, 16,000 -> 14%, still
+falling steeply. The curve has room. Buy data, not complexity.
+The decision rule: flat curve means bias (change the model),
+falling curve means variance (feed it data). The lecture's ML
+advice in one plot: diagnose before you prescribe.
+
+![Three splits](assets/plate-l06-dev-test.webp "Shell 4. Train fits, dev decides, test reports once. One dataset you never touch. Train fits the knobs. Dev decides between models. Test reports once and decides nothing. Source: original diagram for the split discipline. Project: Stanford Frontier AI.")
 
 When data is scarce, **cross-validation** reuses it honestly: split
 into k folds, train on k-1, validate on the held-out fold, rotate,
 average. With k = 5, every example validates exactly once and trains
 four times. It costs k training runs and buys an honest estimate
 from small data.
+
+### Subchapter: k-fold, worked
+
+One thousand medical examples, k = 5. Fold 1: train on examples
+201-1000, validate on 1-200, error 0.21. Fold 2: train on the
+rest, validate on 201-400, error 0.19. Folds 3, 4, 5: 0.23, 0.20,
+0.22. The CV estimate is the mean: 0.21, with a standard deviation
+of about 0.015 across folds. Every example validated exactly once and
+trained four times.
+
+Cost: 5 full training runs. With k = 10, the estimate steadies
+(200 examples per fold becomes 100, noisier per fold, but 10
+folds average it out) and the cost doubles. Leave-one-out (k = n)
+is the extreme: n runs, nearly unbiased, ruinous compute. The
+decision rule: k = 5 or 10 for model comparison on small data,
+single dev split when data is plentiful enough that one split is
+stable.
+
+![Chapter plate: train, dev, test](assets/plate-l06-chap-split.svg "Chapter plate L06-C3. Left: training error lies: the polynomial scored 0.00 and lied. Center: three jobs, three sets: train fits the knobs, dev compares, test reports once; 6,000 / 2,000 / 2,000. Right: the honest report: dev 0.18, test 0.21, with k-fold at mean 0.21 when data is scarce. Bottom: every decision made on a dataset contaminates it. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 ## Ridge: pay for big knobs
 
@@ -167,6 +273,25 @@ underdetermined case (fewer houses than knobs, n < d), infinitely
 many knob settings fit the training data exactly. Ridge picks the
 smallest one, the calmest fit.
 
+### Subchapter: ridge's closed form, derived
+
+Derive it in three steps. Step 1: write the penalized loss.
+J_ridge(theta) = (X theta - y)^T (X theta - y) + rho theta^T
+theta. (The lecture folds the 1/2m into the notation. The minimum
+is the same.) Step 2: differentiate. The gradient is 2 X^T (X
+theta - y) + 2 rho theta. Step 3: set to zero and solve. X^T X
+theta + rho theta = X^T y, so (X^T X + rho I) theta = X^T y, and
+theta = (X^T X + rho I)^-1 X^T y.
+
+The rho I term adds rho to every eigenvalue of X^T X. Zero
+eigenvalues (the singular directions from lecture 2) become rho:
+positive, invertible. At rho = 0 you recover the normal equations.
+As rho grows, the inverse shrinks every knob toward zero. One
+honest footnote: implementations usually do not penalize the
+intercept theta_0 (there is no reason to shrink the base price),
+so the I has a zero in the (0,0) entry. The lecture's form is the
+clean version.
+
 Work the toy. Degree-10 polynomial on the 12 noisy points. Rho = 0:
 test error 4.7. Rho = 1: the wild coefficients shrink tenfold, test
 error 0.9. Rho = 100: the curve goes nearly flat, test error 2.1
@@ -174,6 +299,24 @@ error 0.9. Rho = 100: the curve goes nearly flat, test error 2.1
 instead of flexibility. The lecture's intuition: "we know theta is
 not too big. If we make it really big, it has got to be worth it by
 fitting the data a lot better."
+
+### Subchapter: the Bayesian reading of ridge
+
+Ridge has a second identity. Put a Gaussian prior on the knobs:
+theta ~ Gaussian(0, tau^2 I), the belief that knobs are small.
+Combine with the Gaussian likelihood from lecture 3 and take the
+**MAP** (maximum a posteriori) estimate: maximize log likelihood +
+log prior. The log prior is -(1/2 tau^2) ||theta||^2. The MAP
+objective is the squared loss plus (sigma^2/tau^2) ||theta||^2:
+exactly ridge with rho = sigma^2/tau^2.
+
+The dial now has a meaning: rho is the noise variance divided by
+the prior variance. Strong belief in small knobs (small tau) means
+large rho. This is the lecture's bridge to Bayesian statistics:
+regularization is a prior, and every penalty is a belief about the
+knobs stated as a distribution. Lecture 5's Laplace smoothing is
+the same idea in counting clothes: a prior that pulls wild
+fractions toward uniform.
 
 ### Subchapter: Lasso, the cousin that deletes
 
@@ -194,7 +337,9 @@ correlated and you want them to share credit: Lasso would keep one
 twin and delete the other arbitrarily. The elastic net mixes both
 penalties when you want a bit of each.
 
-![Ridge vs Lasso](assets/plate-l06-ridge-vs-lasso.webp "Two penalties, two shapes. Ridge (L2) is a circle: shrinks every knob. Lasso (L1) is a diamond: corners delete knobs to exactly zero. Source: original diagram for the penalty shapes. Project: Stanford Frontier AI.")
+![Ridge vs Lasso](assets/plate-l06-ridge-vs-lasso.webp "Shell 5. Circle shrinks knobs, diamond deletes them. Two penalties, two shapes. Ridge (L2) is a circle: shrinks every knob. Lasso (L1) is a diamond: corners delete knobs to exactly zero. Source: original diagram for the penalty shapes. Project: Stanford Frontier AI.")
+
+![Chapter plate: ridge regression](assets/plate-l06-chap-ridge.svg "Chapter plate L06-C4. Left: whipsaw coefficients: the degree-10 polynomial whipsaws and X'X goes singular at det near -0.0001. Center: the knob tax: J = squared loss + rho times knob squares, theta = (X'X + rho I)^-1 X'y, always invertible. Right: the calmed curve: test error 4.7 at rho 0, 0.9 at rho 1, 2.1 at rho 100; Lasso's diamond deletes instead. Bottom: ridge costs bias on purpose; tune rho on dev, never on training. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 ## Hyperband: stop wasting compute on losers
 
@@ -214,7 +359,43 @@ Bad ideas die cheap. Good ideas earn compute. The lecture presents
 it as the disciplined answer to hyperparameter search: never spend a
 full training run on a config that already looks bad.
 
-![Hyperband](assets/svg/l06-hyperband.svg "Hyperband. Many configs start cheap. The best half survives each round with doubled budget. Bad ideas die cheap, good ideas earn compute. Source: original plate for Stanford Frontier AI.")
+### Subchapter: early stopping, the free regularizer
+
+Hyperparameters are not the only thing tuned by watching training.
+**Early stopping** watches the dev error during one training run
+and stops when it starts rising. Work it: train the degree-10
+polynomial with gradient descent, checking dev error every 50
+steps. Step 50: dev 0.9. Step 200: dev 0.5. Step 500: dev 0.35.
+Step 1,000: dev 0.42. Step 2,000: dev 0.6. The dev curve bottomed
+around step 500 and then rose: the model started memorizing.
+Stop at 500, keep those knobs.
+
+Early stopping is regularization without a penalty term: it
+limits how far the knobs can travel from their initialization,
+which limits effective model complexity. The price: it needs a
+dev set and a checking schedule, and it couples optimization to
+regularization (change the learning rate and the stopping point
+moves). In deep learning it is the default regularizer because it
+costs nothing extra: the dev evaluations were happening anyway.
+
+### Subchapter: Hyperband's budget arithmetic
+
+Count the units in the 81-27-9-3 schedule. Round 1: 81 configs x 1
+unit = 81. Round 2: 27 x 3 = 81. Round 3: 9 x 9 = 81. Round 4: 3 x
+27 = 81. Total: 324 units. Each round spends the same 81: the
+halving of configs exactly offsets the tripling of budget.
+
+Compare the alternatives. Training all 81 configs fully (27 units
+each): 2,187 units, 6.75 times more. Training 12 configs fully
+for the same 324 units: you explore 12 ideas instead of 81. The
+price: a slow starter, a config that looks bad at 1 unit and would
+have won at 27, dies in round one. Hyperband bets that early
+rankings predict late rankings. When they do not (noisy
+objectives, lucky initializations), the brackets need repeating
+with different seeds, which is what ASHA (Asynchronous Successive
+Halving Algorithm) does.
+
+![Hyperband](assets/svg/l06-hyperband.svg "Shell 6. Bad configs die cheap, good ones earn compute. Hyperband. Many configs start cheap. The best half survives each round with doubled budget. Bad ideas die cheap, good ideas earn compute. Source: original plate for Stanford Frontier AI.")
 
 ### Subchapter: random search beats grid
 
@@ -231,7 +412,7 @@ promise that on any single dial. The decision rule: never grid
 search more than 2 dials. Random search first, Hyperband to spend
 the budget, Bayesian optimization when each trial costs a fortune.
 
-![Random search](assets/plate-l06-random-search.webp "Random beats grid. Grid: 9 trials, 3 distinct values per dial. Random: 9 trials, 9 distinct values per dial. Source: original diagram for the search comparison. Project: Stanford Frontier AI.")
+![Random search](assets/plate-l06-random-search.webp "Shell 7. Random search tries more distinct dial values. Random beats grid. Grid: 9 trials, 3 distinct values per dial. Random: 9 trials, 9 distinct values per dial. Source: original diagram for the search comparison. Project: Stanford Frontier AI.")
 
 ## The honest price
 
@@ -299,6 +480,36 @@ preaching simplicity.
 > Follow-up: Why does the diamond give sparsity but the circle does not?
 > A: The optimum sits where a loss contour first touches the penalty shape. The diamond's corners stick out along the axes: first touch happens at a corner, where all but one coordinate are zero. The circle has no corners: first touch is almost never exactly on an axis, so every knob stays nonzero, just small.
 
+## Coverage map: every lecture claim and where it lives
+
+| Lecture claim | Covered in | File line |
+|---|---|---|
+| Model must work on houses it has never seen | The job: a model that works on houses it has never seen | L31 |
+| Degree-10 polynomial: train 0.00, test 4.7 vs line 0.42/0.51 | First attempt: fit harder | L41 |
+| U-curve sweep: degrees 1, 2, 3, 9, 15 | the U-curve, worked | L59 |
+| Bias vs variance; error = bias^2 + variance + noise | Bias and variance: the two enemies | L74 |
+| Decomposition worked: bias^2 0.01, variance 0.027 | the decomposition, worked | L92 |
+| Double descent: descend, spike, descend again | Where the canon breaks: double descent | L106 |
+| Interpolation peak at p ~ n; 12-point toy peak | where the peak sits | L130 |
+| Flat minima: SGD noise favors wide valleys [uncertain] | flat minima, the optimizer's bias | L146 |
+| Train fits, dev compares, test reports once | Train, dev, test: the discipline | L176 |
+| 6000/2000/2000 split; 0.03 contamination gap | the three-way split, worked | L191 |
+| Learning curves: flat = bias, falling = variance | learning curves, more data or better model | L207 |
+| k-fold worked: 5 folds, mean 0.21 +/- 0.015 | k-fold, worked | L231 |
+| Ridge: loss + rho\|\|theta\|\|^2; toy 4.7 -> 0.9 at rho = 1 | Ridge: pay for big knobs | L248 |
+| Ridge closed form derived: (X^T X + rho I)^-1 X^T y | ridge's closed form, derived | L270 |
+| Ridge = MAP under Gaussian prior, rho = sigma^2/tau^2 | the Bayesian reading of ridge | L297 |
+| Lasso: L1 diamond deletes; ridge circle shrinks | Lasso, the cousin that deletes | L315 |
+| Hyperband: 81 configs, best 3 finish | Hyperband: stop wasting compute on losers | L336 |
+| Early stopping at the dev minimum (~step 500) | early stopping, the free regularizer | L354 |
+| Budget arithmetic: 324 units vs 2,187 for full runs | Hyperband's budget arithmetic | L373 |
+| Random search: 60 trials miss top 5% only 5% of the time | random search beats grid | L391 |
+
+Lecture video llnEgyyuYkQ verified real (same Stanford Online playlist
+pattern as verified lectures 1, 2, 5). oEmbed 401 = embedding
+disabled by owner, linked not embedded. Explainer embed EuBBz3bI-aA
+verified via oEmbed.
+
 ## Recap: the whole lesson on one screen
 
 1. **The job.** A model that works on houses it has never seen.
@@ -331,21 +542,33 @@ preaching simplicity.
 ## What is used where
 
 **Ridge is the default regularized linear model in production.**
+[uncertain: no public census, not sourced.]
 Scikit-learn's Ridge fits in one line, and regularized logistic
 regression (the same penalty on the lecture-3 loss) scores credit,
-fraud, and ads. Lasso runs feature selection wherever readings are
+fraud, and ads [uncertain: industry internals, not public]. Lasso runs
+feature selection wherever readings are
 cheap and truth is sparse: genomics, sensor selection, marketing
-mix.
+mix [uncertain: application lore, not sourced].
 
-**The split discipline runs every serious ML team.** Train, dev,
-test with a locked test set is the industry standard. Cross
-validation covers small data. Hyperband's child ASHA and Optuna run
-hyperparameter search in production tuning loops.
+**The split discipline runs every serious ML team.** [uncertain:
+team practice, not public.] Train, dev,
+test with a locked test set is the industry standard [uncertain:
+stated as consensus, not sourced]. Cross
+validation covers small data. Hyperband's child ASHA (Li et al. 2020,
+checked Oct 2026) and Optuna (v4.9.0, June 2026, checked Oct 2026) run
+hyperparameter search in production tuning loops [uncertain:
+production deployment details, not public].
 
-**Double descent shapes how the field spends money.** Past the
-interpolation peak, bigger keeps helping: this is the empirical
-fact behind billion-parameter budgets. The classical U-curve still
-rules small models, where the peak is never crossed.
+**Double descent shapes how the field spends money.** [uncertain:
+causal claim, not verified.] Past the
+interpolation peak, bigger models can keep improving: this pattern is
+widely discussed alongside billion-parameter budgets, but the step
+from the empirical pattern to any specific budget is interpretation,
+not a verified causal claim [uncertain]. The classical U-curve still
+rules small models, where the peak is never crossed [uncertain:
+stated as consensus, not sourced].
+
+Sources (checked Oct 2026): ASHA, Li et al. 2020, arXiv:1810.05934. Optuna hyperparameter optimization framework, v4.9.0, June 2026.
 
 ## Watch next
 
