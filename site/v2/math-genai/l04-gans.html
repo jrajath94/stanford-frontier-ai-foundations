@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 4: Generative Adversarial Networks — Stanford Frontier AI</title>
+<meta name="description" content="The two-player game played by hand: a generator and a critic updating in turns with real gradients, why the original loss saturates (0.001 vs 0.693), and mode c">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="math-genai-l04" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive, Search, RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Attention, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech Brain-Computer Interfaces</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+<li><a href="../cme295/l01-transformers-overview.html" data-page="cme295-l01">L01 · Transformers overview</a></li>
+<li><a href="../cme295/l02-attention-position-bert.html" data-page="cme295-l02">L02 · Attention and BERT</a></li>
+<li><a href="../cme295/l03-llms-decoding-inference.html" data-page="cme295-l03">L03 · LLMs and decoding</a></li>
+<li><a href="../cme295/l04-pretraining-scaling-finetuning.html" data-page="cme295-l04">L04 · Training at scale</a></li>
+<li><a href="../cme295/l05-preference-tuning.html" data-page="cme295-l05">L05 · Preference tuning</a></li>
+<li><a href="../cme295/l06-reasoning-models-grpo.html" data-page="cme295-l06">L06 · Reasoning models</a></li>
+<li><a href="../cme295/l07-rag-tool-calling-agents.html" data-page="cme295-l07">L07 · RAG and agents</a></li>
+<li><a href="../cme295/l08-evaluation.html" data-page="cme295-l08">L08 · Evaluation</a></li>
+<li><a href="../cme295/l09-course-recap-frontiers.html" data-page="cme295-l09">L09 · Recap and frontiers</a></li>
+<li><a href="../cme295/cheatsheet.html" data-page="cme295-cheatsheet">CME295 · Cheatsheet</a></li>
+<li><a href="../cme295/crash-course.html" data-page="cme295-crash">CME295 · Crash course</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+<li><a href="../cs329h/l01-preference-foundations.html" data-page="cs329h-l01">L01 · Preference Foundations</a></li>
+<li><a href="../cs329h/l02-choice-models.html" data-page="cs329h-l02">L02 · Choice Models</a></li>
+<li><a href="../cs329h/l03-iia-identification.html" data-page="cs329h-l03">L03 · IIA and Identification</a></li>
+<li><a href="../cs329h/l04-learning-rewards.html" data-page="cs329h-l04">L04 · Learning Rewards</a></li>
+<li><a href="../cs329h/l05-metric-elicitation.html" data-page="cs329h-l05">L05 · Metric Elicitation</a></li>
+<li><a href="../cs329h/l06-bandits-exploration.html" data-page="cs329h-l06">L06 · Bandits and Exploration</a></li>
+<li><a href="../cs329h/l07-rlhf.html" data-page="cs329h-l07">L07 · RLHF</a></li>
+<li><a href="../cs329h/l08-social-choice.html" data-page="cs329h-l08">L08 · Social Choice</a></li>
+<li><a href="../cs329h/l09-mechanism-design.html" data-page="cs329h-l09">L09 · Mechanism Design</a></li>
+<li><a href="../cs329h/l10-alignment-practice.html" data-page="cs329h-l10">L10 · Alignment in Practice</a></li>
+<li><a href="../cs329h/cheatsheet.html" data-page="cs329h-cheatsheet">CS329H · Cheatsheet</a></li>
+<li><a href="../cs329h/crash-course.html" data-page="cs329h-crash">CS329H · Crash course</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+<li><a href="../cs329z/l01-intro-agentic-systems.html" data-page="cs329z-l01">L01 · Intro to Agentic Systems</a></li>
+<li><a href="../cs329z/l02-compound-ai-systems.html" data-page="cs329z-l02">L02 · Compound AI Systems</a></li>
+<li><a href="../cs329z/l03-llms-for-builders.html" data-page="cs329z-l03">L03 · LLMs for Builders</a></li>
+<li><a href="../cs329z/l04-reasoning-and-context.html" data-page="cs329z-l04">L04 · Reasoning and Context</a></li>
+<li><a href="../cs329z/l05-rag-pipeline.html" data-page="cs329z-l05">L05 · RAG Pipeline</a></li>
+<li><a href="../cs329z/l06-retrieval-methods.html" data-page="cs329z-l06">L06 · Retrieval Methods</a></li>
+<li><a href="../cs329z/l07-agentic-retrieval-failure-modes.html" data-page="cs329z-l07">L07 · Agentic Retrieval</a></li>
+<li><a href="../cs329z/l08-evaluating-agents.html" data-page="cs329z-l08">L08 · Evaluating Agents</a></li>
+<li><a href="../cs329z/cheatsheet.html" data-page="cs329z-cheatsheet">CS329Z · Cheatsheet</a></li>
+<li><a href="../cs329z/crash-course.html" data-page="cs329z-crash">CS329Z · Crash course</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
+<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
+<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
+<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
+<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
+<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
+<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
+<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
+<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
+<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+<li><a href="../mse435/l01-electrons-to-tokens.html" data-page="mse435-l01">L01 · From Electrons to Tokens</a></li>
+<li><a href="../mse435/l02-sixty-million-megawatt.html" data-page="mse435-l02">L02 · The $60M Megawatt</a></li>
+<li><a href="../mse435/l03-how-models-get-smarter.html" data-page="mse435-l03">L03 · How Models Get Smarter</a></li>
+<li><a href="../mse435/l04-evals-rlvr-enterprise.html" data-page="mse435-l04">L04 · Evals and Enterprise AI</a></li>
+<li><a href="../mse435/l05-software-is-dead.html" data-page="mse435-l05">L05 · The SaaS Reckoning</a></li>
+<li><a href="../mse435/l06-where-value-accrues.html" data-page="mse435-l06">L06 · Where Value Accrues</a></li>
+<li><a href="../mse435/cheatsheet.html" data-page="mse435-cheatsheet">MS&amp;E 435 · Cheatsheet</a></li>
+<li><a href="../mse435/crash-course.html" data-page="mse435-crash">MS&amp;E 435 · Crash course</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">MATH-ML · Overview</a></li>
+<li><a href="../math-ml/l01-vectors-as-data.html" data-page="math-ml-l01">L01 · Vectors as Data</a></li>
+<li><a href="../math-ml/l02-matrices-as-machines.html" data-page="math-ml-l02">L02 · Matrices as Machines</a></li>
+<li><a href="../math-ml/l03-eigendecomposition-pca.html" data-page="math-ml-l03">L03 · Eigen-decomposition</a></li>
+<li><a href="../math-ml/l04-svd-low-rank.html" data-page="math-ml-l04">L04 · SVD and Low Rank</a></li>
+<li><a href="../math-ml/l05-probability-bayes.html" data-page="math-ml-l05">L05 · Probability and Bayes</a></li>
+<li><a href="../math-ml/l06-distributions-covariance.html" data-page="math-ml-l06">L06 · Distributions and Covariance</a></li>
+<li><a href="../math-ml/l07-calculus-gradients-chainrule.html" data-page="math-ml-l07">L07 · Calculus for ML</a></li>
+<li><a href="../math-ml/l08-convexity-gradient-descent.html" data-page="math-ml-l08">L08 · Convexity and Gradient Descent</a></li>
+<li><a href="../math-ml/l09-least-squares-regression.html" data-page="math-ml-l09">L09 · Least Squares</a></li>
+<li><a href="../math-ml/l10-information-theory.html" data-page="math-ml-l10">L10 · Information Theory</a></li>
+<li><a href="../math-ml/cheatsheet.html" data-page="math-ml-cheatsheet">MATH-ML · Cheatsheet</a></li>
+<li><a href="../math-ml/crash-course.html" data-page="math-ml-crash-course">MATH-ML · Crash Course</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+<li><a href="../math-genai/l01-the-job.html" data-page="math-genai-l01">L01 · The Job</a></li>
+<li><a href="../math-genai/l02-kl-and-mle.html" data-page="math-genai-l02">L02 · KL Divergence and MLE</a></li>
+<li><a href="../math-genai/l03-f-divergences.html" data-page="math-genai-l03">L03 · f-Divergences</a></li>
+<li><a href="../math-genai/l04-gans.html" data-page="math-genai-l04" class="active">L04 · GANs</a></li>
+<li><a href="../math-genai/l05-wgan-evaluation.html" data-page="math-genai-l05">L05 · WGAN and Evaluation</a></li>
+<li><a href="../math-genai/l06-latent-variables-elbo.html" data-page="math-genai-l06">L06 · ELBO</a></li>
+<li><a href="../math-genai/l07-vae.html" data-page="math-genai-l07">L07 · VAE</a></li>
+<li><a href="../math-genai/l08-ddpm-forward.html" data-page="math-genai-l08">L08 · DDPM Forward</a></li>
+<li><a href="../math-genai/l09-ddpm-loss.html" data-page="math-genai-l09">L09 · DDPM Loss</a></li>
+<li><a href="../math-genai/l10-score-ddim-ar.html" data-page="math-genai-l10">L10 · Score, DDIM, AR</a></li>
+<li><a href="../math-genai/cheatsheet.html" data-page="math-genai-cheatsheet">Cheatsheet</a></li>
+<li><a href="../math-genai/crash-course.html" data-page="math-genai-crash-course">Crash course</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Math · Generative Models · Overview</a></li>
+<li><a href="../math-genmodels/l01-the-one-question.html" data-page="math-genmodels-l01">L01 · The One Question</a></li>
+<li><a href="../math-genmodels/l02-autoregressive-models.html" data-page="math-genmodels-l02">L02 · Autoregressive Models</a></li>
+<li><a href="../math-genmodels/l03-variational-autoencoders.html" data-page="math-genmodels-l03">L03 · Variational Autoencoders</a></li>
+<li><a href="../math-genmodels/l04-normalizing-flows.html" data-page="math-genmodels-l04">L04 · Normalizing Flows</a></li>
+<li><a href="../math-genmodels/l05-diffusion-ddpm.html" data-page="math-genmodels-l05">L05 · Diffusion I: DDPM</a></li>
+<li><a href="../math-genmodels/l06-score-matching-ddim.html" data-page="math-genmodels-l06">L06 · Score Matching &amp; Fast Diffusion</a></li>
+<li><a href="../math-genmodels/l07-energy-based-models.html" data-page="math-genmodels-l07">L07 · Energy-Based Models</a></li>
+<li><a href="../math-genmodels/l08-judging-a-creator.html" data-page="math-genmodels-l08">L08 · Judging a Creator</a></li>
+<li><a href="../math-genmodels/cheatsheet.html" data-page="math-genmodels-cheatsheet">Math · Generative Models · Cheatsheet</a></li>
+<li><a href="../math-genmodels/crash-course.html" data-page="math-genmodels-crash">Math · Generative Models · Crash course</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative AI</a> / Lecture 4: Generative Adversarial Networks</nav>
+      <h1>Lecture 4: Generative Adversarial Networks</h1>
+      <p class="meta-line">2026-10-05 · Instructor: Prof. Prathosh A P · 2025</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="pLD5Q5cS4kI"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/pLD5Q5cS4kI" title="Lecture 4: Generative Adversarial Networks" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=pLD5Q5cS4kI" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=pLD5Q5cS4kI" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original Stanford lecture. Timestamps in the text link to the exact moment.</p></div><h2 id="the-task-play-the-game-from-lesson-3">The task: play the game from Lesson 3</h2>
+<p>Lesson 3 derived the objective. Now two neural networks play it.
+The <strong>generator</strong> G_θ takes noise z and outputs a fake sample
+x̂ = G_θ(z). The <strong>discriminator</strong> (the critic) D_w takes a
+sample x and outputs D_w(x), its belief that x is real, a number
+between 0 and 1. One objective, opposite goals:</p>
+<pre class="ascii">J = E[ log D(x) ] + E[ log(1 - D(x_hat)) ]
+    x real               x_hat = G(z) fake
+
+discriminator: maximize J   (call real &quot;real&quot;, fake &quot;fake&quot;)
+generator:     minimize J   (fool the discriminator)
+</pre>
+<p>The discriminator wants D = 1 on real data and D = 0 on fakes.
+The generator wants D = 1 on its fakes. This is a <strong>minimax</strong>
+game: min over θ, max over w. Training alternates: a few
+discriminator steps, then a generator step, repeat.</p>
+<h2 id="first-attempt-trace-two-rounds-by-hand">First attempt: trace two rounds by hand</h2>
+<p>Make everything tiny. Real data is a single point: x = 0,
+always. The generator ignores noise and outputs a constant:
+G(z) = θ. The discriminator is D(x) = sigmoid(w·x + b), one
+weight and one bias. Sigmoid squashes any number into (0, 1).</p>
+<p>Start: θ = 2, w = 0, b = 0.</p>
+<pre class="ascii">D(0) = sigmoid(0) = 0.5        (real point: coin flip)
+D(2) = sigmoid(0) = 0.5        (fake point: coin flip)
+J = log 0.5 + log(1 - 0.5) = -0.693 + -0.693 = -1.386
+</pre>
+<p><strong>Discriminator step.</strong> Maximize J. The gradient with respect
+to w: D(0) does not depend on w (x = 0 kills it), but D(2)
+does. ∂J/∂w = −2·D(2) = −1.0 at the start. Take a step of size
+0.5: w = −0.5.</p>
+<pre class="ascii">D(0) = sigmoid(0) = 0.5        (unchanged)
+D(2) = sigmoid(-1.0) = 0.269   (fake now looks fake)
+J = log 0.5 + log(1 - 0.269) = -0.693 + -0.313 = -1.006
+</pre>
+<p>J rose from −1.386 to −1.006. The discriminator learned: real
+stays 0.5, fake drops to 0.27. Note it could not raise D(0)
+with w alone. The bias b would handle that on the next step.</p>
+<p><strong>Generator step.</strong> Minimize J over θ. ∂J/∂θ = −D(θ)·w.
+At θ = 2: D = 0.269, w = −0.5, so ∂J/∂θ = +0.1345. Descend
+with step 0.5: θ = 2 − 0.067 = 1.93.</p>
+<p>The generator moved its output from 2 toward 0, toward the
+real data. The discriminator&rsquo;s slope (w &lt; 0: D falls as x
+grows) told it which way was &ldquo;more real&rdquo;. Two rounds, real
+numbers, and the game works: the fake inches toward the data.</p>
+<figure><img alt="The GAN game" src="assets/l04-gan-game.webp"><figcaption>The minimax game: the critic scores real versus fake, the generator fools the critic. Source: original toy. Shell 3. Stanford Frontier AI.</figcaption></figure>
+<div class="mermaid">flowchart LR
+  Z["z: noise"] --> G["G_theta: fake x_hat"]
+  G --> D["D_w: real or fake?"]
+  X["x: real data"] --> D
+  D --> J["J: D maximizes, G minimizes"]
+</div><pre class="mermaid-fallback"><code>flowchart LR
+  Z[&quot;z: noise&quot;] --&gt; G[&quot;G_theta: fake x_hat&quot;]
+  G --&gt; D[&quot;D_w: real or fake?&quot;]
+  X[&quot;x: real data&quot;] --&gt; D
+  D --&gt; J[&quot;J: D maximizes, G minimizes&quot;]
+</code></pre>
+<h2 id="where-it-breaks-part-1-the-saturating-loss">Where it breaks, part 1: the saturating loss</h2>
+<p>Now break it. Early in training the generator is terrible and
+the discriminator is confident: D(G(z)) ≈ 0.001 on fakes. The
+generator minimizes log(1 − D(G(z))). Watch the gradient it
+gets. If the discriminator&rsquo;s score on the fake rises slightly,
+from 0.001 to 0.002 (the generator improved a little), how
+much does the loss change?</p>
+<pre class="ascii">saturating:      L = log(1 - d)
+  d = 0.001 -&gt; L = log(0.999) = -0.00100
+  d = 0.002 -&gt; L = log(0.998) = -0.00200
+  change: 0.001. Almost nothing.
+</pre>
+<p>The curve log(1 − d) is flat near d = 0. The generator made
+real progress (doubled its score) and the loss barely noticed.
+The gradient vanishes exactly when the generator needs it
+most: at the start, when it is bad. This is the <strong>saturation</strong>
+of GAN training, the subject of W4L10.</p>
+<p>The standard fix changes the generator&rsquo;s target. Instead of
+minimizing log(1 − D(G(z))), maximize log D(G(z)): push the
+fake&rsquo;s &ldquo;real&rdquo; score up directly. Same fixed point (both want
+D = 1 on fakes), wildly different gradients:</p>
+<pre class="ascii">non-saturating:  L = -log(d)
+  d = 0.001 -&gt; L = 6.908
+  d = 0.002 -&gt; L = 6.215
+  change: 0.693. Seven hundred times the signal.
+</pre>
+<p>Early in training the non-saturating loss screams while the
+original whispers. Every practical GAN uses this variant.
+The lecture&rsquo;s lesson: the minimax game is not one game. The
+choice of which side&rsquo;s loss the generator optimizes decides
+whether training moves at all.</p>
+<h2 id="where-it-breaks-part-2-mode-collapse">Where it breaks, part 2: mode collapse</h2>
+<p>The second failure is sneakier. The truth has two modes:
+P_X = {0: 0.5, 10: 0.5}. Half the data sits at 0, half at 10.
+The generator discovers that outputting 0 always fools the
+discriminator half the time: D(0) = 0.5 forever (real 0s and
+fake 0s are indistinguishable), and it never tries 10.</p>
+<p>Compute what the objective thinks of this. The model is
+P_θ = {0: 1.0, 10: 0.0}. The Jensen-Shannon divergence
+between truth and model:</p>
+<pre class="ascii">M = average = {0: 0.75, 10: 0.25}
+JS = 0.5 * KL(P_X || M) + 0.5 * KL(P_theta || M)
+KL(P_X || M) = 0.5*log(0.5/0.75) + 0.5*log(0.5/0.25)
+             = 0.5*(-0.405) + 0.5*(0.693) = 0.144
+KL(P_theta || M) = 1.0*log(1.0/0.75) = 0.288
+JS = 0.5*0.144 + 0.5*0.288 = 0.216
+</pre>
+<p>JS = 0.216. A small number. The divergence barely punishes a
+model that deleted half the distribution. And the generator&rsquo;s
+incentive is worse: at output 0 its loss is −log(0.5) = 0.693
+under the non-saturating variant, stable forever. Any move
+toward 10 gets D ≈ 0 and a terrible loss. The generator sits
+at 0 and never explores. This is <strong>mode collapse</strong>: the model
+covers one mode and abandons the rest, and neither the loss
+nor the divergence complains loudly enough.</p>
+<p>Why does the discriminator not fix it? It can: D(10) = 1.0
+(real 10s are always real). But the generator never samples
+near 10, so it never feels that gradient. The two-player
+dynamics have a stable bad equilibrium, and gradient descent
+walks straight into it. Lesson 2&rsquo;s forward KL would have
+punished this (it is mode-covering), but the GAN&rsquo;s JS-like
+divergence does not.</p>
+<h2 id="the-honest-price-the-saddle-point">The honest price: the saddle point</h2>
+<p>The GAN&rsquo;s bill comes due in the optimization itself. MLE
+(Lessons 2, 6-9) minimizes one function: go downhill. The GAN
+solves a saddle-point problem: the discriminator climbs while
+the generator descends, simultaneously. There is no single
+&ldquo;loss going down&rdquo; to watch. Training can oscillate, diverge,
+or collapse, and the usual signs of progress lie.</p>
+<p>Three concrete costs. First, balance: a too-strong
+discriminator gives no gradient (saturation). A too-weak one
+gives wrong gradients. Every step must keep the two players
+matched. Second, no likelihood: the generator gives samples
+with no density, so you cannot score it with MLE or compare
+two GANs by a number from training. Lesson 5 builds the
+external judge (FID). Third, mode collapse as demonstrated:
+0.216 JS for a model missing half the world.</p>
+<p>The lecture ends the adversarial block here with a verdict,
+confirmed in the evaluation transcript: the instability of
+saddle-point optimization is why state-of-the-art generation
+moved to latent-variable models, which need no adversary.
+Lessons 6 through 10 are that move.</p>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Demonstration</th>
+<th>Number</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Saturation</td>
+<td>Doubling D(G(z)) from 0.001</td>
+<td>Saturating loss moves 0.001. Non-saturating moves 0.693</td>
+</tr>
+<tr>
+<td>Mode collapse</td>
+<td>Truth {0: 0.5, 10: 0.5}, model {0: 1.0}</td>
+<td>JS = 0.216. Generator loss stuck at 0.693</td>
+</tr>
+<tr>
+<td>No likelihood</td>
+<td>Generator gives samples only</td>
+<td>Cannot compute log P_θ(x). Need FID (Lesson 5)</td>
+</tr>
+</tbody>
+</table>
+<div class="qa"><div class="q">What is the GAN game, exactly?</div><div class="a"><p>Two networks, one objective J = E[log D(x)] + E[log(1 − D(G(z)))]. The discriminator maximizes J: output near 1 on real data, near 0 on fakes. The generator minimizes J: make fakes score near 1. In the hand trace, the discriminator step moved w from 0 to −0.5 (J rose from −1.386 to −1.006) and the generator step moved θ from 2 to 1.93, toward the data.
+Because each player&rsquo;s best move depends on the other&rsquo;s current state. A fully trained discriminator against a fixed bad generator gives no useful gradient (saturation), and a generator trained against a fixed weak discriminator fools only that weakling. They must co-evolve.</p><div class="followup"><strong>Follow-up:</strong> Why alternate instead of training one then the other?</div></div></div>
+<div class="qa"><div class="q">What is saturation, and how do you fix it?</div><div class="a"><p>Early in training D(G(z)) ≈ 0, and the original generator loss log(1 − D) is flat there: doubling the score from 0.001 to 0.002 changes the loss by 0.001. The fix is the non-saturating loss −log D(G(z)): the same improvement changes the loss by 0.693, seven hundred times the signal. Same goal, usable gradients.
+The fixed point is the same (D = 1 on fakes), but the dynamics differ. The non-saturating variant is technically no longer the minimax game. It is a heuristic with the same equilibrium. In practice it is the only variant that trains.</p><div class="followup"><strong>Follow-up:</strong> Does the fix change what the GAN converges to?</div></div></div>
+<div class="qa"><div class="q">What is mode collapse, and why does the loss allow it?</div><div class="a"><p>The generator covers one mode and ignores the rest: truth {0: 0.5, 10: 0.5}, model {0: 1.0}. The JS divergence is only 0.216, so the objective barely objects, and the generator&rsquo;s loss sits at a stable 0.693 with no incentive to explore 10. The discriminator knows 10 is real, but the generator never goes there to feel the gradient.
+Yes. Forward KL averages over the truth, visits the abandoned mode at 10, and charges infinity (the model assigns it probability zero). That is why the lecture calls forward KL mode-covering, and why VAE samples look blurry instead of collapsed: opposite failure, opposite cause.</p><div class="followup"><strong>Follow-up:</strong> Would forward KL have prevented it?</div></div></div>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<ol>
+<li><strong>The game.</strong> D maximizes, G minimizes J = E[log D(x)] + E[log(1 − D(G(z)))].</li>
+<li><strong>Hand trace.</strong> D step: w 0 → −0.5, J −1.386 → −1.006. G step: θ 2 → 1.93, toward the data.</li>
+<li><strong>Saturation.</strong> At D(G(z)) = 0.001, doubling the score moves the original loss 0.001. Gradient dead on arrival.</li>
+<li><strong>The fix.</strong> Non-saturating loss −log D: same doubling moves the loss 0.693. Seven hundred times the signal.</li>
+<li><strong>Mode collapse.</strong> Model outputs only 0. Truth is half 0, half 10. JS = 0.216. The objective shrugs.</li>
+<li><strong>Why it sticks.</strong> The generator&rsquo;s loss at the collapsed point is a stable 0.693. Exploring 10 looks worse.</li>
+<li><strong>The price.</strong> Saddle-point optimization: no single loss to watch, balance required every step, no likelihood to score models.</li>
+<li><strong>The verdict.</strong> Instability is why the field moved to latent-variable models. Lessons 6-10.</li>
+</ol>
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- W2_L7: GANs formulation:
+  https://www.youtube.com/watch?v=pLD5Q5cS4kI
+- W4L10: Saturation of GAN training:
+  https://www.youtube.com/watch?v=2RMeQ5YxIxI</p>
+<p><strong>Further reading:</strong>
+- Goodfellow et al., &ldquo;Generative Adversarial Nets&rdquo; (2014):
+  https://arxiv.org/abs/1406.2661: the original minimax game.
+- Arjovsky, Chintala, Bottou, &ldquo;Wasserstein GAN&rdquo; (2017):
+  https://arxiv.org/abs/1701.07875: the answer to saturation (Lesson 5).</p>
+<p><strong>Caveats.</strong> The objective, the two-player structure, and the saturation topic are confirmed in the W2_L6 and evaluation transcripts. The hand trace, the 0.001/0.693 saturation numbers, and the 0.216 mode-collapse computation are the lesson&rsquo;s own worked examples. [uncertain] The lecture&rsquo;s exact numeric demonstrations are unknown.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS336 (training data):</strong> that course asks what language models memorize versus generate. Mode collapse is the GAN analogue of memorization failure in reverse: instead of regurgitating training points, the generator regurgitates one mode. A worked tie: a collapsed generator producing the single most common training image scores D = 0.5 forever, exactly like a language model stuck repeating its most frequent phrase. Both are optimization equilibria, not bugs in the architecture.</li>
+<li><strong>CS229 L11 (diffusion models):</strong> that course&rsquo;s models never play this game. Their loss is a plain minimization (denoising error), which is why their training curves go down monotonically while GAN curves oscillate. Lesson 9 derives that loss.</li>
+</ul>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=pLD5Q5cS4kI" target="_blank" rel="noopener">W2_L7: GANs formulation (video pLD5Q5cS4kI)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=2RMeQ5YxIxI" target="_blank" rel="noopener">W4L10: Saturation of GAN training (video 2RMeQ5YxIxI)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1406.2661" target="_blank" rel="noopener">Goodfellow et al., Generative Adversarial Nets (2014)</a></li></ul></section>
+      <nav class="pager"><a href="../math-genai/l03-f-divergences.html"><span class="lbl">← Previous</span>Lecture 3: f-Divergences and Variational Divergence Minimization</a><a href="../math-genai/l05-wgan-evaluation.html"><span class="lbl">Next →</span>Lecture 5: Wasserstein GANs and Judging a Generator</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
