@@ -9,7 +9,9 @@ title: "CS336 Cheatsheet"
 summary: "Every key fact from CS336 on one dense page: definitions, formulas, numbers, decisions, mistakes, interview lines."
 ---
 
-Grows with the course. Each finished lecture adds its blocks here.
+Every block below is the working version of one lecture: the numbers,
+the decisions, and the one-liners that answer interview questions.
+Each block links to its full lesson for the derivations.
 
 <div class="cheat-cols" markdown="1">
 
