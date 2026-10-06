@@ -294,7 +294,7 @@ token recomputes K and V for the whole prefix: 2 x (2Nd^2) =
 4.1e11 FLOPs per token, thrown away.</p>
 <p>With the cache, each token computes K, Q, V for itself only:
 3 x (2d^2) = 2.5e7 per layer, plus the 2Nd score and mix:
-8.4e6. Per layer about 3.4e7; over 24 layers about 8.1e8.
+8.4e6. Per layer about 3.4e7. Over 24 layers about 8.1e8.
 The ratio: 4.1e11 / 8.1e8 = 511. Caching cuts per-token
 attention FLOPs by about 500x at this length, and the factor
 grows with N.</p>
@@ -323,12 +323,12 @@ from the capacity calculation. The formula closes the loop.</p>
 <p>Now a 70B model (80 layers, dmodel 8192): 2 x 2 x 80 x 8192 =
 2.6 MB per token. At 32K context that is 84 GB of cache,
 against 140 GB of weights. The cache is no longer a rounding
-error; it is the second weight matrix. This is why every
+error. It is the second weight matrix. This is why every
 frontier model since Llama 2 uses grouped-query attention:
 with 8 KV heads instead of 64, the bill falls 8x to 0.3 MB per
 token.</p>
 <figure><img alt="The KV block, byte by byte" src="assets/plate-l04-kv-block.webp"><figcaption>Four choices multiply to 196,608 bytes per token on the 7B example. Shell 2. Source: original toy for the KV block. Project: Stanford Frontier AI.</figcaption></figure>
-<figure><img alt="KV block" src="../cs336/assets/l10-kv-cache.svg"><figcaption>Shell 3. Store keys and values; never recompute the prefix. Source: CS336 L10 figure, reused.</figcaption></figure>
+<figure><img alt="KV block" src="../cs336/assets/l10-kv-cache.svg"><figcaption>Shell 3. Store keys and values. Never recompute the prefix. Source: CS336 L10 figure, reused.</figcaption></figure>
 <h2 id="when-does-caching-win-work-the-ratio">When does caching win? Work the ratio</h2>
 <p>Caching trades memory traffic for saved compute. The lecture
 works the tradeoff on an A100 (312e12 FLOPs/s compute, 1.5e12
@@ -371,7 +371,7 @@ model with 24 layers and dmodel 2048, sequence length 1024.</p>
 <li>Capacity: 26 / 0.0002 = 130k tokens.</li>
 <li>Batch size at 1024 tokens each: 130k / 1024 = 128.</li>
 </ol>
-<figure><img alt="KV cache capacity" src="assets/slide-l04-kvcache-capacity.png"><figcaption>Shell 4. 14 GB of weights leaves 26 GB; at 200k bytes per token that is 130k tokens, or batch 128 at length 1024. Source: Stanford slides.</figcaption></figure>
+<figure><img alt="KV cache capacity" src="assets/slide-l04-kvcache-capacity.png"><figcaption>Shell 4. 14 GB of weights leaves 26 GB. At 200k bytes per token that is 130k tokens, or batch 128 at length 1024. Source: Stanford slides.</figcaption></figure>
 <p>Memory, not compute, sets the serving batch size. This is the
 calculation behind every serving-system capacity plan.</p>
 <h2 id="decoding-is-memory-bound">Decoding is memory bound</h2>
@@ -423,7 +423,7 @@ token. Right guesses are free tokens. Wrong guesses cost
 almost nothing, because the verification batch was memory
 bound anyway. Usually 10 to 100 guesses per batch, depending
 on hardware.</p>
-<figure><img alt="Speculative decoding" src="assets/plate-speculative-decoding.svg"><figcaption>Shell 6. Draft, verify in one batch, accept the agreed prefix. Source: original plate; Leviathan and Kalman et al. 2023.</figcaption></figure>
+<figure><img alt="Speculative decoding" src="assets/plate-speculative-decoding.svg"><figcaption>Shell 6. Draft, verify in one batch, accept the agreed prefix. Source: original plate. Leviathan and Kalman et al. 2023.</figcaption></figure>
 <p>Results: 2 to 3x speedup on Chinchilla 70B, T5 11B, and LaMDA
 137B (Leviathan and Kalman et al., 2023, and Chen et al., 2023).</p>
 <figure><img alt="Speculative results" src="assets/slide-l04-speculative-results.png"><figcaption>Shell 7. 2-3x speedups on Chinchilla 70B, T5 11B, LaMDA 137B. Source: Stanford slides.</figcaption></figure>
@@ -458,7 +458,7 @@ Barely better than 1. A disagreeing draft is a tax, not a
 trick. And if the batch is large, verification itself leaves
 the memory-bound regime, and the &ldquo;free&rdquo; compute was never
 free.</p>
-<figure><img alt="The acceptance math" src="assets/plate-l04-acceptance.webp"><figcaption>Alpha 0.8 and K 5 give 3.7 tokens per batch; alpha 0.3 gives 1.4. Shell 3. Source: original toy for the acceptance formula. Project: Stanford Frontier AI.</figcaption></figure>
+<figure><img alt="The acceptance math" src="assets/plate-l04-acceptance.webp"><figcaption>Alpha 0.8 and K 5 give 3.7 tokens per batch. Alpha 0.3 gives 1.4. Shell 3. Source: original toy for the acceptance formula. Project: Stanford Frontier AI.</figcaption></figure>
 <h3 id="subchapter-eagle-and-mtp-the-2024-2026-drafts">Subchapter: EAGLE and MTP, the 2024-2026 drafts</h3>
 <p>The draft strategies above are the 2023 answers. Two newer
 ones ship in production as of October 2026.</p>
@@ -552,22 +552,22 @@ is a trade against the memory roof.</p>
 The chain rule multiplies upstream gradients by local derivatives evaluated at the forward values. For dL/dW2 = a1^T dL/dz2 you need a1, the layer input. Without storing it you must recompute it. Storage versus recomputation is the same tradeoff as KV caching below.</p><div class="followup"><strong>Follow-up:</strong> Why does the backward pass need the activations at all?</div></div></div>
 <div class="qa"><div class="q">A 7B model on a 40 GB A100 serves 1024-token sequences. What batch size fits?</div><div class="a"><p>Weights take 14 GB, leaving 26 GB. Each token&rsquo;s KV cache costs 2 x 2 x 24 x 2048 = 200k bytes, so 26 GB holds about 130k tokens. At 1024 tokens per sequence that is batch size 128. The limit is HBM capacity, not FLOPs.
 The KV cache per sequence doubles, so the batch size halves to 64. Longer contexts trade directly against concurrency on fixed memory.</p><div class="followup"><strong>Follow-up:</strong> What changes first if you double the sequence length?</div></div></div>
-<div class="qa"><div class="q">Explain speculative decoding and when it helps.</div><div class="a"><p>A small draft model guesses the next few tokens. The big model verifies all guesses in one parallel forward pass, which costs about the same as one decode step because decoding is memory bound. Agreed tokens are accepted for free; the first disagreement is resampled. It helps exactly when decoding is memory bound with small batches: the verification batch soaks up idle compute. Reported speedups are 2 to 3x on 11B to 137B models.
+<div class="qa"><div class="q">Explain speculative decoding and when it helps.</div><div class="a"><p>A small draft model guesses the next few tokens. The big model verifies all guesses in one parallel forward pass, which costs about the same as one decode step because decoding is memory bound. Agreed tokens are accepted for free. The first disagreement is resampled. It helps exactly when decoding is memory bound with small batches: the verification batch soaks up idle compute. Reported speedups are 2 to 3x on 11B to 137B models.
 Draft agreement. If guesses are usually wrong, verification still costs a full batch and yields one token. Guessing also cannot be free: a bigger draft model agrees more but costs more per guess. The optimum the slides cite is a draft about 15x smaller than the main model.</p><div class="followup"><strong>Follow-up:</strong> What limits the speedup?</div></div></div>
 <div class="qa"><div class="q">When does KV caching win, and when does recomputation win?</div><div class="a"><p>KV caching wins when you are compute bound: the extra HBM traffic of reading the cache is the cheaper side. Recomputation wins when you are memory bound: then extra math is free and storing more state only adds traffic. The Tmem/Tmath ratio of 208 at dmodel 2048 on an A100 is the lecture&rsquo;s worked decision line.
 Latency is time per item, what interactive users feel. Throughput is items per second, what batch pipelines maximize. Bandwidth is the hardware&rsquo;s property: the ceiling neither can exceed. Small-batch decoding has terrible throughput at fixed latency because bandwidth caps it.</p><div class="followup"><strong>Follow-up:</strong> What is the difference between latency, throughput, and bandwidth?</div></div></div>
 <div class="qa"><div class="q">Walk me through the KV cache byte math for a 70B model. When does the cache rival the weights?</div><div class="a"><p>Take 80 layers and dmodel 8192. Per token: 2 (K and V) x 2 bytes (FP16) x 80 x 8192 = 2.6 MB. At 32K context: 2.6 MB x 32,768 = 84 GB of cache, against 140 GB of weights. The cache is 60 percent of the weights. At 128K context it is 336 GB: the cache dwarfs the model. This is why long-context serving is a cache problem first. With grouped-query attention at 8 KV heads instead of 64, the per-token bill falls 8x to 0.3 MB, and 32K context costs 10 GB.
 Scale. 192 KB per token times 130k tokens is 26 GB: the cache fit the leftover HBM. The cache grows with layers times width times context, while weights are fixed. Longer contexts and bigger models flip which one binds.</p><div class="followup"><strong>Follow-up:</strong> Why did the 7B example in the lecture not have this problem?</div></div></div>
 <div class="qa"><div class="q">Why is prefill compute bound while decode is memory bound on the same chip?</div><div class="a"><p>Prefill feeds N prompt tokens through every layer at once. The matmuls are N by d by d with high data reuse: arithmetic intensity sits far above the ridge. Decode generates one token per step, streaming the full weight matrices for a single vector-matrix multiply per layer: about 2 FLOPs per byte, far below the ridge. Same model, same chip, opposite regimes. That is why batching helps decode (more tokens per weight read) and barely helps prefill (already compute bound).
-Latency. Batch 1 gives the fastest time to the first token for one user. Throughput wants big batches; interactive latency wants small ones. The serving tradeoff is latency versus throughput, priced in bandwidth.</p><div class="followup"><strong>Follow-up:</strong> If decode is memory bound, why does anyone run it at batch 1?</div></div></div>
-<div class="qa"><div class="q">Applied design: your speculative decoding gives 1.1x instead of the promised 2-3x. Diagnose it.</div><div class="a"><p>Check three suspects in order. First, the acceptance rate: log it. If alpha is 0.3 with K = 5, the math gives 1.4 tokens per batch before draft cost: the draft disagrees too often. Fix the draft (better draft model, EAGLE-style, or shorter K). Second, the batch size: if verification runs at large batch, it is no longer memory bound, so the &ldquo;free&rdquo; compute was never free. Third, the draft cost: a draft 15x smaller is the cited sweet spot; a heavier draft eats the winnings. The interview signal: quote the acceptance formula, then name which input broke.
+Latency. Batch 1 gives the fastest time to the first token for one user. Throughput wants big batches. Interactive latency wants small ones. The serving tradeoff is latency versus throughput, priced in bandwidth.</p><div class="followup"><strong>Follow-up:</strong> If decode is memory bound, why does anyone run it at batch 1?</div></div></div>
+<div class="qa"><div class="q">Applied design: your speculative decoding gives 1.1x instead of the promised 2-3x. Diagnose it.</div><div class="a"><p>Check three suspects in order. First, the acceptance rate: log it. If alpha is 0.3 with K = 5, the math gives 1.4 tokens per batch before draft cost: the draft disagrees too often. Fix the draft (better draft model, EAGLE-style, or shorter K). Second, the batch size: if verification runs at large batch, it is no longer memory bound, so the &ldquo;free&rdquo; compute was never free. Third, the draft cost: a draft 15x smaller is the cited sweet spot. A heavier draft eats the winnings. The interview signal: quote the acceptance formula, then name which input broke.
 Then the draft is too expensive or the batch too large. At alpha 0.85 and K = 5 the math promises about 4.2 tokens per batch. If reality says 1.2x, the verification batch is compute bound (batch too big) or the draft costs nearly a full target step. Profile the draft-to-target cost ratio next.</p><div class="followup"><strong>Follow-up:</strong> The acceptance rate is 0.85 but speedup is still 1.2x. What now?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <p>The story in eight steps. Each step answers the one before it.</p>
 <ol>
 <li><strong>One training step costs 3x a forward pass.</strong> Backprop
    on the toy graph: forward 60, gradients 30/12/20 by the
-   chain rule. Reuse intermediates; store activations.</li>
+   chain rule. Reuse intermediates. Store activations.</li>
 <li><strong>Forward is 2 x batch x params.</strong> 2BHN per MLP layer.
    Backward is 4BHN: two more matmuls, twice the forward
    FLOPs, plus activation storage.</li>
@@ -580,7 +580,7 @@ Then the draft is too expensive or the batch too large. At alpha 0.85 and K = 5 
    2Nd score and mix.</li>
 <li><strong>The 208 ratio decides.</strong> On an A100, computing one
    token&rsquo;s KV costs the memory time of 208 tokens. Cache
-   when compute bound; recompute when memory bound.</li>
+   when compute bound. Recompute when memory bound.</li>
 <li><strong>Memory sets the batch size.</strong> 7B on 40 GB: 14 GB
    weights, 130k cacheable tokens, batch 128 at length</li>
 <li>HBM capacity is the serving limit.</li>
@@ -607,7 +607,7 @@ Then the draft is too expensive or the batch too large. At alpha 0.85 and K = 5 
 <p><strong>Caveats from these sources.</strong> The A100 memory bandwidth
 in the KV-caching derivation is 1.5e12 bytes/s in the
 slides (1.5 TB/s) versus 1,935 GB/s in Lecture 3&rsquo;s spec
-slide; both orderings give the same conclusion (memory
+slide. Both orderings give the same conclusion (memory
 bound at small batch). The 208 ratio assumes dmodel 2048.
 The 130k-token capacity ignores attention workspace and
 fragmentation. Medusa&rsquo;s 2x cap and the 15x draft size are
@@ -628,11 +628,11 @@ empirical rules from the slides, not theorems.</p>
 </ul>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
-<li><strong>CS336 L10:</strong> KV caching and inference systems in full;
+<li><strong>CS336 L10:</strong> KV caching and inference systems in full.
   the KV cache figure is shared.</li>
 <li><strong>CS336 L02:</strong> FLOP counting and the backward-pass 2x
   rule, from scratch.</li>
-<li><strong>CS229S L03:</strong> arithmetic intensity and the ridge; the
+<li><strong>CS229S L03:</strong> arithmetic intensity and the ridge. The
   208 ratio is that machinery.</li>
 <li><strong>CS229S L06:</strong> FlashAttention attacks the same
   memory-bound attention.</li>
