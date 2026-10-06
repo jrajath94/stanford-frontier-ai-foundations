@@ -94,6 +94,44 @@ zero when the rules match, positive otherwise. The lecture proves
 this in general: KL is always non-negative, and it is zero if and
 only if the two distributions are equal.
 
+### Nats to bits: 0.737
+
+The 0.511 used the natural log, so the unit is the nat. Base
+2 gives bits. Convert: divide by log 2 (0.6931), or multiply
+by 1.4427. So 0.511 nats = 0.511 · 1.4427 = 0.737 bits.
+State the base every time you quote a KL, cross-entropy, or
+entropy. A "KL of 2.1" means nothing until you know whether
+it is nats or bits: 2.1 nats = 3.03 bits. This course uses
+natural log everywhere unless a number says otherwise.
+
+### The proof: Jensen makes it non-negative
+
+The lecture's proof, in full. Start from the definition and
+flip the ratio inside the log:
+
+```ascii
+KL(P_X || P_theta) = sum P_X(x) * log( P_X(x) / P_theta(x) )
+                   = sum P_X(x) * [ -log( P_theta(x) / P_X(x) ) ]
+                   = E[ -log( P_theta(x) / P_X(x) ) ]
+```
+
+Now −log is a convex function (it bends upward), and
+**Jensen's inequality** for a convex function says the
+expectation of the function sits above the function of
+the expectation: E[g(u)] ≥ g(E[u]). Apply it:
+
+```ascii
+KL = E[ -log( P_theta / P_X ) ]  >=  -log( E[ P_theta / P_X ] )
+```
+
+The inner expectation is sum P_X · (P_θ/P_X) = sum P_θ =
+1. So KL ≥ −log(1) = 0. Equality holds only when the
+ratio P_θ/P_X is constant, i.e. the distributions match.
+This is **Gibbs' inequality**. One precondition: the sum
+needs P_θ(x) > 0 wherever P_X(x) > 0, or the log is
+undefined. That precondition is the zero-probability
+landmine in formal dress.
+
 ![KL = 0.51 nats, counted term by term](assets/l02-kl-toy.webp "Tails surprise dominates: 0.5*log(0.5/0.9) + 0.5*log(0.5/0.1) = 0.511. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
 
 ### The zero-probability landmine
@@ -220,16 +258,44 @@ model A (fair):      P = 0.5 each
   log-likelihood = log 0.5 + log 0.5 + log 0.5 = 3 * (-0.693) = -2.079
 model B (heads 0.7): P(H) = 0.7, P(T) = 0.3
   log-likelihood = log 0.7 + log 0.7 + log 0.3
-                 = (-0.357) + (-0.357) + (-1.204) = -1.918
+                 = (-0.3567) + (-0.3567) + (-1.2040) = -1.9174 ≈ -1.917
 ```
 
-Model B wins: −1.918 beats −2.079 (less negative is better).
+Model B wins: −1.917 beats −2.079 (less negative is better).
 Two heads out of three favor the heads-biased coin. MLE listened
 to the data. With more flips the winner converges to the true
 bias. That is the whole training procedure for every model in
 this course whose densities can be written down.
 
-![MLE listens to the data: H, H, T picks the 0.7 coin](assets/l02-mle-toy.webp "Less negative wins: -1.918 beats -2.079. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+### Maximum likelihood for the Gaussian: the closed form
+
+For the Gaussian, MLE has a closed form. Log-likelihood
+with known spread σ:
+
+```ascii
+ell(mu) = sum over i of  [ -0.5*log(2*pi*sigma^2) - (x_i - mu)^2/(2*sigma^2) ]
+```
+
+Differentiate with respect to μ and set to zero:
+
+```ascii
+d ell / d mu = sum (x_i - mu) / sigma^2 = 0
+mu_hat = (1/n) * sum x_i = x_bar
+```
+
+The MLE mean is the sample mean. On {2, 4, 6, 8}:
+μ̂ = 5, exactly the Lesson 1 eyeball fit. For the
+variance (differentiate with respect to σ²):
+σ̂² = (1/n)·Σ(x_i − x̄)² = (9+1+1+9)/4 = 5, so
+σ̂ = 2.236. Lesson 1 guessed σ = 2 by eye. MLE says
+2.236. The eyeball was close but not exact: this is
+what "hugs the data" means in numbers. Precondition:
+n ≥ 1 for the mean, n ≥ 2 for a nonzero variance
+(one point gives σ̂ = 0, a degenerate spike).
+
+![MLE for the Gaussian: mean 5, spread 2.236](assets/l02-mle-gaussian.webp "d ell/d mu = 0 gives the sample mean. d ell/d sigma^2 = 0 gives 5. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
+![MLE listens to the data: H, H, T picks the 0.7 coin](assets/l02-mle-toy.webp "Less negative wins: -1.917 beats -2.079. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
 
 ### Entropy: the floor you cannot beat
 
@@ -240,11 +306,72 @@ heads has entropy 0: no surprise at all. MLE cannot beat the
 entropy. The best possible average log-likelihood is exactly
 minus the entropy, reached when P_θ = P_X and the KL hits zero.
 
+### The chain rule for entropy
+
+Entropy chains: the uncertainty of a pair is the
+uncertainty of the first plus the remaining uncertainty
+of the second given the first.
+
+```ascii
+H(X, Y) = H(X) + H(Y | X)
+```
+
+Two coins, both fair, independent. H(X) = 0.693 nats.
+Knowing X tells nothing about Y, so H(Y|X) = 0.693.
+H(X,Y) = 1.386: four equally likely pairs, log 4.
+Now make Y = X (perfectly correlated). H(Y|X) = 0:
+knowing X, Y is certain. H(X,Y) = 0.693 + 0 = 0.693.
+Conditioning never increases entropy: H(Y|X) ≤ H(Y),
+with equality only under independence. This is the
+formal version of "information never hurts". The
+autoregressive models of Lesson 10 are this chain rule
+applied T times: H(X_1..X_T) = Σ H(X_t | X_<t).
+
 The middle row of the table deserves one line: the thing you
 minimize in practice, −E[log P_θ(x)], is called
 **cross-entropy**. It equals entropy plus KL. Since entropy is
 constant in θ, minimizing cross-entropy and minimizing KL are
 the same search.
+
+### A vocab toy: CE = 0.357, perplexity 1.43
+
+Watch cross-entropy on a tiny vocabulary of 4 tokens. The
+model predicts the next token with probabilities
+{0.7, 0.1, 0.1, 0.1}. The true next token is token 1.
+Cross-entropy is minus the log-probability of the truth:
+
+```ascii
+CE = -log(0.7) = 0.357 nats
+```
+
+**Perplexity** is exp(CE): e^0.357 = 1.43. Read it as the
+model's effective number of choices: 1.43, between perfect
+certainty (1.0) and a uniform guess over 4 tokens (4.0).
+If the model had predicted {0.25, 0.25, 0.25, 0.25}, CE
+would be −log(0.25) = 1.386 nats and perplexity 4.0.
+Every language-model leaderboard reports one of these
+two numbers. They are the same number in different
+clothes.
+
+### Where this runs in real systems
+
+Next-token training is this lesson at scale, and it is
+the training objective of every major language model:
+GPT-4o, Claude, Gemini 2.5, Llama 4, DeepSeek-V3, Qwen.
+Each training step computes cross-entropy between the
+model's predicted distribution over the vocabulary and
+the actual next token. By this lesson's identity, that
+is forward KL to the text distribution, estimated on
+samples. The VAE reconstruction term (Lesson 7) is the
+same identity: expected log-likelihood under the
+decoder. The diffusion denoising loss (Lesson 9) is a
+reweighted form of it. One identity, three
+architectures. [uncertain] Exact loss weightings,
+label-smoothing settings, and auxiliary objectives in
+production runs are not public.
+
+*Model facts in this section verified October 2026.
+Anything not verifiable is marked [uncertain].*
 
 | Quantity | Formula (discrete) | Meaning |
 |---|---|---|
@@ -252,18 +379,6 @@ the same search.
 | Cross-entropy | −sum P_X log P_θ | What you actually minimize. Equals entropy + KL |
 | Entropy | −sum P_X log P_X | The truth's own unpredictability. The floor |
 | MLE objective | (1/n) sum log P_θ(x_i) | Sample version of minus cross-entropy |
-
-### Where this runs in real systems
-
-Next-token training of language models is this lesson, at
-scale. Each training step computes cross-entropy between the
-model's predicted distribution over the vocabulary and the
-actual next token. By this lesson's identity, that is forward
-KL to the text distribution, estimated on samples. The VAE
-reconstruction term (Lesson 7) is the same: expected
-log-likelihood under the decoder. The diffusion denoising loss
-(Lesson 9) is a reweighted form of it. One identity, three
-architectures.
 
 > [!MEMORY]
 > KL = cross-entropy − entropy. The entropy never moves when you
@@ -291,8 +406,10 @@ mass in the valley between them, where the truth has none. The
 samples look like blends of two faces: blurry averages. This is
 the classic VAE blur, and Lesson 7 traces it to this exact
 mechanism. The number to remember: with two unit Gaussians at
-−3 and +3, the best single Gaussian sits at mean 0, and fully
-half its mass lands where the truth has almost none.
+−3 and +3, the best single Gaussian sits at mean 0 with spread
+3.16, and puts 0.248 of its mass in |x| < 1 where the truth has
+only 0.023. Eleven times too much valley. Not half, but enough
+to blur every sample.
 
 Third, MLE needs the density. You must be able to compute
 log P_θ(x) for each data point. Push-forward models (Lesson 1)
@@ -308,6 +425,8 @@ route.
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/YtebGVx-Fxw" title="Entropy (for data science) Clearly Explained!!! StatQuest" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">External explainer: StatQuest builds entropy from zero, the floor under this lesson's identity. If the embed is blocked: <a href="https://www.youtube.com/watch?v=YtebGVx-Fxw" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
 
+![Chapter plate: KL splits, MLE falls out](assets/plate-l02-chap-kl-mle.webp "KL = H(P_X) - E[log P_theta]: drop the constant, maximize the sample average. Chapter plate. Shell 5. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
+
 > [!QA]
 > Q: What is KL divergence, concretely?
 > A: A weighted average of log surprise ratios: KL(P_X || P_θ) = sum P_X(x) log(P_X(x)/P_θ(x)). In the coin toy, truth {0.5, 0.5} against model {0.9, 0.1} scores 0.51 nats. It is always non-negative and zero only when the distributions match exactly.
@@ -322,7 +441,7 @@ route.
 
 > [!QA]
 > Q: Why does everyone maximize likelihood instead of minimizing KL?
-> A: They are the same search. KL splits into the truth's entropy (no θ in it) minus E[log P_θ(x)]. Dropping the constant turns min-KL into max-likelihood, and the expectation becomes a sample average: (1/n) sum log P_θ(x_i). On three flips H, H, T, the 0.7-heads model beat the fair model, −1.918 versus −2.079.
+> A: They are the same search. KL splits into the truth's entropy (no θ in it) minus E[log P_θ(x)]. Dropping the constant turns min-KL into max-likelihood, and the expectation becomes a sample average: (1/n) sum log P_θ(x_i). On three flips H, H, T, the 0.7-heads model beat the fair model, −1.917 versus −2.079.
 > Follow-up: What is cross-entropy then?
 > A: Minus that expectation: −E[log P_θ(x)]. It equals entropy plus KL. Minimizing cross-entropy, minimizing KL, and maximizing likelihood are three names for one optimization.
 
@@ -358,7 +477,7 @@ route.
 4. **Asymmetry.** Forward KL 0.693 vs reverse KL infinite on the sharp toy. Forward is mode-covering.
 5. **The key question.** How do you shrink KL with only samples, no formula for P_X?
 6. **The identity.** KL = entropy − E[log P_θ]. Drop the constant: min KL = max likelihood.
-7. **Worked.** On H, H, T, the 0.7 model beats the fair one, −1.918 vs −2.079. Sample average replaces expectation.
+7. **Worked.** On H, H, T, the 0.7 model beats the fair one, −1.917 vs −2.079. Sample average replaces expectation.
 8. **The price.** Infinite penalty on zeros, mode-covering blur, and MLE needs a density the push-forward models lack.
 
 ## Official sources and further reading
