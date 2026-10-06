@@ -10,10 +10,10 @@ summary: "From policy gradient to PPO: advantages, clipping, and training reason
 date: "2026-06-01"
 instructor: "Tengyu Ma"
 offering: "Spring 2026"
-duration: "1:18:46"
+duration: "1:14:37"
 video_id: J7CossjMvEg
-video_title: "Lecture 17: RL for LLMs: PPO and Verifiable Rewards"
-video_caption: "Original lecture. Tengyu Ma extends policy gradient to PPO and applies RL to reasoning language models. [uncertain] The YouTube metadata title for this video is mislabeled; the title here follows the transcript."
+video_title: "Lecture 17: RL for Language Models"
+video_caption: "Original lecture. Tengyu Ma builds PPO from REINFORCE via advantages and clipping, then RL on verifiable rewards for reasoning."
 concepts: [PPO, proximal-policy-optimization, advantage-function, baseline, clipping, verifiable-reward, chain-of-thought, post-training, RLVR]
 sources:
   - tag: video
@@ -25,253 +25,186 @@ sources:
     label: "CS229 Spring 2026 official course notes (local PDF)"
 ---
 
-## How to read this lesson
+## The job: teach the model to think, not just answer
 
-This lesson has two levels. **Level 1 (Core)** contains what you need to
-understand everything that follows in CS229 and the courses that build on
-it. **Level 2 (Deep)** contains what you need for correct, interview-grade
-understanding. Read Level 1 straight through. Return to Level 2 when you
-want depth.
+After SFT (lecture 15), the model answers helpfully. But ask it a
+hard math problem and it blurts the first plausible answer. What
+you want: the model tries approaches, checks its work, backtracks,
+then answers. That deliberation is **chain-of-thought**: thinking
+tokens before the final answer. The job: train the model to think
+well, using only a signal for whether the final answer is right.
 
-No prerequisites are assumed. Every term is defined at first use. Policy
-gradient and the MDP were defined in [lecture
-16](l16-reinforcement-learning.html); they are reused, not re-explained.
+## First attempt: REINFORCE on answers
 
-## Level 1: From REINFORCE to PPO
+The naive idea: treat answer generation as the robot's walk
+(lecture 16). Reward 1 if the final answer is correct, 0 if not.
+Run REINFORCE: reinforce token choices that led to correct
+answers. Watch it break. A 500-token thought ending in a wrong
+answer gets total reward 0: every token, including the 490 good
+thinking steps, is punished equally. A lucky guess with no thinking
+gets reward 1: reinforced as genius. The single 0/1 at the end is
+too coarse to teach 500 decisions, and REINFORCE's variance
+(lecture 16) is now multiplied by 500-token trajectories. Training
+jitters and stalls.
 
-Policy gradient is on-policy: every update needs fresh trajectories
-[01:23](ts:01:23). Fresh LLM generations are expensive. **PPO**,
-proximal policy optimization [00:20](ts:00:20), reuses samples across
-updates by correcting for the policy change.
+## The key question
 
-The correction is the **ratio** r = pi_new(a|s) / pi_old(a|s): how much
-more likely the action is under the new policy. Multiply the old
-objective by r and stale samples approximate fresh ones. But ratios
-explode: an action the old policy rarely took gets a huge weight, and
-the update destabilizes.
+Can we keep REINFORCE's idea but calm its variance, reuse samples,
+and stop the policy from jumping off a cliff in one bad update?
 
-The fix is **clipping** [44:30](ts:44:30): cap the ratio at [1 -
-epsilon, 1 + epsilon]. The objective becomes min(r * A, clip(r) * A),
-where A is the advantage. Big policy moves are simply ignored. The name
-says it: keep the new policy **proximal** to the old one.
+## Advantages: subtract the luck
 
-![PPO clipping](assets/svg/l17-ppo.svg "Clip the importance ratio. Ignore updates that move too far. Original plate.")
+The **advantage** A(s,a) measures how much better an action is than
+average: reward-to-go minus a **baseline** (often the value V(s)).
+If thinking step a in state s leads to total 8 while the average
+from s is 5, the advantage is +3: genuinely good. If another run
+scores 5 with average 5, advantage 0: no signal, no update. The
+baseline subtracts the luck shared by all actions in the state.
+
+Work the toy. State: mid-proof. Baseline V = 0.5 (half of answers
+from here end correct). Action 1 ("try substitution"): leads to
+correct, reward-to-go 1. Advantage = 1 - 0.5 = +0.5: reinforce.
+Action 2 ("guess"): leads to wrong, 0. Advantage = -0.5: suppress.
+Without the baseline, both updates would scale by raw 1 and 0.
+With it, the update says "better than usual" vs "worse than
+usual", which is the learnable signal. The lecture's derivation:
+replace reward by advantage in the policy gradient. The
+expectation is unchanged (baselines don't bias it) but the
+variance drops.
+
+## PPO: clip the jump
+
+REINFORCE is on-policy: one gradient step per batch of fresh
+trajectories, then the data is stale. **PPO** (proximal policy
+optimization) reuses data with **importance sampling**: weight each
+old trajectory's gradient by the ratio r = pi_new(a|s) /
+pi_old(a|s), the probability under the new policy over the old.
+If the new policy likes the action twice as much, count its
+advantage twice.
+
+The ratio is dangerous. If r = 100 (the new policy went all-in on
+an action), one stale trajectory dominates the update and the
+policy jumps off a cliff. PPO's fix is **clipping**: cap the ratio
+at [1-epsilon, 1+epsilon], epsilon ~ 0.2. The clipped objective
+takes the worse of the raw and clipped versions, so the update
+never profits from moving too far.
+
+The lecture walks the four cases. Advantage positive, ratio 1.5
+(action good, new policy already likes it more): clip to 1.2, and
+PPO's position is "no need to reinforce anymore": it is already a
+good action at higher probability, so zero out the extra push.
+Advantage positive, ratio 0.5 (good action, new policy shies away):
+unclipped, reinforce it back up. Advantage negative, ratio 1.5
+(bad action, new policy likes it): clip, don't let it get worse.
+Advantage negative, ratio 0.5: fine, keep suppressing. The pattern:
+never let one update move the policy far from the data it trained
+on. "Proximal": stay near the old policy.
+
+![PPO clipping](assets/svg/l17-ppo.svg "PPO. The importance ratio r is clipped to [0.8, 1.2]. Good actions already favored get no extra push. Bad updates cannot jump far. Source: original plate for Stanford Frontier AI.")
+
+## Verifiable rewards: the 0/1 that works
+
+For math and code, correctness is checkable: the answer equals 42
+or it does not. The program passes the tests or it does not. The
+**verifiable reward** is binary: 1 if right, 0 if wrong. No human
+rates the thinking. This is **RLVR** (RL with verifiable rewards).
+
+Why the coarse 0/1 works here when it failed above: scale and the
+fix stack. Advantages isolate which trajectories beat the average.
+PPO's clipping keeps updates safe across reused batches. And the
+model samples many attempts per problem (dozens of thinking
+trajectories), so the law of large numbers separates good thinking
+patterns from lucky guesses: patterns that systematically precede
+correct answers get reinforced. The lecture's flagship: reasoning
+models trained this way, thinking tokens and all, with binary
+correctness as the only reward. The thinking improves because
+better thinking is what systematically produces the 1s.
+
+## The honest price
+
+PPO buys stability and pays in bias and tuning: clipping throws
+away legitimate signal (the "no need to reinforce" case discards
+real gradient), epsilon is another dial, and importance sampling
+degrades as the policy drifts from the data: a few epochs per
+batch, then fresh rollouts. Verifiable rewards buy honest signals
+and pay in scope: only domains with checkable answers qualify
+(math, code, games). For open-ended writing there is no verifier,
+and you are back to human preference models with all their
+biases. And RLVR can teach reward hacking: the model learns to
+produce the checkable token ("42") via broken reasoning that
+happens to land right. The verifier checks the answer, not the
+thought.
+
+## Mapping back
+
+| Idea | Pain it answers | How |
+|---|---|---|
+| Advantage | 0/1 at the end punishes 490 good thinking steps equally | Reward-to-go minus baseline: +0.5 reinforce, -0.5 suppress; luck subtracted, signal kept |
+| Importance ratio | On-policy: data single-use | r = pi_new/pi_old reuses batches; stale trajectories weighted by drift |
+| Clipping | r = 100 jumps the policy off a cliff | Cap at [0.8, 1.2]; four cases: never profit from moving far; "proximal" |
+| Verifiable reward | Human rating does not scale; preferences are biased | Binary correctness (tests pass/answer matches); RLVR trains thinking with 0/1 |
+| Scale | One trajectory cannot separate skill from luck | Dozens of attempts per problem; patterns preceding 1s get reinforced |
 
 > [!QA]
-> Q: What problem does PPO solve?
-> A: Sample waste. Vanilla policy gradient discards every trajectory after one update because the policy changed. PPO reuses trajectories with importance weighting, then clips the weights so stale samples cannot yank the policy far. More learning per sample, stable updates. That is the whole contribution: efficiency plus a guardrail.
-> Follow-up: Why clip instead of just trusting the ratio?
-> A: Ratios have heavy tails. One rare action under the old policy gives a gigantic weight and a gigantic gradient step. A single bad batch can destroy training. Clipping bounds the damage: the update ignores any incentive to move the policy beyond the trust region. It is pessimism as engineering.
-
-## Level 1: Advantages and baselines
-
-Raw returns are noisy. A trajectory scores 10: was the action good, or
-the situation easy? The **baseline** [17:07](ts:17:07) answers by
-subtracting the expected: how much better than usual was this outcome?
-
-The **advantage** [36:25](ts:36:25) is return minus baseline: A = R -
-b(s). Positive advantage: push these actions up. Negative: push them
-down. The baseline is often the value function V(s): the expected return
-from the state. Subtracting it removes luck but not signal, because the
-baseline does not depend on the action taken.
-
-This is variance reduction, not bias introduction. The expected gradient
-is unchanged: the baseline's contribution has expectation zero. What
-changes is the noise. Smaller noise means fewer samples per update,
-which is the currency PPO economizes.
+> Q: What problem does the advantage function solve?
+> A: REINFORCE scales updates by raw total reward, so luck dominates: a good action in a lucky trajectory and a bad action in a lucky trajectory both get reinforced. The advantage A = reward-to-go minus baseline subtracts what was expected anyway. Only better-than-average actions get positive updates. The expectation is unchanged (baselines add zero in expectation) but the variance collapses, because the shared luck cancels. In the toy, substitution scored +0.5 (reinforce) and guessing -0.5 (suppress) against a 0.5 baseline.
+> Follow-up: What is usually the baseline?
+> A: The value function V(s): the expected reward-to-go from the state. It is the best predictor of the luck component, since it captures everything about the state except this action's choice. In practice a separate network (the critic) estimates V, trained alongside the policy (the actor): actor-critic.
 
 > [!QA]
-> Q: Why subtract a baseline instead of using raw returns?
-> A: Raw returns mix action quality with situational luck. A good action in a bad state scores low; a bad action in a good state scores high. The baseline, usually the state's expected value, removes the situational part. What remains is the action's contribution: the advantage. Same expected gradient, far less noise. Less noise means fewer trajectories per update.
-> Follow-up: What is a good baseline?
-> A: The value function V(s): the expected return from the state under the current policy. It is the best state-dependent predictor of the return, so it removes the most variance. Learned alongside the policy, usually by a second network head. Actor-critic methods are exactly this: an actor for the policy, a critic for the baseline.
-
-## Level 1: RL for reasoning models
-
-Now the LLM application. The **state** is the token history. The
-**action** is the next token. The dynamics are deterministic and trivial:
-append the token. The reward comes only at the end of the trajectory:
-did the final answer match the ground truth?
-
-For math problems the reward is **verifiable** [00:35](ts:00:35) and
-**binary** [67:24](ts:67:24): 1 if the extracted answer matches, 0
-otherwise. No human labeler. No reward model to train. The task grades
-itself.
-
-![Verifiable reward](assets/svg/l17-verify.svg "Wrap the answer in tags, parse it, compare to truth. Reward 1 or 0. Original plate.")
-
-The engineering detail: force the format. Ask the model to wrap its
-answer in tags, like <answer>42</answer>. Extract with a parser, not an
-AI judge [67:50](ts:67:50). Compare against the known answer. The parser
-must be pragmatic: strict enough to be checkable, lenient enough that
-formatting quirks do not zero out correct reasoning.
-
-This trains **chain of thought** [56:36](ts:56:36): long reasoning
-traces before the answer. The reward touches only the final answer, but
-the gradient flows back through every token of the trace. Traces that
-lead to correct answers get reinforced. Reasoning emerges from
-answer-level rewards, with no supervision of the thinking itself.
-
-![Test-time scaling](assets/figs-notes/notes-o1-aime-scaling.png "o1 AIME accuracy vs train-time and test-time compute. More thinking helps. Source: Stanford notes.")
+> Q: How does PPO's clipping work, case by case?
+> A: The objective uses r = pi_new/pi_old clipped to [1-eps, 1+eps] (eps ~ 0.2), taking the minimum of raw and clipped times advantage. Four cases. Advantage > 0, r = 1.5: good action already favored. Clip and stop pushing ("no need to reinforce"). Advantage > 0, r = 0.5: good action disfavored. Reinforce normally. Advantage < 0, r = 1.5: bad action favored. Clip the damage. Advantage < 0, r = 0.5: bad action disfavored. Keep suppressing. Net effect: the policy never moves far from the data it learned on in one update.
+> Follow-up: Why "proximal"?
+> A: Proximal means near. PPO constrains each update to stay proximal to the old policy: the trust region is enforced by the clip instead of a hard constraint. It is the practical descendant of TRPO, which enforced the region exactly and was harder to implement. The clip is the whole trick.
 
 > [!QA]
-> Q: Why do verifiable rewards work so well for math?
-> A: Three reasons. The reward is correct by construction: matching the answer is the task. It is cheap: a parser, not a human or a model. And it is dense enough at scale: with many problems, the binary signal separates good reasoning from bad across the dataset. No reward hacking through a learned judge, because there is no learned judge. The environment is the grader.
-> Follow-up: What cannot verifiable rewards train?
-> A: Anything without a checkable answer. Open-ended writing, taste, helpfulness: no parser grades those. Those need human feedback or learned reward models, which bring their own hacking problems. Verifiable rewards own the checkable slice: math, code, puzzles. The field's term is RLVR: reinforcement learning with verifiable rewards.
-
-## Level 1: Stability is the open problem
-
-The lecture is candid. PPO's theoretical justification is thin: why it
-works, and when, remains partly mysterious. Post-training **stability**
-is a general open issue [24:36](ts:24:36). Making these runs stable
-"requires some magic." The open-source community has no consensus on the
-best stabilization recipe. Frontier labs may know more.
-
-This honesty is the point. RL post-training is the least settled part
-of the modern stack. SFT is reliable. Pre-training is reliable. RL is
-powerful and finicky. The course ends here deliberately: at the
-frontier, where the answers are not in yet.
-
-> [!QA]
-> Q: If PPO is poorly understood, why is it the standard?
-> A: It works reliably enough in practice and fails gracefully: clipping bounds the damage of bad updates. The alternatives are either less stable or more complex. Engineering often standardizes on the method with the best worst-case behavior, not the best theory. PPO's worst case is a clipped, small step. That is a comforting failure mode.
-> Follow-up: What does "requires some magic" mean concretely?
-> A: Reward shaping, KL penalties against the base model, careful batch construction, learning-rate schedules, early stopping on proxy metrics: a bundle of tricks with interacting effects. Change one and the run destabilizes. The magic is unprincipled but load-bearing. Documenting it honestly, as the lecture does, is more useful than pretending otherwise.
-
-## Level 2: The full post-training stack
-
-Step back and the course's modern arc is complete. Pre-training teaches
-the world: next-word prediction on the internet. SFT teaches conduct:
-instruction following from demonstrations. RL teaches reasoning:
-trial-and-error on verifiable rewards. Each stage fixes what the
-previous one cannot. Pre-training cannot follow instructions reliably.
-SFT cannot discover reasoning strategies. RL can, at the cost of
-stability.
-
-The loss chip appears in every stage with new contents: cross-entropy,
-then masked cross-entropy on answers, then the PPO clipped objective.
-Same chip, three formulas. The course is one idea, specialized
-repeatedly: define wrongness, minimize it, in that order.
-
-## Level 2: RLVR and the reasoning frontier
-
-The notes' o1 figure shows the payoff: AIME accuracy rising with both
-train-time and test-time compute. **Test-time scaling** is the new axis:
-let the model think longer, score higher. RL with verifiable rewards is
-what taught the model to use the thinking time well.
-
-The open questions are the course's parting gift. Which tasks admit
-verifiable rewards? How far does test-time scaling go? What stabilizes
-post-training? The answers are being written now, in labs and in the
-open. The mathematics in this course is the vocabulary for reading
-them.
+> Q: Why do verifiable rewards work for reasoning when sparse 0/1 rewards failed in the naive attempt?
+> A: Three differences. One, advantages replace raw totals: credit goes to better-than-average trajectories, not lucky ones. Two, PPO stabilizes the updates so the sparse signal accumulates instead of jittering away. Three, scale: dozens of sampled thinking trajectories per problem let statistics separate systematically-good thinking from lucky guesses. The verifier's binary signal is honest (the answer is right or not), and with the variance tamed, honesty suffices. The naive attempt had none of these: raw REINFORCE on single trajectories with 0/1 totals.
+> Follow-up: What is reward hacking in RLVR?
+> A: The model finds ways to score 1 without reasoning well: pattern-matching the answer format, exploiting verifier bugs, or writing broken chains that stumble onto the right final token. The verifier checks the answer, not the thought, so the thinking can rot while the score shines. Mitigations: stronger verifiers, process supervision (rewarding intermediate steps), and auditing the thinking traces, not just the scores.
 
 ## Recap: the whole lesson on one screen
 
-Eight ideas carry this lecture. Read each card. Say the core sentence out
-loud. If you can, you own the lesson.
-
-<div class="recap-grid">
-<div class="recap-card">
-<img src="assets/svg/l17-ppo.svg" alt="PPO clipping">
-<div class="rc-body">
-<strong>1. PPO reuses samples safely</strong>
-<p>Importance ratio r corrects stale trajectories. Clipping bounds the
-correction. Proximal updates, efficient learning.</p>
-<p class="rc-num">Key: min(rA, clip(r)A)</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l17-ppo.svg" alt="Clipping">
-<div class="rc-body">
-<strong>2. Clipping is pessimism as engineering</strong>
-<p>Cap r at 1 +/- epsilon. Ignore incentives to move far. Heavy-tailed
-ratios cannot destroy the run.</p>
-<p class="rc-num">Key: bound the damage</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l17-ppo.svg" alt="Advantage">
-<div class="rc-body">
-<strong>3. Advantage = return minus baseline</strong>
-<p>Subtract the expected. Keep only better-than-expected. Same gradient
-in expectation, far less noise.</p>
-<p class="rc-num">Key: A = R - b(s)</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l17-verify.svg" alt="Verifiable reward">
-<div class="rc-body">
-<strong>4. Math grades itself</strong>
-<p>Binary reward: extracted answer matches truth. Parser, not judge.
-<answer> tags make extraction pragmatic.</p>
-<p class="rc-num">Key: 1 or 0, no human</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l17-verify.svg" alt="Chain of thought">
-<div class="rc-body">
-<strong>5. Reasoning emerges from answer rewards</strong>
-<p>Reward touches only the final answer. Gradients flow through the
-whole trace. Good thinking gets reinforced.</p>
-<p class="rc-num">Key: supervise answers, get reasoning</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/figs-notes/notes-o1-aime-scaling.png" alt="o1 AIME scaling, Stanford notes">
-<div class="rc-body">
-<strong>6. Test-time scaling works</strong>
-<p>More thinking, higher AIME scores. RL taught the model to use the
-time. A new axis alongside training compute.</p>
-<p class="rc-num">Key: think longer, score higher</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l17-ppo.svg" alt="Stability">
-<div class="rc-body">
-<strong>7. Stability is the open problem</strong>
-<p>Thin theory, finicky practice, no open-source consensus. Frontier
-labs may know more. Honest uncertainty.</p>
-<p class="rc-num">Key: powerful but unsettled</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l17-verify.svg" alt="Post-training stack">
-<div class="rc-body">
-<strong>8. The stack: world, conduct, reasoning</strong>
-<p>Pre-train the world. SFT the conduct. RL the reasoning. Same chip,
-three formulas. The course arc, complete.</p>
-<p class="rc-num">Key: each stage fixes the last</p>
-</div>
-</div>
-</div>
+1. **The job.** Teach thinking, not just answering. Reward only
+   final correctness.
+2. **Naive REINFORCE.** 0/1 punishes 490 good steps. Lucky
+   guesses reinforced. Variance x 500-token trajectories.
+3. **The key question.** Calm the variance, reuse samples, stop
+   cliff-jumps?
+4. **Advantages.** Reward-to-go minus baseline: +0.5/-0.5. Luck
+   subtracted, expectation unchanged.
+5. **PPO.** r = pi_new/pi_old, clipped to [0.8, 1.2]. Four cases.
+   Never move far from the data. Proximal.
+6. **Verifiable rewards.** Binary correctness for math/code.
+   RLVR: thinking improves because good thinking earns the 1s.
+7. **The honest price.** Clipping discards signal. Epsilon tuned.
+   Verifiers only exist for checkable domains. Reward hacking.
 
 ## Official sources and further reading
 
 **Official:**
-- Lecture 17 video: PPO [00:20](ts:00:20), verifiable [00:35](ts:00:35), on-policy sampling [01:23](ts:01:23), baseline [17:07](ts:17:07), stability [24:36](ts:24:36), advantage [36:25](ts:36:25), clipping [44:30](ts:44:30), chain of thought [56:36](ts:56:36), binary reward [67:24](ts:67:24), answer extraction [67:50](ts:67:50).
-- CS229 Spring 2026 official course notes: RL for LLMs chapter; the o1 scaling figure above is from it.
+- Lecture 17 video, Stanford Online YouTube:
+  https://www.youtube.com/watch?v=J7CossjMvEg — Tengyu Ma derives
+  advantages and baselines, walks PPO's four clipping cases, and
+  presents RLVR with verifiable binary rewards for reasoning
+  models.
+- Official subtitle transcript (en-US): the lecture's spoken text.
+- CS229 Spring 2026 official course notes (local PDF): the formal
+  PPO objective and RLVR setup.
 
-**Further reading:**
-- Schulman et al. (2017), "Proximal Policy Optimization Algorithms": the PPO paper.
-- OpenAI (2024), "Learning to Reason with LLMs": the o1 system card, for the test-time scaling results.
-
-**Caveats from these sources.** The video's YouTube metadata title is
-wrong; the content is PPO plus RL for LLMs per the transcript. PPO's
-theory is thin by the lecturer's own account; treat justifications as
-intuition. The o1 figure reports one benchmark family; generalization to
-other tasks varies. RLVR needs checkable tasks; it does not transfer to
-open-ended generation.
+**Caveats from these sources.** The four clipping cases are the
+lecture's own walkthrough, including the "no need to reinforce"
+position on good actions at high ratio. The thinking-trajectory
+toy is an original miniature of the lecture's RLVR framing.
+Epsilon ~ 0.2 is the standard PPO setting the lecture cites.
 
 ## Connections to the other courses
 
-- **CS336:** the full RLHF/RLVR pipeline is CS336's post-training unit; this lecture is its foundation.
-- **CS224N:** instruction tuning and preference data are the language-side inputs to this machinery.
-- **CS329H:** reward modeling and preference aggregation are this lecture's reward function, formalized.
-
-> [!CHEAT]
-> **PPO and RLVR cheatsheet.** PPO: reuse samples via ratio r = pi_new/pi_old; clip r to [1-eps, 1+eps]; objective min(rA, clip(r)A); proximal updates. Advantage: A = R - b(s); baseline usually V(s); same expected gradient, less variance. LLM setup: state = history, action = next token, deterministic dynamics, reward at end. Verifiable: binary 1/0 on answer match; <answer> tags plus parser; no human. Chain of thought emerges from answer rewards. Stability: open problem, thin theory, bag of tricks.
-
-> [!MEMORY]
-> **Grade what you can check.** Verifiable rewards work because the task is its own judge. Wherever answers are checkable, RL is cheap and honest. Where they are not, you are back to human judgment with all its costs.
+- **CS229 L15:** SFT: the post-training step before RL; PPO
+  continues where SFT stops.
+- **CS229 L16:** REINFORCE and the MDP: everything this lesson
+  stabilizes.
+- **CS229 L06:** variance, the estimator kind: baselines as
+  variance reduction.
+- **CS336:** PPO at scale: rollout farms and the infrastructure
+  behind RLVR.
