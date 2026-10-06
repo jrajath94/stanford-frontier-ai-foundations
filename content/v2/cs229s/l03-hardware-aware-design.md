@@ -63,7 +63,7 @@ second. Our toy processor moves 4 items per second.
 **Compute bandwidth**: the maximum number of operations done
 per second. The toy processor does 8 operations per second.
 
-![Peak performance toy](assets/slide-l03-peak-performance-toy.png "Shell 1. Memory moves 4 items/s. The processor does 8 ops/s. The slower one wins. Source: Stanford slides.")
+![Peak performance toy](assets/slide-l03-peak-performance-toy.png "Shell 1. Memory moves 4 items/s. The processor does 8 ops/s. The slower one wins. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 Define two times. **Tmem** is time spent on memory:
 (bytes accessed) / (memory bandwidth). **Tmath** is time spent
@@ -82,7 +82,7 @@ second and the processor does 4 ops per second out of a
 possible 8. Result: 50% compute utilization, 100% memory
 utilization. Memory bound.
 
-![Memory-bound example](assets/slide-l03-memory-bound-example.png "Shell 2. Doubling compute on a memory-bound kernel changes nothing. Doubling bandwidth cuts the time. Source: Stanford slides.")
+![Memory-bound example](assets/slide-l03-memory-bound-example.png "Shell 2. Doubling compute on a memory-bound kernel changes nothing. Doubling bandwidth cuts the time. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 The diagnosis dictates the fix. Double the compute speed to 16
 ops/s. Total time is unchanged: 25% compute utilization, 100%
@@ -124,16 +124,17 @@ If your algorithm's AI is below 161, it is memory bound on an
 A100. Above 161, compute bound. The ridge is a property of the
 hardware, not of your code.
 
-![A100 arithmetic ratio](assets/slide-l03-a100-arithmetic-ratio.png "Shell 3. 312 TFLOPS over 1,935 GB/s gives the A100 ridge of 161 FLOPs/byte. Source: Stanford slides.")
+![A100 arithmetic ratio](assets/slide-l03-a100-arithmetic-ratio.png "Shell 3. 312 TFLOPS over 1,935 GB/s gives the A100 ridge of 161 FLOPs/byte. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 The **roofline** plots achievable performance against
 arithmetic intensity. The memory roof slopes up on the left.
 The compute roof is flat on the right. Your algorithm is a
 point on this plot. Left of the ridge: buy bandwidth, fuse
 kernels, tile better. Right of the ridge: buy compute, use
-tensor cores.
+tensor cores (specialized matrix-multiply units in the GPU,
+detailed in subchapter 6 below).
 
-![Roofline](assets/plate-roofline.svg "Shell 4. Below the ridge of 161, memory bounds you. Above it, compute does. Source: original plate. Numbers from Stanford slides.")
+![Roofline](assets/plate-roofline.svg "Shell 4. Below the ridge of 161, memory bounds you. Above it, compute does. Source: original plate. Numbers from Stanford slides. Project: Stanford Frontier AI.")
 
 ### Subchapter: the ridge moves with the chip
 
@@ -172,7 +173,7 @@ read A (NK), read B (KM), write C (NM). Total bytes:
 AI = 2MNK / 2(KM + NK + NM)
 ```
 
-![Matmul AI examples](assets/slide-l03-matmul-ai-examples.png "Shell 5. M=K=8192, N=128 gives AI 124: memory bound. M=K=N=8192 gives AI 2731: compute bound. Source: Stanford slides.")
+![Matmul AI examples](assets/slide-l03-matmul-ai-examples.png "Shell 5. M=K=8192, N=128 gives AI 124: memory bound. M=K=N=8192 gives AI 2731: compute bound. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 Two cases against the A100 ridge of 161. With M = K = 8192 and
 N = 128, AI = 124.1. Below the ridge: memory bound. This is
@@ -183,18 +184,19 @@ different bottleneck. Shape is part of the diagnosis.
 
 ## Six principles for high performance
 
-The diagnosis is only useful if it prescribes a fix. The
-lecture gives six principles, one per bottleneck, each with a
+The lecture gives six principles, one per bottleneck, each with a
 concrete mechanism.
 
-![Six principles](assets/slide-l03-six-principles.png "Shell 6. Fusion, parallelization, tiling, caching vs recomputation, pipelining, hardware-specific optimizations. Source: Stanford slides.")
+![Six principles](assets/slide-l03-six-principles.png "Shell 6. Fusion, parallelization, tiling, caching vs recomputation, pipelining, hardware-specific optimizations. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 ### Subchapter: 1. fusion, keep the intermediate on-chip
 
 Perform composite operations on data already in the processor.
 Save trips to and from memory. If a kernel applies f then g to
 the same data, fuse them so the intermediate never goes back to
-HBM. Critical for I/O-bound operations. FlashAttention is this
+HBM (high-bandwidth memory: the GPU's large off-chip DRAM,
+detailed in the memory-hierarchy section below). Critical for
+I/O-bound operations. FlashAttention is this
 principle applied to attention (L06).
 
 The toy: two kernels, f then g, on 1 MB of data. Unfused: read
@@ -345,10 +347,10 @@ One fact underlies tiling, fusion, and caching: the GPU is a
 memory hierarchy, not one pool. On an A100: registers, 256 KB
 per SM, private to threads. Shared memory, 192 KB per SM,
 visible to a thread block. L2 cache, 40 MB. HBM device memory,
-40 GB at about 2 TB/s. Speed rises as you go up. Capacity
+40 GB at about 1.6 TB/s. Speed rises as you go up. Capacity
 rises as you go down.
 
-![GPU memory hierarchy](assets/slide-l03-gpu-memory-hierarchy.png "Shell 7. Registers 256 KB/SM, shared memory 192 KB/SM, L2 40 MB, HBM 40 GB on an A100. Source: Stanford slides.")
+![GPU memory hierarchy](assets/slide-l03-gpu-memory-hierarchy.png "Shell 7. Registers 256 KB/SM, shared memory 192 KB/SM, L2 40 MB, HBM 40 GB on an A100. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 Every optimization in this course is a decision about which
 pool holds which data. Keep the hot tiles in SRAM and
@@ -492,3 +494,29 @@ add launch and synchronization costs. The tiling AI limits
   recompute.
 - **CS229S L04:** KV caching as the caching-versus-recompute
   decision.
+
+## Coverage map
+
+Every lecture concept mapped to the line that teaches it. File:
+l03-hardware-aware-design.md.
+
+| Lecture concept | Anchor | Line |
+|---|---|---|
+| Big-O vs wall-clock (Strassen, attention meme) | "hardware utilization" | 49 |
+| Toy processor (Tmem vs Tmath) | "toy processor" | 53 |
+| Memory bound vs compute bound | "compute bound" / "memory bound" | 73 |
+| The key question (one diagnosis number) | "key question" | 100 |
+| Arithmetic intensity (FLOPs per byte) | "Arithmetic intensity" | 108 |
+| The ridge (A100 = 161 FLOPs/byte) | "ridge" | 106 |
+| Roofline plot (two roofs) | "plots achievable performance" | 129 |
+| Ridge across chips (A100/H100/H200/B200) | ridge table | 144 |
+| Worked matmul AI (124 vs 2731) | "matmul AI" | 176 |
+| Six principles (one per bottleneck) | "Six principles" | 185 |
+| Principle 1: fusion | "never goes back to" | 196 |
+| Principle 2: parallelization (108 SMs) | "parallelization" | 190 |
+| Principle 3: tiling (0.5 to 1.0 AI) | "3. tiling" | 229 |
+| Principle 4: caching vs recompute | "caching versus recomputation" | 273 |
+| Principle 5: pipelining (max not sum) | "the two hide behind each other" | 304 |
+| Principle 6: tensor cores (16x16) | "multiply 16 by 16" | 319 |
+| GPU memory hierarchy (A100 pools) | "memory hierarchy" | 347 |
+| Honest price (roofline limits) | "honest price" | 387 |
