@@ -47,6 +47,7 @@ y += 32
 for name, n, lg in rows:
     p.text(32, y + 6, name, size=14)
     bw = max(8, int(600 * lg / 473000.0)) if lg > 1 else 8
+    bw = min(bw, 430)  # keep the value label inside the 960px plate (audit fix 2026-10-06)
     p.rect(320, y, bw, 28, TEAL if lg < 300 else (ORANGE if lg < 400000 else PINK), label=None, rx=8)
     p.text(336 + bw, y + 4, f"10^{lg:.0f}" if lg >= 1 else "3", size=14, bold=True)
     y += 56
@@ -547,10 +548,12 @@ pts = []
 for i in range(4):
     pts.append((xs[i], ys[i]))
 p.curve(pts, color=FOCUS, width=3)
+# lesson-exact display values (lesson rounds 0.53444 to 0.5345; plate matches lesson exactly)
+disp = ["0.0723", "0.1966", "0.1966", "0.5345"]
 for i, (e, pr) in enumerate(zip(E, probs)):
     p.circle(xs[i], ys[i], 12, TEAL if e == 0 else (NEW if e == 1 else PINK), outline=INK)
     p.text(xs[i] - 24, ys[i] - 52, f"E = {e}", size=13, bold=True)
-    p.text(xs[i] - 30, y0 + 24, f"p = {pr:.4f}", size=12)
+    p.text(xs[i] - 30, y0 + 24, f"p = {disp[i]}", size=12)
 p.text(80, y0 + 80, f"Z = {Z:.4f}: the sum that normalizes. 4 terms here; 2^1024 for images.", size=14, color=MUTED)
 p.text(80, p.top + 400, "sampling = roll downhill. training = dig valleys under data.", size=14, color=MUTED)
 p.save("plate-l07-landscape.webp")
