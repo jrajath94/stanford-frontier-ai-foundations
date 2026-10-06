@@ -704,6 +704,16 @@ The story in eight steps. Each step answers the one before it.
    for memory-bound decode. Sliding windows alternate local and
    global layers for long context.
 
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/kCc8FmEb1nY" title="Karpathy: Let's build GPT, from scratch, in code" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- Karpathy, Let's build GPT (the embed above): https://www.youtube.com/watch?v=kCc8FmEb1nY
+- Vaswani et al., Attention Is All You Need: https://arxiv.org/abs/1706.03762
+- Su et al., RoFormer: Rotary Position Embedding: https://arxiv.org/abs/2104.09864
+- Shazeer, GLU Variants Improve Transformer: https://arxiv.org/abs/2002.04745
+
 ## Official sources and further reading
 
 **Official:**
