@@ -19,6 +19,12 @@ sources:
   - tag: video
     label: "Lecture 7 video, Stanford Online YouTube"
     url: https://www.youtube.com/watch?v=fRM41w9jzQo
+  - tag: video
+    label: "Explainer: 3Blue1Brown, Neural Networks Chapter 1"
+    url: https://www.youtube.com/watch?v=aircAruvnKk
+  - tag: paper
+    label: "He et al., Deep Residual Learning for Image Recognition (2015)"
+    url: https://arxiv.org/abs/1512.03385
   - tag: notes
     label: "Official subtitle transcript (en-US)"
   - tag: notes
@@ -85,6 +91,18 @@ neuron, one learned intermediate quantity, zero hand-tuning.
 
 ![One neuron](assets/svg/l07-neuron.svg "One neuron. Linear mix w.x + b, then bend with sigma. The bend is what makes it a feature, not just a line. Source: original plate for Stanford Frontier AI.")
 
+### Subchapter: the bias as a movable threshold
+
+The bias b looks like a spare knob. It is the neuron's threshold.
+The neuron fires when w^T x + b > 0, which is w^T x > -b. The bias
+sets where the hinge sits. In the walkability toy, w = (-2, 3) and
+b = 0.5, so the neuron fires when -2*park + 3*sidewalk > -0.5. Drop
+b to -3 and the same house needs a far better (park, sidewalk) pair
+to fire. Training moves the hinge by tuning b. Every "threshold" in
+every neuron is just a bias the optimizer placed.
+
+![Bias threshold](assets/plate-l07-bias-threshold.webp "The bias moves the hinge. With b = 0 the neuron fires when the mix crosses 0. With b = 0.5 it fires at minus 0.5: a lower bar. Source: original toy for the bias as threshold. Project: Stanford Frontier AI.")
+
 ## Where one neuron breaks
 
 A single ReLU neuron draws one bent boundary. The Ames market needs
@@ -125,6 +143,19 @@ model class.
 
 ![MLP](assets/svg/l07-mlp.svg "The multi-layer perceptron. Each layer builds bent features from the previous layer. Depth builds abstraction. Source: original plate for Stanford Frontier AI.")
 
+### Subchapter: the bump, built
+
+Two ReLUs make a ramp with a plateau: ReLU(x) - ReLU(x-2). At x =
+0, 1, 2, 3, 4 the values are 0, 1, 2, 2, 2: rises, then flat. Fold
+it down with a mirror pair and you get a peak:
+bump(x) = ReLU(x) - 2*ReLU(x-2) + ReLU(x-4). Values at x = 0, 1, 2,
+3, 4: 0, 1, 2, 1, 0. A triangle peaking at x = 2, built from four
+hinges. Slide and scale copies of this bump and you can trace any
+curve: this is the constructive half of universal approximation,
+not a slogan but a recipe.
+
+![The bump](assets/plate-l07-bump.webp "Two ReLUs build a peak. ReLU(x) minus twice ReLU(x-2) plus ReLU(x-4) gives 0, 1, 2, 1, 0 at x = 0 to 4. Hinges make bumps, bumps trace any curve. Source: original toy for the bump construction. Project: Stanford Frontier AI.")
+
 ## The activation zoo
 
 ReLU is the default, but the lecture tours the alternatives because
@@ -149,6 +180,24 @@ The interview trap: "which activation where?" ReLU (or GELU) in
 hidden layers, sigmoid only for binary outputs, softmax only for
 multi-class outputs, linear for regression outputs. The activation
 must match the job of the layer.
+
+### Subchapter: the interview table, activation by layer
+
+One glance, no hesitation:
+
+| Layer job | Activation | If you mismatch |
+|---|---|---|
+| Hidden layer | ReLU or GELU | Sigmoid saturates, gradients die |
+| Binary output | Sigmoid | ReLU outputs are not probabilities |
+| Multi-class output | Softmax | Sigmoids do not compete, sum is not 1 |
+| Regression output | Linear (none) | Sigmoid caps your prices at 1 |
+
+The rule behind the table: the activation must match what the layer
+promises. Hidden layers promise features: ReLU bends cheaply. Output
+layers promise a data type: probabilities, class shares, or raw
+numbers. Interviewers ask this table cold. Memorize it.
+
+![Activation table](assets/plate-l07-activation-table.webp "Match the activation to the job. Hidden: ReLU or GELU. Binary out: sigmoid. Multi-class out: softmax. Regression out: linear. Source: original table for the layer jobs. Project: Stanford Frontier AI.")
 
 ## Where depth breaks: vanishing gradients
 
@@ -186,6 +235,20 @@ lecture notes the dimension constraint: x and F(x) must match, so
 the block preserves dimension.
 
 ![Residual block](assets/svg/l07-residual.svg "The residual block. Learn the change F(x), add the input back. The skip path carries gradients untouched through any depth. Source: original plate for Stanford Frontier AI.")
+
+### Subchapter: ResNet by the numbers
+
+The 2015 ResNet paper (He et al., Microsoft Research) settled the
+depth question with one experiment. Plain networks got worse past
+about 20 layers: training error rose with depth, which meant the
+optimizer was failing, not overfitting. Residual networks with the
+same depth trained fine and kept improving: 34, 50, 101, 152
+layers. The 152-layer ensemble scored 3.57% top-5 error on the
+ImageNet test set and won ILSVRC 2015. Depth stopped being a risk
+and became a dial. Every transformer block since (lecture 14) is a
+residual block.
+
+![ResNet numbers](assets/plate-l07-resnet-numbers.webp "ResNet by the numbers. Plain nets stall past 20 layers. ResNet reached 152 layers and 3.57 percent top-5 error, winning ILSVRC 2015. Source: He et al. 2015, original plate. Project: Stanford Frontier AI.")
 
 ## The honest price
 
@@ -234,6 +297,24 @@ That is lecture 8's problem.
 > Follow-up: What is the dimension constraint on a residual block?
 > A: x and F(x) are added, so they must have the same shape. When a stage changes dimension (e.g., doubling channels), the skip uses a projection, usually a 1x1 convolution or linear map, to match. The lecture flags this: the block preserves dimension by definition.
 
+> [!QA]
+> Q: Walk me through the mechanism: forward pass of a tiny 2-layer MLP. Input x = (1, 0). Layer 1: neuron A has w = (2, -1), b = 0. Neuron B has w = (-1, 0.5), b = 1. Layer 2: one neuron with w = (1, 1), b = -1. ReLU everywhere.
+> A: Layer 1, neuron A: z = 2*1 + (-1)*0 + 0 = 2, ReLU gives 2. Neuron B: z = -1*1 + 0.5*0 + 1 = 0, ReLU gives 0. Layer 1 output: (2, 0). Layer 2: z = 1*2 + 1*0 - 1 = 1, ReLU gives 1. Final answer: 1. Notice neuron B died on this input (output 0) but the network still answered: dead on one input is normal, dead on all inputs is the dying-ReLU disease.
+> Follow-up: Change layer 2's bias to -3. What happens?
+> A: z = 2 + 0 - 3 = -1, ReLU gives 0. The network now says 0. One bias moved the final threshold: biases are the cheapest dials in the network.
+
+> [!QA]
+> Q: Applied design: your 40-layer plain MLP trains worse than your 10-layer one, and the training error is worse too. Diagnose and fix.
+> A: Training error worse with more depth means optimization failure, not overfitting: the deeper net cannot even fit. Prime suspect is vanishing gradients through 40 bends. Confirm: check gradient norms per layer. Early layers near zero confirms it. Fix: residual connections around each block so the skip carries signal at full strength. Also check initialization and add normalization. If training error drops with depth after residuals, the diagnosis was right.
+> Follow-up: Why not just use the 10-layer net?
+> A: Because depth buys representational efficiency: the 40-layer net can express composed features the 10-layer one cannot afford. The lecture's lesson from ResNet: depth stopped being a risk once residuals existed, and the 152-layer winner beat every shallow model.
+
+> [!QA]
+> Q: Where does the sigmoid still live, if ReLU won hidden layers?
+> A: Three places. Binary outputs: the final layer of a yes-or-no classifier, where you need a probability. Gates: LSTM and GRU gates multiply by sigmoids to open or close information flow. Attention: softmax, the sigmoid's multi-class sibling, normalizes attention weights. ReLU won the hidden feature layers. The squashing functions kept every job that needs "a number between 0 and 1."
+> Follow-up: Why not ReLU on a binary output?
+> A: ReLU outputs are unbounded and uncalibrated: 2.8 is not a probability. The loss needs a probability to score against the label. Sigmoid is the probability-shaped activation, so it owns the binary output layer.
+
 ## Recap: the whole lesson on one screen
 
 1. **The job.** Price houses from unmeasured quantities like
@@ -255,14 +336,40 @@ That is lecture 8's problem.
    stacks. Early layers learn nothing.
 9. **Residuals.** out = x + F(x). Skip carries gradient at full
    strength through any depth. 2015, 100+ layers.
+
 10. **The honest price.** Data hunger, opacity, architecture
     hyperparameters. Representable does not mean learnable.
+11. **The bias is the threshold.** b moves the hinge: fires when
+    w^T x > -b.
+12. **The bump, built.** ReLU(x) - 2ReLU(x-2) + ReLU(x-4) gives
+    0,1,2,1,0: a peak from four hinges.
+13. **The table.** Hidden: ReLU/GELU. Binary: sigmoid.
+    Multi: softmax. Regression: linear.
+14. **ResNet.** 152 layers, 3.57% top-5 (ensemble), ILSVRC 2015.
+    Depth became a dial.
+
+## What is used where
+
+**MLPs run tabular production.** Gradient-boosted trees contest
+them, but MLPs with embeddings dominate recommender systems and
+any tabular job with high-cardinality categories. Every
+transformer (lecture 14) contains MLP blocks: the feed-forward
+sublayer is this lesson's MLP with GELU.
+
+**ReLU and GELU are the default hidden activations in every deep
+net shipped.** ResNet variants remain the standard vision backbone
+for feature extraction. The residual pattern is universal: GPT,
+diffusion U-Nets, AlphaFold all stack residual blocks.
+
+## Watch next
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/aircAruvnKk" title="3Blue1Brown: Neural Networks Chapter 1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: 3Blue1Brown, Neural Networks Chapter 1. Grant Sanderson animates the neuron, the layers, and the learned features. Watch after the MLP section.</p></div>
 
 ## Official sources and further reading
 
 **Official:**
 - Lecture 7 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=fRM41w9jzQo — Tengyu Ma builds
+  - [Tengyu Ma builds](https://www.youtube.com/watch?v=fRM41w9jzQo)
   the neuron from ReLU first principles, stacks the MLP on the
   housing example, tours activations, and presents residual blocks.
 - Official subtitle transcript (en-US): the lecture's spoken text.
