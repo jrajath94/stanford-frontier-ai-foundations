@@ -39,8 +39,9 @@ input sequence                  output sequence
 A **sequence model** is any machine that maps an input sequence to an
 output sequence. Text is the flagship case, but the same frame covers
 audio waveforms, sensor readings, and medical signals. In this course
-the systems treat every one of them as a tensor of shape (batch,
-length, dim): a stack of sequences, each a row of token vectors.
+the systems treat every one of them as a tensor (a multi-dimensional
+array of numbers) of shape (batch, length, dim): a stack of
+sequences, each a row of token vectors.
 
 This chapter tells one story: how we learned to build sequence models
 for language, why the first serious attempt broke, and what replaced
@@ -156,8 +157,9 @@ to right through the chain of hidden states. To predict token 4, the
 model reads h_3, which (in theory) remembers tokens 1 through 3.
 
 This worked. RNNs powered the best translation and speech systems of
-their era. But three cracks ran through the design, and each one
-mattered more as sequences got longer.
+their era, where sequences were short enough that the hidden
+state's fading stayed manageable. But three cracks ran through
+the design, and each one mattered more as sequences got longer.
 
 ### Subchapter: backprop through time (how the RNN learns)
 
@@ -196,7 +198,8 @@ The update: c_t = f_t x c_{t-1} + i_t x candidate_t. The key is the
 **addition**. Old memory is not squashed through a matrix. It is
 scaled by the forget gate and *added*. When the forget gate outputs
 0.9 for the slot holding "The", six steps keep 0.9^6 = 0.53, not
-0.016. The gradient gets the same highway: it flows back through
+0.016. The gradient (the direction and size of each correction
+the error demands) gets the same highway: it flows back through
 the additions unmultiplied, so it no longer vanishes. The LSTM
 learns *what to remember* instead of hoping the squash preserves
 it.
@@ -248,8 +251,8 @@ their interaction through a long chain of lossy steps.
 To see the second crack, you need one fact about training. A neural
 network learns by **backpropagation**: it makes a prediction, measures
 the error, then nudges every weight a little in the direction that
-would have reduced the error. The size of each nudge is called the
-**gradient**. Big gradient, big correction. Tiny gradient, the weight
+would have reduced the error. The size of each nudge is the
+gradient. Big gradient, big correction. Tiny gradient, the weight
 barely moves.
 
 In an RNN, the gradient for an early token must travel backward
@@ -535,7 +538,8 @@ signal p_i to each token before attention. The original paper used
 **sinusoids** of many frequencies: each position gets a unique
 wave-pattern, and a fixed offset is a rotation, so relative
 distance stays expressible. Modern models use **RoPE** (rotary
-position embedding): it rotates each query and key by a
+position embedding: a vector scheme that marks each token's
+position): it rotates each query and key by a
 position-dependent angle, so the dot product itself shrinks as two
 tokens drift apart. Relative distance, baked into the score.
 
@@ -551,7 +555,8 @@ Two more answers to the quadratic bill, in brief:
   descendants (Mamba drops attention entirely).
 - **FlashAttention** keeps exact attention but tiles the
   computation so the N^2 matrix never sits in slow memory: it
-  streams blocks through fast SRAM and recomputes instead of
+  streams blocks through fast SRAM (the GPU's small on-chip memory,
+  detailed in L05) and recomputes instead of
   storing. Same math, 2-4x faster, far less memory. L06 builds it
   from zero.
 
@@ -626,15 +631,16 @@ training. The course is about paying for inference.
 
 > [!QA]
 > Q: Walk me through the LSTM gates. Why do they fix the vanishing gradient?
-> A: The LSTM keeps two tracks: the hidden state and the cell state, a conveyor belt for long-term memory. Three learned gates, each a sigmoid between 0 and 1, guard it. The forget gate decides how much of the old cell survives. The input gate decides how much of the new candidate gets written. The output gate decides how much of the cell becomes the visible hidden state. The cell update is c_t = f_t x c_{t-1} + i_t x candidate: old memory is scaled and *added*, not squashed through a matrix. In the toy, a forget gate of 0.9 keeps "The" at 0.9^6 = 0.53 after six steps, against 0.016 for the vanilla RNN. The gradient rides the same highway: the cell path is a chain of additions, so the error signal flows back unmultiplied instead of shrinking geometrically. The LSTM learns what to remember. The vanilla RNN hopes the squash preserves it.
+> A: The LSTM keeps two tracks: the hidden state and the cell state, a conveyor belt for long-term memory. Three learned gates, each a sigmoid (an S-shaped function that
+squashes any input into the 0-to-1 range), guard it. The forget gate decides how much of the old cell survives. The input gate decides how much of the new candidate gets written. The output gate decides how much of the cell becomes the visible hidden state. The cell update is c_t = f_t x c_{t-1} + i_t x candidate: old memory is scaled and *added*, not squashed through a matrix. In the toy, a forget gate of 0.9 keeps "The" at 0.9^6 = 0.53 after six steps, against 0.016 for the vanilla RNN. The gradient rides the same highway: the cell path is a chain of additions, so the error signal flows back unmultiplied instead of shrinking geometrically. The LSTM learns what to remember. The vanilla RNN hopes the squash preserves it.
 > Follow-up: Then why did transformers still win?
 > A: Gates patch the chain but keep it. The LSTM still reads token t after token t-1: the serial queue remains, and interaction distance is still O(N). Attention deletes the chain entirely, which buys parallelism and O(1) distance at the cost of O(N^2) memory.
 
 > [!QA]
 > Q: Your product needs 1M-token context. Walk me through the design decision.
-> A: Start from the bill: full attention at N = 1M needs 10^12 score entries per layer per head. That does not fit anywhere, so full attention is out. The options from this chapter: sliding-window attention (Mistral's answer) cuts the cost to O(N x W) and recovers range through stacked layers, at the price of indirect long-range paths. GQA or MLA (Llama's and DeepSeek's answers) keep full attention but shrink what gets stored: MLA's 512-dim latent per token is the most aggressive public design. Mamba-style SSMs drop attention for O(N) recurrence. In practice the frontier answer is a hybrid: Gemini 1.5 ships 1M context on full attention plus MoE sparsity and massive scale, DeepSeek pairs MLA with a 128K window. The interview signal: name the exact bottleneck (the N^2 score matrix and the KV cache, two different costs), then pick the tool that attacks the binding one.
+> A: Start from the bill: full attention at N = 1M needs 10^12 score entries per layer per head. That does not fit anywhere, so full attention is out. The options from this chapter: sliding-window attention (Mistral's answer) cuts the cost to O(N x W) and recovers range through stacked layers, at the price of indirect long-range paths. GQA or MLA (Llama's and DeepSeek's answers) keep full attention but shrink what gets stored: MLA's 512-dim latent per token is the most aggressive public design. Mamba-style SSMs drop attention for O(N) recurrence. In practice the frontier answer is a hybrid: Gemini 1.5 ships 1M context on full attention plus massive scale [uncertain: Google never announced Gemini 1.5 as MoE. Its architecture is not public], DeepSeek pairs MLA with a 128K window. The interview signal: name the exact bottleneck (the N^2 score matrix and the KV cache, two different costs), then pick the tool that attacks the binding one.
 > Follow-up: Which cost binds first at 1M tokens, compute or memory?
-> A: Memory, twice over. The score matrix is 10^12 entries (4 PB in fp32 per layer per head: impossible), and even with FlashAttention avoiding materialization, the KV cache at 1M tokens is tens of gigabytes per layer. Compute is large but parallel. Memory capacity and bandwidth are the walls. That is why every 1M-context design in the table attacks storage first.
+> A: Memory, twice over. The score matrix is 10^12 entries (4 TB in fp32 per layer per head: impossible), and even with FlashAttention avoiding materialization, the KV cache at 1M tokens is tens of gigabytes per layer. Compute is large but parallel. Memory capacity and bandwidth are the walls. That is why every 1M-context design in the table attacks storage first.
 
 ## Three ways to use a transformer
 
@@ -673,7 +679,7 @@ quadratic bill paid.
 | T5 | encoder-decoder | self + cross | relative bias | full O(N^2) | input and output differ in kind; cross-attention bridges them |
 | Llama 3 | decoder-only | GQA, causal | RoPE | GQA shrinks KV | open weights; grouped queries cut the cache |
 | Mistral 7B | decoder-only | sliding window + GQA | RoPE | O(N x W) | long context on a budget |
-| Gemini 1.5 | decoder-only MoE | full attention | (not public) | scale + sparsity | 1M-token context as the product feature |
+| Gemini 1.5 | decoder-only [uncertain: architecture not publicly confirmed] | full attention | (not public) | scale | 1M-token context as the product feature |
 | DeepSeek-V3 | decoder-only MoE | MLA | decoupled RoPE | latent KV cache | 671B params, 37B active; the cache holds a 512-dim latent, not full K/V |
 | DeepSeek-R1 | decoder-only MoE | MLA | decoupled RoPE | latent KV cache | same backbone as V3; reasoning comes from RL training, not architecture |
 | Mamba-2 | no attention | selective SSM | none needed | O(N) | the RNN strikes back: recurrence with learned gates, no pairs at all |
@@ -708,9 +714,9 @@ scale linearly in N. The bet: recurrence was never the problem,
 
 ![The design space: one skeleton, many answers](assets/plate-model-map.webp "Nine models placed by mask, position scheme, and how they pay the quadratic bill. Shell 3. Source: public model cards and papers. Project: Stanford Frontier AI.")
 
-Two honest caveats. Gemini's and GPT-4's internals are not public;
-the table records what their makers announced (MoE, long context)
-and marks the rest unknown. And "best" depends on the job: Mamba
+Two honest caveats. Gemini's and GPT-4's internals are not public.
+The table records what their makers announced (long context) and
+marks the rest unknown. And "best" depends on the job: Mamba
 wins long sequences, BERT-style encoders win classification,
 decoder-only wins generation. There is no universal winner, only
 tradeoffs this chapter now lets you read.
@@ -774,6 +780,17 @@ literal table entries. The O(1) interaction claim is about path
 length, not cost: the path is short but the step itself is
 quadratic.
 
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/eMlx5fFNoYc" title="Attention in transformers, step-by-step | Deep Learning Chapter 6" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+- Attention in transformers, step-by-step (3Blue1Brown): https://www.youtube.com/watch?v=eMlx5fFNoYc
+- Vaswani et al., Attention Is All You Need (2017): https://arxiv.org/abs/1706.03762
+- The Annotated Transformer (Harvard NLP, attention from scratch in code): https://nlp.seas.harvard.edu/annotated-transformer/
+- Stanford CS324, Introduction lecture (the language modeling setup the slides cite): https://stanford-cs324.github.io/winter2022/lectures/introduction/
+
 ## Connections to the other courses
 
 - **CS336 L03:** builds the transformer block in full: residual
@@ -784,3 +801,32 @@ quadratic.
   KV caching and FlashAttention.
 - **CS229S L09:** the RNN strikes back: S4, Mamba, and whether
   attention-free architectures change the tradeoff table.
+
+## Coverage map
+
+Every lecture concept mapped to the line that teaches it. File:
+l02-sequence-models.md.
+
+| Lecture concept | Anchor | Line |
+|---|---|---|
+| Sequence model (sequences in, sequences out) | "sequence model" | 39 |
+| Next-token prediction (chain rule) | "chain rule" | 75 |
+| Perplexity | "perplexity" | 93 |
+| RNN (hidden state update) | "recurrent neural network" | 106 |
+| RNN toy (fade by half) | "hidden state" | 111 |
+| Backprop through time | "backprop through time" | 164 |
+| LSTM gates and cell highway | "LSTM" | 179 |
+| GRU (update/reset gates) | "GRU" | 207 |
+| Long interaction distance (fade crack) | "long interaction distance" | 243 |
+| Vanishing / exploding gradients | "vanishing" | 270 |
+| Serial bottleneck (GPU cores idle) | "the sequence is a queue" | 282 |
+| The key question (direct token talk) | "key question" | 302 |
+| Attention as hash-table lookup | "hash table" | 317 |
+| Attention toy (softmax by hand) | "softmax" | 356 |
+| Four-step matrix computation | "mermaid" | 379 |
+| Position encoding (sinusoids, RoPE) | "RoPE" | 540 |
+| Causal attention (mask) | "causal" | 480 |
+| Cross-attention (two sequences) | "cross-attention" | 493 |
+| Sliding-window attention (Mistral) | "sliding-window" | 504 |
+| Multi-head attention | "multi-head" | 515 |
+| Linear attention vs FlashAttention | "linear attention" | 548 |
