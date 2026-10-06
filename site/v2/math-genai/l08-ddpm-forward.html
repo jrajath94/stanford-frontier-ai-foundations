@@ -81,6 +81,7 @@
 <li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
 <li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
 <li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../cs229s/crash-course-02.html" data-page="cs229s-crash-02">CS229S · Crash course 2</a></li>
 </ul>
 <h3>CS224N: NLP with Deep Learning</h3><ul>
 <li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
@@ -146,18 +147,14 @@
 </ul>
 <h3>CS329A: Self-Improving AI Agents</h3><ul>
 <li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
-<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
-<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
-<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
-<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
-<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
-<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
-<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
-<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
-<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
-<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
-<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
-<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+<li><a href="../cs329a/l01-course-overview.html" data-page="cs329a-l01">L01 · Course Overview</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Compute Scaling</a></li>
+<li><a href="../cs329a/l03-feedback-tools-code.html" data-page="cs329a-l03">L03 · Feedback, Tools, Code</a></li>
+<li><a href="../cs329a/l04-planning-multistep-reasoning.html" data-page="cs329a-l04">L04 · Planning and Multi-Step Reasoning</a></li>
+<li><a href="../cs329a/l05-search-at-scale.html" data-page="cs329a-l05">L05 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l06-train-time-scaling.html" data-page="cs329a-l06">L06 · Train-Time Scaling</a></li>
+<li><a href="../cs329a/l07-agentic-evaluations.html" data-page="cs329a-l07">L07 · Agentic Evaluations</a></li>
+<li><a href="../cs329a/l08-future-directions.html" data-page="cs329a-l08">L08 · Future Directions</a></li>
 </ul>
 <h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
 <li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
@@ -323,6 +320,61 @@ Total noise variance: 0.3² = 0.09 = 1 − 0.81 ✓, and
 0.3/0.4359 = 0.688 ✓. The closed form agrees to the
 digit. Training uses this constantly: pick a random t,
 jump straight there, no chaining.</p>
+<h3 id="why-gaussian-noise">Why Gaussian noise</h3>
+<p>Three reasons the forward process uses Gaussians,
+and each one is load-bearing. First, Gaussians are
+closed under addition: the sum of independent
+Gaussians is Gaussian. The induction above used
+exactly this: without it, the closed-form jump
+fails and training must chain all t steps. Second,
+the central limit theorem: sums of many small
+independent noises look Gaussian regardless of the
+individual noise shapes, so the Gaussian is the
+honest choice for accumulated corruption. Third,
+the reverse step is Gaussian only because the
+forward step is Gaussian and small: change the
+noise family and the &ldquo;learn a Gaussian reverse&rdquo;
+argument collapses. The decision rule: the noise
+family is not a detail. It is what makes every
+closed form in Lessons 8-9 true.</p>
+<h3 id="cold-diffusion-what-if-the-forward-process-is-not-noise">Cold diffusion: what if the forward process is not noise</h3>
+<p><strong>Cold diffusion</strong> asks whether the corruption must
+be noise at all. Replace the Gaussian steps with
+deterministic degradations: blur the image a little
+more each step, or mask out a few more pixels. The
+reverse learns to deblur, to inpaint. The chain is
+still fixed, still Markov in the degradation level,
+and the closed-form jump still works if the
+degradation composes cleanly. [uncertain] Beyond the
+lecture&rsquo;s scope. The point stands: the fixed-encoder
+idea does not require randomness. It requires a
+known, gradual destruction the reverse can learn to
+undo.</p>
+<h3 id="the-induction-shown">The induction, shown</h3>
+<p>A math course proves the jump, not just checks it.
+Assume the form holds at step t−1:</p>
+<pre class="ascii">x_{t-1} = sqrt(a_bar_{t-1}) * x_0 + sqrt(1 - a_bar_{t-1}) * e_{t-1}
+</pre>
+<p>Apply one forward step:</p>
+<pre class="ascii">x_t = sqrt(a_t) * x_{t-1} + sqrt(1 - a_t) * e_t
+    = sqrt(a_t * a_bar_{t-1}) * x_0
+      + sqrt(a_t) * sqrt(1 - a_bar_{t-1}) * e_{t-1}
+      + sqrt(1 - a_t) * e_t
+</pre>
+<p>The signal coefficient is √(α_t·ᾱ_{t−1}) = √ᾱ_t by the
+definition of ᾱ. The two noise terms are independent
+Gaussians, so they merge into one Gaussian whose
+variance is the sum of the variances:</p>
+<pre class="ascii">noise variance = a_t * (1 - a_bar_{t-1}) + (1 - a_t)
+               = a_t - a_t*a_bar_{t-1} + 1 - a_t
+               = 1 - a_bar_t
+</pre>
+<p>So the merged noise is √(1−ᾱ_t)·ε with ε ~ N(0,1).
+Base case t = 1 holds by definition (ᾱ_1 = α_1).
+By induction the closed form holds for every t.
+Preconditions: each ε_t independent with unit
+variance, and α_t in (0,1) so the square roots are
+real.</p>
 <figure><img alt="The closed form agrees with chaining, to the digit" src="assets/l08-closed-form.webp"><figcaption>x_2 = 3.6 + 0.4359*eps matches the chained 3.900 at eps = 0.688. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <figure><img alt="Forward diffusion" src="assets/l08-forward-chain.webp"><figcaption>The fixed forward chain destroys data one small noise step at a time until only static remains. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h3 id="the-end-of-the-chain-pure-noise">The end of the chain: pure noise</h3>
@@ -342,6 +394,36 @@ noise. The decision rule: the schedule should spend
 roughly equal learning effort at each noise level. In
 practice that means a schedule where ᾱ_t falls smoothly,
 not one that kills the signal in the first 10 steps.</p>
+<h3 id="two-schedules-on-numbers">Two schedules, on numbers</h3>
+<p>The original DDPM uses a linear schedule: β_t rises
+linearly from 10^{−4} to 0.02 over T = 1000 steps
+(β_t = 1 − α_t). The endpoint: ᾱ_1000 = 0.00004. The
+signal is thoroughly dead: 0.004% remains. But the
+death is front-loaded: most of the signal vanishes in
+the first 200 steps, starving the later steps of
+learning signal.</p>
+<p>The cosine schedule (Nichol and Dhariwal 2021) fixes
+the shape: ᾱ_t = cos²(((t/T) + 0.008)/1.008 · π/2),
+normalized to start at 1. It falls slowly at first,
+linearly in the middle, slowly at the end. Numbers:
+ᾱ_500 = 0.494, ᾱ_1000 ≈ 0. The signal dies evenly,
+so every noise level gets its share of training.</p>
+<p>The <strong>signal-to-noise ratio</strong> SNR_t = ᾱ_t/(1−ᾱ_t)
+measures the mix. At ᾱ_t = 0.5, SNR = 1: half signal,
+half noise (0 dB). Training samples t uniformly, so
+the schedule decides which SNRs the network practices
+on. A schedule that rushes through SNR = 1 produces a
+denoiser that never learned the middle game.</p>
+<figure><img alt="Linear vs cosine: where the signal dies" src="assets/l08-schedules-compare.webp"><figcaption>Linear: abar_1000 = 0.00004, front-loaded. Cosine: abar_500 = 0.494, even. Shell 2. Source: original computation. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="the-continuous-time-view-enrichment">The continuous-time view (enrichment)</h3>
+<p>Beyond the lecture: as T → ∞ and step sizes shrink,
+the chain becomes a stochastic differential equation.
+The variance-preserving SDE is dx = −½β(t)x·dt +
+√β(t)·dw. The forward process, the closed form, and
+the score all have continuous-time twins. [uncertain]
+The lecture stays discrete. The SDE view is the
+standard enrichment from the score-based modeling
+literature.</p>
 <figure><img alt="The schedule decides how fast the signal dies" src="assets/l08-schedule.webp"><figcaption>alpha = 0.9: at t = 100, only 0.003% of the signal remains. Shell 2. Source: original computation. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-reverse-small-steps-learnable">The reverse: small steps, learnable</h2>
 <h3 id="the-learned-reverse-chain">The learned reverse chain</h3>
@@ -424,9 +506,11 @@ compressed space instead.</p>
 </tbody>
 </table>
 <h3 id="where-the-forward-process-runs-in-real-systems">Where the forward process runs in real systems</h3>
-<p>The DDPM forward process is the noising procedure inside
-every diffusion image generator: the same √ᾱ scaling,
-the same closed-form jump, the same N(0,1) endpoint.
+<p>Verified October 2026: the DDPM forward process is the
+noising procedure inside DDPM (Ho et al. 2020), Stable
+Diffusion 1.x/2.x (Rombach et al. 2022), and ADM
+(Dhariwal and Nichol 2021): the same √ᾱ scaling, the
+same closed-form jump, the same N(0,1) endpoint.
 Latent diffusion keeps the process identical and changes
 only the space it runs in (a VAE&rsquo;s compressed grid
 instead of pixels). The schedule is the main thing that
@@ -438,6 +522,7 @@ schedules in current production models are not public.</p>
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/9FjzUSM3Ni4" title="Diffusion Models: How to turn Noise into Art" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">External explainer: the forward process x_t = √ᾱ_t x_0 + √(1−ᾱ_t) ε built step by step, with real trained toy models and a real text-to-image run. If the embed is blocked: <a href="https://www.youtube.com/watch?v=9FjzUSM3Ni4" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
 
+<figure><img alt="Chapter plate: destroy slowly, reverse easily" src="assets/plate-l08-chap-forward.webp"><figcaption>The fixed chain buys a tractable reverse, one small step at a time. Chapter plate. Shell 5. Source: original synthesis of the lesson. Project: Stanford Frontier AI.</figcaption></figure>
 <div class="qa"><div class="q">What is the forward process, concretely?</div><div class="a"><p>A fixed Markov chain: x_t = √α_t x_{t-1} + √(1−α_t) ε_t, ε_t ~ N(0,1). Each step shrinks the signal slightly and adds a little noise. In the hand toy, x_0 = 4.0 became x_1 = 4.111 then x_2 = 3.900 with α = 0.9. Nothing is learned. The schedule α_t is fixed.
 Because x_t depends only on x_{t-1}, not on earlier steps: q(x_t|x_{t-1}) is Gaussian with mean √α_t x_{t-1}. Given the previous noisy image, the past adds no information. That property is what makes the reverse chain learnable step by step.</p><div class="followup"><strong>Follow-up:</strong> Why is it a Markov chain?</div></div></div>
 <div class="qa"><div class="q">How do you sample x_t without chaining t steps?</div><div class="a"><p>With the closed form: x_t = √ᾱ_t x_0 + √(1−ᾱ_t) ε, where ᾱ_t = α_1···α_t. Sums of independent Gaussians stay Gaussian, so all the step noises collapse into one. In the toy, ᾱ_2 = 0.81 gave x_2 = 3.6 + 0.4359ε, matching the chained 3.900 at ε = 0.688. Training picks a random t and jumps straight there.
