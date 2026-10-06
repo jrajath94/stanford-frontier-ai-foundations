@@ -19,6 +19,9 @@ sources:
   - tag: video
     label: "Lecture 9 video, Stanford Online YouTube"
     url: https://www.youtube.com/watch?v=bSmIGBCoffA
+  - tag: video
+    label: "Explainer: StatQuest, K-means clustering"
+    url: https://www.youtube.com/watch?v=4b5d3muPQmA
   - tag: notes
     label: "Official subtitle transcript (en-US)"
   - tag: notes
@@ -77,6 +80,33 @@ one. Different seeds, different answers. The NP-hardness result the
 lecture cites says no efficient algorithm guarantees the global
 optimum.
 
+### Subchapter: one round, audited
+
+Trust the toy, then verify it. First round, lucky start: assigned
+{1,2,3} to mu_1 = 1. The update moves mu_1 to the mean: (1+2+3)/3
+= 2. Assigned {10,11,12} to mu_2 = 12: mean (10+11+12)/3 = 11. Now
+audit the elbow's k=1 number. Mean of all six: 39/6 = 6.5.
+Distortion: (1-6.5)^2 + (2-6.5)^2 + (3-6.5)^2 + (10-6.5)^2 +
+(11-6.5)^2 + (12-6.5)^2 = 30.25 + 20.25 + 12.25 + 12.25 + 20.25 +
+30.25 = 125.5. (An earlier draft of this lesson wrote 121.5: wrong.
+The arithmetic is above.) k=2 gives 4.0: the drop from 125.5 to 4.0
+is the elbow's signal, and it survives the correction.
+
+![Round audit](assets/plate-l09-round-audit.webp "One round, audited. Assign {1,2,3} to center 1, {10,11,12} to center 12. Update to means 2 and 11. The k=1 distortion is 125.5, not 121.5. Source: original audit for the toy round. Project: Stanford Frontier AI.")
+
+### Subchapter: the mean is the minimizer
+
+Why the mean, and not the median or the midpoint? Fix the
+assignments and minimize the distortion over mu_j. The term for
+cluster j is sum of (x - mu_j)^2 over its points. Derivative with
+respect to mu_j: -2 * sum(x - mu_j) = 0. So sum(x) = n * mu_j, and
+mu_j = mean of the points. One line of calculus, no choice
+involved. The median would minimize the sum of absolute distances,
+a different objective (k-medians). K-means uses squared distances,
+so it gets the mean. The algorithm's two steps are both optimal for
+their subproblem: assignment is optimal per point, update is
+optimal per center. That is why distortion never rises.
+
 ## Where it breaks: the seed decides
 
 Demonstrate with numbers. Eight points: four at x = 0 (call them
@@ -89,6 +119,21 @@ fix: reinitialize it randomly). Depending on the fix, you can end
 with both centers inside A and B unclustered: distortion far above
 optimal. The seed decided the answer. On real data with hundreds of
 dimensions, bad seeds are the norm, not the exception.
+
+### Subchapter: the seed lottery
+
+Two seeds, same data, different bills. Seeds at 1 and 12: one
+round, distortion 4.0, done. Seeds at 0 and 0.1: round 1 assigns
+all eight points (four at 0, four at 10) to mu_2 = 0.1, because 9.9
+< 10 for every B point. mu_1 gets zero points: the empty-cluster
+case. Reinitialize mu_1 randomly and you may land inside A again,
+ending with both centers in A and B unclustered: distortion stuck
+near 200 instead of 4.0. The lottery is the algorithm: k-means is
+deterministic given the seed, and the seed is luck. Production
+practice: k-means++ seeding plus 10 restarts, keep the best
+distortion. Sklearn does this by default (n_init=10).
+
+![Seed lottery](assets/plate-l09-seed-lottery.webp "The seed lottery. Seeds at 1 and 12: one round, distortion 4.0. Seeds at 0 and 0.1: a cluster strands, distortion near 200. Source: original plate for the seed dependence. Project: Stanford Frontier AI.")
 
 ## The key question
 
@@ -105,7 +150,7 @@ existing center. Points far from all centers are likely seeds.
 Points near a center are unlikely.
 
 On the toy {1,2,3,10,11,12}: first center lands somewhere, say 2.
-Squared distances: 10 is 64 away, 11 is 81, 12 is 100; 1 is 1, 3 is
+Squared distances: 10 is 64 away, 11 is 81, 12 is 100. 1 is 1, 3 is
 1. The next seed is overwhelmingly likely to come from {10,11,12}.
 The two clumps get one seed each with high probability. The lecture
 reports the payoff: k-means++ guarantees an expected approximation
@@ -119,8 +164,8 @@ K-means needs k up front. The **elbow method**: run k-means for
 k = 1, 2, 3, ..., plot the final distortion. Distortion always falls
 as k rises (k = n gives distortion 0: every point its own center).
 Look for the **elbow**, the k where the curve bends: gains slow
-down after it. Toy distortions: k=1: 121.5, k=2: 4.0, k=3: 2.7,
-k=4: 1.5. The elbow is at k = 2: the drop from 121.5 to 4.0 dwarfs
+down after it. Toy distortions: k=1: 125.5, k=2: 4.0, k=3: 2.7,
+k=4: 1.5. The elbow is at k = 2: the drop from 125.5 to 4.0 dwarfs
 everything after. The lecture's honest note: elbows are often
 ambiguous on real data. It is a heuristic, not a rule.
 
@@ -145,6 +190,37 @@ the probabilistic grown-up of the ad-hoc algorithm: same spirit,
 with uncertainty quantified.
 
 ![GMM](assets/svg/l09-gmm.svg "Gaussian mixture model. Each point carries responsibilities across clusters: 70 percent cluster 1, 30 percent cluster 2. K-means is the hard limit. Source: original plate for Stanford Frontier AI.")
+
+### Subchapter: responsibilities, worked
+
+Take two 1-D Gaussians: cluster 1 at mu = 2, cluster 2 at mu = 11,
+both sigma = 1, equal priors phi = 0.5. Point x = 3. Density under
+cluster 1: exp(-(3-2)^2/2)/sqrt(2*pi) = 0.242. Under cluster 2:
+exp(-(3-11)^2/2)/sqrt(2*pi), about 1e-15: essentially zero.
+Responsibility gamma_1(3) = 0.5*0.242 / (0.5*0.242 + 0) = 1.0. The
+point is fully claimed. Now x = 6.5, the midpoint. Both densities
+equal exp(-(4.5)^2/2)/sqrt(2*pi): identical. gamma_1 = gamma_2 =
+0.5. The midpoint splits evenly. Between 3 and 6.5 the
+responsibility slides smoothly from 1.0 to 0.5: that slide is the
+softness k-means cannot express.
+
+![Responsibilities worked](assets/plate-l09-responsibility.webp "Responsibilities, worked. Point 3: cluster 1 claims it fully, 1.0 vs 0.0. Point 6.5, the midpoint: 0.5 and 0.5. Source: original toy for the responsibility arithmetic. Project: Stanford Frontier AI.")
+
+### Subchapter: the interview trap, crescents
+
+Draw two interleaved half-moons: crescent A opening right,
+crescent B opening left, nested. Ask k-means with k=2. It draws
+one straight bisector and splits both crescents in half: each
+cluster is half of each moon. Distortion is locally minimal and
+completely wrong. The failure is structural: k-means only knows
+Euclidean balls. The interview trap is asking "when would you not
+use k-means" and accepting "when k is unknown". The strong answer:
+non-convex shapes. The fix is density or graph methods (DBSCAN,
+spectral clustering), which follow the moons. Decision rule: plot
+a 2-D projection first. If you see crescents, spirals, or rings,
+do not run k-means.
+
+![Crescents](assets/plate-l09-crescents.webp "Know when to quit k-means. Spherical clusters: k-means wins. Interleaved crescents: the bisector splits both moons in half. Source: original plate for the non-convex failure. Project: Stanford Frontier AI.")
 
 ## The honest price
 
@@ -199,18 +275,68 @@ and density methods take over.
    minimum?
 5. **K-means++.** Seed proportional to squared distance. O(log k)
    expected approximation ratio. Sklearn default.
-6. **The elbow.** Distortions 121.5, 4.0, 2.7, 1.5: bend at k=2.
+> [!QA]
+> Q: Walk me through the mechanism: prove the update step must be the mean.
+> A: Fix the assignments. Cluster j's distortion term is sum over its points of (x - mu_j)^2. Differentiate with respect to mu_j: -2 * sum(x - mu_j) = 0. So sum(x) = n_j * mu_j, and mu_j = (1/n_j) * sum(x): the mean. One line. The median would minimize the sum of absolute deviations, a different algorithm (k-medians). K-means minimizes squares, so the update is forced to be the mean.
+> Follow-up: Both steps are optimal for their subproblem. Why is the whole algorithm not optimal?
+> A: Because the steps optimize different variables alternately: assignment fixes centers, update fixes assignments. Each step is the best move given the other half frozen. Alternating best-moves converges to a local minimum of the joint problem, like descending into the nearest valley while the deepest valley sits across a ridge. Coordinate descent shares this property.
+
+> [!QA]
+> Q: Applied design: one million customers, features are age, yearly spend, visit frequency. Marketing wants segments. Walk through your choices.
+> A: First, standardize: spend is in dollars (thousands), visits in counts (tens). Without scaling, Euclidean distance is spend distance: a $100 spend gap dwarfs a 5-visit gap, and clusters become spend brackets. Standardize each feature to unit variance, or use domain weights. Second, k-means++ seeding with 10 restarts, keep the best distortion. Third, choose k by elbow plus silhouette score, and show marketing the cluster profiles (mean age, spend, visits per cluster) so the segments are actionable. Fourth, sanity check: tiny clusters (under 1% of customers) are usually outliers, not segments.
+> Follow-up: Marketing asks for exactly 5 segments because the campaign has 5 creatives. Elbow says 3. What do you do?
+> A: Run k=5 and k=3, profile both, and show the trade: k=5 splits a natural group to fill the quota. If the split is interpretable (e.g., high-spend splits into frequent and infrequent), take 5. If it is arbitrary, push back with the profiles: forcing k manufactures segments that do not exist, and the campaign personalizes on noise.
+
+> [!QA]
+> Q: When do you pay for EM and a GMM instead of k-means?
+> A: When the answer needs uncertainty or shape. Overlapping customer tiers where a point is genuinely 60/40: k-means forces a hard label, GMM reports the split. Clusters with different covariances: a tight dense clump beside a broad diffuse one. K-means' spherical bias mis-splits them. GMM fits a covariance per cluster. Downstream weighting: if the next stage weights points by cluster confidence, you need responsibilities, not labels. The price: EM is slower, has worse local optima than k-means, and still needs k.
+> Follow-up: Can GMM fail where k-means succeeds?
+> A: Yes, on well-separated spherical clusters with little data: GMM fits full covariances (d^2 parameters per cluster) and overfits, while k-means' rigidity is a virtue. More parameters need more data. The bias-variance trade from lecture 6 applies to clustering too.
+
+> [!QA]
+> Q: K-means++ guarantees O(log k) expected approximation. What does that actually promise on the toy?
+> A: k=2, so log 2 is a constant: the guarantee says the expected distortion is within a small constant factor of optimal. Optimal here is 4.0. The guarantee promises the seeding lands near 4.0 in expectation, not that any single run hits it. On the toy, first seed anywhere, second seed lands in the opposite clump with probability proportional to squared distances (64+81+100 vs 1+1): overwhelmingly. The guarantee is about the seeding distribution, and k-means' own local descent can only improve on the seeded start.
+> Follow-up: Why can no algorithm promise optimal efficiently?
+> A: The lecture cites NP-hardness: finding the global minimum distortion is NP-hard in general dimension. Any efficient algorithm must settle for approximation. K-means++ is the best cheap answer: provably close from seeding alone.
+
+6. **The elbow.** Distortions 125.5, 4.0, 2.7, 1.5: bend at k=2.
    Heuristic, often ambiguous.
 7. **GMM.** Soft assignments via responsibilities: 70/30 splits.
    K-means is the hard limit.
 8. **The honest price.** Local minima, spherical bias, heuristic k,
    EM needed for GMM, both die on crescents.
+9. **The audit.** One round verified: means 2 and 11. k=1
+   distortion is 125.5 (corrected from 121.5).
+10. **The mean.** Derivative of the squared term forces the mean.
+    Both steps optimal, the joint problem local.
+11. **Responsibilities, worked.** Point 3: 1.0 vs 0.0. Midpoint
+    6.5: 0.5/0.5. The slide is the softness.
+12. **Crescents.** Non-convex shapes break k-means structurally.
+    Plot first, then choose the algorithm.
+13. **The lottery.** Seeds decide. K-means++ plus 10 restarts in
+    production.
+
+## What is used where
+
+**K-means runs everywhere labels are absent and shapes are
+tame.** Customer segmentation is the canonical job. Image color
+quantization: cluster pixels into k colors to compress. Embedding
+pipelines: k-means over word or product vectors to build
+candidate sets. Sklearn's KMeans defaults to k-means++ seeding
+with 10 restarts: the production configuration is the lesson's
+prescription. GMMs appear wherever soft assignment matters:
+speaker diarization (who spoke when, with overlap) and
+background/foreground separation.
+
+## Watch next
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/4b5d3muPQmA" title="StatQuest: K-means clustering" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: StatQuest, K-means clustering. Josh Starmer works the algorithm step by step with his usual diagrams. Watch after the toy rounds.</p></div>
 
 ## Official sources and further reading
 
 **Official:**
 - Lecture 9 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=bSmIGBCoffA — Chris Ré runs
+  - [Chris Ré runs](https://www.youtube.com/watch?v=bSmIGBCoffA)
   k-means live, proves convergence to local minima, presents
   k-means++ with its approximation guarantee, and sets up GMMs.
 - Official subtitle transcript (en-US): the lecture's spoken text.
@@ -227,7 +353,7 @@ by the lecture's own ordering.
 
 ## Connections to the other courses
 
-- **CS229 L05:** GDA's Gaussians with known labels; GMM is GDA
+- **CS229 L05:** GDA's Gaussians with known labels. GMM is GDA
   with the labels hidden.
 - **CS229 L10:** EM: the algorithm that fits GMMs, and PCA for
   visualizing clusters.
