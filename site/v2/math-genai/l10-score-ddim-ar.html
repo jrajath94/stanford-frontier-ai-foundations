@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 10: Scores, Shortcuts, and the Autoregressive Family — Stanford Frontier AI</title>
+<meta name="description" content="Three views that complete diffusion: the score (walk uphill on probability, worked: 3.821), DDIM strides that skip steps (100 → 50 in one jump: 2.844), guided a">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="math-genai-l10" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive, Search, RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Attention, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech Brain-Computer Interfaces</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+<li><a href="../cme295/l01-transformers-overview.html" data-page="cme295-l01">L01 · Transformers overview</a></li>
+<li><a href="../cme295/l02-attention-position-bert.html" data-page="cme295-l02">L02 · Attention and BERT</a></li>
+<li><a href="../cme295/l03-llms-decoding-inference.html" data-page="cme295-l03">L03 · LLMs and decoding</a></li>
+<li><a href="../cme295/l04-pretraining-scaling-finetuning.html" data-page="cme295-l04">L04 · Training at scale</a></li>
+<li><a href="../cme295/l05-preference-tuning.html" data-page="cme295-l05">L05 · Preference tuning</a></li>
+<li><a href="../cme295/l06-reasoning-models-grpo.html" data-page="cme295-l06">L06 · Reasoning models</a></li>
+<li><a href="../cme295/l07-rag-tool-calling-agents.html" data-page="cme295-l07">L07 · RAG and agents</a></li>
+<li><a href="../cme295/l08-evaluation.html" data-page="cme295-l08">L08 · Evaluation</a></li>
+<li><a href="../cme295/l09-course-recap-frontiers.html" data-page="cme295-l09">L09 · Recap and frontiers</a></li>
+<li><a href="../cme295/cheatsheet.html" data-page="cme295-cheatsheet">CME295 · Cheatsheet</a></li>
+<li><a href="../cme295/crash-course.html" data-page="cme295-crash">CME295 · Crash course</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+<li><a href="../cs329h/l01-preference-foundations.html" data-page="cs329h-l01">L01 · Preference Foundations</a></li>
+<li><a href="../cs329h/l02-choice-models.html" data-page="cs329h-l02">L02 · Choice Models</a></li>
+<li><a href="../cs329h/l03-iia-identification.html" data-page="cs329h-l03">L03 · IIA and Identification</a></li>
+<li><a href="../cs329h/l04-learning-rewards.html" data-page="cs329h-l04">L04 · Learning Rewards</a></li>
+<li><a href="../cs329h/l05-metric-elicitation.html" data-page="cs329h-l05">L05 · Metric Elicitation</a></li>
+<li><a href="../cs329h/l06-bandits-exploration.html" data-page="cs329h-l06">L06 · Bandits and Exploration</a></li>
+<li><a href="../cs329h/l07-rlhf.html" data-page="cs329h-l07">L07 · RLHF</a></li>
+<li><a href="../cs329h/l08-social-choice.html" data-page="cs329h-l08">L08 · Social Choice</a></li>
+<li><a href="../cs329h/l09-mechanism-design.html" data-page="cs329h-l09">L09 · Mechanism Design</a></li>
+<li><a href="../cs329h/l10-alignment-practice.html" data-page="cs329h-l10">L10 · Alignment in Practice</a></li>
+<li><a href="../cs329h/cheatsheet.html" data-page="cs329h-cheatsheet">CS329H · Cheatsheet</a></li>
+<li><a href="../cs329h/crash-course.html" data-page="cs329h-crash">CS329H · Crash course</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+<li><a href="../cs329z/l01-intro-agentic-systems.html" data-page="cs329z-l01">L01 · Intro to Agentic Systems</a></li>
+<li><a href="../cs329z/l02-compound-ai-systems.html" data-page="cs329z-l02">L02 · Compound AI Systems</a></li>
+<li><a href="../cs329z/l03-llms-for-builders.html" data-page="cs329z-l03">L03 · LLMs for Builders</a></li>
+<li><a href="../cs329z/l04-reasoning-and-context.html" data-page="cs329z-l04">L04 · Reasoning and Context</a></li>
+<li><a href="../cs329z/l05-rag-pipeline.html" data-page="cs329z-l05">L05 · RAG Pipeline</a></li>
+<li><a href="../cs329z/l06-retrieval-methods.html" data-page="cs329z-l06">L06 · Retrieval Methods</a></li>
+<li><a href="../cs329z/l07-agentic-retrieval-failure-modes.html" data-page="cs329z-l07">L07 · Agentic Retrieval</a></li>
+<li><a href="../cs329z/l08-evaluating-agents.html" data-page="cs329z-l08">L08 · Evaluating Agents</a></li>
+<li><a href="../cs329z/cheatsheet.html" data-page="cs329z-cheatsheet">CS329Z · Cheatsheet</a></li>
+<li><a href="../cs329z/crash-course.html" data-page="cs329z-crash">CS329Z · Crash course</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
+<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
+<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
+<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
+<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
+<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
+<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
+<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
+<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
+<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+<li><a href="../mse435/l01-electrons-to-tokens.html" data-page="mse435-l01">L01 · From Electrons to Tokens</a></li>
+<li><a href="../mse435/l02-sixty-million-megawatt.html" data-page="mse435-l02">L02 · The $60M Megawatt</a></li>
+<li><a href="../mse435/l03-how-models-get-smarter.html" data-page="mse435-l03">L03 · How Models Get Smarter</a></li>
+<li><a href="../mse435/l04-evals-rlvr-enterprise.html" data-page="mse435-l04">L04 · Evals and Enterprise AI</a></li>
+<li><a href="../mse435/l05-software-is-dead.html" data-page="mse435-l05">L05 · The SaaS Reckoning</a></li>
+<li><a href="../mse435/l06-where-value-accrues.html" data-page="mse435-l06">L06 · Where Value Accrues</a></li>
+<li><a href="../mse435/cheatsheet.html" data-page="mse435-cheatsheet">MS&amp;E 435 · Cheatsheet</a></li>
+<li><a href="../mse435/crash-course.html" data-page="mse435-crash">MS&amp;E 435 · Crash course</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">MATH-ML · Overview</a></li>
+<li><a href="../math-ml/l01-vectors-as-data.html" data-page="math-ml-l01">L01 · Vectors as Data</a></li>
+<li><a href="../math-ml/l02-matrices-as-machines.html" data-page="math-ml-l02">L02 · Matrices as Machines</a></li>
+<li><a href="../math-ml/l03-eigendecomposition-pca.html" data-page="math-ml-l03">L03 · Eigen-decomposition</a></li>
+<li><a href="../math-ml/l04-svd-low-rank.html" data-page="math-ml-l04">L04 · SVD and Low Rank</a></li>
+<li><a href="../math-ml/l05-probability-bayes.html" data-page="math-ml-l05">L05 · Probability and Bayes</a></li>
+<li><a href="../math-ml/l06-distributions-covariance.html" data-page="math-ml-l06">L06 · Distributions and Covariance</a></li>
+<li><a href="../math-ml/l07-calculus-gradients-chainrule.html" data-page="math-ml-l07">L07 · Calculus for ML</a></li>
+<li><a href="../math-ml/l08-convexity-gradient-descent.html" data-page="math-ml-l08">L08 · Convexity and Gradient Descent</a></li>
+<li><a href="../math-ml/l09-least-squares-regression.html" data-page="math-ml-l09">L09 · Least Squares</a></li>
+<li><a href="../math-ml/l10-information-theory.html" data-page="math-ml-l10">L10 · Information Theory</a></li>
+<li><a href="../math-ml/cheatsheet.html" data-page="math-ml-cheatsheet">MATH-ML · Cheatsheet</a></li>
+<li><a href="../math-ml/crash-course.html" data-page="math-ml-crash-course">MATH-ML · Crash Course</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+<li><a href="../math-genai/l01-the-job.html" data-page="math-genai-l01">L01 · The Job</a></li>
+<li><a href="../math-genai/l02-kl-and-mle.html" data-page="math-genai-l02">L02 · KL Divergence and MLE</a></li>
+<li><a href="../math-genai/l03-f-divergences.html" data-page="math-genai-l03">L03 · f-Divergences</a></li>
+<li><a href="../math-genai/l04-gans.html" data-page="math-genai-l04">L04 · GANs</a></li>
+<li><a href="../math-genai/l05-wgan-evaluation.html" data-page="math-genai-l05">L05 · WGAN and Evaluation</a></li>
+<li><a href="../math-genai/l06-latent-variables-elbo.html" data-page="math-genai-l06">L06 · ELBO</a></li>
+<li><a href="../math-genai/l07-vae.html" data-page="math-genai-l07">L07 · VAE</a></li>
+<li><a href="../math-genai/l08-ddpm-forward.html" data-page="math-genai-l08">L08 · DDPM Forward</a></li>
+<li><a href="../math-genai/l09-ddpm-loss.html" data-page="math-genai-l09">L09 · DDPM Loss</a></li>
+<li><a href="../math-genai/l10-score-ddim-ar.html" data-page="math-genai-l10" class="active">L10 · Score, DDIM, AR</a></li>
+<li><a href="../math-genai/cheatsheet.html" data-page="math-genai-cheatsheet">Cheatsheet</a></li>
+<li><a href="../math-genai/crash-course.html" data-page="math-genai-crash-course">Crash course</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Math · Generative Models · Overview</a></li>
+<li><a href="../math-genmodels/l01-the-one-question.html" data-page="math-genmodels-l01">L01 · The One Question</a></li>
+<li><a href="../math-genmodels/l02-autoregressive-models.html" data-page="math-genmodels-l02">L02 · Autoregressive Models</a></li>
+<li><a href="../math-genmodels/l03-variational-autoencoders.html" data-page="math-genmodels-l03">L03 · Variational Autoencoders</a></li>
+<li><a href="../math-genmodels/l04-normalizing-flows.html" data-page="math-genmodels-l04">L04 · Normalizing Flows</a></li>
+<li><a href="../math-genmodels/l05-diffusion-ddpm.html" data-page="math-genmodels-l05">L05 · Diffusion I: DDPM</a></li>
+<li><a href="../math-genmodels/l06-score-matching-ddim.html" data-page="math-genmodels-l06">L06 · Score Matching &amp; Fast Diffusion</a></li>
+<li><a href="../math-genmodels/l07-energy-based-models.html" data-page="math-genmodels-l07">L07 · Energy-Based Models</a></li>
+<li><a href="../math-genmodels/l08-judging-a-creator.html" data-page="math-genmodels-l08">L08 · Judging a Creator</a></li>
+<li><a href="../math-genmodels/cheatsheet.html" data-page="math-genmodels-cheatsheet">Math · Generative Models · Cheatsheet</a></li>
+<li><a href="../math-genmodels/crash-course.html" data-page="math-genmodels-crash">Math · Generative Models · Crash course</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative AI</a> / Lecture 10: Scores, Shortcuts, and the Autoregressive Family</nav>
+      <h1>Lecture 10: Scores, Shortcuts, and the Autoregressive Family</h1>
+      <p class="meta-line">2026-10-05 · Instructor: Prof. Prathosh A P · 2025</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="2Sp0BqAWWXY"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/2Sp0BqAWWXY" title="Lecture 10: Scores, Shortcuts, and the Autoregressive Family" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original Stanford lecture. Timestamps in the text link to the exact moment.</p></div><h2 id="the-task-what-did-the-denoiser-really-learn">The task: what did the denoiser really learn?</h2>
+<p>Lesson 9 trained ε_θ to predict added noise. The W9
+lectures step back and ask what that means. Recall the
+equivalence: predicting ε is predicting the <strong>score</strong>,
+the gradient of the log-density:</p>
+<pre class="ascii">score(x_t) = grad log p(x_t) = -epsilon / sqrt(1 - a_bar_t)
+</pre>
+<p>The score is an arrow at every point, pointing toward
+higher probability. In the Lesson 9 toy:
+−0.688/0.4359 = −1.578. At x_2 = 3.9, the arrow points
+left with strength 1.578: probability increases toward
+smaller x. The denoiser learned a map of arrows covering
+the whole noisy space. That reframes everything:
+generation is hill-climbing on probability.</p>
+<h2 id="first-attempt-follow-the-arrows-naively">First attempt: follow the arrows naively</h2>
+<p>If the score points uphill, sample by walking uphill:
+start anywhere, take small steps along the score, add a
+little noise so you explore instead of collapsing to the
+peak. This is <strong>Langevin dynamics</strong>:</p>
+<pre class="ascii">x &lt;- x + (delta/2) * score(x) + sqrt(delta) * z,   z ~ N(0,1)
+</pre>
+<p>Try it on the toy. x = 3.9, score = −1.578, δ = 0.1,
+draw z = 0.4:</p>
+<pre class="ascii">x &lt;- 3.9 + 0.05 * (-1.578) + 0.316 * 0.4
+   = 3.9 - 0.079 + 0.126 = 3.947
+</pre>
+<p>The point moved from 3.9 to 3.947: uphill toward the
+clean 4.0, with exploration noise. Repeat thousands of
+times and the walk&rsquo;s positions follow p(x). This is the
+older <strong>score matching</strong> literature&rsquo;s sampler, and the
+lecture&rsquo;s point is that DDPM training already learns
+exactly the object it needs. Two communities, one
+arrow field.</p>
+<p>Where naive Langevin breaks: it needs tiny steps and
+thousands of them, and the step size δ is fiddly. Too
+large: the walk diverges. Too small: it never arrives.
+DDPM&rsquo;s ancestral sampler (Lesson 9) is the stabilized,
+scheduled version of this walk.</p>
+<h2 id="the-key-question">The key question</h2>
+<p>The sampler still costs T steps. Can we take bigger
+strides without retraining?</p>
+<h2 id="the-new-idea-ddim-strides">The new idea: DDIM strides</h2>
+<p><strong>DDIM</strong> (Denoising Diffusion Implicit Models) observes
+that training only ever used the marginals q(x_t|x_0):
+the closed-form jump from Lesson 8. The Markov
+step-by-step chain was one choice consistent with those
+marginals. A non-Markovian process with the same
+marginals trains the identical ε_θ. And with the
+non-Markovian form, the reverse can skip steps: jump
+from t = 100 to t = 50 in one stride, deterministically.</p>
+<p>The stride formula: predict the clean x_0 from x_t via
+ε_θ, then re-noise it to the target step s:</p>
+<pre class="ascii">x_hat_0 = ( x_t - sqrt(1 - a_bar_t) * e_theta ) / sqrt(a_bar_t)
+x_s     = sqrt(a_bar_s) * x_hat_0 + sqrt(1 - a_bar_s) * e_theta
+</pre>
+<p>Work it. t = 100, s = 50, ᾱ_100 = 0.05, ᾱ_50 = 0.5,
+x_100 = 1.5, ε_θ = 0.8:</p>
+<pre class="ascii">x_hat_0 = (1.5 - sqrt(0.95)*0.8) / sqrt(0.05)
+        = (1.5 - 0.7798) / 0.2236 = 3.221
+x_50 = sqrt(0.5)*3.221 + sqrt(0.5)*0.8
+     = 2.278 + 0.566 = 2.844
+</pre>
+<p>One stride: 1.5 → 2.844, landing where 50 DDPM steps
+would have gone. Fifty strides replace a thousand
+steps. The price: the deterministic stride (no z
+wobble) explores less, so diversity drops slightly.
+re-adding controlled noise per stride recovers most of
+it. Same network, faster sampler, no retraining.</p>
+<h2 id="steering-and-shrinking-guided-and-latent-diffusion">Steering and shrinking: guided and latent diffusion</h2>
+<p>Two more W9 ideas, each one mechanism.</p>
+<p><strong>Guided diffusion</strong> steers generation toward a target,
+like &ldquo;a cat&rdquo;. Train a classifier p(y|x_t) on noisy
+images. Then sample with the conditional score:</p>
+<pre class="ascii">score_guided = score(x_t) + s * grad log p(y | x_t)
+</pre>
+<p>The extra term is an arrow pointing toward &ldquo;more
+cat-like&rdquo;. Toy numbers: score −1.578, classifier
+gradient +0.5, guidance scale s = 2: guided score =
+−1.578 + 1.0 = −0.578. The walk still climbs the data
+probability but bends toward the requested class.
+Larger s: stronger steering, weirder images. The
+scale is the dial.</p>
+<p><strong>Latent diffusion</strong> shrinks the problem. Lesson 8&rsquo;s
+price was full-size latents at every step. Instead,
+compress the image with a VAE encoder (Lesson 7&rsquo;s
+machinery), diffuse in the small latent space, decode
+once at the end. A 512×512×3 image (786,432 numbers)
+becomes a 64×64×4 latent (16,384 numbers): 48 times
+smaller, so every diffusion step costs 48 times less.
+This is the architecture behind Stable Diffusion.
+The price is the VAE&rsquo;s bottleneck: compression
+artifacts the diffusion cannot fix.</p>
+<h2 id="the-fourth-family-autoregressive-models">The fourth family: autoregressive models</h2>
+<p>The course closes (W10) with the family that needs no
+latent variables and no adversary: factor the joint
+distribution with the chain rule and predict one piece
+at a time.</p>
+<pre class="ascii">p(x_1, x_2, x_3) = p(x_1) * p(x_2 | x_1) * p(x_3 | x_1, x_2)
+</pre>
+<p>Each factor is a small classification problem: given
+the past, what comes next? Train by maximum likelihood
+(Lesson 2&rsquo;s identity): maximize the log-probability of
+the true next piece. Generate left to right: sample
+x_1, feed it in, sample x_2, and so on.</p>
+<p>Work it on three tokens from {a, b}. Model says:
+p(a) = 0.6. p(a|a) = 0.7, p(b|a) = 0.3.
+p(a|a,b) = 0.2, p(b|a,b) = 0.8.</p>
+<pre class="ascii">p(a, b, a) = p(a) * p(b|a) * p(a|a,b)
+           = 0.6 * 0.3 * 0.2 = 0.036
+</pre>
+<p>The sequence &ldquo;aba&rdquo; gets probability 0.036 under the
+model. Training on real text pushes these factors
+toward the true continuations. Generation samples
+each factor in turn. This is next-token prediction,
+the engine of every large language model. The
+transformer architecture that makes it scale is
+CS336/CS229S territory. This course contributes the
+probabilistic frame: AR models are the chain-rule
+family, trained by plain MLE, with exact likelihoods
+and slow sequential sampling.</p>
+<h2 id="the-honest-price-per-shortcut">The honest price, per shortcut</h2>
+<p>Langevin: principled but fiddly. Step size can
+diverge the walk. DDPM&rsquo;s scheduled sampler is the
+practical form. DDIM: 20 times fewer steps, slightly
+less diversity, and the strides assume the marginals
+match (they do, by construction). Guidance: needs a
+classifier on noisy inputs and a hand-tuned scale.
+too much guidance degrades quality. Latent
+diffusion: 48 times cheaper per step, bottlenecked by
+the autoencoder&rsquo;s fidelity. Autoregressive: exact
+likelihood and simple training, but generation is
+strictly sequential: token 1000 waits for 999 before
+it. Every family pays somewhere.</p>
+<h2 id="the-course-in-one-table">The course in one table</h2>
+<p>Four families, one recipe (family, divergence,
+optimization), four prices:</p>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Latent?</th>
+<th>Objective</th>
+<th>Generator gives</th>
+<th>Price</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GAN (L3-5)</td>
+<td>None (noise only)</td>
+<td>Minimax game on a variational bound</td>
+<td>Samples, no density</td>
+<td>Saddle point: saturation, mode collapse</td>
+</tr>
+<tr>
+<td>VAE (L6-7)</td>
+<td>Learned code z</td>
+<td>ELBO: reconstruction − KL</td>
+<td>Samples + density bound + editable code</td>
+<td>Blurry: mode-covering + Gaussian decoder</td>
+</tr>
+<tr>
+<td>Diffusion (L8-10)</td>
+<td>Fixed noise chain</td>
+<td>ELBO → noise MSE</td>
+<td>Samples via T denoising steps</td>
+<td>Slow sampling. Fixed schedule</td>
+</tr>
+<tr>
+<td>Autoregressive (L10)</td>
+<td>None (chain rule)</td>
+<td>Exact MLE per piece</td>
+<td>Samples + exact likelihood</td>
+<td>Sequential generation</td>
+</tr>
+</tbody>
+</table>
+<p>The arc of the course: from counting what exists
+(density estimation) to making what does not
+(generation). GANs learn the boundary between real
+and fake. VAEs learn a compressed imagination.
+Diffusion learns to clean noise, one small step at a
+time. Autoregressive models learn what comes next.
+Four answers to &ldquo;how do you teach a machine to
+create?&rdquo;, each with its bill attached.</p>
+<div class="qa"><div class="q">What is the score, and why does it matter?</div><div class="a"><p>The score is ∇log p(x): an arrow at each point toward higher probability. DDPM&rsquo;s noise prediction is a scaled score: −ε/√(1−ᾱ_t) = −1.578 in the toy. It matters because it unifies two literatures: DDPM training learns the object score matching always wanted, so score-based samplers like Langevin dynamics apply directly.
+x ← x + (δ/2)·score + √δ·z. In the toy: 3.9 + 0.05·(−1.578) + 0.316·0.4 = 3.947. Uphill toward the clean 4.0 plus exploration noise. DDPM&rsquo;s sampler is this walk with a stabilizing schedule.</p><div class="followup"><strong>Follow-up:</strong> What does one Langevin step look like?</div></div></div>
+<div class="qa"><div class="q">How does DDIM sample faster without retraining?</div><div class="a"><p>Training only used the marginals q(x_t|x_0), which a non-Markovian process shares. DDIM exploits that: predict x̂_0 from x_t, then jump straight to step s. In the toy, one stride took x_100 = 1.5 to x_50 = 2.844 via x̂_0 = 3.221. Fifty strides replace a thousand steps. The cost is slightly reduced diversity.
+DDPM&rsquo;s sampler adds fresh noise z at every step, exploring around the mean path. DDIM&rsquo;s basic stride has no z term: same x_T always gives the same x_0. Re-adding partial noise per stride recovers most of the variety.</p><div class="followup"><strong>Follow-up:</strong> Why does the deterministic stride lose diversity?</div></div></div>
+<div class="qa"><div class="q">How does guided diffusion steer generation?</div><div class="a"><p>Add a classifier&rsquo;s gradient to the score: score + s·∇log p(y|x_t). The extra arrow points toward the requested class y. In the toy, −1.578 + 2·0.5 = −0.578: still climbing data probability, bent toward the class. The scale s trades steering strength against image quality.
+Speed. Diffuse in a VAE&rsquo;s compressed latent space instead of pixels: 786,432 numbers become 16,384 (48× smaller), so each step costs 48× less. The autoencoder&rsquo;s compression artifacts are the price.</p><div class="followup"><strong>Follow-up:</strong> What is latent diffusion buying?</div></div></div>
+<div class="qa"><div class="q">What is an autoregressive model?</div><div class="a"><p>A model that factors the joint distribution with the chain rule and predicts one piece at a time: p(x_1,x_2,x_3) = p(x_1)·p(x_2|x_1)·p(x_3|x_1,x_2). In the toy, p(a,b,a) = 0.6·0.3·0.2 = 0.036. Train each factor by MLE, generate left to right. Exact likelihoods, simple training, strictly sequential sampling.
+Because it completes the four-family map: adversarial (GAN), learned-latent (VAE), fixed-latent (diffusion), no-latent (autoregressive). The transformer architecture that scales AR models belongs to CS336/CS229S. This course&rsquo;s contribution is the probabilistic frame all four share.</p><div class="followup"><strong>Follow-up:</strong> Why does the course end here?</div></div></div>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<ol>
+<li><strong>The reframe.</strong> ε_θ learns the score ∇log p(x_t): an arrow field pointing uphill on probability (−1.578 in the toy).</li>
+<li><strong>Langevin.</strong> Walk the arrows with noise: 3.9 → 3.947 in one step. DDPM&rsquo;s sampler is the scheduled version.</li>
+<li><strong>The key question.</strong> Can we stride instead of stepping, without retraining?</li>
+<li><strong>DDIM.</strong> Same marginals, non-Markovian reverse: x_100 = 1.5 → x_50 = 2.844 in one stride via x̂_0 = 3.221.</li>
+<li><strong>Guidance.</strong> score + s·∇log p(y|x): steer with a classifier&rsquo;s arrows (−0.578 in the toy).</li>
+<li><strong>Latent.</strong> Diffuse in VAE space: 48× cheaper per step, bottlenecked by the autoencoder.</li>
+<li><strong>Autoregressive.</strong> Chain rule, one piece at a time: p(a,b,a) = 0.036. Exact likelihood, sequential sampling.</li>
+<li><strong>The course.</strong> Four families, one recipe, four prices. Density estimation → generation.</li>
+</ol>
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- W9L35: DDPMs as score-predictors:
+  https://www.youtube.com/watch?v=2Sp0BqAWWXY
+- W9L36/L37: Guided diffusion, latent diffusion models.
+- W9L38/L39: DDIMs and inference:
+  https://www.youtube.com/watch?v=qiMJBB8chzI
+- W10L40: Auto-regressive models:
+  https://www.youtube.com/watch?v=PtDFqdTbQUY</p>
+<p><strong>Further reading:</strong>
+- Song and Ermon, &ldquo;Generative Modeling by Estimating Gradients of the Data Distribution&rdquo; (2019):
+  https://arxiv.org/abs/1907.05600: the score view.
+- Song, Meng, Ermon, &ldquo;DDIM&rdquo; (2020):
+  https://arxiv.org/abs/2010.02502: the strides.
+- Rombach et al., &ldquo;High-Resolution Image Synthesis with Latent Diffusion Models&rdquo; (2021):
+  https://arxiv.org/abs/2112.10752: latent diffusion (Stable Diffusion).</p>
+<p><strong>Caveats.</strong> The W9L35 and W9L38 transcripts were not recovered (IDs from the playlist). This lesson follows the standard Song/Ermon and Rombach presentations, consistent with the lecture titles. [uncertain] The lecture&rsquo;s exact treatment and examples are unknown.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS229 L11 (diffusion models):</strong> that course&rsquo;s sampler is this lesson&rsquo;s DDIM with the same ε_θ. A worked tie: 50 DDIM strides on a 1000-step schedule evaluate the network 50 times instead of 1000, a 20× speedup, while the training loss never changes. Same weights, different walk.</li>
+<li><strong>CS336:</strong> the autoregressive family is that course&rsquo;s home ground. The chain-rule factorization here is its next-token objective: p(token_t | tokens_&lt;t). This lesson&rsquo;s 0.036 toy is the smallest possible language model.</li>
+</ul>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">W9L35: DDPMs as score-predictors (video 2Sp0BqAWWXY)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=qiMJBB8chzI" target="_blank" rel="noopener">W9L38/L39: DDIMs and inference (video qiMJBB8chzI)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=PtDFqdTbQUY" target="_blank" rel="noopener">W10L40: Auto-regressive models (video PtDFqdTbQUY)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2010.02502" target="_blank" rel="noopener">Song, Meng, Ermon, Denoising Diffusion Implicit Models (2020)</a></li></ul></section>
+      <nav class="pager"><a href="../math-genai/l09-ddpm-loss.html"><span class="lbl">← Previous</span>Lecture 9: From ELBO to Predicting Noise</a><a href="../math-genai/cheatsheet.html"><span class="lbl">Next →</span>MATH-GENAI Cheatsheet</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
