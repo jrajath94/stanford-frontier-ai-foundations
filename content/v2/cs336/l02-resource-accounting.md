@@ -460,6 +460,15 @@ The story in eight steps. Each step answers the one before it.
    extra compute. Checkpointing: store sqrt(L), recompute the rest,
    ~30% extra compute.
 
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/DfnV32AmtlE" title="The Memory Wall Explained (Roofline Model)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- The Memory Wall Explained, Roofline Model (the embed above): https://www.youtube.com/watch?v=DfnV32AmtlE
+- Williams et al., Roofline: An Insightful Visual Performance Model: https://www2.eecs.berkeley.edu/Pubs/TechRpts/2008/EECS-2008-134.html
+- Micikevicius et al., Mixed Precision Training: https://arxiv.org/abs/1710.03740
+
 ## Official sources and further reading
 
 **Official:**
