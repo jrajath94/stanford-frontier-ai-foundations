@@ -219,7 +219,7 @@
       <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative AI</a> / Lecture 9: From ELBO to Predicting Noise</nav>
       <h1>Lecture 9: From ELBO to Predicting Noise</h1>
       <p class="meta-line">2026-10-05 · Instructor: Prof. Prathosh A P · 2025</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="yzU0ueuABLw"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/yzU0ueuABLw" title="Lecture 9: From ELBO to Predicting Noise" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=yzU0ueuABLw" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=yzU0ueuABLw" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original Stanford lecture. Timestamps in the text link to the exact moment.</p></div><h2 id="the-task-train-the-denoiser">The task: train the denoiser</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="yzU0ueuABLw"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/yzU0ueuABLw" title="W8L30: Optimization of DDPM loss" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=yzU0ueuABLw" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=yzU0ueuABLw" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">The lecture video for this lesson: turning the DDPM ELBO into the noise-prediction loss. Timestamps in the text link to the exact moment.</p></div><h2 id="the-task-train-the-denoiser">The task: train the denoiser</h2>
 <p>Lesson 8 defined the model: learn the reverse Gaussians
 p_θ(x_{t-1}|x_t). Lesson 6 gave the training principle:
 maximize the ELBO. Combine them and the ELBO for the chain
@@ -234,24 +234,30 @@ Gaussians per step, T steps. The naive approach optimizes
 this directly: learn both μ_θ and Σ_θ per step by
 gradient ascent on the bound.</p>
 <h2 id="where-the-naive-elbo-breaks">Where the naive ELBO breaks</h2>
+<h3 id="a-thousand-coupled-gaussians">A thousand coupled Gaussians</h3>
 <p>Watch it struggle. Each KL term compares two Gaussians
 whose parameters both move during training. The gradient
 must tune means and variances jointly across 1000 coupled
 terms, and the variance parameters are notoriously
 twitchy: a slightly wrong Σ_θ explodes or collapses the
 KL. Training is slow, unstable, and the samples are
-mediocre. The bound is correct but unusable in raw form.
-The lecture&rsquo;s whole W8 block is the rescue: three
+mediocre.</p>
+<h3 id="correct-but-unusable">Correct but unusable</h3>
+<p>The bound is correct but unusable in raw form. The
+lecture&rsquo;s whole W8 block is the rescue: three
 algebraic moves that turn this monster into one clean
-regression.</p>
+regression. The decision rule to remember: when a bound
+is correct but untrainable, look for conditioning that
+makes the intractable parts tractable. Training knows
+the answer (x_0). Use it.</p>
 <h2 id="the-key-question">The key question</h2>
 <p>During training we know x_0 (it is the data). Can knowing
 the answer simplify what each reverse step must learn?</p>
 <h2 id="the-new-idea-condition-on-the-answer">The new idea: condition on the answer</h2>
-<p><strong>Move 1: the tractable posterior.</strong> The ELBO&rsquo;s per-step
-KL compares p_θ(x_{t-1}|x_t) against the true reverse
-q(x_{t-1}|x_t), which is intractable. But conditioned on
-x_0, which training knows, the posterior
+<h3 id="move-1-the-tractable-posterior">Move 1: the tractable posterior</h3>
+<p>The ELBO&rsquo;s per-step KL compares p_θ(x_{t-1}|x_t) against
+the true reverse q(x_{t-1}|x_t), which is intractable. But
+conditioned on x_0, which training knows, the posterior
 q(x_{t-1}|x_t, x_0) is a Gaussian with a closed form.
 (Bayes&rsquo; rule on three Gaussians: q(x_t|x_{t-1}) times
 q(x_{t-1}|x_0), normalized.) Its mean is:</p>
@@ -270,14 +276,14 @@ mu_tilde = 0.4993 * 4.0 + 0.4993 * 3.9 = 1.997 + 1.947 = 3.944
 variance is β̃<em>t = ((1−ᾱ</em>{t-1})/(1−ᾱ_t))·β_t =
 (0.1/0.19)·0.1 = 0.0526: small, because knowing x_0
 removes most uncertainty.</p>
-<p><strong>Move 2: KL of Gaussians is squared error.</strong> The KL
-between two Gaussians with the same variance is
+<h3 id="move-2-kl-of-gaussians-is-squared-error">Move 2: KL of Gaussians is squared error</h3>
+<p>The KL between two Gaussians with the same variance is
 proportional to the squared distance of their means.
 So each ELBO term becomes ||μ̃_t − μ_θ(x_t, t)||², up
-to constants. Still a mean to predict. But, </p>
-<p><strong>Move 3: predict the noise, not the mean.</strong> From
-Lesson 8&rsquo;s closed form, x_t = √ᾱ_t x_0 + √(1−ᾱ_t) ε,
-solve for x_0 and substitute into μ̃_t. The mean
+to constants. Still a mean to predict. But,</p>
+<h3 id="move-3-predict-the-noise-not-the-mean">Move 3: predict the noise, not the mean</h3>
+<p>From Lesson 8&rsquo;s closed form, x_t = √ᾱ_t x_0 + √(1−ᾱ_t)
+ε, solve for x_0 and substitute into μ̃_t. The mean
 rewrites as a function of x_t and the <em>noise</em> ε that
 was added. So instead of predicting μ̃_t directly,
 have the network predict the noise:</p>
@@ -290,6 +296,7 @@ have the network predict the noise:</p>
 a random step t, add the corresponding noise, ask the
 network what noise was added. Denoising as
 noise-prediction.</p>
+<h3 id="worked-the-loss-is-00354">Worked: the loss is 0.0354</h3>
 <p>Work the loss on the toy. Building x_2 = 3.900 used
 combined noise ε = 0.688 (Lesson 8). Suppose the
 network predicts ε_θ = 0.5:</p>
@@ -299,7 +306,9 @@ network predicts ε_θ = 0.5:</p>
 0.688. Every training step is this simple, at every t.
 The lecture&rsquo;s punchline: the world&rsquo;s best image
 generators train on this MSE.</p>
+<figure><img alt="Three moves turn the ELBO monster into one MSE" src="assets/l09-three-moves.webp"><figcaption>Condition on x_0. Reduce KL to squared error. Predict the noise. Shell 3. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="three-faces-of-the-same-prediction">Three faces of the same prediction</h2>
+<h3 id="noise-clean-image-score">Noise, clean image, score</h3>
 <p>The W8L31 lecture (&ldquo;ELBO equivalence&rdquo;) shows the
 noise prediction is one of three equivalent targets.
 Since x_t = √ᾱ_t x_0 + √(1−ᾱ_t) ε, predicting any one
@@ -316,12 +325,25 @@ trains best empirically, which is why L_simple won.
 The score view connects diffusion to an older
 literature (score matching) and to the sampling
 methods of Lesson 10.</p>
+<h3 id="why-noise-trains-best">Why noise trains best</h3>
+<p>The noise has a fixed scale (standard Gaussian) at
+every step t, while x_0&rsquo;s scale relative to x_t varies
+wildly with t. A network predicting a fixed-scale
+target trains more stably: the loss landscape looks
+the same at t = 10 and t = 900. Predicting x_0 would
+ask the network to output tiny corrections at high
+noise and huge ones at low noise. Same information,
+friendlier regression. The decision rule: pick the
+prediction target with the most constant scale.</p>
+<figure><img alt="One prediction, three faces: noise, clean image, score" src="assets/l09-three-faces.webp"><figcaption>Know one, know all three. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="inference-walking-the-chain-backward">Inference: walking the chain backward</h2>
+<h3 id="the-reverse-step-formula">The reverse step formula</h3>
 <p>Trained ε_θ gives the reverse mean via the move-3
 substitution. One sampling step:</p>
 <pre class="ascii">x_{t-1} = (1/sqrt(a_t)) * ( x_t - (b_t / sqrt(1 - a_bar_t)) * e_theta )
           + sqrt(beta_tilde_t) * z,    z ~ N(0,1)
 </pre>
+<h3 id="worked-39-4059">Worked: 3.9 → 4.059</h3>
 <p>With the toy numbers (t = 2, x_2 = 3.9, ε_θ = 0.5):</p>
 <pre class="ascii">1/sqrt(0.9) = 1.054,   b_2/sqrt(1 - a_bar_2) = 0.1/0.4359 = 0.2294
 x_1 = 1.054 * (3.9 - 0.2294*0.5) + sqrt(0.0526)*z
@@ -332,6 +354,7 @@ back toward the clean 4.0, plus a controlled wobble.
 Repeat down to t = 1 and x_0 emerges. The wobble
 (z term) is what makes samples vary: same x_T,
 different z&rsquo;s, different photos.</p>
+<figure><img alt="One reverse step: from 3.9 back toward 4.0, plus a wobble" src="assets/l09-sampling-step.webp"><figcaption>Remove the predicted noise, then add controlled randomness for variety. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <div class="mermaid">flowchart LR
   XT["x_T: pure noise"] --> R["reverse step: remove predicted noise"]
   R --> X1["x_{T-1}"]
@@ -343,18 +366,29 @@ different z&rsquo;s, different photos.</p>
   X1 --&gt; R2[&quot;... T steps ...&quot;]
   R2 --&gt; X0[&quot;x_0: photo&quot;]
 </code></pre>
+<h3 id="why-the-wobble-stays">Why the wobble stays</h3>
+<p>Why add noise during generation? Why not just take the
+mean? The mean path gives one deterministic output per
+x_T: less variety, and errors compound without the
+stochastic correction. The added noise keeps each step
+a true sample from the reverse Gaussian, which is what
+the ELBO trained. Deterministic variants exist (DDIM,
+Lesson 10) but they change the sampler deliberately.</p>
 <h2 id="the-honest-price">The honest price</h2>
+<h3 id="a-reweighted-bound">A reweighted bound</h3>
 <p>L_simple is not the true ELBO. Dropping the per-term
 weights optimizes a reweighted bound: slightly worse
 likelihood, much better samples. The field chose
 samples. (Weightings that restore the true ELBO exist
 and train worse-looking models. An honest trade,
 stated plainly.)</p>
+<h3 id="fixed-variances">Fixed variances</h3>
 <p>Second, the variance Σ_θ is fixed, not learned, in
 the basic DDPM. The model cannot express uncertainty
 about its denoising beyond the schedule&rsquo;s β̃_t.
 Learned variances help likelihood and hurt nothing
 much, but the simple version won on sample quality.</p>
+<h3 id="still-t-slow-steps">Still T slow steps</h3>
 <p>Third, sampling still costs T steps. The loss is
 beautiful. The sampler is slow. Lesson 10 attacks
 exactly this.</p>
@@ -384,12 +418,34 @@ exactly this.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="where-l_simple-runs-in-real-systems">Where L_simple runs in real systems</h3>
+<p>L_simple is the training loss inside every DDPM-lineage
+image generator: pick t, add noise, predict the noise.
+The three-faces equivalence is why the same trained
+network can drive DDIM sampling (Lesson 10) and
+score-based guidance without retraining: the weights
+already encode all three views. [uncertain] Which
+production models use exactly L_simple versus weighted
+variants is not public.</p>
+<h2 id="videos-for-this-lesson">Videos for this lesson</h2>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/AnWitwNPnN4" title="W8L28: ELBO for DDPM : Part 1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: the DDPM ELBO derived, part 1. If the embed is blocked: <a href="https://www.youtube.com/watch?v=AnWitwNPnN4" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/0p7T-3WiPnQ" title="W8L33: Inference in DDPM" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: inference in DDPM, walking the chain backward to generate. If the embed is blocked: <a href="https://www.youtube.com/watch?v=0p7T-3WiPnQ" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
 <div class="qa"><div class="q">How does the horrible DDPM ELBO become a simple MSE?</div><div class="a"><p>Three moves. Condition on the known x_0 to get a tractable Gaussian posterior per step (mean 3.944 in the toy). Use the Gaussian KL closed form: it reduces to squared error between means. Reparameterize the mean through the added noise: predicting the mean equals predicting ε. Result: L_simple = E||ε − ε_θ(x_t, t)||². In the toy the loss was (0.688 − 0.5)² = 0.0354.
 It is a reweighted version: the per-step weights of the true ELBO are dropped. It optimizes a slightly different bound with slightly worse likelihood but much better samples. The field kept the reweighting deliberately.</p><div class="followup"><strong>Follow-up:</strong> Is L_simple still a valid ELBO?</div></div></div>
+<div class="qa"><div class="q">Walk me through move 1 on fresh numbers.</div><div class="a"><p>x_0 = 10.0, x_3 = 6.934 (from the Lesson 8 exercise), α_3 = 0.8, ᾱ_2 = 0.64, ᾱ_3 = 0.512, β_3 = 0.2. Coeff of x_0: √0.64·0.2/(1−0.512) = 0.8·0.2/0.488 = 0.328. Coeff of x_3: √0.8·(1−0.64)/0.488 = 0.8944·0.36/0.488 = 0.660. μ̃_3 = 0.328·10 + 0.660·6.934 = 3.28 + 4.576 = 7.856. Between the noisy 6.934 and the clean 10, closer to the noisy point because β_3 is large. Variance: ((1−0.64)/(1−0.512))·0.2 = (0.36/0.488)·0.2 = 0.148.
+Because this step&rsquo;s noise (β_3 = 0.2) is large relative to the accumulated certainty. The posterior hedges: it trusts the noisy observation more when the step noise is big. As β_t → 0, the mean converges to x_t itself: no noise added, nothing to undo.</p><div class="followup"><strong>Follow-up:</strong> Why is the mean closer to x_3 than x_0 here?</div></div></div>
 <div class="qa"><div class="q">What is the network actually predicting?</div><div class="a"><p>The noise ε that was added to make x_t. Since x_t = √ᾱ_t x_0 + √(1−ᾱ_t) ε, knowing ε reveals x_0, and knowing x_0 reveals the score −ε/√(1−ᾱ_t) = −1.578 in the toy. Three equivalent targets. Noise prediction trains best.
 The noise has a fixed scale (standard Gaussian) at every step t, while x_0&rsquo;s scale relative to x_t varies wildly with t. A network predicting a fixed-scale target trains more stably. Same information, friendlier regression.</p><div class="followup"><strong>Follow-up:</strong> Why does predicting noise work better than predicting x_0?</div></div></div>
 <div class="qa"><div class="q">How do you generate from a trained DDPM?</div><div class="a"><p>Draw x_T ~ N(0,1), then iterate x_{t-1} = (1/√α_t)(x_t − (β_t/√(1−ᾱ_t))ε_θ) + √β̃_t·z down to t = 1. In the toy, x_2 = 3.9 became x_1 = 4.059 with z = 0.3: a step back toward the clean 4.0 plus controlled randomness. The z terms at each step are what make outputs differ.
 The mean path gives one deterministic output per x_T: less variety, and errors compound without the stochastic correction. The added noise keeps each step a true sample from the reverse Gaussian, which is what the ELBO trained. Deterministic variants exist (DDIM, Lesson 10) but they change the sampler deliberately.</p><div class="followup"><strong>Follow-up:</strong> Why add noise during generation? Why not just take the mean?</div></div></div>
+<div class="qa"><div class="q">Your DDPM trains but the samples are noisy at low t and blurry at high t. What went wrong?</div><div class="a"><p>The network underfits at different noise levels differently. Noisy-at-low-t means it never learned fine denoising: the schedule may kill the signal too fast, starving low-t training, or the network lacks capacity at fine detail. Blurry-at-high-t means the coarse structure prediction is weak. Diagnose per-t: plot the loss broken down by t. The fix follows the curve: rebalance the schedule or add capacity where the loss is high.
+It averages over t uniformly. A disaster at 50 steps can hide inside a good average over 1000. Always inspect the loss per noise level, not just the mean. The reweighting that made L_simple simple also made it blind to per-t failures.</p><div class="followup"><strong>Follow-up:</strong> Why does L_simple hide this?</div></div></div>
+<div class="qa"><div class="q">You want the model to also report uncertainty per step (learn Σ_θ). What changes?</div><div class="a"><p>Add a variance head to the network and restore the true ELBO weights: the loss becomes the full per-step KL, not the unweighted MSE. Likelihood improves (the model can say &ldquo;I am unsure here&rdquo;), sample quality usually drops slightly, and training gets twitchier: the variance head is the unstable part move 2 removed. The decision rule: learn variances for likelihood benchmarks, fix them for sample quality.
+Because the unweighted MSE spends equal effort at every noise level, which matches human perception better than the ELBO&rsquo;s weights (which overweight near-noiseless steps). The &ldquo;wrong&rdquo; objective trains the right thing for the eye. Another case of the field choosing samples over likelihood.</p><div class="followup"><strong>Follow-up:</strong> Why did the simple version win on samples?</div></div></div>
+<div class="qa"><div class="q">Design a training loop for a DDPM on 32×32 images. Write the steps.</div><div class="a"><p>Repeat these steps. (1) Sample a batch of images x_0. (2) Sample t uniformly from 1..T per image. (3) Sample ε ~ N(0,1) with the image&rsquo;s shape. (4) Form x_t = √ᾱ_t x_0 + √(1−ᾱ_t) ε via the closed form (no chaining). (5) Predict ε_θ(x_t, t). (6) Set loss = mean((ε − ε_θ)²). (7) Backprop and step. That is the entire loop. No adversary, no posterior, no variance heads.
+Three places. The schedule (signal dies too fast, starving some t). The t sampling (uniform is standard, non-uniform needs reweighting). And the network&rsquo;s time conditioning (if ε_θ ignores t, one network must handle all noise levels blind: it cannot). Check all three before blaming the math.</p><div class="followup"><strong>Follow-up:</strong> Where can this loop go wrong in practice?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
 <li><strong>The task.</strong> Train the reverse Gaussians via the chain ELBO: a sum of T KL terms.</li>
@@ -403,21 +459,20 @@ The mean path gives one deterministic output per x_T: less variety, and errors c
 </ol>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
-- W8L28/L29: ELBO for DDPM (Parts 1-2):
-  https://www.youtube.com/watch?v=AnWitwNPnN4
-- W8L30: Optimization of DDPM loss:
-  https://www.youtube.com/watch?v=yzU0ueuABLw
-- W8L31: ELBO Equivalence. W8L32/33: Training/Inference of DDPM.</p>
+- W8L28: ELBO for DDPM Part 1: <a href="https://www.youtube.com/watch?v=AnWitwNPnN4">paper</a>
+- W8L29: ELBO for DDPM Part 2: <a href="https://www.youtube.com/watch?v=wPx64rVy2c4">paper</a>
+- W8L30: Optimization of DDPM loss: <a href="https://www.youtube.com/watch?v=yzU0ueuABLw">paper</a>
+- W8L33: Inference in DDPM: <a href="https://www.youtube.com/watch?v=0p7T-3WiPnQ">paper</a></p>
 <p><strong>Further reading:</strong>
 - Ho, Jain, Abbeel, &ldquo;Denoising Diffusion Probabilistic Models&rdquo; (2020):
-  https://arxiv.org/abs/2006.11239: sections 3-4 are this lesson&rsquo;s three moves.</p>
+  - <a href="https://arxiv.org/abs/2006.11239">sections 3-4 are this lesson&rsquo;s three moves.</a></p>
 <p><strong>Caveats.</strong> The W8L28 transcript was fetched but not read in full. W8L30-33 transcripts were not recovered. This lesson follows the Ho et al. derivation, which the lecture series tracks. [uncertain] The lecture&rsquo;s exact algebraic path and emphasis are unknown.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
 <li><strong>CS229 L11 (diffusion models):</strong> that course trains the same ε_θ network with the same L_simple. A worked tie: at step t with ᾱ_t = 0.5, the network sees x_t = 0.707·x_0 + 0.707·ε and must output ε. If it outputs ε_θ = 0.9ε (10% short), the loss is 0.01·||ε||² per dimension: the training signal is exactly the shortfall, at every step, in both courses.</li>
 <li><strong>CS336:</strong> the ε_θ network is usually a U-Net with attention, the same transformer blocks that course builds. The math of this lesson is the objective. The architecture is shared machinery.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=AnWitwNPnN4" target="_blank" rel="noopener">W8L28/L29: ELBO for DDPM (videos AnWitwNPnN4, wPx64rVy2c4)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=yzU0ueuABLw" target="_blank" rel="noopener">W8L30: Optimization of DDPM loss (video yzU0ueuABLw)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=0p7T-3WiPnQ" target="_blank" rel="noopener">W8L33: Inference in DDPM (video 0p7T-3WiPnQ)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2006.11239" target="_blank" rel="noopener">Ho, Jain, Abbeel, Denoising Diffusion Probabilistic Models (2020)</a></li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=AnWitwNPnN4" target="_blank" rel="noopener">W8L28: ELBO for DDPM Part 1 (video AnWitwNPnN4)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=wPx64rVy2c4" target="_blank" rel="noopener">W8L29: ELBO for DDPM Part 2 (video wPx64rVy2c4)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=yzU0ueuABLw" target="_blank" rel="noopener">W8L30: Optimization of DDPM loss (video yzU0ueuABLw)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=0p7T-3WiPnQ" target="_blank" rel="noopener">W8L33: Inference in DDPM (video 0p7T-3WiPnQ)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2006.11239" target="_blank" rel="noopener">Ho, Jain, Abbeel, Denoising Diffusion Probabilistic Models (2020)</a></li></ul></section>
       <nav class="pager"><a href="../math-genai/l08-ddpm-forward.html"><span class="lbl">← Previous</span>Lecture 8: Diffusion: Destroying Data on Purpose</a><a href="../math-genai/l10-score-ddim-ar.html"><span class="lbl">Next →</span>Lecture 10: Scores, Shortcuts, and the Autoregressive Family</a></nav>
     </article>
     <footer class="pagefoot">
