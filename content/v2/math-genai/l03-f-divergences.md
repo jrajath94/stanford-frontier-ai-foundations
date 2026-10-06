@@ -11,6 +11,8 @@ date: "2026-10-05"
 instructor: "Prof. Prathosh A P"
 offering: "2025"
 video_id: nfZQYopzv20
+video_title: "W1L3: f-Divergence"
+video_caption: "The lecture video for this lesson: the f-divergence family, worked by hand. Timestamps in the text link to the exact moment."
 concepts: [f-divergence, jensen-shannon, total-variation, variational-bound, critic, gan-objective]
 sources:
   - tag: video
@@ -56,6 +58,17 @@ divergence is always non-negative. And it is zero if and only if
 the two distributions match exactly. So every f gives a usable
 training target: turn θ until it hits zero.
 
+### Why convexity is non-negotiable
+
+Convexity is what makes the non-negativity proof work. Jensen's
+inequality says the average of a convex function sits above the
+function of the average: E[f(u)] ≥ f(E[u]). The average ratio
+E[p_X/p_θ] over the model equals 1 (both densities integrate to
+1). So D_f ≥ f(1) = 0. Drop convexity and the proof collapses:
+the "divergence" could go negative and training would chase a
+meaningless target. The decision rule: any f you invent must be
+convex with f(1) = 0, or it is not a divergence.
+
 ## Three members, one toy, real numbers
 
 Take the same coin toy from Lesson 2. Truth P_X = {0.5, 0.5},
@@ -63,7 +76,9 @@ model P_θ = {0.9, 0.1}. The density ratios are 0.5/0.9 = 0.556
 for heads and 0.5/0.1 = 5.0 for tails. Now run three choices
 of f.
 
-**KL divergence.** f(u) = u log u. Plug in:
+### KL: the u log u member
+
+f(u) = u log u. Plug in:
 
 ```ascii
 D = 0.9 * f(0.556) + 0.1 * f(5.0)
@@ -74,11 +89,13 @@ D = 0.9 * f(0.556) + 0.1 * f(5.0)
 
 Same 0.51 nats as Lesson 2. KL is the u log u member of the
 family. The algebra cancels the p_θ weights and leaves
-sum P_X log(P_X / P_θ), exactly Lesson 2's formula.
+sum P_X log(P_X / P_θ), exactly Lesson 2's formula. Nothing new
+here except the viewpoint: KL is one setting of the f knob.
 
-**Jensen-Shannon divergence.** f(u) = 0.5 u log u −
-0.5 (u+1) log((u+1)/2). This one is symmetric: it treats truth
-and model alike. On the toy:
+### Jensen-Shannon: the symmetric one
+
+f(u) = 0.5 u log u − 0.5 (u+1) log((u+1)/2). This one is
+symmetric: it treats truth and model alike. On the toy:
 
 ```ascii
 f(0.556) = 0.5*0.556*log 0.556 - 0.5*1.556*log 0.778
@@ -94,8 +111,10 @@ has a price, though: JS saturates. When the distributions
 barely overlap, JS sits near its maximum and its gradient
 nearly vanishes. Lesson 4 shows this stalling GAN training.
 
-**Total variation distance.** f(u) = 0.5 |u − 1|. The
-simplest member: half the absolute mismatch.
+### Total variation: the simple one
+
+f(u) = 0.5 |u − 1|. The simplest member: half the absolute
+mismatch.
 
 ```ascii
 D = 0.9 * 0.5*|0.556 - 1| + 0.1 * 0.5*|5.0 - 1|
@@ -106,7 +125,10 @@ D = 0.9 * 0.5*|0.556 - 1| + 0.1 * 0.5*|5.0 - 1|
 TV scores 0.4 and is symmetric too. It measures the largest
 gap in probability the two rules assign to any single event.
 Simple, but its absolute value has a kink at zero that makes
-gradient optimization awkward.
+gradient optimization awkward. The decision rule: TV is for
+theory and proofs, not for gradient descent.
+
+### Reading the table: f is a design choice
 
 | Divergence | f(u) | Coin toy score | Personality |
 |---|---|---|---|
@@ -117,7 +139,11 @@ gradient optimization awkward.
 The lecture's point: choosing f chooses the training
 dynamics. Different f, different properties, different model.
 
+![Three f's, one coin toy: 0.511, 0.102, 0.400](assets/l03-three-members.webp "Same truth, same model. The f chooses the score. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
 ## Where density estimation breaks
+
+### The plug-in trap
 
 Here is the trap the whole lecture is built to escape. Every
 f-divergence is written with densities p_X and p_θ. But Lesson
@@ -126,14 +152,18 @@ samples from P_X (the dataset) and samples from P_θ (push noise
 through the generator). The naive fix is to estimate both
 densities from samples, then plug into the formula.
 
+### Why 12,288 dimensions kill the plug-in
+
 Watch it fail on images. A 64×64 color photo has 12,288
 numbers. Estimating a density over that space from samples is
 hopeless: the samples are isolated points in a vast empty
-space, and any density estimate is mostly guesswork. The error
-in the density estimate then poisons the divergence. High
-dimensions kill the plug-in approach. This is the wall the
-lecture hits on purpose, because the way around it is the
-lecture's main contribution.
+space, and any density estimate is mostly guesswork. Count the
+scale: even a crude histogram with 2 bins per dimension needs
+2^12288 cells. The observable universe has about 10^80 atoms.
+The histogram needs 10^3698 cells. The error in the density
+estimate then poisons the divergence. High dimensions kill the
+plug-in approach. This is the wall the lecture hits on purpose,
+because the way around it is the lecture's main contribution.
 
 ## The key question
 
@@ -141,6 +171,8 @@ Can you measure the distance between two distributions using
 only samples from each, never estimating either density?
 
 ## The new idea: a critic that lower-bounds the divergence
+
+### The dual form: maximize over critics
 
 The answer is a variational trick. Every f-divergence has a
 dual form: instead of integrating over densities, maximize over
@@ -160,12 +192,7 @@ The critic T plays a game: score real samples high, score
 generated samples in a way that keeps the second term small.
 The best critic's score equals the true divergence.
 
-Since we cannot search over all functions, we approximate T
-with a neural network T_w. The max becomes approximate, so we
-get a **lower bound** on the divergence, not the exact value.
-Training now has two players: the critic w tightens the bound
-by maximizing, and the generator θ shrinks the divergence by
-minimizing. That two-player structure is the GAN.
+### The coin-toy critic, worked
 
 Watch the bound on the coin toy. Take the JS-flavored f and a
 tiny critic: T(heads) = a, T(tails) = b, two numbers to tune.
@@ -183,17 +210,50 @@ The bound is honest: it never overclaims the distance.
 The generator then moves θ to push even the best critic's
 score down.
 
+Since we cannot search over all functions, we approximate T
+with a neural network T_w. The max becomes approximate, so we
+get a **lower bound** on the divergence, not the exact value.
+Training now has two players: the critic w tightens the bound
+by maximizing, and the generator θ shrinks the divergence by
+minimizing. That two-player structure is the GAN.
+
+### Bound, not value: the weak-critic lie
+
+The honest property cuts both ways. The bound never overclaims,
+so a weak critic underestimates the distance. The generator
+then optimizes a lie: it thinks it is close when it is not.
+The numbers: a critic stuck at 0.06 tells the generator the
+job is nearly done, while the true distance is 0.102, almost
+twice as far. In practice this means the critic must be trained
+well at every step, which doubles the optimization burden and
+is the root of GAN instability. The decision rule: if the
+critic is weak, the generator's gradients are fiction. Train
+the critic first, trust the generator second.
+
+![A critic lower-bounds the divergence from samples alone](assets/l03-variational-bound.webp "Best critic = true divergence. Weak critic = honest underestimate. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
+
 ## The GAN falls out
+
+### The conjugate of the GAN's f
 
 Now the lecture specializes to the GAN's f:
 f(u) = u log u − (u+1) log(u+1). Its conjugate is
-f*(t) = −log(1 − e^t), defined for t < 0. To keep the critic
-in that domain, write it as a composition: T_w(x) =
-σ_f(V_w(x)), where V_w is an ordinary network ending in one
-real number and σ_f(v) = −log(1 + e^{−v}) maps reals to
-negative numbers. Substitute everything into the bound and
-rearrange. The lecture does the algebra. The result is the
-famous objective:
+f*(t) = −log(1 − e^t), defined for t < 0. The domain matters:
+feed the conjugate a positive t and e^t exceeds 1, the log
+goes negative inside, and the math breaks.
+
+### The reparameterization that respects the domain
+
+To keep the critic in that domain, write it as a composition:
+T_w(x) = σ_f(V_w(x)), where V_w is an ordinary network ending
+in one real number and σ_f(v) = −log(1 + e^{−v}) maps reals to
+negative numbers. Any real v lands at a negative t. The domain
+constraint is handled by construction, not by hope.
+
+### The famous objective
+
+Substitute everything into the bound and rearrange. The lecture
+does the algebra. The result is the famous objective:
 
 ```ascii
 J = E[ log D(x) ] + E[ log(1 - D(x_hat)) ]
@@ -212,6 +272,8 @@ derive its loss this way. This variational view is the deeper
 explanation, and it shows the GAN is one point in a large
 design space. Change f, change the game.
 
+![Choose the GAN's f, and the GAN objective falls out](assets/l03-gan-falls-out.webp "One substitution chain: f to conjugate to critic reparameterization to the game. Shell 3. Source: f-GAN paper. Project: Stanford Frontier AI.")
+
 ## The honest price: a bound, not the thing
 
 The variational trick costs exactly what it saves. We never
@@ -228,13 +290,27 @@ GAN's JS-like f saturates when the distributions are far
 apart: the divergence sits near its max and the gradient
 dies. Lesson 4 demonstrates this saturation numerically.
 The f-GAN paper's answer is to pick a friendlier f, but no
-choice removes the two-player tension entirely.
+choice removes the two-player tension entirely. The decision
+rule: pick f for the dynamics you want, then budget twice the
+optimization effort for the critic.
+
+## Videos for this lesson
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/EHhURRwMEPo" title="W2_L6: Generative adversarial networks: introduction" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: the f, f*, and σ_f derivation on the board, leading to the GAN objective. If the embed is blocked: <a href="https://www.youtube.com/watch?v=EHhURRwMEPo" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/mEvIvOYCVmE" title="Entropy and KL Divergence, Visually" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">External explainer: KL divergence built visually from entropy, the family member this lesson generalizes. If the embed is blocked: <a href="https://www.youtube.com/watch?v=mEvIvOYCVmE" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
 
 > [!QA]
 > Q: What is an f-divergence?
 > A: A family of distribution distances indexed by a convex function f with f(1) = 0: D_f = integral p_θ(x) f(p_X(x)/p_θ(x)) dx. KL (f = u log u), Jensen-Shannon, and total variation (f = 0.5|u−1|) are members. On the coin toy they scored 0.511, 0.102, and 0.4. Every member is non-negative and zero only for identical distributions.
 > Follow-up: Why have a whole family instead of just KL?
 > A: Because f controls training dynamics. KL explodes on zero probabilities and covers modes. JS is symmetric but saturates when distributions are far apart. TV is simple but kinked. The lecture treats f as a design choice with consequences.
+
+> [!QA]
+> Q: Walk me through the variational bound on a fresh toy.
+> A: Truth {0.6, 0.4}, model {0.4, 0.6}. A critic T scores each outcome. The bound is E[T] over truth minus E[f*(T)] over model. If the critic learns T(heads) high (truth's likelier outcome), the first term grows. The second term penalizes the critic for scoring the model's samples high. The max over T equals the true divergence. Any weaker T gives a smaller, honest number.
+> Follow-up: Why is "honest" the right word?
+> A: Because the bound never exceeds the true divergence. A weak critic can only underreport the distance, never invent distance that is not there. The generator may be misled by an underreport, but the critic never frames an innocent model.
 
 > [!QA]
 > Q: How can you compute a divergence from samples alone?
@@ -247,6 +323,24 @@ choice removes the two-player tension entirely.
 > A: Choose the GAN's f(u) = u log u − (u+1) log(u+1). Its conjugate is f*(t) = −log(1 − e^t) on negative t. Write the critic as σ_f(V_w(x)) to respect the domain, substitute into the bound, and rearrange: you get E[log D(x)] + E[log(1 − D(x̂))] with D the sigmoid of the critic. The critic maximizes it, the generator minimizes it.
 > Follow-up: Did the original GAN paper derive it this way?
 > A: No. The original paper motivated the game directly. This variational derivation came later (f-GAN, 2016) and is the deeper view: it shows the GAN is one choice of f in a large design space.
+
+> [!QA]
+> Q: You are designing a GAN for sharp product photos. Which f do you pick, and why?
+> A: Start with the GAN's JS-like f: it is symmetric and calm near the solution, and the whole DCGAN architecture family is tuned for it. But watch the start of training: if real and generated distributions barely overlap, JS saturates and gradients die. The f-GAN answer is to switch to a friendlier f with stronger far-apart gradients, or move to the Wasserstein distance of Lesson 5, which never saturates.
+> Follow-up: What is the first diagnostic you watch?
+> A: The critic's score gap between real and fake batches. If D(x) sits at 1.0 on real and 0.0 on fake from step one, the critic is perfect, the JS is saturated, and the generator learns nothing. A healthy game keeps the critic uncertain: D around 0.5 to 0.8 on fakes.
+
+> [!QA]
+> Q: Why can you not just estimate both densities and plug them into the f-divergence formula?
+> A: The curse of dimensionality. A 64×64 color image has 12,288 dimensions. A histogram with 2 bins per dimension needs 2^12288 cells. The universe has ~10^80 atoms. Any density estimate from realistic sample counts is mostly empty space and guesswork, and its errors poison the divergence. The variational bound sidesteps density estimation entirely.
+> Follow-up: Does the bound have its own curse?
+> A: Yes, but a milder one: the critic must be expressive enough to approximate the optimal T in high dimensions. That is a function-approximation problem, which neural networks handle far better than density estimation. The price moved from impossible to merely expensive.
+
+> [!QA]
+> Q: Total variation is the simplest f-divergence. Why does nobody train with it?
+> A: The kink. f(u) = 0.5|u−1| has a non-differentiable corner at u = 1, exactly where training wants to converge. Gradient descent near the solution gets conflicting subgradients and chatters instead of settling. TV stays in the theory chapters: it is the cleanest way to prove statements, and the worst way to optimize them.
+> Follow-up: Where does TV actually get used?
+> A: In proofs and in evaluation. TV bounds the worst-case probability gap on any event. So it certifies statements like "no classifier can distinguish real from fake better than 0.5 + TV". It judges. It does not train.
 
 ## Recap: the whole lesson on one screen
 
@@ -262,18 +356,15 @@ choice removes the two-player tension entirely.
 ## Official sources and further reading
 
 **Official:**
-- W1L3: f-Divergence:
-  https://www.youtube.com/watch?v=nfZQYopzv20
-- W1L4: Variational divergence minimization:
-  https://www.youtube.com/watch?v=VxRIqenOoQw
+- W1L3: f-Divergence: [paper](https://www.youtube.com/watch?v=nfZQYopzv20)
+- W1L4: Variational divergence minimization: [paper](https://www.youtube.com/watch?v=VxRIqenOoQw)
 - W2_L6: GANs introduction:
-  https://www.youtube.com/watch?v=EHhURRwMEPo: the f, f*, and σ_f derivation confirmed in transcript.
+  - [the f, f*, and σ_f derivation confirmed in transcript.](https://www.youtube.com/watch?v=EHhURRwMEPo)
 
 **Further reading:**
 - Nowozin, Cseke, Tomioka, "f-GAN: Training Generative Neural Samplers using Variational Divergence Minimization" (2016):
-  https://arxiv.org/abs/1606.00709: the paper version of this lecture.
-- Goodfellow et al., "Generative Adversarial Nets" (2014):
-  https://arxiv.org/abs/1406.2661
+  - [the paper version of this lecture.](https://arxiv.org/abs/1606.00709)
+- Goodfellow et al., "Generative Adversarial Nets" (2014): [paper](https://arxiv.org/abs/1406.2661)
 
 **Caveats.** The f-divergence definition, the three examples, and the GAN specialization (f, f*, σ_f, final objective) are confirmed in the W1L3 and W2_L6 transcripts. The coin-toy scores and the two-parameter critic demonstration are the lesson's own worked numbers. [uncertain] The lecture's exact numeric examples are unknown.
 
