@@ -258,7 +258,8 @@ immediate reward. At position 3: left gives -1, right gives -1. Tie.
 Say it goes left to 2. At 2: left -1, right -1. Wanders. The greedy
 agent never reasons that 9 rights in a row earn +10. It chases
 immediate reward and misses the dock forever, paying -1 per step
-into eternity. Total: negative infinity (discounted: -100).</p>
+into eternity. Total: negative infinity (discounted at gamma = 0.9:
+-1/(1-0.9) = -10).</p>
 <p>The failure: rewards are delayed. The action&rsquo;s value is not its
 immediate reward but the future it leads to. Greedy is blind to the
 future.</p>
@@ -273,11 +274,28 @@ discounted value later.</p>
 <p>Work the toy. Policy: always go right. Deterministic moves,
 gamma = 0.9, dock at 10 gives +10, each step -1. V(10) = 0 (done).
 V(9) = -1 + 0.9<em>10 = 8.0. V(8) = -1 + 0.9</em>8.0 = 6.2. V(7) = -1 +
-0.9<em>6.2 = 4.58. Walking back: V(3) = -1 + 0.9</em>V(4), and V(4) =
-2.46, so V(3) = 1.21. The value at 3 is +1.21: going right is worth
-it despite the -1 steps, because the dock pays. Q(3, right) = 1.21,
-Q(3, left) = -1 + 0.9<em>V(2) = -1 + 0.9</em>(-0.71) = -1.64. Right wins
-by the numbers. Values turn delayed rewards into present prices.</p>
+0.9<em>6.2 = 4.58. Walking back: V(6) = 3.12, V(5) = 1.81, V(4) =
+0.63, V(3) = -0.43. (An earlier draft of this lesson wrote V(4) =
+2.46 and V(3) = 1.21: wrong. The audit is in the subchapter
+below.) The value at 3 is negative: 7 discounted -1 steps outweigh
+the discounted +10. But Q(3, right) = -0.43 still beats Q(3, left)
+= -1 + 0.9</em>V(2) = -1 + 0.9*(-1.39) = -2.25. Right wins by the
+numbers: not because it is profitable, but because it loses
+least. Values turn delayed rewards into present prices, including
+bad news.</p>
+<h3 id="subchapter-the-value-walk-audited">Subchapter: the value walk, audited</h3>
+<p>Run the chain the draft skipped. V(9) = 8.0, V(8) = 6.2, V(7) =
+4.58 are correct. Continue: V(6) = -1 + 0.9<em>4.58 = 3.122. V(5) =
+-1 + 0.9</em>3.122 = 1.8098. V(4) = -1 + 0.9<em>1.8098 = 0.6288. V(3) =
+-1 + 0.9</em>0.6288 = -0.4341. The draft&rsquo;s 2.46 and 1.21 appear
+nowhere in this chain: they were hand-waved. Cross-check V(3)
+directly: 7 steps of -1 discounted give -(1-0.9^7)/0.1 = -5.217.
+The dock gives 0.9^7*10 = 4.783. Total: -0.434. Matches. The qualitative point
+survives with honest numbers: from position 3 the dock does not
+pay for the trip, but right (-0.43) still beats left (-2.25). Value
+functions do not promise good news. They price the future
+exactly, and sometimes the price is negative.</p>
+<figure><img alt="Value audit" src="assets/plate-l16-value-audit.webp"><figcaption>The value walk, audited. Draft: V(4)=2.46, V(3)=1.21. True chain: V(4)=0.63, V(3)=-0.43. Right still beats left: -0.43 vs -2.25. Source: original audit for the Bellman chain. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-key-question">The key question</h2>
 <p>Values evaluate a policy. But how do we <em>improve</em> a parameterized
 policy pi_theta (say, a neural network mapping states to action
@@ -287,7 +305,7 @@ differentiable and the future depends on our own changing actions?</p>
 <p>The objective: J(theta) = expected total reward under pi_theta.
 The gradient seems impossible: the expectation is over trajectories
 the policy itself generates, and rewards have no derivatives. The
-<strong>log-derivative trick</strong> unlocks it:</p>
+<strong>log-derivative trick</strong> makes it work:</p>
 <pre class="ascii">gradient of E[R] = E[ R * gradient of log pi_theta(actions) ]
 </pre>
 <p>Why it works, in one line: the gradient of a probability is the
@@ -311,6 +329,34 @@ theta up: theta += alpha * 3 * (1 - 0.6) = theta + 0.12 (alpha =
 total = -12. theta += 0.1 * (-12) * grad: left&rsquo;s probability
 falls. Over many trajectories, the policy shifts toward the dock.</p>
 <figure><img alt="Policy gradient" src="assets/svg/l16-pg.svg"><figcaption>REINFORCE. Trajectories with high total reward push their actions' probabilities up. Reinforce the good actions. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-subtract-the-luck">Subchapter: subtract the luck</h3>
+<p>REINFORCE scales each update by the raw total: 3 on a lucky run,
+-12 on an unlucky one. Subtract a <strong>baseline</strong> b: theta += alpha
+* (total - b) * grad log pi. Any b that does not depend on the
+action keeps the estimator unbiased, because E[b * grad log pi] =
+b * E[grad log pi] = 0 (the expected score is the gradient of 1).
+Pick b as the average total, say -4.5 for our two runs: the
+updates scale by 3-(-4.5) = 7.5 and -12-(-4.5) = -7.5 instead of 3
+and -12. Same direction, less wild. The best baseline is the value
+V(s): the expected total from here. Total minus value is the
+<strong>advantage</strong>: how much better this run did than par. Lecture 17&rsquo;s
+whole variance machinery starts here: subtract the predictable,
+learn from the surprise.</p>
+<figure><img alt="Baseline" src="assets/plate-l16-baseline.webp"><figcaption>Subtract the luck. Raw totals 3 and -12: wild updates. Baseline -4.5: updates scale by 7.5 and -7.5. Same direction, calmer. Source: original plate for the baseline. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-who-earned-the-10">Subchapter: who earned the +10?</h3>
+<p>Seven rights, one +10. REINFORCE credits each right equally: every
+step&rsquo;s update scales by the total 3. But the 7th right (9 to 10)
+earned the dock. The 1st right (3 to 4) merely did not ruin
+things. Equal credit is wrong per step and right on average: that
+is the variance problem wearing a mask. True per-step credit needs
+the <strong>advantage</strong> of each action: Q(3,right) - V(3), how much
+better this action was than the state&rsquo;s par. At the dock, the
+advantage concentrates on the final steps. Far away, advantages are
+near zero: those steps were routine. Lecture 17 builds the
+machinery that prices each step separately. REINFORCE&rsquo;s price for
+skipping it: millions of trajectories to average out the
+misattribution.</p>
+<figure><img alt="Credit" src="assets/plate-l16-credit.webp"><figcaption>Who earned the +10? Seven rights share the total 3 equally. The 7th right earned the dock. The 1st merely survived. Source: original plate for the credit assignment. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="where-it-breaks-variance">Where it breaks: variance</h2>
 <p>REINFORCE&rsquo;s gradient is a single trajectory&rsquo;s opinion. One lucky
 run (total 3) and one unlucky run (total -12) give violently
@@ -352,7 +398,7 @@ pays down the variance bill.</p>
 <tr>
 <td>Values + Bellman</td>
 <td>Greedy chases -1 steps forever, misses the +10</td>
-<td>V(9)=8.0, V(3)=1.21: delayed rewards priced into the present; Q(3,right)=1.21 beats Q(3,left)=-1.64</td>
+<td>V(9)=8.0 down to V(3)=-0.43: delayed rewards priced into the present, honestly negative; Q(3,right)=-0.43 beats Q(3,left)=-2.25</td>
 </tr>
 <tr>
 <td>REINFORCE</td>
@@ -370,8 +416,17 @@ pays down the variance bill.</p>
 S = positions 1..10. A = {left, right}. P: move succeeds with 0.9, stays with 0.1 (slippery). R: +10 at dock (10), -1 per step. Gamma = 0.9. Policy pi(a|s): the strategy. Goal: maximize expected discounted total.</p><div class="followup"><strong>Follow-up:</strong> Give the five pieces for the robot toy.</div></div></div>
 <div class="qa"><div class="q">Derive the REINFORCE update in words.</div><div class="a"><p>Objective J = expected total reward under pi_theta. The log-derivative trick: grad E[R] = E[R * grad log pi_theta(trajectory)]. Since a trajectory&rsquo;s log-probability is the sum of its steps&rsquo; log-probs, the gradient is: sample a trajectory, compute its total reward, and for each step move theta along grad log pi(action|state) scaled by the total. High-reward trajectories push their actions&rsquo; probabilities up. In the toy, a dock-reaching run with total 3 raised pi(right|3) via theta += 0.1<em>3</em>0.4.
 Each gradient is one trajectory&rsquo;s opinion: the same policy produces totals of 3 and -12 by luck. The estimator averages correctly but swings wildly per sample, so steps must be small and many. Worse, it is on-policy: trajectories go stale when theta moves, so every update needs fresh rollouts. The next lecture&rsquo;s baselines subtract the luck to calm it.</p><div class="followup"><strong>Follow-up:</strong> Why is REINFORCE high-variance?</div></div></div>
-<div class="qa"><div class="q">What is the Bellman equation, and what is it for?</div><div class="a"><p>V(s) = E[R(s,a) + gamma V(s&rsquo;)]: the value of a state equals the immediate reward plus the discounted value of where you land. It is the consistency condition every value function must satisfy, and it turns the global problem (maximize total future reward) into a local one (one-step lookahead with priced futures). In the toy it priced position 3 at +1.21 despite the -1 steps, proving right beats left without simulating to the dock each time.
+<div class="qa"><div class="q">What is the Bellman equation, and what is it for?</div><div class="a"><p>V(s) = E[R(s,a) + gamma V(s&rsquo;)]: the value of a state equals the immediate reward plus the discounted value of where you land. It is the consistency condition every value function must satisfy, and it turns the global problem (maximize total future reward) into a local one (one-step lookahead with priced futures). In the toy it priced position 3 at -0.43 despite the -1 steps, proving right beats left (-0.43 vs -2.25) without simulating to the dock each time. Values report honestly, even when the news is bad.
 V(s) values the state under the policy: what follows from here. Q(s,a) values the state-action pair: what follows if I do a now, then follow the policy. Q lets you choose: pick argmax_a Q(s,a). V lets you evaluate. Bellman links them: V(s) = E_a[Q(s,a)].</p><div class="followup"><strong>Follow-up:</strong> What is the difference between V and Q?</div></div></div>
+
+<div class="qa"><div class="q">Walk me through the mechanism: recompute the value chain and find the draft&#x27;s error.</div><div class="a"><p>V(9) = -1+0.9<em>10 = 8.0, V(8) = 6.2, V(7) = 4.58: correct. Continue: V(6) = -1+0.9</em>4.58 = 3.122, V(5) = 1.8098, V(4) = 0.6288, V(3) = -0.4341. The draft wrote V(4) = 2.46, V(3) = 1.21: hand-waved, nowhere in the chain. Cross-check: 7 discounted -1s = -5.217, discounted dock = 4.783, total -0.434. Matches. Right still beats left: Q(3,right) = -0.43 vs Q(3,left) = -2.25. The conclusion changes honestly: from 3 the trip loses money, but right loses least.
+Yes, and the values prove it: Q(3,right) = -0.43 &gt; Q(3,left) = -2.25, and the same ordering holds at every state (each right moves one step closer to the only positive reward). Optimal does not mean profitable: the MDP&rsquo;s rewards make position 3 a losing spot under any policy. Values report the best available, not a good one.</p><div class="followup"><strong>Follow-up:</strong> If V(3) is negative, is &quot;always go right&quot; still the optimal policy?</div></div></div>
+<div class="qa"><div class="q">Applied design: reward-shaping for a warehouse robot. Goal: reach the shelf. Constraints: avoid humans, save battery. Design the rewards and name the hacks.</div><div class="a"><p>+10 reaching the shelf, -1 per step (battery), -100 for coming within 2m of a human. Now red-team it. Hack 1: the robot creeps at minimum speed to&hellip; no, step cost punishes slowness. Hack 2: it takes a long detour around humans that costs 50 steps: -50 vs -100 for proximity: the detour is correct behavior, fine. Hack 3: it oscillates near the shelf without docking to avoid the episode ending&hellip; if docking ends the episode with +10, lingering costs -1/step forever: no hack. The dangerous hack: -100 proximity teaches the robot to blind its human sensor (if sensor input is part of the state, it cannot. If the penalty is computed from a separate detector, it might learn to occlude it). Decision rule: shape rewards, then simulate adversarially: ask what policy maximizes this reward that you do not want.
+The step cost dominates: -1/step with a distant +10 means every policy looks bad, and staying still&hellip; still costs -1/step. If it stays still, check whether the episode times out with zero instead: then stillness (0) beats trying (-0.43). The fix: rebalance so the goal is worth the trip (raise +10 or cut step cost), or add a small penalty for no progress. Reward design is the task specification: the bug is in your spec, not the robot.</p><div class="followup"><strong>Follow-up:</strong> The robot learns to stay still at the start. Diagnose.</div></div></div>
+<div class="qa"><div class="q">Why is subtracting a baseline unbiased?</div><div class="a"><p>The REINFORCE gradient is E[total * grad log pi]. Subtract b: E[(total-b) * grad log pi] = E[total * grad log pi] - b * E[grad log pi]. The second term: E[grad log pi] is the gradient of E[1] = the gradient of 1 = 0 (probabilities sum to 1, always). So any action-independent b vanishes in expectation: unbiased. It only changes the variance: b near the expected total centers the updates. The best b is V(s), giving the advantage: total minus par.
+Yes: b(s) is the standard form, and E[b(s) * grad log pi(a|s)] = 0 still holds because the expectation over actions of the score is zero at each state. State-dependent baselines (the value function) remove more variance than a constant: they subtract what was predictable from here. Action-dependent baselines need care: they can bias.</p><div class="followup"><strong>Follow-up:</strong> Can the baseline depend on the state?</div></div></div>
+<div class="qa"><div class="q">Why can REINFORCE not reuse old trajectories?</div><div class="a"><p>The gradient weights each trajectory by grad log pi_theta under the current theta. A trajectory sampled under last week&rsquo;s theta came from a different distribution: its actions&rsquo; probabilities under the current policy differ, so the weighting is wrong. Reusing it as-is biases the gradient toward the old policy. The fix is importance sampling: weight by pi_new/pi_old per step. But the weights explode or vanish over long trajectories (variance again), which is why PPO (lecture 17) clips them. The standing cost: every update needs fresh rollouts from the current policy. Samples are single-use.
+Each update needs enough trajectories to average out the variance: hundreds to thousands per gradient step, thousands of steps. Millions of rollouts for tasks supervised learning solves in thousands of examples. Simulation is the only reason RL is affordable: the robot toy runs millions of episodes in minutes. Real robots cannot.</p><div class="followup"><strong>Follow-up:</strong> How sample-hungry is that, in numbers?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
 <li><strong>The job.</strong> Robot at 3, dock at 10, +10/-1 rewards. No labels.
@@ -380,8 +435,9 @@ V(s) values the state under the policy: what follows from here. Q(s,a) values th
    Policy pi(a|s): the strategy.</li>
 <li><strong>Greedy fails.</strong> Chases -1 steps, misses +10 forever.
    Delayed rewards need pricing.</li>
-<li><strong>Values.</strong> V(9) = 8.0 down to V(3) = 1.21. Bellman: value now
-   = reward + discounted value later.</li>
+<li><strong>Values.</strong> V(9) = 8.0 down to V(3) = -0.43. Bellman: value
+   now = reward + discounted value later. Honest, even when
+   negative.</li>
 <li><strong>The key question.</strong> Improve pi_theta by gradient when rewards
    do not differentiate?</li>
 <li><strong>REINFORCE.</strong> grad E[R] = E[R grad log pi]. Reinforce good
@@ -390,11 +446,32 @@ V(s) values the state under the policy: what follows from here. Q(s,a) values th
    On-policy: samples are single-use. Millions of rollouts.</li>
 <li><strong>The honest price.</strong> Sample hunger, reward design is the task,
    credit assignment, Markov as modeling choice.</li>
+<li><strong>The audit.</strong> V(4) = 0.63, V(3) = -0.43, not 2.46/1.21.
+   Right beats left: -0.43 vs -2.25. Honest bad news.</li>
+<li><strong>The baseline.</strong> Subtract b: unbiased since E[score] = 0.
+    Best b is V(s): the advantage.</li>
+<li><strong>The credit.</strong> Seven rights share the total. The 7th
+    earned it. Per-step credit needs advantages.</li>
+<li><strong>Greedy, corrected.</strong> Wandering forever at gamma 0.9: -10,
+    not -100.</li>
 </ol>
+<h2 id="what-is-used-where">What is used where</h2>
+<p><strong>RL runs games, robots, and LLM post-training.</strong> Game AI
+(AlphaGo&rsquo;s lineage through AlphaZero) is value functions plus
+search at superhuman scale. Robotics trains in simulation
+(millions of cheap rollouts) and transfers to hardware. <strong>LLM
+post-training is RL:</strong> RLHF/PPO (lecture 17) tune assistants from
+human preference rewards: REINFORCE&rsquo;s grandchild, with baselines
+and clipping. Recommender systems run bandits (one-step RL) for
+explore/exploit. The toy&rsquo;s MDP is the frame. The variance
+machinery is the job.</p>
+<h2 id="watch-next">Watch next</h2>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/mfjWWOsCNIo" title="Explainer: reinforcement learning basics" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: reinforcement learning basics. MDPs, values, and policy gradients in one visual pass. Watch after the REINFORCE section.</p></div>
+
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Lecture 16 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=xveNBYVTrqw — Tengyu Ma builds
+  - <a href="https://www.youtube.com/watch?v=xveNBYVTrqw">Tengyu Ma builds</a>
   the MDP on the robot toy (positions 1-10, dock at 10), derives
   value functions and Bellman, and presents REINFORCE via the
   log-derivative trick.
@@ -417,7 +494,7 @@ methods.</p>
 <li><strong>CS336:</strong> rollout infrastructure: generating millions of
   trajectories at scale.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=xveNBYVTrqw" target="_blank" rel="noopener">Lecture 16 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=xveNBYVTrqw" target="_blank" rel="noopener">Lecture 16 video, Stanford Online YouTube</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=mfjWWOsCNIo" target="_blank" rel="noopener">Explainer: reinforcement learning basics</a></li><li><span class="src-tag">BOOK</span><a href="http://incompleteideas.net/book/the-book-2nd.html" target="_blank" rel="noopener">Sutton and Barto, Reinforcement Learning: An Introduction (2nd ed.)</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
       <nav class="pager"><a href="../cs229/l15-efficient-icl-sft.html"><span class="lbl">← Previous</span>Lecture 15: Attention Variants, In-Context Learning, and SFT</a><a href="../cs229/l17-rl-for-llms.html"><span class="lbl">Next →</span>Lecture 17: RL for Language Models, PPO and Verifiable Rewards</a></nav>
     </article>
     <footer class="pagefoot">
