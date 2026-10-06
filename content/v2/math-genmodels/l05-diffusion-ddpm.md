@@ -141,7 +141,10 @@ jump to any t in one formula.
 
 The **reverse process** is the learned part. Model
 p_theta(x_{t-1} | x_t): given the noisy image and the timestep t,
-predict one step cleaner. The network (usually a U-Net) predicts
+predict one step cleaner. The network is usually a **U-Net**.
+A U-Net compresses the image down through shrinking layers, then
+expands it back up, with shortcut links carrying fine detail
+across the gap. It predicts
 the noise epsilon that was added. Training is plain regression:
 
 ```ascii
@@ -230,7 +233,7 @@ The diffusion model learns the distribution of latents, not
 pixels. Two courses' machines compose: the sculptor compresses,
 the restorer dreams. L06's guidance steers the dreaming.
 
-<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/7juab9uDvJ4" title="How AI Generates Images (Diffusion Models Explained)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: How AI Generates Images, diffusion models explained. DDPM forward and reverse, the noise schedule, the ELBO, latent diffusion, and classifier-free guidance in one pipeline. Watch after the latent-diffusion section.</p></div>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/7juab9uDvJ4" title="How AI Generates Images (Diffusion Models Explained)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: How AI Generates Images, diffusion models explained. DDPM forward and reverse, the noise schedule, the ELBO, latent diffusion, and classifier-free guidance (steering the sampler with the denoiser's own prompt-conditioned and unconditional predictions, no separate classifier) in one pipeline. Watch after the latent-diffusion section.</p></div>
 
 ## Mapping back: what each property fixes
 
@@ -258,7 +261,10 @@ recursed). Second, the ELBO is tight only when each step's
 reversal stays close to the true posterior. Small steps keep the
 approximation honest. T large is not a whim. It is what makes the
 reverser learnable. The field's whole few-step sampler industry
-(L06: DDIM) exists to pay this price down.
+(L06's **DDIM**, Denoising Diffusion Implicit Models: a sampler
+that jumps t = 1000 -> 800 -> 600, estimating the clean image at
+each jump from the same trained denoiser, instead of walking all
+1,000 steps) exists to pay this price down.
 
 ## What is used where: the restorer in production
 
@@ -270,8 +276,15 @@ reverser learnable. The field's whole few-step sampler industry
 | Sora | Diffusion transformer: patches as tokens, diffusion over video latents | Public: OpenAI technical report, Feb 2024 |
 | Stable Diffusion 3 | Rectified flow in latent space (the straight-line cousin, L06) | Public: Esser et al., 2024, arxiv 2403.03206 |
 
+**CLIP** (Contrastive Language-Image Pretraining, Radford et al.,
+2021) is a model trained on image-text pairs. It embeds a photo
+and a sentence into one shared space, so the similarity of the
+two embeddings measures prompt match.
+
 The pattern: text-to-image and text-to-video are diffusion
-territory. The sampler varies (DDPM, DDIM, DPM-Solver), the
+territory. The sampler varies (DDPM, DDIM, **DPM-Solver**: a
+smarter sampler that takes larger, more accurate steps than
+DDIM's plain jumps, reaching good images in 10-20 steps), the
 guidance is almost always classifier-free, and the diffusion
 runs in a latent room. When someone says "diffusion model" in
 production, they mean this stack.
@@ -314,7 +327,7 @@ production, they mean this stack.
 
 > [!QA]
 > Q: Applied: you have a 2-second budget per image and a 50 ms denoiser. Design the sampler.
-> A: 2 seconds / 50 ms = 40 network calls. DDPM's 1,000 steps do not fit. Use DDIM (L06): 40 jumps from the same trained denoiser, deterministic (eta = 0). Expect a small quality cost vs 1,000 steps. Add classifier-free guidance (w around 7) to keep prompt match strong at few steps. If quality still lags, distill: train a student to mimic 2 DDIM steps in 1, halving the calls again. The interview signal: start from the 50-second bill, divide the budget, name the tool that cuts steps without retraining.
+> A: 2 seconds / 50 ms = 40 network calls. DDPM's 1,000 steps do not fit. Use DDIM (L06): 40 jumps from the same trained denoiser, deterministic (eta = 0: no fresh noise per jump, so the same start gives the same image). Expect a small quality cost vs 1,000 steps. Add classifier-free guidance (the guidance scale w around 7) to keep prompt match strong at few steps. If quality still lags, distill: train a student to mimic 2 DDIM steps in 1, halving the calls again. The interview signal: start from the 50-second bill, divide the budget, name the tool that cuts steps without retraining.
 > Follow-up: Why not just train with T = 40 from the start?
 > A: Because large T is what makes the reversal learnable: each step's target stays near-Gaussian. Train at T = 1,000 for learnability, sample at 40 jumps for speed. DDIM exists precisely to separate the two.
 
