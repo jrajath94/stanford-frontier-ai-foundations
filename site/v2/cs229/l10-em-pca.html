@@ -269,6 +269,18 @@ collapses, i.e., when Q puts all its structure where the posterior
 is. So: set Q to the posterior, and maximizing the ELBO pushes the
 true likelihood up.</p>
 <figure><img alt="ELBO" src="assets/svg/l10-elbo.svg"><figcaption>The ELBO. Jensen's inequality turns the log of a sum into a sum: a tractable lower bound. Tight when Q equals the posterior. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-why-the-likelihood-cannot-fall">Subchapter: why the likelihood cannot fall</h3>
+<p>The guarantee is two lines. Write L(theta) for the log likelihood
+and B(theta, Q) for the ELBO. The E-step sets Q_new to the
+posterior at theta_old, which makes the bound tight: B(theta_old,
+Q_new) = L(theta_old). The M-step picks theta_new to maximize the
+bound: B(theta_new, Q_new) &gt;= B(theta_old, Q_new). Chain them:
+L(theta_new) &gt;= B(theta_new, Q_new) &gt;= B(theta_old, Q_new) =
+L(theta_old). The first inequality is Jensen (the bound is below
+the truth). The likelihood never falls. Note what is missing: no
+claim about where it lands. A climber that never descends still
+summits the wrong hill.</p>
+<figure><img alt="Bound touches then climbs" src="assets/plate-l10-elbo-tight.webp"><figcaption>The bound touches, then climbs. E-step: Q equals posterior, the bound touches the likelihood. M-step: climb the bound. The likelihood cannot fall. Source: original plate for the EM guarantee. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="em-alternate-two-easy-steps">EM: alternate two easy steps</h2>
 <p><strong>Expectation-Maximization</strong> alternates. The <strong>E-step</strong>: fix the
 parameters, set Q_i(z) = p(z | x^(i). Theta), the responsibilities.
@@ -295,6 +307,19 @@ boundary point honestly instead of forcing it.</p>
 <p>EM is k-means grown up: E-step softens the assignment into
 responsibilities, M-step softens the mean update into weighted
 averages. Same alternating skeleton, uncertainty preserved.</p>
+<h3 id="subchapter-the-m-step-worked">Subchapter: the M-step, worked</h3>
+<p>The lesson fits the means. Fit the spread too. The M-step updates
+each Gaussian&rsquo;s variance to the responsibility-weighted spread:
+sigma_j^2 = sum_i gamma_ij (x_i - mu_j)^2 / sum_i gamma_ij. On the
+toy, cluster 1 owns {0.5, -0.5, 1.0} with mu_1 = 0.33 (hard
+weights for the audit). Deviations: 0.17, -0.83, 0.67. Squares:
+0.028, 0.694, 0.444. Sum: 1.167. Divide by 3: sigma_1^2 = 0.389,
+sigma_1 = 0.62. The cluster&rsquo;s points spread about 0.62 around
+0.33. With soft weights the same formula applies, and a boundary
+point like 5.0 contributes a little to both clusters&rsquo; spreads.
+Every M-step quantity is a weighted average: means, spreads,
+mixing weights. Weight everything, by the doubt.</p>
+<figure><img alt="M-step worked" src="assets/plate-l10-covariance.webp"><figcaption>The M-step, worked. Mean 0.33, then spread: squared deviations 0.028, 0.694, 0.444 average to sigma squared 0.389. Source: original toy for the M-step variance. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-honest-price-of-em">The honest price of EM</h2>
 <p>EM climbs to a local maximum of the likelihood, not the global one.
 Initialization matters: start the Gaussians badly and EM polishes
@@ -338,6 +363,32 @@ until the kept eigenvalues sum to, say, 95 percent of the total.
 That is the dimensionality reduction: 200 features down to 12, with
 95 percent of the variation intact.</p>
 <figure><img alt="PCA" src="assets/svg/l10-pca.svg"><figcaption>PCA. The first principal component is the cigar's long axis: the direction of maximum variance. Eigenvalues say how much each axis carries. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-pca-on-suv-numbers">Subchapter: PCA on SUV numbers</h3>
+<p>Make the SUV toy concrete. Four SUVs, (length in meters, weight in
+tons): (4,2), (5,3), (6,3), (7,4). Mean: (5.5, 3). Centered:
+(-1.5,-1), (-0.5,0), (0.5,0), (1.5,1). Covariance (divide by 4):
+var(length) = 1.25, var(weight) = 0.5, cov = 0.75. Sigma =
+[[1.25, 0.75],[0.75, 0.5]]. Eigenvalues: (1.75 +/- sqrt(1.75^2 -
+4<em>0.0625))/2 = 1.7135 and 0.0365. The first component keeps
+1.7135/1.75 = 97.9 percent of the variance. Its eigenvector
+satisfies -0.4635</em>x + 0.75<em>y = 0, so y = 0.618</em>x: the direction
+(1, 0.618), mostly length with some weight. That is the cigar&rsquo;s
+long axis, in numbers: long SUVs are heavy, and one number along
+(1, 0.618) captures 97.9 percent of the two-feature spread.</p>
+<figure><img alt="SUV PCA" src="assets/plate-l10-suv-pca.webp"><figcaption>PCA on SUV numbers. Four SUVs, two features. First component direction (1, 0.618) keeps 97.9 percent of the variance. Source: original toy for the PCA arithmetic. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-collapse-priced">Subchapter: the collapse, priced</h3>
+<p>The degenerate warning deserves a number. A Gaussian sitting on a
+single point x_0 with variance sigma^2 has density
+1/(sqrt(2<em>pi)</em>sigma) at x_0. Let sigma go to 0.01: density ~ 40.
+Sigma 0.001: density ~ 400. The likelihood contribution explodes as
+1/sigma while the point&rsquo;s responsibility for that component goes to
+1. EM happily climbs this: infinite likelihood, useless model.
+Contrast the healthy toy fit: sigma_1 = 0.62, density at the mean
+~ 0.64. The fix is a variance floor (never let sigma below, say,
+0.1) or a prior pulling variances up. K-means never collapses this
+way: distortion has no singularity. The singularity is the price of
+a probabilistic model with unbounded densities.</p>
+<figure><img alt="Collapse" src="assets/plate-l10-degenerate.webp"><figcaption>The collapse. A Gaussian on one point: sigma to 0, density to infinity. Healthy fit: sigma 0.62, density 0.64. Source: original plate for the degenerate likelihood. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-honest-price-of-pca">The honest price of PCA</h2>
 <p>PCA is linear: it finds straight axes. Data curved like a Swiss
 roll has no good straight summary. The roll&rsquo;s two intrinsic
@@ -387,7 +438,7 @@ randomized approximations take over.</p>
 </table>
 <div class="qa"><div class="q">What is the ELBO and why does EM maximize it instead of the likelihood?</div><div class="a"><p>The evidence lower bound: sum_z Q(z) log(p(x,z)/Q(z)), a lower bound on the log likelihood built by Jensen&rsquo;s inequality. The true log likelihood is a log of a sum over hidden labelings: intractable to differentiate. The ELBO is a sum: tractable. EM alternates: the E-step sets Q to the posterior, making the bound tight at the current parameters. The M-step maximizes the bound, which is weighted MLE with closed forms. Since the bound touches the likelihood before each M-step, climbing the bound climbs the likelihood. It never decreases.
 When Q(z) = p(z|x. Theta), the posterior under the current parameters. Jensen&rsquo;s inequality is an equality when the distribution inside is degenerate relative to the function: here, when Q matches the posterior, the &ldquo;average&rdquo; the log wraps is exact. That is precisely the E-step&rsquo;s choice.</p><div class="followup"><strong>Follow-up:</strong> When is the bound tight?</div></div></div>
-<div class="qa"><div class="q">How is EM different from k-means?</div><div class="a"><p>Same alternating skeleton, soft instead of hard. K-means E-step: assign each point to one cluster. EM E-step: compute responsibilities, the posterior probability per cluster. K-means M-step: plain means. EM M-step: responsibility-weighted means, covariances, and mixing weights. K-means minimizes distortion; EM maximizes likelihood. Let the Gaussians&rsquo; variances go to zero and EM&rsquo;s soft steps harden into k-means.
+<div class="qa"><div class="q">How is EM different from k-means?</div><div class="a"><p>Same alternating skeleton, soft instead of hard. K-means E-step: assign each point to one cluster. EM E-step: compute responsibilities, the posterior probability per cluster. K-means M-step: plain means. EM M-step: responsibility-weighted means, covariances, and mixing weights. K-means minimizes distortion. EM maximizes likelihood. Let the Gaussians&rsquo; variances go to zero and EM&rsquo;s soft steps harden into k-means.
 Three things. Local maxima: bad initialization gets polished, not fixed. Slow crawl near convergence. Degenerate likelihood: a Gaussian collapsing onto one point drives variance to zero and likelihood to infinity, so bound variances or use priors. None of these affect the guarantee that likelihood never decreases. They affect which maximum you reach and how fast.</p><div class="followup"><strong>Follow-up:</strong> What can go wrong with EM?</div></div></div>
 <div class="qa"><div class="q">What does PCA actually compute, and how do you choose k?</div><div class="a"><p>Center the data, form the covariance matrix, take its eigendecomposition. The eigenvectors are the principal components, ordered by eigenvalue: variance along that axis. Project onto the top k. Choose k by explained variance: keep components until their eigenvalues sum to a target like 95 percent of the total. In the toy, eigenvalues (5, 0) meant k=1 keeps 100 percent.
 When the structure is nonlinear (Swiss roll), when variance is not meaning (the top component is noise), or when features are unscaled (millimeters dominate meters: standardize first). It also costs O(d^3), so exact PCA dies around d = 100,000 and randomized methods take over.</p><div class="followup"><strong>Follow-up:</strong> When does PCA fail?</div></div></div>
@@ -407,13 +458,42 @@ When the structure is nonlinear (Swiss roll), when variance is not meaning (the 
    Initialization matters.</li>
 <li><strong>PCA.</strong> Top eigenvectors of the covariance: the axes of
    variation. Toy: (5, 0), one axis keeps 100 percent.</li>
-<li><strong>PCA&rsquo;s price.</strong> Linear only, chases variance not meaning,
-   scale-sensitive, O(d^3).</li>
 </ol>
+<div class="qa"><div class="q">Walk me through the mechanism: prove the likelihood cannot fall in one EM round.</div><div class="a"><p>Write L for log likelihood, B for the ELBO. E-step: Q_new is the posterior at theta_old, so the bound is tight: B(theta_old, Q_new) = L(theta_old). M-step: theta_new maximizes the bound, so B(theta_new, Q_new) &gt;= B(theta_old, Q_new). Jensen says the bound sits below the truth: L(theta_new) &gt;= B(theta_new, Q_new). Chain: L(theta_new) &gt;= B(theta_new, Q_new) &gt;= B(theta_old, Q_new) = L(theta_old). Done. Every round climbs or holds.
+One round climbs once, not to the top. The guarantee is per-round monotonicity, not one-round convergence. Near the top the steps shrink and EM crawls: the bound gets flatter as Q approaches the true posterior shape. Monotone is not fast.</p><div class="followup"><strong>Follow-up:</strong> Then why not run EM once from a great initialization and stop?</div></div></div>
+<div class="qa"><div class="q">Applied design: your 5-component GMM on customer spend collapses one component onto a single whale customer. Diagnose and fix.</div><div class="a"><p>The degenerate likelihood: that Gaussian&rsquo;s variance went to zero and its density at the whale went to infinity, so the likelihood &ldquo;improved&rdquo; into meaninglessness. Confirm: check component variances. One near zero confirms it. Fix in order: set a variance floor (e.g., sigma &gt;= 0.1 in standardized units), or fit MAP with a prior on variances instead of MLE, or drop to fewer components, or remove the outlier and fit separately. Decision rule: a component owning fewer than ~d+1 points (d = dimension) is a collapse suspect.
+Distortion is a sum of squared distances: no division by variance, no singularity. A cluster with one point contributes zero distortion, which is fine, not infinite. The collapse is specific to probabilistic models with unbounded densities. K-means&rsquo; rigidity is protective here.</p><div class="followup"><strong>Follow-up:</strong> Why did k-means never do this to you?</div></div></div>
+<div class="qa"><div class="q">Compute the M-step variance for cluster 1 of the toy, and say what it means.</div><div class="a"><p>Points {0.5, -0.5, 1.0}, mu_1 = 0.33. Squared deviations: 0.028, 0.694, 0.444. Average: 0.389. Sigma_1 = 0.62. It means cluster 1&rsquo;s points spread about 0.62 around 0.33: the cluster is a bump of width ~0.6, not a spike. With soft responsibilities the same formula weighs each point&rsquo;s squared deviation by its gamma: a boundary point at 5.0 adds a little spread to both clusters instead of a lot to one.
+The E-step&rsquo;s doubt flows into the M-step&rsquo;s parameters: uncertain points spread their influence across clusters in both the mean and the variance. Hard assignment concentrates all influence in one cluster. EM&rsquo;s honesty about doubt is what the weighted formulas implement.</p><div class="followup"><strong>Follow-up:</strong> How does this connect to the E-step&#x27;s softness?</div></div></div>
+<div class="qa"><div class="q">PCA says PC1 = (1, 0.618) keeps 97.9%. Your colleague drops the weight feature and keeps length only. Who is right?</div><div class="a"><p>The projection is right and the colleague is approximating. PC1 uses both features: the 0.618 weight component captures the length-weight correlation, and length alone recovers only part of the 97.9%. But quantify the loss: projecting onto length alone keeps var(length)/total = 1.25/1.75 = 71.4% of variance, vs 97.9% for PC1. That is a real gap. The colleague is right only if interpretability beats 26 points of variance: e.g., a dashboard where &ldquo;length&rdquo; is explainable and the extra precision changes no decision.
+PCA builds new features (linear combos). Feature selection keeps originals. PC1 = 1.0<em>length + 0.618</em>weight is not &ldquo;the length feature&rdquo;. If the downstream model needs raw-feature meaning (regulation, debugging), select features. If it needs compact variance, use PCA. Never say &ldquo;PCA selected length&rdquo;: it built a direction.</p><div class="followup"><strong>Follow-up:</strong> Give the never-confuse pair for PCA vs feature selection.</div></div></div>
+<ol start="9">
+<li><strong>The guarantee.</strong> B touches at E-step, climbs at M-step.
+   Likelihood never falls. Local summit, not global.</li>
+<li><strong>The M-step, worked.</strong> Sigma_1^2 = 0.389. Every parameter
+    is a responsibility-weighted average.</li>
+<li><strong>SUV numbers.</strong> PC1 = (1, 0.618), keeps 97.9 percent. The
+    cigar axis, in numbers.</li>
+<li><strong>The collapse.</strong> Sigma to 0, density to infinity. Variance
+    floor or prior. K-means cannot do this.</li>
+</ol>
+<h2 id="what-is-used-where">What is used where</h2>
+<p><strong>EM fits mixtures wherever labels are hidden.</strong> Speaker
+diarization (who spoke when, with overlapping speech), background
+subtraction in video, and missing-data imputation all run EM or its
+cousins. <strong>PCA is the default first step on wide data:</strong>
+visualization (plot the first two components), denoising (drop
+small components), and compression before expensive models.
+Eigenfaces (faces as PCA components) was the classic demo. At
+d = 100,000, exact O(d^3) PCA dies and randomized SVD takes over:
+the production version of this lesson&rsquo;s eigendecomposition.</p>
+<h2 id="watch-next">Watch next</h2>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/FgakZw6K1QQ" title="StatQuest: Expectation Maximization" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: StatQuest, Expectation Maximization. Josh Starmer derives the E and M steps with his usual worked numbers. Watch after the Jensen section.</p></div>
+
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Lecture 10 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=sUS-eTa0l6s — Chris Ré derives
+  - <a href="https://www.youtube.com/watch?v=sUS-eTa0l6s">Chris Ré derives</a>
   the ELBO from Jensen&rsquo;s inequality, runs EM on GMMs, and presents
   PCA on the SUV toy.
 - Official subtitle transcript (en-US): the lecture&rsquo;s spoken text.
@@ -428,7 +508,7 @@ likelihood warning is standard practice around EM, presented here
 as the practitioner&rsquo;s caveat.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
-<li><strong>CS229 L05:</strong> GDA: the same Gaussians with labels known; EM
+<li><strong>CS229 L05:</strong> GDA: the same Gaussians with labels known. EM
   handles them hidden.</li>
 <li><strong>CS229 L09:</strong> k-means: the hard limit of EM as variances go to
   zero.</li>
@@ -439,7 +519,7 @@ as the practitioner&rsquo;s caveat.</p>
 <li><strong>CS336:</strong> randomized PCA and scale: dimensionality reduction at
   training scale.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=sUS-eTa0l6s" target="_blank" rel="noopener">Lecture 10 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=sUS-eTa0l6s" target="_blank" rel="noopener">Lecture 10 video, Stanford Online YouTube</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=FgakZw6K1QQ" target="_blank" rel="noopener">Explainer: StatQuest, Expectation Maximization</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
       <nav class="pager"><a href="../cs229/l09-kmeans-gmm.html"><span class="lbl">← Previous</span>Lecture 9: Clustering, K-Means and Gaussian Mixtures</a><a href="../cs229/l11-diffusion-models.html"><span class="lbl">Next →</span>Lecture 11: Diffusion Models</a></nav>
     </article>
     <footer class="pagefoot">
