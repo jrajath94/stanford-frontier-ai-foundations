@@ -63,6 +63,25 @@ clear this bar:
    answers, including at least one "walk me through the mechanism"
    and one applied design question.
 
+## Expansion first, then densify (binding, user's Oct 5 order)
+
+The user rejected shortened lessons ("how can you reduce the content
+in such a short manner"). The cut pass was over-applied. The order
+is now:
+
+1. EXPAND: cover EVERYTHING — every concept, angle, number, worked
+   example, variant, edge case, and implication in the lecture. A
+   lesson is done expanding when nothing interview-relevant from the
+   lecture is missing. When in doubt, include.
+2. DENSIFY: cut only zero-information sentences — throat-clearing,
+   restatement, generic transitions, adjectives doing the work of
+   facts. NEVER cut a concept, number, worked example, variant,
+   failure mode, or edge case to save space.
+
+Short is not dense. Dense means information per sentence at full
+comprehensiveness. A 500-line lesson that misses concepts fails. A
+1500-line lesson where every paragraph earns its place passes.
+
 ## Depth over breadth; density, no fluff (binding, user's Oct 5 order)
 
 Interviews test depth of knowledge, not breadth. When a lesson must
