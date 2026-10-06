@@ -185,7 +185,7 @@ fewer misses, more false positives.
 Work the literature setting: b=20, r=450. Threshold =
 (1/20)^(1/450). ln(1/20) = -3.0, divided by 450 = -0.0067,
 exponentiated: 0.993. Pairs above 0.993 Jaccard collide with high
-probability; below, they vanish. That is aggressive: near-exact
+probability. Below, they vanish. That is aggressive: near-exact
 duplicates only. For aggressive paraphrase dedup you would lower r
 or raise b: b=100, r=50 gives threshold (1/100)^(1/50) = 0.912.
 
@@ -333,7 +333,7 @@ filter hard, train on the legible subset.
 
 The limit: the teacher must still be correct. A legible wrong trace
 teaches confident error. Verification (execution for code, answer
-checks for math) filters correctness; legibility is the second
+checks for math) filters correctness. Legibility is the second
 filter. Both are needed. OpenThoughts runs both.
 
 ![Synthetic teachers](assets/media-generation-cs336-l14-synthetic-teachers-0-1ca9248c-d40e-41c9-93de-1e7ef222a20b.webp "OpenThoughts, SWE-smith, SWE-Zero. The weaker teacher shows its work. Source: original. Project: Stanford Frontier AI.")
@@ -391,6 +391,16 @@ The story in eight steps. Each step answers the one before it.
 8. **Synthetic teachers.** Environments, tasks, teachers.
    OpenThoughts, SWE-smith, SWE-Zero. Better is not always the
    better teacher.
+
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/AIOyPXtYsf8" title="How Pre-Training LLMs Stage Actually Works: The 44 Terabyte Internet Pipeline" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- The 44 Terabyte Internet Pipeline (the embed above): https://www.youtube.com/watch?v=AIOyPXtYsf8
+- Li et al., DataComp-LM / DCLM: https://arxiv.org/abs/2406.11794
+- Lee et al., Deduplicating Training Data Makes Language Models Better: https://arxiv.org/abs/2107.03374
+- Penedo et al., FineWeb: https://arxiv.org/abs/2406.17557
 
 ## Official sources and further reading
 
