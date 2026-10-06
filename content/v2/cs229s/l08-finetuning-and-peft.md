@@ -271,7 +271,7 @@ optimizer states, gradients, and activations all scale with
 the trainable count, so the 10x memory bill from the last
 subchapter collapses to megabytes.
 
-![The LoRA math](assets/plate-l08-lora-math.webp "65,536 versus 16.8M per matrix; 4.2M total, 0.06 percent of 7B. Shell 4. Source: original toy for the LoRA count. Project: Stanford Frontier AI.")
+![The LoRA math](assets/plate-l08-lora-math.webp "65,536 versus 16.8M per matrix. 4.2M total, 0.06 percent of 7B. Shell 4. Source: original toy for the LoRA count. Project: Stanford Frontier AI.")
 
 ### Subchapter: QLoRA, the memory answer
 
@@ -279,7 +279,7 @@ LoRA shrinks the trainable count, but the frozen base still
 sits in FP16: 14 GB for 7B, 130 GB for 65B. **QLoRA**
 (Dettmers et al., 2023) quantizes the frozen base to 4-bit
 (NF4) and trains LoRA adapters on top. The base is read in
-4-bit and dequantized on the fly; gradients flow only into
+4-bit and dequantized on the fly. Gradients flow only into
 the adapters.
 
 The worked result: a 65B model in 4-bit is 32.5 GB. Add
@@ -313,7 +313,7 @@ October 2026.
 
 Which exact recipe GPT-5 or Gemini 3 uses is not public.
 The shapes (preferences, reward or DPO, adapters for
-serving) are industry standard; the details are
+serving) are industry standard. The details are
 proprietary.
 
 ## Mapping back: each cost gets its answer
@@ -338,7 +338,7 @@ are sourced.
 
 > [!QA]
 > Q: Contrast RLHF and Constitutional AI in one breath each.
-> A: RLHF trains a reward model on human preference rankings, then RL-optimizes the LLM against it; it works but needs costly human labels. Constitutional AI replaces the labels with a short human-written constitution: the model critiques and revises its own outputs against the principles, then a preference model trained on AI judgments drives the RL step. Same three-stage shape, AI feedback instead of human feedback.
+> A: RLHF trains a reward model on human preference rankings, then RL-optimizes the LLM against it. It works but needs costly human labels. Constitutional AI replaces the labels with a short human-written constitution: the model critiques and revises its own outputs against the principles, then a preference model trained on AI judgments drives the RL step. Same three-stage shape, AI feedback instead of human feedback.
 > Follow-up: Why is AI feedback higher quality than human feedback in some cases?
 > A: Because the AI judge can already surpass humans on the task being judged, as in games or specialized domains, and it applies the constitution consistently at scale. Humans are expensive, slow, and inconsistent. The risk is that the AI judge's blind spots become the model's blind spots, which is why the constitution stays human-written.
 
@@ -356,33 +356,33 @@ are sourced.
 
 > [!QA]
 > Q: How does LLaMA-Adapter's zero-init gating work?
-> A: Trainable prompt tokens are prepended to the input, and their attention scores are scaled by a learnable gate g initialized to zero. Early in training the adapter contributes nothing, so the model behaves exactly as pretrained; g grows gradually and the instructions phase in. It avoids shocking the frozen model with random prompt embeddings on step one.
+> A: Trainable prompt tokens are prepended to the input, and their attention scores are scaled by a learnable gate g initialized to zero. Early in training the adapter contributes nothing, so the model behaves exactly as pretrained. G grows gradually and the instructions phase in. It avoids shocking the frozen model with random prompt embeddings on step one.
 > Follow-up: How is this different from plain prompt tuning?
 > A: Plain prompt tuning trains only the prepended embeddings at the input layer. LLaMA-Adapter adds the gating mechanism so the pretrained behavior is preserved at initialization, and P-Tuning v2 extends prompts to deeper layers with reparametrization. All three keep the base model frozen.
 
 > [!QA]
 > Q: Walk me through DPO versus RLHF, step by step.
-> A: RLHF runs three trainings: collect human rankings, train a reward model on the rankings, then RL-optimize the policy against the reward model. DPO runs one: feed the same preference pairs into a single loss that raises the preferred response's likelihood relative to the rejected one, with the KL penalty to the reference model inside the loss. The reward model never exists; the RL loop never runs. You lose RL's long-horizon exploration, but for aligning a chat model on rankings, one stable supervised run beats a three-stage unstable one.
+> A: RLHF runs three trainings: collect human rankings, train a reward model on the rankings, then RL-optimize the policy against the reward model. DPO runs one: feed the same preference pairs into a single loss that raises the preferred response's likelihood relative to the rejected one, with the KL penalty to the reference model inside the loss. The reward model never exists. The RL loop never runs. You lose RL's long-horizon exploration, but for aligning a chat model on rankings, one stable supervised run beats a three-stage unstable one.
 > Follow-up: When would you still pick RLHF over DPO?
-> A: When the reward is not a static preference dataset: online settings where the reward model keeps learning from new interactions, or tasks needing extended trial-and-error that a single supervised loss cannot express. DPO is offline preference learning; RLHF with an evolving reward model is online.
+> A: When the reward is not a static preference dataset: online settings where the reward model keeps learning from new interactions, or tasks needing extended trial-and-error that a single supervised loss cannot express. DPO is offline preference learning. RLHF with an evolving reward model is online.
 
 > [!QA]
 > Q: LoRA with r = 16 on all four attention matrices (Wq, Wk, Wv, Wo) of a 7B model (d = 4096, 32 layers). How many trainable parameters?
-> A: Per matrix: 2 x 4096 x 16 = 131,072. Four matrices per layer: 524,288. Times 32 layers: 16.8M trainable parameters. Against 7B that is 0.24 percent. The paper's Wq-and-Wv-only recipe at r = 8 was 4.2M (0.06 percent); doubling the rank and covering all four matrices quadruples it. The interview habit: 2 x d x r per matrix, times matrices, times layers.
+> A: Per matrix: 2 x 4096 x 16 = 131,072. Four matrices per layer: 524,288. Times 32 layers: 16.8M trainable parameters. Against 7B that is 0.24 percent. The paper's Wq-and-Wv-only recipe at r = 8 was 4.2M (0.06 percent). Doubling the rank and covering all four matrices quadruples it. The interview habit: 2 x d x r per matrix, times matrices, times layers.
 > Follow-up: Does covering all four matrices beat Wq and Wv only?
-> A: Sometimes, on harder tasks, but with diminishing returns: the paper found Wq and Wv best on its tasks. More matrices means more capacity and more memory. Tune r and the target set per task; the rank budget is the knob.
+> A: Sometimes, on harder tasks, but with diminishing returns: the paper found Wq and Wv best on its tasks. More matrices means more capacity and more memory. Tune r and the target set per task. The rank budget is the knob.
 
 > [!QA]
 > Q: Applied design: fine-tune a 70B model on 8x80GB GPUs. Full fine-tuning or PEFT?
-> A: Full fine-tuning first needs the memory math: 140 GB of FP16 weights, 140 GB of gradients, 840 GB of Adam states, plus activations: over 1 TB. Even 8x80GB (640 GB) cannot hold it without sharding, so full fine-tuning means FSDP or ZeRO-3 across the node (Lecture 10). PEFT changes the job: QLoRA puts the 70B base in 4-bit (35 GB) and trains adapters, fitting on one or two GPUs. The design answer: full fine-tuning for maximum quality when you own the cluster and the data; QLoRA when you want the adaptation this week on hardware you have. Most open fine-tunes choose QLoRA.
+> A: Full fine-tuning first needs the memory math: 140 GB of FP16 weights, 140 GB of gradients, 840 GB of Adam states, plus activations: over 1 TB. Even 8x80GB (640 GB) cannot hold it without sharding, so full fine-tuning means FSDP or ZeRO-3 across the node (Lecture 10). PEFT changes the job: QLoRA puts the 70B base in 4-bit (35 GB) and trains adapters, fitting on one or two GPUs. The design answer: full fine-tuning for maximum quality when you own the cluster and the data. QLoRA when you want the adaptation this week on hardware you have. Most open fine-tunes choose QLoRA.
 > Follow-up: The task needs the model to learn genuinely new capabilities, not just a style. Does PEFT suffice?
-> A: Often not. A rank-r update has limited capacity: it steers existing capabilities well but struggles to install new ones. New capabilities want more trainable parameters: higher rank, more target modules, or full fine-tuning. Match the capacity to the ambition: style transfer takes r = 8; new skills take r = 64 or the full run.
+> A: Often not. A rank-r update has limited capacity: it steers existing capabilities well but struggles to install new ones. New capabilities want more trainable parameters: higher rank, more target modules, or full fine-tuning. Match the capacity to the ambition: style transfer takes r = 8. New skills take r = 64 or the full run.
 
 ## Recap: the whole lesson on one screen
 
 The story in eight steps. Each step answers the one before it.
 
-1. **Base models complete; assistants follow.** Pretraining
+1. **Base models complete. Assistants follow.** Pretraining
    teaches next-token prediction. The cheese test: the
    base model continues the pattern, the tuned model
    answers.
@@ -395,7 +395,7 @@ The story in eight steps. Each step answers the one before it.
    maximizes the reward. Preferences beat demonstrations:
    under 1% labeled.
 4. **RLHF is not scalable.** Human labels are costly and
-   slow; optimizing against raters breeds evasive
+   slow. Optimizing against raters breeds evasive
    responses.
 5. **Constitutional AI swaps labels for principles.** Ten
    human principles replace ten thousand labels.
@@ -408,7 +408,7 @@ The story in eight steps. Each step answers the one before it.
    weights), additive (soft prompts, adapters),
    reparametrization (low-rank). Or hybrids.
 8. **LoRA merges and disappears.** Train A and B with r
-   much smaller than d; merge into W after. Zero inference
+   much smaller than d. Merge into W after. Zero inference
    latency. One base, many adapters.
 
 ## Official sources and further reading
@@ -429,11 +429,11 @@ The story in eight steps. Each step answers the one before it.
   PEFT survey behind the taxonomy.
 
 **Caveats from these sources.** The "10x" fine-tuning
-memory figure is an order-of-magnitude rule; exact ratios
+memory figure is an order-of-magnitude rule. Exact ratios
 depend on optimizer, precision, and activation
 checkpointing. LoRA's "Wq and Wv best" is empirical on the
 paper's tasks. Constitutional AI's scaling plots compare
-specific model sizes; the harmlessness-helpfulness tradeoff
+specific model sizes. The harmlessness-helpfulness tradeoff
 shape is the finding that holds.
 
 ## Go deeper
