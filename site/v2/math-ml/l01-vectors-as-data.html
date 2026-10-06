@@ -81,6 +81,7 @@
 <li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
 <li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
 <li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../cs229s/crash-course-02.html" data-page="cs229s-crash-02">CS229S · Crash course 2</a></li>
 </ul>
 <h3>CS224N: NLP with Deep Learning</h3><ul>
 <li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
@@ -146,18 +147,14 @@
 </ul>
 <h3>CS329A: Self-Improving AI Agents</h3><ul>
 <li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
-<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
-<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
-<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
-<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
-<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
-<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
-<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
-<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
-<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
-<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
-<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
-<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+<li><a href="../cs329a/l01-course-overview.html" data-page="cs329a-l01">L01 · Course Overview</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Compute Scaling</a></li>
+<li><a href="../cs329a/l03-feedback-tools-code.html" data-page="cs329a-l03">L03 · Feedback, Tools, Code</a></li>
+<li><a href="../cs329a/l04-planning-multistep-reasoning.html" data-page="cs329a-l04">L04 · Planning and Multi-Step Reasoning</a></li>
+<li><a href="../cs329a/l05-search-at-scale.html" data-page="cs329a-l05">L05 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l06-train-time-scaling.html" data-page="cs329a-l06">L06 · Train-Time Scaling</a></li>
+<li><a href="../cs329a/l07-agentic-evaluations.html" data-page="cs329a-l07">L07 · Agentic Evaluations</a></li>
+<li><a href="../cs329a/l08-future-directions.html" data-page="cs329a-l08">L08 · Future Directions</a></li>
 </ul>
 <h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
 <li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
@@ -316,11 +313,44 @@ norm encourages sparsity (many exact zeros), which is why L1
 regularization selects features. The L2 norm encourages small
 weights everywhere, which is why L2 regularization (weight decay)
 is the default.</p>
-<p>Norms also police training. <strong>Gradient clipping</strong> rescales a
-gradient when its norm exceeds a threshold: if ||g|| &gt; 5, replace
+<p>Norms also police training. <strong>Gradient clipping</strong> rescales a gradient (the direction of steepest increase of the loss)
+when its norm exceeds a threshold: if ||g|| &gt; 5, replace
 g with 5 * g / ||g||. Without this, one bad batch can detonate
 the weights. The norm is the fuse box.</p>
 <figure><img alt="The norm measures size alone" src="assets/plate-l01-norm.svg"><figcaption>Square, sum, square-root. A3 is 3x longer than A. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-unit-vectors-and-normalization">Subchapter: unit vectors and normalization</h3>
+<p><strong>Normalization</strong> divides a vector by its own norm, producing a
+<strong>unit vector</strong>: length exactly 1, same direction as the original.
+The hat marks it: v-hat = v / ||v||.</p>
+<pre class="ascii">v = [3, -4],  ||v|| = 5
+v-hat = [3/5, -4/5] = [0.6, -0.8]
+check: sqrt(0.36 + 0.64) = sqrt(1) = 1
+</pre>
+<p>Normalization is the standard first step before cosine
+comparison: for unit vectors the dot product IS the cosine,
+since both norms are 1. It also stabilizes training: optimizers
+behave better when inputs live on the same scale. Decision rule:
+normalize when only direction matters and when feature scales
+differ wildly.</p>
+<h3 id="subchapter-cauchy-schwarz-why-cosine-stays-between-1-and-1">Subchapter: Cauchy-Schwarz, why cosine stays between -1 and 1</h3>
+<p>The lesson asserted that cosine similarity lands between -1 and 1.
+That is not a convention. It is a theorem. The
+<strong>Cauchy-Schwarz inequality</strong> says the dot product can never
+outrun the product of the norms:</p>
+<pre class="ascii">|x . y| &lt;= ||x|| * ||y||
+</pre>
+<p>Check it on the toy: |3| &lt;= 2.24 * 1.73 = 3.87. True, with room to
+spare. Divide both sides by the norms (valid only when both norms
+are nonzero) and the cosine is trapped:</p>
+<pre class="ascii">|(x . y) / (||x|| * ||y||)| &lt;= 1
+</pre>
+<p>Equality holds exactly when one vector is a scaled copy of the
+other: cos(A, A3) = (A . A3) / (||A|| ||A3||) = 15 / (2.24 * 6.71)
+= 15 / 15 = 1. That also explains why cosine(A, B) equaled
+cosine(A3, B) at 0.77: a positive scale factor cancels out of the
+ratio. Interviewers use this inequality to bound inner products
+in proofs about attention and kernels. Know it by name.</p>
+<figure><img alt="Cauchy-Schwarz bounds the dot product" src="assets/plate-l01-cauchyschwarz.svg"><figcaption>cos(A,B) = 0.77 is trapped in [-1,1] by |x.y| &lt;= ||x|| ||y||. Equality only for scaled copies. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-key-question">The key question</h2>
 <p>How do you compare two vectors by direction alone, so that a long
 vector and a short vector pointing the same way count as identical?</p>
@@ -330,7 +360,7 @@ The result is the <strong>cosine similarity</strong>, a number between -1 and 1
 that measures direction only:</p>
 <pre class="ascii">cosine(x, y) = (x . y) / (||x|| * ||y||)
 
-cosine(A, B)  = 3 / (2.24 * 1.73) = 3 / 3.88 = 0.77
+cosine(A, B)  = 3 / (2.24 * 1.73) = 3 / 3.87 = 0.77
 cosine(A3, B) = 9 / (6.71 * 1.73) = 9 / 11.6 = 0.77
 </pre>
 <p>Identical. The length canceled out, as it should: A and A3 point
@@ -346,6 +376,45 @@ size is the signal. A long detailed review may deserve more weight
 than a two-word one. A common compromise: use cosine for ranking,
 but keep the norm as a separate feature. Know what you discarded.</p>
 <figure><img alt="Cosine similarity divides the size out" src="assets/plate-l01-cosine.svg"><figcaption>A and its tripled copy score identically: 0.77. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-zero-vector-where-cosine-breaks">Subchapter: the zero vector, where cosine breaks</h3>
+<p>The cosine formula has a precondition: both vectors must be
+nonzero. Dividing by zero is undefined, and the norm of the
+<strong>zero vector</strong> [0, 0, 0] (every component zero) is 0.</p>
+<p>Work it: cosine([0,0,0], [1,0,0]) = 0 / (0 * 1) = 0/0.
+Undefined. The zero vector has no direction, so there is
+nothing to compare. A document with no tokens embeds as the
+zero vector: scoring it against anything is meaningless.</p>
+<p>Production rule: guard the pipeline before scoring. Skip
+empty documents, or special-case them (assign score 0 or drop
+them), before computing cosine. The &ldquo;Rank documents by topic:
+cosine&rdquo; rule below only applies to real, nonzero vectors. An
+unguarded division by a zero norm is a silent NaN (not a
+number): the code runs and the ranking breaks.</p>
+<h3 id="subchapter-euclidean-distance-vs-cosine-a-worked-choice">Subchapter: Euclidean distance vs cosine, a worked choice</h3>
+<p>The <strong>Euclidean distance</strong> ||x - y|| measures separation in the
+space, size included:</p>
+<pre class="ascii">A = [2, 1, 0],  B = [1, 1, 1]
+A - B = [1, 0, -1]
+||A - B|| = sqrt(1 + 0 + 1) = sqrt(2) = 1.41
+</pre>
+<p>Now compare A with its tripled copy A3. Cosine says they are
+identical: 1.00. Distance says they are far apart:
+||A - A3|| = ||[-4, -2, 0]|| = sqrt(16 + 4) = sqrt(20) = 4.47.
+Same direction, large separation. The two measures disagree on
+purpose: they ask different questions.</p>
+<p>Decision rule, one line each:</p>
+<ul>
+<li>Rank documents by topic: cosine. Length is noise.</li>
+<li>Cluster points where magnitude matters (spending behavior,
+  pixel intensity): Euclidean distance. Length is signal.</li>
+<li>Compare inside a model (attention scores, neuron sums): dot
+  product. Both direction and magnitude carry weight, and no
+  division is needed.</li>
+</ul>
+<p>Three measures, three questions. Picking the wrong one is a
+silent bug: the code runs, the numbers look sane, and the
+rankings are wrong.</p>
+<figure><img alt="Distance cares about size, cosine does not" src="assets/plate-l01-distance.svg"><figcaption>A vs A3: cosine 1.00, distance 4.47. Same direction, different measures. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="building-blocks-linear-combination-and-independence">Building blocks: linear combination and independence</h2>
 <p>Two more ideas complete the vector toolkit. Each is one small step
 past the last.</p>
@@ -476,13 +545,15 @@ count vectors.</p>
 </tr>
 </tbody>
 </table>
-<figure><img alt="Vectors: what is used where" src="assets/plate-l01-used-where.svg"><figcaption>The same three tools run embeddings, search, and training. Shell 5. Source: public model docs and standard practice. Project: Stanford Frontier AI.</figcaption></figure>
+<figure><img alt="Chapter plate: what cosine buys" src="assets/plate-l01-chap-vectors.svg"><figcaption>Chapter plate L01-C1. Left: the raw dot product: A scores 3, A3 scores 9, same words. Center: the norm: ||A|| = 2.24, ||A3|| = 6.71, size measured alone. Right: cosine: 0.77 vs 0.77, tweet matches article. Bottom: cosine throws size away; when size carries signal, trust distance. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.</figcaption></figure>
 <div class="qa"><div class="q">What is a vector, and why does ML use them for everything?</div><div class="a"><p>A vector is an ordered list of numbers, like [0.9, -0.4, 0.2]. ML uses vectors because arithmetic is all a computer can do: a review, a pixel, or a word must become numbers before a model can touch it. Embeddings turn words into vectors in R^12,288, and attention scores are dot products between them.
 Because each position has a fixed meaning. In a word-count vector, position 1 might mean &ldquo;great&rdquo; and position 2 &ldquo;boring&rdquo;. Swapping them swaps the meaning. In an embedding, position 47 tracks some learned property. Scrambling positions destroys the code.</p><div class="followup"><strong>Follow-up:</strong> Why ordered? Why is [1, 2] different from [2, 1]?</div></div></div>
 <div class="qa"><div class="q">Walk me through the dot product on a concrete pair. What does each part do?</div><div class="a"><p>Take x = [3, -1, 2], y = [2, 4, 1]. Multiply matching components: 3<em>2 = 6 (strong agreement), -1</em>4 = -4 (clash: opposite signs subtract), 2*1 = 2 (mild agreement). Sum: 6 - 4 + 2 = 4. The total says &ldquo;mostly agreement, partly canceled.&rdquo; Each product is one feature&rsquo;s vote. The sum is the election.
-The vectors are perpendicular: they share no direction. In ML this reads as &ldquo;no shared signal.&rdquo; Attention exploits it: a near-zero score becomes a near-zero weight after softmax, so the token is ignored.</p><div class="followup"><strong>Follow-up:</strong> What does a dot product of zero mean geometrically?</div></div></div>
+The vectors are perpendicular: they share no direction. In ML this reads as &ldquo;no shared signal.&rdquo; Attention exploits it. Softmax turns scores into weights that sum to 1, so a near-zero score becomes a near-zero weight and the token is ignored.</p><div class="followup"><strong>Follow-up:</strong> What does a dot product of zero mean geometrically?</div></div></div>
 <div class="qa"><div class="q">When do you use the dot product and when do you use cosine similarity?</div><div class="a"><p>Use the dot product inside the model: attention scores, neuron sums, classifier margins. Use cosine similarity when comparing finished vectors, like ranking search results or measuring how close two embeddings are. In the worked toy, A and its tripled copy A3 scored 3 and 9 by dot product but both scored 0.77 by cosine. Cosine ignores the length. The dot product does not.
 Yes. A negative dot product means the vectors point in opposing directions: mostly disagreement. Cosine similarity maps this to -1. In attention this matters: a strongly negative score becomes a near-zero weight after softmax, so the model ignores that token.</p><div class="followup"><strong>Follow-up:</strong> Can the dot product be negative?</div></div></div>
+<div class="qa"><div class="q">Distance says A and A3 are far apart (4.47). Cosine says they are identical (1.00). Which is right?</div><div class="a"><p>Both, about different questions. Cosine asks &ldquo;do they point the same way&rdquo;: yes, so the topic matches. Distance asks &ldquo;are they at the same place&rdquo;: no, one review is three times longer. For ranking documents by topic, trust cosine. For clustering where size matters, like spending behavior, trust distance. The Cauchy-Schwarz inequality guarantees cosine stays in [-1, 1]: the dot product can never outrun the product of the norms.
+Normalization divides each vector by its norm, making every vector length 1: v-hat = v / ||v||. For [3, -4] that is [0.6, -0.8]. Unit vectors turn the dot product directly into the cosine, since both norms are 1. It also stops one giant feature from dominating the comparison.</p><div class="followup"><strong>Follow-up:</strong> Why normalize vectors before comparing them?</div></div></div>
 <div class="qa"><div class="q">What does the norm measure, and why are there several of them?</div><div class="a"><p>The default L2 norm measures the arrow&rsquo;s length: sqrt of summed squares. [3, -4] has norm 5. The L1 norm sums absolute values (7 here) and encourages sparsity: many exact zeros, which is why L1 regularization selects features. The L2 norm spreads shrinkage across all components, which is why L2 (weight decay) is the default regularizer.
 Gradient clipping. If a gradient&rsquo;s norm exceeds a threshold, rescale it to the threshold. One bad batch can otherwise produce a giant gradient that detonates the weights. The norm is the fuse box of training.</p><div class="followup"><strong>Follow-up:</strong> Where does the norm act as a safety device?</div></div></div>
 <div class="qa"><div class="q">What does linear independence mean for a dataset?</div><div class="a"><p>It means no feature is a copy of the others. [1,1] and [2,2] are dependent because 2*[1,1] - [2,2] = [0,0]. In a dataset, price-in-dollars and price-in-cents are dependent features: the second adds no direction. Dependent features waste dimensions and can make regression singular, which L09 demonstrates.
@@ -501,6 +572,7 @@ Precompute and index. Exact cosine over millions of vectors is too slow per quer
 <li><strong>The fix.</strong> Cosine similarity divides out both sizes: 0.77 for A and A3 alike. Geometry agrees: it is the cosine of the angle. It discards size, so keep the norm as a separate signal when size matters.</li>
 <li><strong>The building blocks.</strong> Linear combinations mix vectors (span). Independence means no vector is a copy of the rest.</li>
 <li><strong>Embeddings.</strong> Learned vectors: the machine chooses the axes. Compared with dot products and cosines, regularized by norms.</li>
+<li><strong>Unit vectors and distance.</strong> Normalize to compare directions (v-hat = [0.6, -0.8]). Cauchy-Schwarz traps cosine in [-1, 1]. Euclidean distance keeps size: ||A - A3|| = 4.47 while cosine is 1.00. Pick the measure that matches the question.</li>
 <li><strong>The price and the bridge.</strong> Cosine throws away size, which sometimes matters. Keep both tools. L02 turns vectors into matrices: machines that transform whole datasets at once.</li>
 </ol>
 <h2 id="go-deeper">Go deeper</h2>
@@ -509,7 +581,7 @@ Precompute and index. Exact cosine over millions of vectors is too slow per quer
 </div>
 
 <ul>
-<li>3Blue1Brown, &ldquo;Vectors, what even are they?&rdquo; (Essence of linear algebra, ch. 1; the embed above): https://www.youtube.com/watch?v=fNk_zzaMoSs</li>
+<li>3Blue1Brown, &ldquo;Vectors, what even are they?&rdquo; (Essence of linear algebra, ch. 1, the embed above): https://www.youtube.com/watch?v=fNk_zzaMoSs</li>
 <li>The NPTEL lecture for this lesson (frontmatter video): https://www.youtube.com/watch?v=Y1Gndz4sNeE</li>
 <li>Deisenroth, Faisal, Ong, &ldquo;Mathematics for Machine Learning&rdquo;, ch. 2 (free): https://mml-book.github.io: vectors, norms, dot products, independence.</li>
 <li>Strang, &ldquo;Introduction to Linear Algebra&rdquo;, ch. 1: the geometric view.</li>
@@ -529,6 +601,89 @@ Precompute and index. Exact cosine over millions of vectors is too slow per quer
 <li><strong>CS336:</strong> token embeddings are vectors in R^d. Cosine similarity ranks nearest neighbors in embedding space.</li>
 <li><strong>CS229 L10:</strong> PCA starts by centering data vectors. Norms measure reconstruction error.</li>
 </ul>
+<h2 id="coverage-map">Coverage map</h2>
+<p>Every lecture concept, and where this lesson covers it:</p>
+<table>
+<thead>
+<tr>
+<th>Lecture concept</th>
+<th>Covered in</th>
+<th>Lines</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vectors as ordered lists of numbers</td>
+<td>The task: turn the world into numbers</td>
+<td>l01:28-52</td>
+</tr>
+<tr>
+<td>dot product, definition and first computation</td>
+<td>First attempt: count shared words</td>
+<td>l01:53-84</td>
+</tr>
+<tr>
+<td>dot product by hand: symmetric, linear, zero = perpendicular</td>
+<td>Subchapter: the dot product, by hand</td>
+<td>l01:121-146</td>
+</tr>
+<tr>
+<td>norm as size, L2/L1/max norms, gradient clipping</td>
+<td>Where counts break; Subchapter: the norm, by hand</td>
+<td>l01:85-119, l01:148-172</td>
+</tr>
+<tr>
+<td>normalization, unit vectors, v-hat</td>
+<td>Subchapter: unit vectors and normalization</td>
+<td>l01:174-192</td>
+</tr>
+<tr>
+<td>Cauchy-Schwarz inequality, why cosine is in [-1, 1]</td>
+<td>Subchapter: Cauchy-Schwarz</td>
+<td>l01:193-219</td>
+</tr>
+<tr>
+<td>cosine similarity, the 0.77 toy, the size trap</td>
+<td>The key question; cosine similarity, by hand</td>
+<td>l01:220-254</td>
+</tr>
+<tr>
+<td>Euclidean distance vs cosine, the decision rule</td>
+<td>Subchapter: Euclidean distance vs cosine</td>
+<td>l01:255-286</td>
+</tr>
+<tr>
+<td>linear combination, span, standard vectors</td>
+<td>Subchapter: linear combination</td>
+<td>l01:292-311</td>
+</tr>
+<tr>
+<td>linear independence, dependence test, row-reduction</td>
+<td>Subchapter: linear independence</td>
+<td>l01:312-333</td>
+</tr>
+<tr>
+<td>embeddings: learned vs counted components</td>
+<td>Subchapter: embeddings</td>
+<td>l01:334-357</td>
+</tr>
+<tr>
+<td>what is used where: attention, search, norms, independence</td>
+<td>What is used where</td>
+<td>l01:358-371</td>
+</tr>
+<tr>
+<td>8 interview Q&amp;As with follow-ups</td>
+<td>QA blocks</td>
+<td>l01:372-419</td>
+</tr>
+<tr>
+<td>full-lesson recap</td>
+<td>Recap</td>
+<td>l01:420-431</td>
+</tr>
+</tbody>
+</table>
       <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=Y1Gndz4sNeE" target="_blank" rel="noopener">Essential Mathematics for Machine Learning: Lecture 01 (Vectors)</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://mml-book.github.io" target="_blank" rel="noopener">Deisenroth, Faisal, Ong, Mathematics for Machine Learning, ch. 2</a></li><li><span class="src-tag">SUPPLEMENT</span>Strang, Introduction to Linear Algebra, ch. 1</li></ul></section>
       <nav class="pager"><a href="../math-ml/index.html"><span class="lbl">← Previous</span>Mathematical Foundations of Machine Learning</a><a href="../math-ml/l02-matrices-as-machines.html"><span class="lbl">Next →</span>Lecture 2: Matrices as Machines</a></nav>
     </article>
