@@ -61,6 +61,8 @@ loss = -E_q[ log p_theta(x|z) ]  +  KL( q(z|x) || N(0,1) )
         reconstruction error         keep causes near the prior
 ```
 
+All logs in this lesson are natural logs (base e).
+
 For a Gaussian decoder, the reconstruction term is the
 squared pixel error between x and the decoder's output.
 Familiar territory: an autoencoder. The KL term is the new
@@ -83,8 +85,9 @@ The naive fix, the score-function estimator, differentiates
 through the sampling probabilities instead. It works but its
 variance is enormous: the gradient estimate jumps wildly
 between samples, and training crawls. The variance scales
-with the dimension of z and the sharpness of the loss
-landscape. In practice you need many samples per step to
+with the dimension of z and with how sharply the loss
+changes between nearby points. In practice you need
+many samples per step to
 make progress, which is expensive. The lecture's answer is
 cleaner.
 
@@ -153,7 +156,36 @@ has a closed form (per dimension):
 KL = -0.5 * ( 1 + log(sigma^2) - mu^2 - sigma^2 )
 ```
 
-With μ = 0.5, σ² = 0.25:
+### The derivation, step by step
+
+A math course shows the integral. KL(N(μ,σ²) || N(0,1))
+is E_q[log q(z) − log p(z)]. Write both log-densities:
+
+```ascii
+log q(z) = -0.5*log(2*pi*sigma^2) - (z - mu)^2 / (2*sigma^2)
+log p(z) = -0.5*log(2*pi)        - z^2 / 2
+```
+
+Subtract. The −0.5·log(2π) terms partially cancel:
+
+```ascii
+log q - log p = -0.5*log(sigma^2) - (z-mu)^2/(2*sigma^2) + z^2/2
+```
+
+Take the expectation under q. Two facts: E_q[(z−μ)²] =
+σ² (the variance), and E_q[z²] = μ² + σ² (mean squared
+plus variance). So:
+
+```ascii
+KL = -0.5*log(sigma^2) - sigma^2/(2*sigma^2) + (mu^2 + sigma^2)/2
+   = -0.5*log(sigma^2) - 0.5 + mu^2/2 + sigma^2/2
+   = -0.5 * ( 1 + log(sigma^2) - mu^2 - sigma^2 )
+```
+
+Preconditions: σ² > 0. The log needs a positive argument.
+σ = 0 would be a point mass, not a Gaussian. The
+formula is per dimension. For a d-dimensional diagonal
+Gaussian, sum over dimensions. With μ = 0.5, σ² = 0.25:
 
 ```ascii
 KL = -0.5 * ( 1 + log(0.25) - 0.25 - 0.25 )
@@ -213,22 +245,148 @@ about.
 
 ### The fixes: three answers
 
-Fixes include weakening the decoder (a less powerful
-decoder must lean on z), annealing the KL weight from 0
-upward during training (let reconstruction win early,
-then charge rent), or the β-VAE variant below.
+Posterior collapse has three standard answers. Weaken
+the decoder: a less powerful decoder must lean on z.
+Anneal the KL weight from 0 upward during training: let
+reconstruction win early, then charge rent. Constrain
+the bottleneck: the β-VAE and VQ-VAE variants below
+develop this answer with worked numbers.
 
-Two descendants from the lecture, briefly. **β-VAE**
-multiplies the KL term by β > 1. The extra rent pressure
-forces each latent dimension to earn its keep, which
-empirically disentangles causes (one dimension for pose,
-one for lighting). The price is worse reconstruction:
-higher β, blurrier images. **VQ-VAE** replaces the
-continuous Gaussian with a discrete codebook: z snaps
-to the nearest of K learned vectors. No KL-to-Gaussian
-term, no collapse of the same kind, and the discrete
-codes suit transformers downstream. The lecture covers
-both as answers to the VAE's weaknesses.
+### β-VAE: the disentanglement dial, worked
+
+**β-VAE** multiplies the KL term by β > 1:
+
+```ascii
+loss = reconstruction + beta * KL( q(z|x) || N(0,1) )
+```
+
+Take the toy q with KL = 0.443 and set β = 4. The rent
+becomes 4 · 0.443 = 1.772 nats. The encoder now pays
+four times more for every dimension it uses, so each
+dimension must earn its keep in reconstruction savings.
+Dimensions that carry redundant information get
+priced out: their μ → 0, σ → 1, contributing nothing.
+What survives is a sparse code where each live
+dimension tends to control one generative factor
+(pose, lighting, smile). That is **disentanglement**,
+and β is the dial.
+
+The price is exact: higher β, worse reconstruction.
+At β = 1 the model is a plain VAE. At β = 4 the
+reconstructions blur: the rent forces the encoder to
+throw away fine detail. At β = 100 almost every
+dimension dies and the model reconstructs the dataset
+mean. The decision rule: raise β until the latents
+disentangle, then stop before the reconstructions
+dissolve. There is no free disentanglement.
+
+### VQ-VAE: the snap mechanism, worked
+
+**VQ-VAE** replaces the continuous Gaussian with a
+discrete codebook: K learned vectors e_1..e_K. The
+encoder outputs a continuous vector z_e(x). It snaps
+to the nearest codebook vector:
+
+```ascii
+z_q = e_k,   k = argmin_j || z_e(x) - e_j ||
+```
+
+Work it. K = 4 codebook vectors in 2-D: e_1 = (1,0),
+e_2 = (0,1), e_3 = (−1,0), e_4 = (0,−1). The encoder
+outputs z_e = (0.8, 0.3). Squared distances:
+
+```ascii
+to e_1: (0.8-1)^2 + (0.3-0)^2 = 0.04 + 0.09 = 0.13
+to e_2: (0.8-0)^2 + (0.3-1)^2 = 0.64 + 0.49 = 1.13
+to e_3: (0.8+1)^2 + 0.09      = 3.24 + 0.09 = 3.33
+to e_4: 0.64 + (0.3+1)^2      = 0.64 + 1.69 = 2.33
+```
+
+Nearest is e_1: z_q = (1, 0). The decoder sees only
+(1, 0), never (0.8, 0.3). The latent the decoder uses
+is an index k, a discrete token. Transformers eat
+tokens.
+
+### VQ-VAE: the two codebook losses, worked
+
+Two losses train the codebook. The **codebook loss**
+||sg[z_e] − e_k||² = 0.13 moves e_1 toward the
+encoder's output (sg = stop gradient: the encoder is
+frozen for this term). The **commitment loss**
+β·||z_e − sg[e_k]||² with β = 0.25 gives 0.25 · 0.13 =
+0.0325, pulling the encoder to commit to its chosen
+code instead of drifting between codes. One loss moves
+the codebook to the encoder. The other moves the
+encoder to the codebook.
+
+### VQ-VAE: the straight-through gradient estimator
+
+The argmin has no gradient: a tiny change in z_e either
+keeps the same nearest code or jumps to another. So
+the decoder's gradient is copied straight through to
+the encoder, as if the snap were the identity. That
+copy is the **straight-through estimator**. It is
+biased (the snap is not the identity), but it works:
+the encoder learns to place z_e near codes the decoder
+uses well.
+
+Why it matters: no KL-to-Gaussian term, so no
+posterior collapse of the VAE kind. That is why discrete
+image tokenizers (VQ-VAE, VQGAN) became the standard
+front end for autoregressive image models: the image
+becomes a sequence of codebook indices, and Lesson 10's
+chain rule takes over.
+
+![VQ-VAE: snap to the nearest codebook vector](assets/l07-vqvae.webp "z_e = (0.8, 0.3) snaps to e_1 = (1, 0). Distance 0.13, commitment 0.0325. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
+### Gumbel-softmax: reparameterizing the discrete
+
+The reparameterization trick needs continuous
+variables. For discrete latents, the **Gumbel-softmax**
+gives a differentiable relaxation. To sample a
+category with probabilities π_1..π_K: draw g_i =
+−log(−log u_i) with u_i uniform (the Gumbel draw),
+then
+
+```ascii
+y_i = exp( (log pi_i + g_i) / tau ) / sum_j exp( (log pi_j + g_j) / tau )
+```
+
+Work it: π = {0.7, 0.3}, temperature τ = 0.5, draws
+g_1 = 0.2, g_2 = −0.5. Numerators: exp((−0.357 +
+0.2)/0.5) = exp(−0.314) = 0.731, and exp((−1.204 −
+0.5)/0.5) = exp(−3.408) = 0.033. So y_1 =
+0.731/0.764 = 0.957, y_2 = 0.043. As τ → 0, y hardens
+to a one-hot sample. As τ → ∞, y flattens to
+uniform. The temperature is the dial between
+differentiable and discrete. Gradients flow through
+the softmax. The discreteness is approximated, not
+exact.
+
+### The aggregate posterior
+
+The KL term matches each q(z|x) to the prior, but
+generation samples z from the prior and decodes.
+What matters is the **aggregate posterior**:
+q̄(z) = E_x[q(z|x)], the mixture of all encodings.
+If q̄ differs from p(z), prior samples land where
+the decoder never trained.
+
+Jensen gives the relationship:
+E_x[KL(q(z|x)||p(z))] ≥ KL(q̄(z)||p(z)). The
+per-point KL can be small while the aggregate still
+mismatches: imagine q(z|x) = N(±3, 0.01) depending
+on x, each far from N(0,1) in location but the
+mixture... actually the per-point KL would be large
+there. The real failure: each q(z|x) = N(0,1)
+exactly (collapse), aggregate equals prior, but the
+latents carry nothing. The diagnostic is behavioral:
+sample z ~ p(z), decode, and look. If the samples
+look nothing like reconstructions, the aggregate
+and the prior have parted ways, whatever the KL
+says.
+
+![Gumbel-softmax: tau dials between discrete and differentiable](assets/l07-gumbel.webp "tau = 0.5 gives y_1 = 0.957. tau -> 0 hardens to one-hot. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
 
 ## The honest price
 
@@ -257,20 +415,38 @@ The VAE's second life is compression, not generation.
 Latent diffusion models compress images with a VAE
 encoder into a small latent grid, run diffusion there,
 and decode back: the VAE is the codec, diffusion is the
-generator. The reparameterization trick itself outlived
-the VAE: any model that samples a continuous latent
-during training uses it. β-VAE's disentanglement dial
-survives in representation-learning research. VQ-VAE's
-discrete codebook became the standard way to tokenize
-images and audio for transformer models. [uncertain]
-Which current production systems use each variant is not
-public.
+generator. The numbers, verified October 2026:
+
+- **Stable Diffusion 1.x/2.x**: the autoencoder uses
+  a downsampling factor of 8 and maps H×W×3 images to
+  H/8×W/8×4 latents (per the official v1.5 model card).
+  A 512×512×3 image becomes a 64×64×4 latent: 48×
+  smaller. The latents are scaled by 0.18215 (the
+  measured latent std) before diffusion. This is the
+  kl-f8 VAE lineage from the latent-diffusion paper.
+- **Stable Diffusion 3.5**: 16 latent channels at the
+  same 8× downsampling: 128×128×16 for a 1024×1024
+  image, 12× smaller. More channels, less bottleneck.
+- **FLUX.1**: 16 latent channels as well (its VAE
+  lineage), feeding the rectified flow transformer.
+
+The reparameterization trick itself outlived the VAE:
+any model that samples a continuous latent during
+training uses it. β-VAE's disentanglement dial
+survives in representation-learning research.
+VQ-VAE's discrete codebook became the standard way to
+tokenize images for transformer models. [uncertain]
+DALL-E's dVAE and VQGAN details, and which current
+production systems use each variant, are not verified
+here.
 
 ## Videos for this lesson
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/RN3_gkjlYoA" title="W5L20: Variational Autoencoder (VAE)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: the VAE, encoder to decoder, the ELBO made concrete. If the embed is blocked: <a href="https://www.youtube.com/watch?v=RN3_gkjlYoA" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/hMsQLwxYHhQ" title="5 Types of Autoencoders Explained Visually" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">External explainer: vanilla autoencoders versus VAEs, and where VQ-VAE and masked variants fit. If the embed is blocked: <a href="https://www.youtube.com/watch?v=hMsQLwxYHhQ" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
+![Chapter plate: amortize the posterior](assets/plate-l07-chap-vae.webp "Move the randomness out of the gradient path; watch the KL rent. Chapter plate. Shell 5. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 > [!QA]
 > Q: What is the reparameterization trick?
@@ -280,8 +456,8 @@ public.
 
 > [!QA]
 > Q: Walk me through a reparameterization on fresh numbers.
-> A: Encoder outputs μ = −1.0, σ = 2.0. Draw ε = 0.5. Then z = −1.0 + 2.0·0.5 = 0.0. Gradients: ∂z/∂μ = 1, so raising μ by 0.1 raises z by 0.1. ∂z/∂σ = 0.5, so raising σ by 0.1 raises z by 0.05. The KL rent for this q: −0.5·(1 + log 4 − 1 − 4) = −0.5·(1 + 1.386 − 5) = 1.807 nats. Expensive: the encoder placed its mass far from the prior and wide.
-> Follow-up: The KL is 1.807. Is that good or bad?
+> A: Encoder outputs μ = −1.0, σ = 2.0. Draw ε = 0.5. Then z = −1.0 + 2.0·0.5 = 0.0. Gradients: ∂z/∂μ = 1, so raising μ by 0.1 raises z by 0.1. ∂z/∂σ = 0.5, so raising σ by 0.1 raises z by 0.05. The KL rent for this q: −0.5·(1 + log 4 − 1 − 4) = −0.5·(1 + 1.386 − 5) = 1.307 nats. Expensive: the encoder placed its mass far from the prior and wide.
+> Follow-up: The KL is 1.307. Is that good or bad?
 > A: Neither by itself. It is the rent for an informative q. If reconstruction is excellent, the rent is justified. If the KL were 0.001 with the same reconstruction, the encoder would be saying nothing and the latents would be dead. Judge the KL against what the latents buy.
 
 > [!QA]
@@ -335,7 +511,7 @@ public.
 - Kingma and Welling, "Auto-Encoding Variational Bayes" (2013):
   - [reparameterization and the VAE loss.](https://arxiv.org/abs/1312.6114)
 - Higgins et al., "β-VAE: Learning Basic Visual Concepts with a Constrained Variational Framework" (2017):
-  - [the disentanglement dial.](https://arxiv.org/abs/1802.06875)
+  - [the disentanglement dial.](https://openreview.net/forum?id=Sy2fzU9gl)
 - van den Oord et al., "Neural Discrete Representation Learning" (VQ-VAE, 2017):
   - [discrete latents.](https://arxiv.org/abs/1711.00937)
 
