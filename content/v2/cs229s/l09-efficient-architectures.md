@@ -163,7 +163,7 @@ Recurrence: h_t = 0.5 h_{t-1} + x_t. Unroll it: h_0 = x_0,
 h_1 = x_1 + 0.5 x_0, h_2 = x_2 + 0.5 x_1 + 0.25 x_0. Every
 output is a dot product of the input with a kernel of
 decaying powers: [1, 0.5, 0.25, ...]. The recurrence was a
-convolution in disguise; the recurrence weights chose the
+convolution in disguise. The recurrence weights chose the
 kernel.
 
 Train with the FFT as a convolution: all timesteps in
@@ -171,7 +171,7 @@ parallel, O(n log n). Sample as the recurrence: one state
 update per step, O(1). The duality is exact because the
 recurrence is linear: no nonlinearity couples the
 timesteps, so regrouping the terms is legal. Add a
-nonlinearity and the disguise fails; training serializes
+nonlinearity and the disguise fails. Training serializes
 again.
 
 ![The duality](assets/plate-l09-duality.webp "h_t = 0.5 h_{t-1} + x_t unrolls to the kernel 1, 0.5, 0.25: train as convolution, sample as recurrence. Shell 4. Source: original toy for the duality. Project: Stanford Frontier AI.")
@@ -211,7 +211,7 @@ content. The attention-free mixing matrix is
 Recall needs a fully flexible mixing matrix, and only the
 input-dependent one qualifies.
 
-![Mixing matrix](assets/slide-l09-mixing-matrix.png "Shell 5. Attention mixing is input-dependent; convolutional mixing is diagonal-constant. Recall needs the former. Source: Stanford slides, Zoology 2023.")
+![Mixing matrix](assets/slide-l09-mixing-matrix.png "Shell 5. Attention mixing is input-dependent. Convolutional mixing is diagonal-constant. Recall needs the former. Source: Stanford slides, Zoology 2023.")
 
 ### Subchapter: the recall toy, worked
 
@@ -229,7 +229,7 @@ of weights can route "the value that followed the recalled
 key" for arbitrary keys. The failure is structural, not a
 matter of more parameters.
 
-![The recall toy](assets/plate-l09-recall-toy.webp "Attention routes the value 8 by content; a fixed convolution cannot. Shell 5. Source: original toy for recall. Project: Stanford Frontier AI.")
+![The recall toy](assets/plate-l09-recall-toy.webp "Attention routes the value 8 by content. A fixed convolution cannot. Shell 5. Source: original toy for recall. Project: Stanford Frontier AI.")
 
 The lecture's two conclusions. First, measure efficiency on
 the task, not just the sequence length: convolutions are
@@ -258,7 +258,7 @@ matrix B, and the output matrix C functions of the input
 token.
 
 The worked meaning: Delta = 2 means the state keeps
-almost everything from this token (remember it); Delta =
+almost everything from this token (remember it). Delta =
 0.1 means the state barely updates (forget it). The model
 learns to set Delta large on content tokens and small on
 filler. Selectivity is the input-dependent gate the
@@ -271,7 +271,7 @@ restricted linear attention, so its kernels reuse the
 matrix-multiply hardware GPUs are built for. Same idea,
 faster execution.
 
-![Mamba's selection](assets/plate-l09-mamba-select.webp "Delta large remembers the token; Delta small forgets it: input-dependent gating in linear time. Shell 6. Source: original toy for selectivity. Project: Stanford Frontier AI.")
+![Mamba's selection](assets/plate-l09-mamba-select.webp "Delta large remembers the token. Delta small forgets it: input-dependent gating in linear time. Shell 6. Source: original toy for selectivity. Project: Stanford Frontier AI.")
 
 ## What is used where: real models, 2026
 
@@ -341,13 +341,13 @@ for free.
 > Q: Walk me through the FFT convolution theorem on a toy.
 > A: Input [1, 2, 3, 4], kernel [1, 1]: naive time-domain convolution computes each output as a dot product, O(n^2). The theorem: transform both signals to the frequency domain with the FFT (O(n log n) each), multiply pointwise (O(n)), inverse-transform back (O(n log n)). The result equals the naive convolution exactly: it is a theorem, not an approximation. The speedup comes from the structure of convolution, which attention lacks.
 > Follow-up: Why is it exact?
-> A: Because the theorem is an equality about what convolution means in frequency space, not a numerical shortcut. Every step (FFT, pointwise multiply, inverse FFT) is exact arithmetic up to floating-point rounding. Sparsity and low-rank methods trade accuracy for speed; the FFT does not.
+> A: Because the theorem is an equality about what convolution means in frequency space, not a numerical shortcut. Every step (FFT, pointwise multiply, inverse FFT) is exact arithmetic up to floating-point rounding. Sparsity and low-rank methods trade accuracy for speed. The FFT does not.
 
 > [!QA]
 > Q: Why does selectivity fix recall?
-> A: Because selectivity makes the mixing input-dependent. In Mamba, Delta, B, and C are functions of the current token: the model sets Delta large on the token it must remember later and small on filler. The state update then routes content the way attention's query-key matching does, while staying a linear recurrence. Zoology's diagnosis was that recall needs input-dependent mixing; selectivity is the SSM version of it.
+> A: Because selectivity makes the mixing input-dependent. In Mamba, Delta, B, and C are functions of the current token: the model sets Delta large on the token it must remember later and small on filler. The state update then routes content the way attention's query-key matching does, while staying a linear recurrence. Zoology's diagnosis was that recall needs input-dependent mixing. Selectivity is the SSM version of it.
 > Follow-up: If selectivity recovers attention's flexibility, why is Mamba still linear time?
-> A: Because the state stays fixed-size: selectivity changes which information enters the state, not the state's size. Attention's cost comes from comparing every token against every past token; the selective recurrence updates one fixed state per step. Content-dependent routing without the pairwise matrix.
+> A: Because the state stays fixed-size: selectivity changes which information enters the state, not the state's size. Attention's cost comes from comparing every token against every past token. The selective recurrence updates one fixed state per step. Content-dependent routing without the pairwise matrix.
 
 > [!QA]
 > Q: Worked: unroll h_t = 0.5 h_{t-1} + x_t for three steps and name the kernel.
@@ -359,7 +359,7 @@ for free.
 > Q: Applied design: you need 1M-token context on a fixed memory budget. Attention, S4, or Mamba? Pick and defend.
 > A: Pure attention is out: the KV cache at 1M tokens is terabytes, and prefill is quadratic. S4 trains and samples cheaply but its fixed mixing fails content lookup, so any task needing recall from the context breaks. Mamba (or a hybrid) is the pick: linear-time scaling, O(1) state per step, and selective mixing that handles recall. For exact copying or citation over the full 1M, add a few attention layers: that is why production hybrids (Jamba, Nemotron-H, Granite 4.0) exist. The design answer prices each option in the two currencies that matter: memory and recall.
 > Follow-up: The workload is verbatim citation from the context. Does that change the pick?
-> A: Yes. SSMs compress history into a fixed state and can lose fine-grained detail; transformers keep every token addressable. For verbatim citation, keep attention (possibly with retrieval over the context) and pay the memory cost, or use a hybrid weighted toward attention. Match the architecture to the task's hardest demand.
+> A: Yes. SSMs compress history into a fixed state and can lose fine-grained detail. Transformers keep every token addressable. For verbatim citation, keep attention (possibly with retrieval over the context) and pay the memory cost, or use a hybrid weighted toward attention. Match the architecture to the task's hardest demand.
 
 ## Recap: the whole lesson on one screen
 
@@ -369,7 +369,7 @@ The story in eight steps. Each step answers the one before it.
    exact but O(N squared) in compute. Books, audio, and
    genomes need sub-quadratic.
 2. **Two older primitives.** Convolutions mix by kernel
-   ([-1, 2, -1] detects edges); recurrences keep a
+   ([-1, 2, -1] detects edges). Recurrences keep a
    fixed-size state with O(1) sampling. Each has a price.
 3. **Why bother with O(N squared) convolutions?** The
    key question: attention is quadratic too.
@@ -384,7 +384,7 @@ The story in eight steps. Each step answers the one before it.
    perplexity versus 9.79 to 13.13 for SSM variants.
    Something was missing.
 7. **Recall needs input-dependent mixing.** Attention
-   adapts its mixing matrix to content; convolutional
+   adapts its mixing matrix to content. Convolutional
    mixing is diagonal-constant. Content lookup needs the
    former.
 8. **Sub-quadratic plus selective.** Mamba, gated linear
@@ -407,10 +407,10 @@ The story in eight steps. Each step answers the one before it.
 
 **Caveats from these sources.** The perplexity table is
 one controlled comparison (360M params, 10B Pile tokens,
-same infrastructure); rankings shift with scale and data.
+same infrastructure). Rankings shift with scale and data.
 The RNN/ConvNet/Transformer tradeoff table simplifies:
 modern hybrids blur every column. The FFT causality
-discussion assumes the circular transform;
+discussion assumes the circular transform.
 implementations vary in padding convention.
 
 ## Go deeper
@@ -431,7 +431,7 @@ implementations vary in padding convention.
 - **CS336 L04:** linear attention and MoE: the
   architecture the kernel idea became.
 - **CS229S L02:** the RNN challenges that motivated
-  transformers; this lecture revisits them.
+  transformers. This lecture revisits them.
 - **CS229S L06:** the other answer to O(N squared): exact
   attention done right.
 - **CS229S L05:** FFT and parallel scans as new primitives
