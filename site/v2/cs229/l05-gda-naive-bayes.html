@@ -243,6 +243,7 @@ likely 40 kg is for elephants, times how common elephants are,
 divided by how likely 40 kg is overall. The denominator p(x) is the
 same for both species, so the decision is: pick the class with the
 bigger p(x|y) * p(y).</p>
+<figure><img alt="Two roads" src="assets/plate-l05-generative-vs-discriminative.webp"><figcaption>Two roads to the boundary. Discriminative: model p(y|x), draw the line directly. Generative: model each class, the line falls out of Bayes rule. Source: original diagram for the two framings. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="first-attempt-compare-the-averages">First attempt: compare the averages</h2>
 <p>The naive idea: compute the average cat weight and the average
 elephant weight, and pick whichever average the new animal is
@@ -287,6 +288,19 @@ gives a linear boundary: w^T x + b = 0, with w = Sigma^-1 (mu_1 -
 mu_0). GDA, the generative model, produces a linear classifier, the
 same shape as logistic regression&rsquo;s. Different road, same destination.</p>
 <figure><img alt="GDA" src="assets/svg/l05-gda.svg"><figcaption>Gaussian discriminant analysis. Each class is a Gaussian bell. The decision boundary is where the bells cross: x = 22 in the toy. Shared covariance makes it linear. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-qda-the-quadratic-sibling">Subchapter: QDA, the quadratic sibling</h3>
+<p>GDA shares one covariance across classes. Drop that and each class
+gets its own Sigma. The model is now <strong>QDA</strong> (quadratic discriminant
+analysis). The quadratic terms no longer cancel, so the boundary
+curves: it bends around the tighter class like a fence around a
+small yard.</p>
+<p>Count the price. In d = 2, GDA fits 2 means (4 numbers), 1 Sigma (3
+numbers), and the class fraction: 8 knobs. QDA fits 2 means and 2
+Sigmas: 11 knobs. In d = 100, GDA needs about 5,150 knobs and QDA
+about 10,200. Double the knobs, double the data needed to fit them
+without overfitting. The decision rule: shared spread, use GDA.
+Wildly different spreads and plenty of data, QDA earns its keep.</p>
+<figure><img alt="GDA vs QDA" src="assets/plate-l05-gda-vs-qda.webp"><figcaption>GDA vs QDA. GDA shares one covariance: the boundary is a straight line. QDA gives each class its own: the boundary curves around the tighter class. Source: original toy for the covariance choice. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-key-question">The key question</h2>
 <p>GDA needs real-valued features and bell curves. What about the spam
 filter from lecture 1, where the features are words: does the email
@@ -314,6 +328,19 @@ p(free|spam) * p(no meeting|spam) * p(spam) = 0.8 * 0.8 * 0.5 =
 0.32. Score real: 0.1 * 0.1 * 0.5 = 0.005. Spam wins by 64 to 1.
 The logs make it addition: log scores add per word, which is how
 implementations do it.</p>
+<h3 id="subchapter-two-ways-to-count-words">Subchapter: two ways to count words</h3>
+<p>The lesson&rsquo;s Naive Bayes is the <strong>multivariate Bernoulli</strong> model:
+each word is present or not, one coin per word. There is a second
+event model: the <strong>multinomial</strong>. It counts repetitions. An email
+with &ldquo;free&rdquo; three times contributes p(free|spam) once under
+Bernoulli and p(free|spam)^3 under multinomial.</p>
+<p>The multinomial usually wins on long documents, where repetition
+carries signal: three &ldquo;free&rdquo;s is stronger evidence than one. The
+Bernoulli model can win on short texts, where presence is all there
+is. Scikit-learn ships both: BernoulliNB and MultinomialNB. The
+decision rule: short texts, try Bernoulli. Long documents, start
+multinomial.</p>
+<figure><img alt="Two event models" src="assets/plate-l05-bernoulli-vs-multinomial.webp"><figcaption>Two ways to count words. Bernoulli: present or not, one coin per word. Multinomial: counts repetitions, three frees cube the evidence. Source: original toy for the event models. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="where-it-breaks-the-zero-that-kills">Where it breaks: the zero that kills</h2>
 <p>Now the failure the lecture spotlights. A new email contains the
 word &ldquo;congratulations&rdquo;. It never appeared in the 20 training emails.
@@ -332,7 +359,17 @@ of a veto. The lecture calls this &ldquo;the magic&rdquo;: it prevents zero
 probabilities and shrinks confidence in all estimates, pulling wild
 fractions like 1/1 back toward uniform. It is the simplest form of
 <strong>regularization</strong>, the theme of lecture 6.</p>
+<figure><img alt="Laplace smoothing" src="assets/plate-l05-laplace.webp"><figcaption>Add one, save the filter. An unseen word scores 0 in both classes: blind. Laplace adds 1 to every count: 1/12, small and honest, no veto. Source: original toy for Laplace smoothing. Project: Stanford Frontier AI.</figcaption></figure>
 <figure><img alt="Naive Bayes spam filter" src="assets/svg/l05-naivebayes.svg"><figcaption>Naive Bayes. Words vote independently by their class probabilities. Laplace smoothing adds 1 to every count so unseen words cannot veto. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-log-trick-again">Subchapter: the log trick, again</h3>
+<p>The toy multiplies three numbers. A real email has thousands of
+words, each with probability far below 1. The product underflows to
+zero in floating point, exactly the disease the log cured in lecture
+3. Implementations add logs: log(0.32) = -1.14, log(0.005) = -5.30.
+The decision is unchanged (bigger is still better), and no product
+ever touches zero. Every Naive Bayes implementation scores in log
+space. Memorize the pair: the toy score was (0.32, 0.005), the log
+score is (-1.14, -5.30).</p>
 <h2 id="the-honest-price">The honest price</h2>
 <p>Generative models buy cheap training and pay in assumptions. GDA
 assumes each class is Gaussian with shared covariance. Real classes
@@ -379,12 +416,20 @@ strong assumptions squeeze more from fewer examples.</p>
 </tr>
 </tbody>
 </table>
-<div class="qa"><div class="q">What is the difference between generative and discriminative models?</div><div class="a"><p>A discriminative model learns p(y|x) directly: given the features, which class? Logistic regression draws the boundary. A generative model learns p(x|y) and p(y): what each class looks like, and how common it is. Then Bayes&rsquo; rule flips it into p(y|x) for decisions. GDA models each class as a Gaussian; Naive Bayes models each class as word probabilities. Generative training is usually closed-form counting. Discriminative training is usually iterative optimization.
+<div class="qa"><div class="q">What is the difference between generative and discriminative models?</div><div class="a"><p>A discriminative model learns p(y|x) directly: given the features, which class? Logistic regression draws the boundary. A generative model learns p(x|y) and p(y): what each class looks like, and how common it is. Then Bayes&rsquo; rule flips it into p(y|x) for decisions. GDA models each class as a Gaussian. Naive Bayes models each class as word probabilities. Generative training is usually closed-form counting. Discriminative training is usually iterative optimization.
 When data is scarce. The strong assumptions (Gaussian classes, independent words) squeeze more signal from few examples. With plentiful data, discriminative models usually win on accuracy because they optimize the boundary directly instead of hoping it falls out of the class models. The lecture notes the discriminative versions &ldquo;dwarf&rdquo; the generative ones in modern use, but GDA and Naive Bayes remain the cheap, fast baseline.</p><div class="followup"><strong>Follow-up:</strong> When does the generative approach win?</div></div></div>
 <div class="qa"><div class="q">Why does GDA with shared covariance give a linear boundary?</div><div class="a"><p>Compare the two Gaussian densities at a point x. Each has a quadratic term x^T Sigma^-1 x in the exponent. With one shared Sigma, that term is identical for both classes and cancels in the comparison. What remains is linear in x: w^T x + b with w = Sigma^-1(mu_1 - mu_0). The decision &ldquo;which bell is taller&rdquo; becomes &ldquo;which side of a line&rdquo;. Give each class its own covariance and the quadratics survive: the boundary becomes quadratic (that model is called QDA).
 mu_0 is the average of class 0&rsquo;s examples, mu_1 the average of class 1&rsquo;s, Sigma the average squared deviation pooled across classes, and p(y=1) the fraction of class-1 examples. All closed form, one pass. No iterations, no learning rate.</p><div class="followup"><strong>Follow-up:</strong> What are the MLE estimates for GDA?</div></div></div>
 <div class="qa"><div class="q">What breaks in Naive Bayes without Laplace smoothing, and what does smoothing do?</div><div class="a"><p>Any word unseen in training gets probability 0 in both classes by raw counting. One such word in a new email zeroes the whole product, and classification collapses. Laplace smoothing adds 1 to every word count: p = (count + 1)/(total + V). The unseen word gets 1/(total+V) instead of 0: small, honest, non-vetoing. It also shrinks every estimate toward uniform, taming wild fractions from tiny samples. The lecture calls it the simplest regularization.
 Almost never, and the model works anyway. Correlated words get double-counted, which inflates confidence but usually preserves the ranking of the classes. When ranking is all you need, the wrong assumption is cheap and fast. When you need calibrated probabilities, it is a real problem.</p><div class="followup"><strong>Follow-up:</strong> Is the independence assumption ever true?</div></div></div>
+<div class="qa"><div class="q">Walk me through the mechanism: fit GDA by hand on class 0 = {1, 3} and class 1 = {7, 9}, equal class fractions.</div><div class="a"><p>mu_0 = (1+3)/2 = 2. mu_1 = (7+9)/2 = 8. Pooled variance: squared deviations from own means are (1-2)^2 + (3-2)^2 + (7-8)^2 + (9-8)^2 = 1+1+1+1 = 4, over 4 examples = 1. The densities cross at the midpoint: x = 5. A new animal at x = 6 lands above 5, so class 1. Closed form, one pass, no iterations.
+The p(y) factor penalizes the rare class: its bell is multiplied by 0.1, the common one by 0.9. The crossing point moves toward class 1&rsquo;s side, so the rare class claims less territory. Rare classes must shout louder to win.</p><div class="followup"><strong>Follow-up:</strong> What changes if class 1 is 9 times rarer than class 0?</div></div></div>
+<div class="qa"><div class="q">Applied design: filter 10 million emails a day on a single machine. What do you build?</div><div class="a"><p>Multinomial Naive Bayes in log space. Training is one counting pass over the corpus: memory is one float per vocabulary word. Inference per email is a table lookup and an addition per word. Ten million emails a day is 116 a second. NB does that on one core with room to spare. Laplace smoothing is mandatory: unseen words arrive daily.
+When NB&rsquo;s accuracy plateaus and you can afford iterative training. Correlated words (&ldquo;free&rdquo;, &ldquo;money&rdquo;) get double-counted by NB. Logistic regression weighs the evidence jointly. The honest upgrade path: NB first for the baseline and the speed, logistic regression when the baseline is not enough.</p><div class="followup"><strong>Follow-up:</strong> When do you graduate to logistic regression?</div></div></div>
+<div class="qa"><div class="q">GDA and logistic regression draw the same linear boundary. When does each win?</div><div class="a"><p>GDA wins on small data: closed-form fits squeeze more from few examples because the Gaussian assumption does half the work. Logistic regression wins on big data: it optimizes the boundary directly instead of hoping the boundary falls out of two class models. The classical result (Ng and Jordan): GDA reaches its higher asymptotic error with O(log n) examples, logistic regression needs O(n) to reach its lower one. Small data, generative. Big data, discriminative.
+No. Small-data regimes are everywhere: medical studies with 200 patients, BCI with 50 trials, any cold-start problem. GDA and its cousin LDA still ship there. Obsolete on ImageNet does not mean obsolete in the clinic.</p><div class="followup"><strong>Follow-up:</strong> Does that mean GDA is obsolete?</div></div></div>
+<div class="qa"><div class="q">Why does Naive Bayes stay competitive in text despite the independence lie?</div><div class="a"><p>Classification needs the argmax, not calibrated probabilities. Correlated words get double-counted, which inflates confidence but rarely flips which class wins: the ranking survives the lie. The model is also dirt cheap, so it wins on speed-adjusted accuracy. When the lie hurts: highly correlated features plus a need for honest probabilities, like expected-loss decisions. Then the overconfidence is a real bill.
+There is not a free one. Calibrated alternatives (logistic regression, Platt scaling on NB scores) cost the joint modeling NB skipped. Speed, accuracy of ranking, calibrated confidence: pick two cheaply, pay for the third.</p><div class="followup"><strong>Follow-up:</strong> Name the fix that keeps the speed but fixes the confidence.</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
 <li><strong>The job.</strong> 40 kg animal: giant cat or small elephant? Model
@@ -405,11 +450,32 @@ Almost never, and the model works anyway. Correlated words get double-counted, w
 <li><strong>The honest price.</strong> Gaussian and independence assumptions are
    usually false. Discriminative models win on big data. Generative
    wins on small data and on speed.</li>
+<li><strong>QDA.</strong> Each class gets its own Sigma: the boundary curves.
+   d = 100 needs ~10,200 knobs vs GDA&rsquo;s ~5,150. Different spreads
+   plus plenty of data, or stay linear.</li>
+<li><strong>Two event models.</strong> Bernoulli: present or not. Multinomial:
+    counts repetitions. Long documents start multinomial.</li>
+<li><strong>Log space.</strong> The toy (0.32, 0.005) becomes (-1.14, -5.30).
+    No product ever touches zero.</li>
 </ol>
+<h2 id="what-is-used-where">What is used where</h2>
+<p><strong>Naive Bayes filtered the world&rsquo;s email.</strong> Early-2000s spam
+filters (the lecture&rsquo;s direct descendant) ran Naive Bayes on every
+inbox. Modern filters layer rules, reputation, and learned ensembles
+on top, but NB remains the cheap first stage and the baseline every
+text classifier must beat. Sentiment analysis tutorials still start
+here.</p>
+<p><strong>GDA&rsquo;s family survives as LDA/QDA.</strong> Scikit-learn ships both.
+They still ship in small-data production: brain-computer interfaces,
+medical diagnostics, and any cold-start classifier with hundreds of
+examples. Closed form, no tuning, no GPU.</p>
+<h2 id="watch-next">Watch next</h2>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/O2L2Uv9pdDA" title="StatQuest: Naive Bayes, Clearly Explained" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: StatQuest, Naive Bayes Clearly Explained. Josh Starmer builds the spam filter from counting. Watch after the Naive Bayes section.</p></div>
+
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Lecture 5 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=zRdE8A4UZes — Chris Ré derives
+  - <a href="https://www.youtube.com/watch?v=zRdE8A4UZes">Chris Ré derives</a>
   GDA from the Gaussian, shows the linear boundary, and builds the
   Naive Bayes spam filter with Laplace smoothing.
 - Official subtitle transcript (en-US): the lecture&rsquo;s spoken text.
@@ -435,7 +501,7 @@ iterative methods, not a formal complexity statement.</p>
 <li><strong>CS224N:</strong> Naive Bayes as the classical text classifier before
   neural methods.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=zRdE8A4UZes" target="_blank" rel="noopener">Lecture 5 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=zRdE8A4UZes" target="_blank" rel="noopener">Lecture 5 video, Stanford Online YouTube</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=O2L2Uv9pdDA" target="_blank" rel="noopener">Explainer: StatQuest, Naive Bayes Clearly Explained</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
       <nav class="pager"><a href="../cs229/l04-glms-softmax.html"><span class="lbl">← Previous</span>Lecture 4: The Exponential Family and Generalized Linear Models</a><a href="../cs229/l06-bias-variance.html"><span class="lbl">Next →</span>Lecture 6: Bias, Variance, and Picking Models</a></nav>
     </article>
     <footer class="pagefoot">
