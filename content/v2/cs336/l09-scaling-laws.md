@@ -276,7 +276,7 @@ most general: fix any budget, sweep any tradeoff.
 > Q: Walk me through fitting a scaling law from four small runs.
 > A: Fix a small FLOP budget, say 1e20. Pick four model sizes: 100M, 300M, 1B, 3B. For each, set tokens D = C / 6N: the 100M model gets about 1.7e11 tokens, the 3B model about 5.6e9. Train all four with tuned hyperparameters. Plot final loss vs N: a U-shape. Read the minimum: suppose it lands at 1B. That is your optimal N for 1e20 FLOPs. Repeat at 1e21 and 1e22. Three minima give three (N, D) pairs. Plot log N vs log C: the slope is your exponent. Extrapolate to the big budget. That is the whole procedure: sweeps, minima, a line.
 > Follow-up: What breaks the extrapolation?
-> A: Anything that changes the regime: a new architecture, a different data mixture, a hyperparameter that does not transfer. The line is fit in the small-scale regime; the big run must live in the same one. Kaplan's miss is the warning: exclude the unembedding, shortchange warmup, fix a bad batch size, and the small-scale minima point the wrong way. Details decide.
+> A: Anything that changes the regime: a new architecture, a different data mixture, a hyperparameter that does not transfer. The line is fit in the small-scale regime. The big run must live in the same one. Kaplan's miss is the warning: exclude the unembedding, shortchange warmup, fix a bad batch size, and the small-scale minima point the wrong way. Details decide.
 
 ## Overtrain for serving
 
@@ -321,7 +321,7 @@ cost.
 
 > [!QA]
 > Q: You have the 10,000 B200s for a month. Spend them, step by step.
-> A: Do not touch the big run yet. First, pick three small FLOP budgets, about 1/1000, 1/100, and 1/10 of the big budget. At each, run an IsoFLOP sweep: five model sizes, tokens set by 6ND, tuned hyperparameters, read the minima. Fit the scaling law: the line through the minima gives the optimal N and D for the full budget. Check the batch: fit B_crit from the sweeps and confirm the planned batch sits below it. Check serving: if the model will serve at scale, overtrain past the research optimum on purpose. Only then launch the big run, with the hyperparameters transferred (muP or width scaling), not retuned. The month is spent on the small runs; the big run is the receipt.
+> A: Do not touch the big run yet. First, pick three small FLOP budgets, about 1/1000, 1/100, and 1/10 of the big budget. At each, run an IsoFLOP sweep: five model sizes, tokens set by 6ND, tuned hyperparameters, read the minima. Fit the scaling law: the line through the minima gives the optimal N and D for the full budget. Check the batch: fit B_crit from the sweeps and confirm the planned batch sits below it. Check serving: if the model will serve at scale, overtrain past the research optimum on purpose. Only then launch the big run, with the hyperparameters transferred (muP or width scaling), not retuned. The month is spent on the small runs. The big run is the receipt.
 > Follow-up: What is the most expensive mistake in this plan?
 > A: Tuning hyperparameters on the big run. One failed big run costs more than all the small sweeps combined. The second most expensive: fitting the law with the wrong details, Kaplan-style. Count all the parameters, warm up fully, and tune the batch per scale. The small runs must live in the same regime as the big one, or the extrapolation points the wrong way.
 
@@ -372,6 +372,16 @@ The story in eight steps. Each step answers the one before it.
    the devil in the details. IsoFLOP is the reliable default.
 8. **Serve small, train long.** Training-optimal is big. Serving
    wants small and capable: overtrain past 20:1 on purpose.
+
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/MFLU1c7uf-8" title="Chinchilla Scaling Laws: Why Bigger Isn't Better" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- Chinchilla Scaling Laws (the embed above): https://www.youtube.com/watch?v=MFLU1c7uf-8
+- Hoffmann et al., Chinchilla: https://arxiv.org/abs/2203.15556
+- Kaplan et al., Scaling Laws for Neural Language Models: https://arxiv.org/abs/2001.08361
+- Li et al., DataComp-LM / DCLM: https://arxiv.org/abs/2406.11794
 
 ## Official sources and further reading
 
