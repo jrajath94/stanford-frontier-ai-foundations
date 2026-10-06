@@ -19,6 +19,9 @@ sources:
   - tag: video
     label: "Lecture 1 video, Stanford Online YouTube"
     url: https://www.youtube.com/watch?v=DATnpGoGhM8
+  - tag: video
+    label: "Explainer: How Machine Learning Works (With Real Examples)"
+    url: https://www.youtube.com/watch?v=peBnLUBaXzI
   - tag: notes
     label: "Official subtitle transcript (en-US)"
   - tag: notes
@@ -65,15 +68,37 @@ of algorithms that improve at a task from experience instead of from
 hand-written instructions. Two classic definitions make this precise,
 and both still hold after decades.
 
-Arthur Samuel wrote the first one in 1959, before the term "software"
-was common. He said machine learning is "the field of study that
-gives computers the ability to learn without being explicitly
-programmed." The key phrase is "without being explicitly programmed".
-Nobody programmed the "fr33" rule. The machine learned it from data.
+### Subchapter: Samuel, 1959, the first definition
 
-Tom Mitchell wrote the second one in 1997, and it is sharper because
-it names the three moving parts. "A computer program is said to learn
-from experience E with respect to some class of tasks T and
+Arthur Samuel wrote the first definition in 1959, before the term
+"software" was common. He said machine learning is "the field of
+study that gives computers the ability to learn without being
+explicitly programmed." The key phrase is "without being explicitly
+programmed". Nobody programmed the "fr33" rule. The machine learned
+it from data.
+
+Samuel built the first famous learning machine: a checkers program
+that learned to play by playing itself. The program did not contain
+a rule for every board position. It contained a scoring function with
+knobs, and the knobs turned as the program won and lost games. The
+1959 paper reports the program beating a human champion. The
+definition and the demo arrive together: learning means the
+program's behavior changes because of experience, not because a
+human edited the code.
+
+The definition has one soft spot. "Explicitly programmed" draws a
+line that is hard to see in modern systems. A neural network's
+architecture is hand-designed. Its training loop is hand-written
+code. What is "learned" is the numbers inside, the weights. Samuel's
+definition survives because the behavior that matters, the spam
+decision, comes from the learned numbers, not from a rule a human
+typed.
+
+### Subchapter: Mitchell, 1997, the testable definition
+
+Tom Mitchell wrote the second definition in 1997, and it is sharper
+because it names the three moving parts. "A computer program is said
+to learn from experience E with respect to some class of tasks T and
 performance measure P, if its performance at tasks T, as measured by
 P, improves with experience E."
 
@@ -91,18 +116,48 @@ itself, and the sequence of rewards and punishments in a game. The
 lecture stresses this breadth because modern models drink from all of
 these sources at once.
 
+![Mitchell's T, E, P](assets/plate-l01-mitchell-tep.webp "Mitchell's definition on the spam filter. Task T: sort email. Experience E: 10,000 labeled emails. Performance P: accuracy on new mail, rising from 94 to 99 percent as E grows. Source: original plate for Stanford Frontier AI.")
+
+Three traps hide in Mitchell's definition, and interviewers love
+them. First, P must be measured on data the machine has not trained
+on. Accuracy on the 10,000 training emails can reach 100 percent by
+memorization. That is not learning. Lecture 6 is entirely about this
+trap. Second, E must actually cause the improvement. If P rises
+because the test got easier, nothing learned. Third, the definition
+says nothing about how the improvement happens. Any method counts:
+rules, tables, neural networks. The definition tests the outcome, not
+the mechanism.
+
 ## The three paradigms
 
 Every learning algorithm in this course fits one of three setups.
 The setups differ in what the experience looks like.
 
+### Subchapter: supervised, the labeled pair
+
 **Supervised learning** is learning from labeled examples. Each
 experience is a pair: the input and the correct answer. For spam:
 ("Win fr33 money now!!!", spam). For house prices: (3 bedrooms, 2
 baths, 1,800 sq ft. Sold for $812,000). The machine's job is to
-predict the answer for new inputs it has never seen. Most of this
-course is supervised learning. Lectures 2 through 8 build it from
-zero.
+predict the answer for new inputs it has never seen.
+
+Two flavors cover almost all supervised work. **Regression**
+predicts a number: the house sells for $812,000. **Classification**
+predicts a category: the email is spam. A toy makes the difference
+concrete. Four houses: 1,000 sq ft sold for $200,000. 1,500 sq ft
+sold for $300,000. 2,000 sq ft sold for $400,000. The pattern is
+$200 per square foot, and a 1,750 sq ft house predicts $350,000.
+That is regression: the answer lives on a number line. Four emails
+labeled spam or not spam: the answer is a category, and the machine
+outputs a probability of spam. That is classification.
+
+Supervision is expensive. Every label costs human time. One labeler
+tags about 2,000 emails per day. Ten thousand labels cost five
+labeler-days. The labels are also the ceiling: the machine cannot
+learn a distinction the labels never make. Lectures 2 through 8
+build supervised learning from zero.
+
+### Subchapter: unsupervised, structure without answers
 
 **Unsupervised learning** is learning from unlabeled data. Nobody
 tells the machine the right answer. The machine finds structure on
@@ -110,19 +165,47 @@ its own: which items group together, which patterns repeat. Give it
 one million emails with no labels and it might discover that
 "pharmacy" emails form one cluster and "invoice" emails form
 another. The answers are not given, so the machine invents its own
-categories. Lectures 9 and 10 cover this: clustering with k-means and
-Gaussian mixtures, then EM and PCA.
+categories.
+
+A toy shows what "finds structure" means. Six points on a line: 1,
+2, 3, 20, 21, 22. No labels. A clustering algorithm with two groups
+puts {1, 2, 3} together and {20, 21, 22} together, because points
+within a group sit close and points across groups sit far. Nobody
+told it that 10.5 was the boundary. The boundary fell out of the
+geometry.
+
+Evaluation is the hard part. With no labels, there is no accuracy to
+measure. You judge unsupervised results by usefulness: do the
+clusters help a human, do the compressed features keep the signal.
+Lectures 9 and 10 cover this: clustering with k-means and Gaussian
+mixtures, then EM and PCA.
+
+### Subchapter: reinforcement, the score that teaches
 
 **Reinforcement learning** is learning from trial and error. The
 machine acts in an environment and gets rewards or punishments back.
 Nobody shows it the right move. It plays thousands of games, wins
 some, loses some, and shifts toward the moves that won. The
-experience is a history of actions and rewards. Lectures 16 and 17
-cover this, with language models as the flagship application.
+experience is a history of actions and rewards.
+
+A toy makes the loop concrete. A robot stands in a corridor with
+three doors. It picks door 2 and finds a reward of +10. It picks
+door 1 and finds -5. After 1,000 tries, door 2 paid +10 most of the
+time, door 1 paid -5, door 3 paid 0. The machine's policy shifts
+toward door 2. No label said "door 2 is correct". The rewards taught
+it.
+
+The price of trial and error is the trials. A chess program plays
+millions of games against itself. A robot breaks hardware learning
+to walk. Sample efficiency, learning from few trials, is the field's
+central pain. Lectures 16 and 17 cover this, with language models as
+the flagship application.
 
 Which setup fits a job? Ask what experience you have. Labeled pairs
 means supervised. Raw data with no answers means unsupervised. A
 world you can act in and get scored means reinforcement.
+
+![Choosing the paradigm](assets/svg/l01-paradigm-choice.svg "Choosing the paradigm from the experience. Labeled pairs point to supervised. Raw data points to unsupervised. Actions with rewards point to reinforcement. Source: original plate for Stanford Frontier AI.")
 
 ## Why the old way broke, in numbers
 
@@ -140,12 +223,65 @@ false-positive rate climbs with the rule count. You are patching a
 system whose complexity grows every wave while the attacker pays
 nothing to probe it.
 
+![The rule economics](assets/plate-l01-rule-economics.webp "The rule economics that killed rule lists. Humans add 10 rules a day. Spammers invent 100 evasions a day. Rules lose by 10x, forever. Source: original plate for Stanford Frontier AI.")
+
 The learning approach inverts this. The machine retrains on this
 week's labeled mail. No new code. The labeling is the only human
 work, and one labeler tags about 2,000 emails per day. Ten thousand
 labels cost five labeler-days and produce a filter that adapts to
 "fr33", "f.r.e.e", and whatever comes next, because the pattern is
 re-learned from fresh examples each time.
+
+### Subchapter: where rules still win
+
+Learning is not always the answer. Hand-written rules still win when
+the world does not change and the rules are few. Tax brackets are
+exact and stable: income over $44,725 pays 22 percent. No learning
+needed. Unit conversions are exact. Chess move legality is exact.
+Aircraft checklists are exact.
+
+The decision rule: if the correct behavior can be written down in
+under 100 rules and the world will not move under them, write the
+rules. They are precise, auditable, and free to run. If the pattern
+is too complex to write down (what does a cat look like) or the
+world adapts against you (spammers, fraudsters), learn it from
+data. The mistake is using learning where rules would do. The
+opposite mistake is hand-writing rules for a moving target.
+
+## What is used where
+
+Each paradigm runs real production systems today. The mapping is
+public and stable.
+
+**Supervised learning runs the revenue.** Search ranking, ad
+click prediction, fraud scoring, and recommendation feeds are
+supervised models trained on logged user behavior. The workhorse for
+tabular data is gradient-boosted trees: XGBoost and LightGBM win
+most tabular competitions and production benchmarks on structured
+data, a public and long-standing result. Linear and logistic models
+still serve enormous traffic where speed and interpretability
+matter: ad systems score billions of impressions a day with models
+simple enough to update in minutes. Deep supervised models own
+perception: vision and speech systems train supervised on labeled
+datasets.
+
+**Unsupervised learning runs the plumbing.** Embeddings from
+contrastive and self-supervised training power search and
+recommendation retrieval at every large tech company. PCA and its
+cousins compress features before models train. Clustering segments
+users and detects new fraud patterns without labels.
+
+**Reinforcement learning runs the frontier.** RLHF, reinforcement
+learning from human feedback, aligns every major chat model. Game
+systems like AlphaZero and OpenAI Five are pure RL. Recommender
+systems use bandit algorithms, RL's one-step cousin, to balance
+showing what works against trying what might work better. [uncertain]
+on exact production details inside any specific company: the public
+record confirms the techniques, not the internal configs.
+
+## Watch next
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/peBnLUBaXzI" title="How Machine Learning Works (With Real Examples)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: How Machine Learning Works (With Real Examples). Supervised vs unsupervised vs reinforcement, spam detection, and house-price prediction, all in one mental model. Watch after the three-paradigms section.</p></div>
 
 ## The map of the course
 
@@ -177,14 +313,25 @@ Lecture 2 derives it.
 ## The honest price
 
 Machine learning buys adaptability and pays in three currencies.
+
+![The honest price](assets/plate-l01-honest-price.webp "The honest price. Adaptability costs three currencies: data (thousands of labels), compute (millions of repeated operations), and trust (a box nobody can read). Source: original plate for Stanford Frontier AI.")
+
 First, data. The machine needs thousands of labeled examples where
-the rule list needed one clever engineer. Second, compute. Training
-scans those examples again and again, millions of arithmetic
-operations. Third, trust. A learned model is a black box: nobody
-wrote its rules, so nobody can read them back. When it fails, it
-fails in ways no human predicted. The rest of this course is about
-making each of these three costs as small as possible while keeping
-the adaptability.
+the rule list needed one clever engineer. Ten thousand spam labels
+cost five labeler-days. Some tasks cannot buy labels at any price:
+rare diseases, novel fraud.
+
+Second, compute. Training scans those examples again and again,
+millions of arithmetic operations. The rule list ran in
+microseconds. A trained model also runs fast, but producing it is
+expensive, and the bill repeats every retrain.
+
+Third, trust. A learned model is a black box: nobody wrote its
+rules, so nobody can read them back. When it fails, it fails in ways
+no human predicted. The spam filter that learned "fr33" might also
+have learned that emails sent at 3 a.m. are spam. The rest of this
+course is about making each of these three costs as small as possible
+while keeping the adaptability.
 
 > [!QA]
 > Q: What is the difference between the Samuel and Mitchell definitions of machine learning?
@@ -204,6 +351,30 @@ the adaptability.
 > Follow-up: When do hand-written rules still win?
 > A: When the world does not change and the rules are few. Tax brackets, unit conversions, and chess move legality are stable and exact. Rules win on precision and auditability there. Learning wins where the world adapts or the pattern is too complex to write down.
 
+> [!QA]
+> Q: Walk me through Mitchell's definition on a task I have never seen: predicting subway delays from weather data.
+> A: Name T first: "predict whether each scheduled train is delayed more than 5 minutes, given the weather at departure time". E is the experience: two years of paired records, each a (weather snapshot, delayed-or-not label). P is the performance measure: accuracy on future weeks the model has never seen, or better, the cost of wrong predictions in passenger-minutes. Learning happened if P on unseen weeks improves as you add more months of E. The trap to name: P measured on the same two years is memorization, not learning.
+> Follow-up: What if P improves but the world changed, not the model?
+> A: Then Mitchell's test fails its intent. If delays drop because the transit agency fixed the signals, P rises with no learning. Always compare against a baseline on the same time window, and check that the improvement comes from E, not from an easier test.
+
+> [!QA]
+> Q: Give me a product decision: a startup wants to flag fraudulent transactions with 200 confirmed fraud cases and 10 million unlabeled transactions. Which paradigm, and why?
+> A: Start unsupervised, graduate to supervised. Two hundred labels are too few to train a supervised fraud classifier that generalizes. It will memorize the 200. First cluster the 10 million transactions unsupervised and look for the clusters where the 200 known frauds concentrate. Use those clusters to prioritize human review, which produces more labels. Once labeling reaches thousands of confirmed frauds, train supervised. This is the standard production ramp: unsupervised triage buys the labels that supervised learning needs.
+> Follow-up: Why not reinforcement learning here?
+> A: There is no environment to act in and no cheap reward signal. Each "action" would mean blocking a real customer's transaction, which costs money and trust. RL needs thousands of trials. Fraud blocking cannot afford them.
+
+> [!QA]
+> Q: Why is accuracy on the training data not enough to claim learning?
+> A: Because memorization scores 100 percent without generalizing. A lookup table of the 10,000 training emails gets every one right and fails on email 10,001. Mitchell's P must be measured on new data drawn from the same task. The gap between training P and new-data P is the whole subject of lecture 6: overfitting is exactly a model that memorized instead of learned.
+> Follow-up: What is the minimum honest experiment to claim learning happened?
+> A: Split E into train and held-out test before any training. Train on one part, measure P on the other. Then train on twice as much and measure again. If held-out P rises with more E, learning happened. One split, two training sizes, one comparison.
+
+> [!QA]
+> Q: The lecture says the old ML workflow changed with pre-trained models. What changed, exactly?
+> A: The old workflow was per task: collect labels for your task, train a model on them, ship it. The new workflow is pre-train once, adapt many times: one foundation model trains on internet-scale experience, then each task adapts it with a small amount of task data or just a prompt. Mitchell's definition still applies, but E is now two-stage: massive general E for pre-training, small task E for adaptation. Lecture 12 covers this shift.
+> Follow-up: Does prompting a model count as learning under Mitchell's definition?
+> A: Usually not. A prompt does not change the model's weights, so P on the task does not improve with E in any lasting way. The context helps one conversation. The next starts fresh. Fine-tuning on the task's E does count: the weights change and P rises permanently.
+
 ## Recap: the whole lesson on one screen
 
 1. **The job.** Sort spam when spammers change tactics every two
@@ -216,24 +387,45 @@ the adaptability.
 4. **The key question.** What if the machine writes its own rules
    from labeled examples?
 5. **The new idea.** Learn from experience. Samuel: without explicit
-   programming. Mitchell: T, E, P, and P must improve with E.
+   programming. Mitchell: T, E, P, and P must improve with E on new
+   data.
 6. **The three paradigms.** Labeled pairs (supervised), raw data
-   (unsupervised), actions and rewards (reinforcement).
-7. **The honest price.** Data, compute, and trust. Learned models
+   (unsupervised), actions and rewards (reinforcement). Subchapters
+   work a toy for each.
+7. **Where rules still win.** Stable, exact, few rules: taxes,
+   conversions, checklists. Under 100 rules and a still world, write
+   them.
+8. **What is used where.** Supervised runs revenue (XGBoost,
+   logistic CTR models, perception). Unsupervised runs plumbing
+   (embeddings, compression). RL runs the frontier (RLHF, games,
+   bandits).
+9. **The honest price.** Data, compute, and trust. Learned models
    adapt but cannot be read back like rule lists.
-8. **The map.** Lectures 2 to 8 build supervised learning and neural
-   nets. Lectures 9 to 10 cover unsupervised learning. Lectures 11
-   to 17 cover modern deep learning and reinforcement.
+10. **The map.** Lectures 2 to 8 build supervised learning and
+    neural nets. Lectures 9 to 10 cover unsupervised learning.
+    Lectures 11 to 17 cover modern deep learning and reinforcement.
 
 ## Official sources and further reading
 
 **Official:**
 - Lecture 1 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=DATnpGoGhM8 — Tengyu Ma's
+  - [Tengyu Ma's](https://www.youtube.com/watch?v=DATnpGoGhM8)
   introduction, definitions, and course map.
 - Official subtitle transcript (en-US): the lecture's spoken text.
 - CS229 Spring 2026 official course notes (local PDF): the rigorous
   companion to the lectures.
+
+**Go deeper:**
+- Samuel, A. L. (1959). "Some Studies in Machine Learning Using the
+  Game of Checkers." IBM Journal of Research and Development.
+  - [the original paper](https://ieeexplore.ieee.org/document/5392560)
+  behind the 1959 definition.
+- Mitchell, T. (1997). Machine Learning. McGraw Hill, Chapter 1.
+  - [the T, E, P](https://www.cs.cmu.edu/~tom/mlbook-chapter-slides.html)
+  definition with worked examples.
+- Explainer: How Machine Learning Works (With Real Examples):
+  - [the three paradigms](https://www.youtube.com/watch?v=peBnLUBaXzI)
+  and the ML workflow in one visual pass.
 
 **Caveats from these sources.** The lecture says the definitions from
 1959 and 1997 "still kind of hold", but the *use* of models changed:
