@@ -224,10 +224,10 @@ IS = exp( E[ KL(p(y|x) || p(y)) ] )
 Its blind spot is memorization at scale, demonstrated. A model
 that outputs exactly one memorized photo per ImageNet class,
 cycling through all 1,000 classes: each p(y|x) is one-hot, so
-KL = log 1000 = 6.9 nats per sample, and p(y) is uniform:
+KL = log 1000 = 6.9078 nats per sample, and p(y) is uniform:
 
 ```ascii
-IS = exp(6.9) = 1000
+IS = exp(6.9078) = 1000
 ```
 
 A perfect score for a 1,000-photo memory machine. IS also
@@ -295,11 +295,11 @@ inherit the Inception-features caveat.
 
 | Judge | Where it runs | Evidence |
 |---|---|---|
-| FID | Papers-with-code leaderboards. Every text-to-image paper reports it | Public: the field standard since 2017 |
-| Human eval | Model launches (DALL-E 2, Imagen papers report human preference rates) | Public: reported in the papers' evaluation sections |
-| Likelihood / bpd | Flow and autoregressive papers, compression benchmarks | Public: reported wherever exact densities exist |
-| CLIP score | Text-to-image alignment: cosine similarity of prompt and image CLIP embeddings | Public: widely reported alongside FID |
-| Nearest-neighbor tests | Memorization audits of diffusion models | Public: reported in replication studies |
+| FID | Papers-with-code leaderboards. Every text-to-image paper reports it | Public: Heusel et al., 2017, arxiv 1706.08500. The field standard since 2017 |
+| Human eval | Model launches (DALL-E 2, Imagen papers report human preference rates) | Public: Ramesh et al., 2022, arxiv 2204.06125 (DALL-E 2). Saharia et al., 2022, arxiv 2205.11487 (Imagen) |
+| Likelihood / bpd | Flow and autoregressive papers, compression benchmarks | Public: Kingma and Dhariwal, 2018, arxiv 1807.03039 (Glow). Dinh et al., 2016, arxiv 1605.08803 (RealNVP) |
+| CLIP score | Text-to-image alignment: cosine similarity of prompt and image CLIP embeddings | Public: Ramesh et al., 2022, arxiv 2204.06125 (DALL-E 2 reports CLIP score) |
+| Nearest-neighbor tests | Memorization audits of diffusion models | Public: Somepalli et al., 2023, arxiv 2212.03860 (diffusion memorization study) |
 
 The pattern: FID for the leaderboard, humans for the launch,
 likelihood where it exists, CLIP for prompt match,
