@@ -184,7 +184,7 @@ exactly the Mamba-2 gate from this lecture. One idea added: the SSD
 (state-space duality) form. Now the dense form trains in parallel on
 GPUs and the recurrent form infers with a fixed state, the same
 duality as linear attention. Mamba-1 selected. Mamba-2 selects and
-dualizes. Same selection, new math form, both fast paths unlocked.
+dualizes. Same selection, new math form, both fast paths available.
 
 ## Gated delta net: erase before writing
 
@@ -424,7 +424,7 @@ attention at all: GQA plus scale still competes.
 
 > [!QA]
 > Q: Expert-choice routing balances load for free. Why does token-choice still win?
-> A: Because load balance is not the objective; loss is. Token-choice gives every token its best experts, so each token gets the highest-quality computation. Expert-choice gives every expert a fair workload, so some tokens get served by experts that scored them low, or get dropped entirely. OlMoE's ablations show token-choice beating expert-choice on both loss and benchmarks. The field's answer: take token-choice and pay for balance separately with the F x P auxiliary loss.
+> A: Because load balance is not the objective. Loss is. Token-choice gives every token its best experts, so each token gets the highest-quality computation. Expert-choice gives every expert a fair workload, so some tokens get served by experts that scored them low, or get dropped entirely. OlMoE's ablations show token-choice beating expert-choice on both loss and benchmarks. The field's answer: take token-choice and pay for balance separately with the F x P auxiliary loss.
 > Follow-up: When would expert-choice be the right call?
 > A: When the serving system cannot tolerate imbalance. Expert-choice guarantees fixed compute per expert per step, which simplifies capacity planning. Production frontier models still pick token-choice, but research systems with strict device budgets sometimes prefer the guarantee.
 
@@ -491,6 +491,16 @@ The story in eight steps. Each step answers the one before it.
 8. **Balance or collapse.** Without the F x P aux loss, two experts
    take everything and 62 sit idle. The gradient pushes probability
    mass off popular experts.
+
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/9dSkvxS2EB0" title="Mamba Explained" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- Mamba Explained (the embed above): https://www.youtube.com/watch?v=9dSkvxS2EB0
+- Gu and Dao, Mamba: Linear-Time Sequence Modeling: https://arxiv.org/abs/2312.00752
+- DeepSeek-V3 Technical Report: https://arxiv.org/abs/2412.19437
+- Fedus et al., Switch Transformers: https://arxiv.org/abs/2101.03961
 
 ## Official sources and further reading
 
