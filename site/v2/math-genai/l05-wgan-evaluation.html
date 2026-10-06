@@ -81,6 +81,7 @@
 <li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
 <li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
 <li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../cs229s/crash-course-02.html" data-page="cs229s-crash-02">CS229S · Crash course 2</a></li>
 </ul>
 <h3>CS224N: NLP with Deep Learning</h3><ul>
 <li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
@@ -146,18 +147,14 @@
 </ul>
 <h3>CS329A: Self-Improving AI Agents</h3><ul>
 <li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
-<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
-<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
-<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
-<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
-<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
-<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
-<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
-<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
-<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
-<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
-<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
-<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+<li><a href="../cs329a/l01-course-overview.html" data-page="cs329a-l01">L01 · Course Overview</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Compute Scaling</a></li>
+<li><a href="../cs329a/l03-feedback-tools-code.html" data-page="cs329a-l03">L03 · Feedback, Tools, Code</a></li>
+<li><a href="../cs329a/l04-planning-multistep-reasoning.html" data-page="cs329a-l04">L04 · Planning and Multi-Step Reasoning</a></li>
+<li><a href="../cs329a/l05-search-at-scale.html" data-page="cs329a-l05">L05 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l06-train-time-scaling.html" data-page="cs329a-l06">L06 · Train-Time Scaling</a></li>
+<li><a href="../cs329a/l07-agentic-evaluations.html" data-page="cs329a-l07">L07 · Agentic Evaluations</a></li>
+<li><a href="../cs329a/l08-future-directions.html" data-page="cs329a-l08">L08 · Future Directions</a></li>
 </ul>
 <h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
 <li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
@@ -230,7 +227,7 @@ care about probability ratios at each point. When the model and
 the truth do not overlap at all, the ratio is 0 or infinite
 everywhere, and every such pair looks equally &ldquo;maximally far&rdquo;.
 A model 10 units away scores the same as a model 100 units away.
-No gradient can point downhill if the whole landscape is flat.</p>
+No gradient can point downhill if the whole surface is flat.</p>
 <h2 id="first-attempt-watch-js-go-flat">First attempt: watch JS go flat</h2>
 <h3 id="the-point-mass-toy">The point-mass toy</h3>
 <p>Make the toy as stark as possible. The truth is a point mass at
@@ -246,7 +243,8 @@ theta = 100:  M = {0: 0.5, 100: 0.5}
 <p>Identical: 0.693 both times. JS cannot tell 10 from 100. Its
 gradient with respect to θ is exactly zero. The generator is
 lost: every direction looks the same. This is saturation made
-quantitative, and it is why Lesson 4&rsquo;s generator stalled.</p>
+quantitative, and it is why Lesson 4&rsquo;s generator stalled.
+(All logs in this lesson are natural logs, base e.)</p>
 <figure><img alt="JS is flat at 0.693. Wasserstein sees the distance" src="assets/l05-js-vs-w.webp"><figcaption>d(JS)/d(theta) = 0. dW/d(theta) = 1. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-key-question">The key question</h2>
 <p>Is there a distance between distributions that keeps working
@@ -302,17 +300,62 @@ gradient zero the whole way. The number to remember: 100
 steps of size 1 land exactly at 0. Under JS, 100 steps of
 size anything land nowhere.</p>
 <figure><img alt="WGAN: the same game, raw scores, a speed limit" src="assets/l05-wgan-game.webp"><figcaption>J = E[f(x)] - E[f(xhat)] over 1-Lipschitz f. Shell 3. Source: WGAN paper. Project: Stanford Frontier AI.</figcaption></figure>
-<h3 id="enforcing-the-speed-limit-two-options">Enforcing the speed limit: two options</h3>
+<h3 id="enforcing-the-speed-limit-option-1-weight-clipping">Enforcing the speed limit, option 1: weight clipping</h3>
 <p>Enforcing the speed limit is the engineering. The original
 WGAN clips the critic&rsquo;s weights to a small box after each
 step, which crudely bounds the slope. It works but cripples
 the critic&rsquo;s capacity: the critic can only use a corner of
-its expressiveness. The later gradient-penalty variant
-penalizes the slope directly: add (||∇f|| − 1)² to the
-critic&rsquo;s loss. Either way, the price is a slower, more
-constrained critic than the GAN&rsquo;s free one. The decision
-rule: clipping is simpler and weaker. The gradient penalty
-trains better and costs more tuning.</p>
+its expressiveness. The price is a slower, more constrained
+critic than the GAN&rsquo;s free one.</p>
+<h3 id="enforcing-the-speed-limit-option-2-gradient-penalty">Enforcing the speed limit, option 2: gradient penalty</h3>
+<p>The later gradient-penalty variant penalizes the slope
+directly: add (||∇f|| − 1)² to the critic&rsquo;s loss. Same price
+(a slower, more constrained critic), better training. The
+decision rule: clipping is simpler and weaker. The gradient
+penalty trains better and costs more tuning.</p>
+<h3 id="worked-the-penalty-is-40-on-a-slope-3-critic">Worked: the penalty is 40 on a slope-3 critic</h3>
+<p>The WGAN-GP (Wasserstein GAN with gradient penalty,
+Gulrajani et al. 2017) loss for the critic is:</p>
+<pre class="ascii">L = E[f(x_hat)] - E[f(x)] + lambda * E[ (||grad f(x_mix)|| - 1)^2 ]
+x_mix = epsilon * x + (1 - epsilon) * x_hat,  epsilon ~ Uniform(0,1)
+</pre>
+<p>Take the toy critic f(x) = −3x (slope 3, three times the
+limit) and λ = 10, the paper&rsquo;s value. ||∇f|| = 3
+everywhere, so the penalty is 10·(3−1)² = 40. The critic
+pays 40 for speeding. Gradient descent on L shrinks the
+slope toward 1, where the penalty hits 0. The mixture
+points x_mix matter: the penalty is enforced on the
+segments between real and fake points, exactly where the
+dual&rsquo;s slope constraint binds.</p>
+<h3 id="spectral-normalization-a-cleaner-speed-limit">Spectral normalization: a cleaner speed limit</h3>
+<p>A linear layer&rsquo;s Lipschitz constant is its largest
+singular value σ_max(W). <strong>Spectral normalization</strong>
+divides each weight matrix by its σ_max after every
+step, capping each layer&rsquo;s slope at 1. A stack of such
+layers has total slope at most 1.</p>
+<p>Worked: W = [[2, 0], [0, 0.5]]. Its singular values are
+2 and 0.5, so σ_max = 2. Normalize: W/2 =
+[[1, 0], [0, 0.25]]. The layer can no longer amplify
+any input direction by more than 1. Unlike clipping,
+no capacity is fenced off: the weights keep their
+directions, only the scale is capped. Unlike the
+gradient penalty, there is no extra loss term to tune.
+The σ_max is estimated by one power-iteration step per
+update, cheap.</p>
+<h3 id="what-the-other-divergences-say-on-the-point-mass-toy">What the other divergences say on the point-mass toy</h3>
+<p>For completeness, run the Lesson 3 family on the
+point-mass toy (P_X = δ_0, P_θ = δ_θ, θ ≠ 0):</p>
+<ul>
+<li>KL: infinite (the model assigns 0 to the truth&rsquo;s
+  point). Reverse KL: infinite. χ²: infinite.</li>
+<li>TV: ½(|1−0| + |0−1|) = 1. Constant: no gradient.</li>
+<li>JS: log 2 = 0.693. Constant: no gradient.</li>
+<li>Wasserstein: |θ|. Gradient 1.</li>
+</ul>
+<p>Every ratio-based divergence is either infinite or
+flat on disjoint supports. Only the moving-cost
+distance sees the gap. This table is the whole
+argument for Wasserstein in one glance.</p>
 <h2 id="the-second-wound-judging-without-a-likelihood">The second wound: judging without a likelihood</h2>
 <h3 id="the-procedure-step-by-step">The procedure, step by step</h3>
 <p>A trained generator has no density, so MLE cannot score it.
@@ -371,6 +414,82 @@ For text or audio you need a different feature extractor, and
 the &ldquo;which layer&rdquo; choice is a hyperparameter that moves the
 number.</p>
 <figure><img alt="FID: judge samples with samples" src="assets/l05-fid.webp"><figcaption>Real and generated images become Gaussians in Inception feature space. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
+<h2 id="the-inception-score-fids-older-sibling">The Inception Score: FID&rsquo;s older sibling</h2>
+<h3 id="the-definition">The definition</h3>
+<p>Before FID, the field used the <strong>Inception Score</strong> (IS).
+It uses the same Inception classifier but asks a
+different question: for each generated image, how
+confident is the classifier, and across images, how
+diverse are the predicted classes?</p>
+<pre class="ascii">IS = exp( E[ KL( p(y|x) || p(y) ) ] )
+     x generated
+</pre>
+<p>p(y|x) is the classifier&rsquo;s label distribution on one
+image. p(y) is the average over all generated images.
+The KL is large when each image is confidently one
+class (sharp p(y|x)) and the classes vary across images
+(flat p(y)). Both properties in one number.</p>
+<h3 id="worked-is-1445-on-two-images">Worked: IS = 1.445 on two images</h3>
+<p>Two generated images, two classes. The classifier says
+p(y|x_1) = {0.9, 0.1} and p(y|x_2) = {0.1, 0.9}: each
+image confident, classes split evenly. The marginal is
+p(y) = {0.5, 0.5}.</p>
+<pre class="ascii">KL per image = 0.9*log(0.9/0.5) + 0.1*log(0.1/0.5)
+             = 0.9*0.588 + 0.1*(-1.609) = 0.368
+IS = exp(0.368) = 1.445
+</pre>
+<p>A perfect score on 2 classes would be 2.0 (every image
+certain, classes uniform). We get 1.445 because 0.9 is
+not 1.0. Now the failure: a generator emitting one
+perfect dog photo forever gets p(y|x) = {1.0, 0.0} and
+p(y) = {1.0, 0.0}: KL = 0, IS = 1.0, the minimum. IS
+punishes collapse. But a generator emitting real
+training photos in class balance also scores well: IS
+cannot detect memorization, same blind spot as FID.</p>
+<h3 id="is-versus-fid">IS versus FID</h3>
+<p>IS never looks at real images: it judges generated
+samples against the classifier&rsquo;s own idea of classes.
+FID compares generated features to real features
+directly. The decision rule: IS rewards sharp,
+diverse samples even if they match no real data
+distribution. FID rewards matching the real
+distribution. Papers report both, and trust FID more.</p>
+<figure><img alt="IS = 1.445: confident per image, diverse across images" src="assets/l05-is-toy.webp"><figcaption>exp(0.368) = 1.445. Perfect on 2 classes would be 2.0. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="the-frechet-distance-in-one-dimension">The Fréchet distance in one dimension</h3>
+<p>In 1-D the Fréchet formula simplifies to
+(μ−μ̂)² + (σ−σ̂)²: mean gap squared plus spread gap
+squared. Two worked cases. N(0,1) vs N(2,1): same
+spread, centers 2 apart. FID = 4 + 0 = 4. N(0,1) vs
+N(0,4): same center, spreads 1 and 2. FID = 0 +
+(1−2)² = 1. The first is a shifted cloud, the second
+a fatter cloud. The formula prices them separately:
+4 for the shift, 1 for the fattening. In high
+dimensions the (ΣΣ̂)^{1/2} term does the same job
+for the full covariance: it matches spreads and
+correlations, not just centers.</p>
+<h3 id="precision-and-recall-for-gans">Precision and recall for GANs</h3>
+<p>FID is one number. <strong>Precision and recall</strong>
+(Kynkäänniemi et al. 2019) split quality from
+diversity. Embed real and generated images in
+feature space. Around each set, build a manifold
+from k-nearest-neighbor balls. Then:</p>
+<ul>
+<li><strong>Precision</strong>: fraction of generated samples
+  inside the real manifold. Are the fakes
+  realistic?</li>
+<li><strong>Recall</strong>: fraction of real samples inside the
+  generated manifold. Does the generator cover the
+  real variety?</li>
+</ul>
+<p>Toy: 10 real points, 10 generated. 8 generated fall
+inside the real manifold: precision 0.8. 5 real
+fall inside the generated manifold: recall 0.5.
+Read it: quality is decent, coverage is half. High
+precision with low recall is the signature of mode
+collapse: every sample looks real, but half the
+world is missing. FID would report one middling
+number. Precision/recall names the failure.</p>
+<figure><img alt="Precision 0.8, recall 0.5: quality without coverage" src="assets/l05-precision-recall.webp"><figcaption>8 of 10 generated inside the real manifold. 5 of 10 real inside the generated one. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-honest-price">The honest price</h2>
 <h3 id="wassersteins-remaining-costs">Wasserstein&rsquo;s remaining costs</h3>
 <p>Wasserstein fixes saturation but not everything. The
@@ -423,20 +542,38 @@ training set) and a diversity check (cluster the samples).</p>
 </tbody>
 </table>
 <h3 id="where-this-runs-in-real-systems">Where this runs in real systems</h3>
-<p>The gradient-penalty WGAN (WGAN-GP) became the stable
-adversarial baseline for several years: it trains without the
-saturation stalls of Lesson 4 and without the capacity
-crippling of weight clipping. FID outlived the GAN era: it is
-still the standard number for comparing image generators,
-including diffusion models, because it needs only samples.
-When a paper reports &ldquo;FID 3.2 versus 9.1&rdquo;, it is running this
-lesson&rsquo;s six-point toy at scale: two feature Gaussians, one
-Fréchet distance. [uncertain] Exact FID values across papers
-are not comparable unless the feature layer, sample count,
-and dataset split match.</p>
+<p>Verified deployments, October 2026:</p>
+<p>WGAN-GP (Gulrajani et al. 2017) became the stable
+adversarial baseline for several years: it trains
+without the saturation stalls of Lesson 4 and without
+the capacity crippling of weight clipping. Progressive
+GAN trained its early configurations with WGAN-GP
+before switching to the non-saturating loss.</p>
+<p>FID outlived the GAN era: it is still the standard
+number for comparing image generators, including
+diffusion models, because it needs only samples. The
+landmark FID numbers, all on the same metric:</p>
+<ul>
+<li>DDPM (Ho et al. 2020): FID 3.17 on CIFAR-10,
+  taking a clear bite out of the GAN-held record.</li>
+<li>ADM (Dhariwal and Nichol 2021): FID 4.59 on
+  ImageNet 256×256 with classifier guidance,
+  formally beating BigGAN-deep and ending the
+  GAN era on that benchmark.</li>
+<li>StyleGAN papers report FID throughout: it is how
+  the progressive-growing and style-based lines
+  measured each gain.</li>
+</ul>
+<p>When a paper reports &ldquo;FID 3.2 versus 9.1&rdquo;, it is
+running this lesson&rsquo;s six-point toy at scale: two
+feature Gaussians, one Fréchet distance. [uncertain]
+Exact FID values across papers are not comparable
+unless the feature layer, sample count, and dataset
+split match.</p>
 <h2 id="videos-for-this-lesson">Videos for this lesson</h2>
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/5Mchnh2xedI" title="W4L16: Evaluation of Generative Models" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: evaluation of generative models, the FID procedure and formula on the board. If the embed is blocked: <a href="https://www.youtube.com/watch?v=5Mchnh2xedI" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
 
+<figure><img alt="Chapter plate: Wasserstein sees the distance" src="assets/plate-l05-chap-wgan.webp"><figcaption>A distance with gradients beats a divergence without them; FID judges samples with samples. Chapter plate. Shell 5. Source: original synthesis of the lesson. Project: Stanford Frontier AI.</figcaption></figure>
 <div class="qa"><div class="q">Why is the Wasserstein distance better behaved than JS?</div><div class="a"><p>JS only sees probability ratios, so non-overlapping distributions all score the max: 0.693 for θ = 10 and θ = 100 alike, gradient zero. Wasserstein measures moving cost: W = 10 versus W = 100, with a constant downhill gradient of 1. The generator always knows which way to go.
 It approximates the Kantorovich-Rubinstein dual: max over 1-Lipschitz f of E[f(x)] − E[f(x̂)]. No sigmoid, no logs. The Lipschitz speed limit keeps the max finite. Weight clipping enforces it crudely. The gradient penalty enforces it directly.</p><div class="followup"><strong>Follow-up:</strong> What does the critic actually compute in a WGAN?</div></div></div>
 <div class="qa"><div class="q">Walk me through a Wasserstein computation on a new toy.</div><div class="a"><p>Truth: half the mass at 0, half at 2. Model: all mass at 6. Pair the mass: the half at 0 travels 6, the half at 2 travels 4. Average distance: 0.5·6 + 0.5·4 = 5. So W = 5. The gradient with respect to the model&rsquo;s position is 1: move the mass left and W falls one-for-one. No flat region, no surprise.
@@ -475,6 +612,7 @@ Where sample sharpness per unit of compute matters most and you can babysit trai
 - Heusel et al., &ldquo;GANs Trained by a Two Time-Scale Update Rule Converge to a Local Nash Equilibrium&rdquo; (2017):
   - <a href="https://arxiv.org/abs/1706.08500">the paper that introduced FID.</a></p>
 <p><strong>Caveats.</strong> The FID procedure, its formula, and the Inception/ImageNet details are confirmed in the W4L16 transcript. The W4L11 transcript was bot-blocked, so the WGAN treatment (duality, Lipschitz, clipping) follows the standard Arjovsky et al. presentation. [uncertain] The point-mass W = |θ| toy and the six-point FID = 4 computation are the lesson&rsquo;s own.</p>
+<p>Scope exclusion, documented. The playlist&rsquo;s topic sequence lists <strong>Domain Adversarial Networks</strong> (DAN/UDA) in the W4 block: adversarial training applied to domain adaptation, where a domain classifier&rsquo;s gradient is reversed to learn domain-invariant features. The recovered lecture transcripts contain no substantive treatment, and the playlist&rsquo;s T8 (UDA) is a code tutorial, not math. It is excluded here rather than invented: a named gap, not a filled one.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
 <li><strong>CS229 L11 (diffusion models):</strong> that course never needs FID for training (its loss is plain denoising error), but FID is still how its samples are judged against GAN samples in papers. A worked tie: a diffusion model with FID 3.2 beats a GAN with FID 9.1 on the same dataset, and the number means the diffusion model&rsquo;s feature Gaussian sits closer to the real one by exactly that Fréchet gap.</li>
