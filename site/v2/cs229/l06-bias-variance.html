@@ -256,6 +256,17 @@ models: low bias, high variance. The classic picture is a U-curve:
 test error falls as flexibility fixes bias, then rises as variance
 takes over. The bottom of the U is the model you want.</p>
 <figure><img alt="Bias and variance" src="assets/svg/l06-biasvar.svg"><figcaption>Bias versus variance. Simple models underfit with high bias. Flexible models overfit with high variance. Test error is U-shaped in the classical picture. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-decomposition-worked">Subchapter: the decomposition, worked</h3>
+<p>Three fits of the true curve y = x^2 at x = 1, where the truth is
+1.0. Three training samples give three predictions: 0.7, 0.9, 1.1.
+Mean prediction: 0.9. Bias: 0.9 - 1.0 = -0.1, so bias squared is
+0.01. Variance: average squared distance from the mean:
+((0.7-0.9)^2 + (0.9-0.9)^2 + (1.1-0.9)^2)/3 = (0.04 + 0 + 0.04)/3 =
+0.027. Expected test error: 0.01 + 0.027 + irreducible noise. The
+three parts add up to the whole. When a model fails, this split
+tells you which enemy to fight: shrink bias with flexibility,
+shrink variance with data or penalties.</p>
+<figure><img alt="Decomposition" src="assets/plate-l06-decomposition.webp"><figcaption>Three parts, one error. Predictions 0.7, 0.9, 1.1 at truth 1.0: bias squared 0.01, variance 0.027, plus noise. Source: original toy for the decomposition. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="where-the-canon-breaks-double-descent">Where the canon breaks: double descent</h2>
 <p>For decades the U-curve was the whole story. Then neural networks
 broke it. The lecture presents <strong>double descent</strong>: keep adding
@@ -295,6 +306,7 @@ partly lucky on dev. The test set stays clean because you never
 decide anything with it. The lecture&rsquo;s warning: every decision made
 on a dataset contaminates it. The test set is the one dataset you
 decide nothing with.</p>
+<figure><img alt="Three splits" src="assets/plate-l06-dev-test.webp"><figcaption>One dataset you never touch. Train fits the knobs. Dev decides between models. Test reports once and decides nothing. Source: original diagram for the split discipline. Project: Stanford Frontier AI.</figcaption></figure>
 <p>When data is scarce, <strong>cross-validation</strong> reuses it honestly: split
 into k folds, train on k-1, validate on the held-out fold, rotate,
 average. With k = 5, every example validates exactly once and trains
@@ -324,6 +336,22 @@ error 0.9. Rho = 100: the curve goes nearly flat, test error 2.1
 instead of flexibility. The lecture&rsquo;s intuition: &ldquo;we know theta is
 not too big. If we make it really big, it has got to be worth it by
 fitting the data a lot better.&rdquo;</p>
+<h3 id="subchapter-lasso-the-cousin-that-deletes">Subchapter: Lasso, the cousin that deletes</h3>
+<p>Ridge penalizes the square of each knob: rho * theta_j^2. Its cousin
+<strong>Lasso</strong> penalizes the absolute value: rho * |theta_j|. Same
+shrinkage idea, different geometry, different fate.</p>
+<p>Picture the penalty as a shape around the origin. Ridge&rsquo;s penalty
+is a circle: it pulls every knob toward zero but never quite to
+zero. Lasso&rsquo;s penalty is a diamond: its corners sit on the axes, and
+the loss contours hit those corners first, which sets knobs exactly
+to zero. Ridge shrinks. Lasso deletes.</p>
+<p>The decision rule: use Lasso when you suspect most features are
+junk and you want the model to say which: 1,000 candidate features,
+Lasso keeps 17, you read the 17. Use ridge when features are
+correlated and you want them to share credit: Lasso would keep one
+twin and delete the other arbitrarily. The elastic net mixes both
+penalties when you want a bit of each.</p>
+<figure><img alt="Ridge vs Lasso" src="assets/plate-l06-ridge-vs-lasso.webp"><figcaption>Two penalties, two shapes. Ridge (L2) is a circle: shrinks every knob. Lasso (L1) is a diamond: corners delete knobs to exactly zero. Source: original diagram for the penalty shapes. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="hyperband-stop-wasting-compute-on-losers">Hyperband: stop wasting compute on losers</h2>
 <p>Rho is a <strong>hyperparameter</strong>: a dial you set before training, not a
 knob the training fits. Learning rate, polynomial degree, network
@@ -340,6 +368,19 @@ Bad ideas die cheap. Good ideas earn compute. The lecture presents
 it as the disciplined answer to hyperparameter search: never spend a
 full training run on a config that already looks bad.</p>
 <figure><img alt="Hyperband" src="assets/svg/l06-hyperband.svg"><figcaption>Hyperband. Many configs start cheap. The best half survives each round with doubled budget. Bad ideas die cheap, good ideas earn compute. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-random-search-beats-grid">Subchapter: random search beats grid</h3>
+<p>Before Hyperband decides budgets, decide which configs to try. Grid
+search lays a lattice: 3 values per dial, 2 dials, 9 trials. The
+disease: if only one dial matters, the grid tries just 3 distinct
+values of it, repeated 3 times each. Random search draws 9
+independent points: 9 distinct values of the important dial.</p>
+<p>The classic result (Bergstra and Bengio): with 60 random trials, the
+chance of missing the top 5% of configs is 0.95^60 = 5%. Sixty
+random trials nearly guarantee a top-5% config. A grid of 60 cannot
+promise that on any single dial. The decision rule: never grid
+search more than 2 dials. Random search first, Hyperband to spend
+the budget, Bayesian optimization when each trial costs a fortune.</p>
+<figure><img alt="Random search" src="assets/plate-l06-random-search.webp"><figcaption>Random beats grid. Grid: 9 trials, 3 distinct values per dial. Random: 9 trials, 9 distinct values per dial. Source: original diagram for the search comparison. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-honest-price">The honest price</h2>
 <p>Every tool here charges. The train/dev/test split costs data: a
 test set of 10,000 examples is 10,000 examples the model never
@@ -397,6 +438,12 @@ Only if you can afford past the peak and you regularize. Between the classical s
 Contaminating the test set by deciding with it: tuning on test, early-stopping on test, or selecting among papers by test score. Each decision leaks test information into the model, and the reported number drifts optimistic. The discipline is absolute: decide on dev, report on test, once.</p><div class="followup"><strong>Follow-up:</strong> What is adaptive overfitting?</div></div></div>
 <div class="qa"><div class="q">How does ridge regression fix an underdetermined problem?</div><div class="a"><p>With fewer examples than knobs (n &lt; d), X^T X is singular and infinitely many theta fit training exactly. Ridge minimizes loss plus rho times ||theta||^2, giving theta = (X^T X + rho I)^-1 X^T y. The rho*I term makes the matrix invertible for any rho &gt; 0, and among all perfect fits it selects the smallest-norm one: the calmest curve. On the toy, rho = 1 cut test error from 4.7 to 0.9 by shrinking the whipsawing coefficients tenfold.
 On the dev set, not the training set: training error falls monotonically as rho drops to 0, so training cannot choose. Sweep rho over a logarithmic grid (0.001, 0.01, 0.1, 1, 10, 100), pick the dev winner. The toy&rsquo;s sweep: 4.7 at 0, 0.9 at 1, 2.1 at 100.</p><div class="followup"><strong>Follow-up:</strong> How do you pick rho?</div></div></div>
+<div class="qa"><div class="q">Walk me through the mechanism: compute bias and variance for predictions {0.6, 1.0, 1.4} when the truth is 1.0.</div><div class="a"><p>Mean prediction: (0.6 + 1.0 + 1.4)/3 = 1.0. Bias: 1.0 - 1.0 = 0, so bias squared is 0. Variance: ((0.6-1.0)^2 + (1.0-1.0)^2 + (1.4-1.0)^2)/3 = (0.16 + 0 + 0.16)/3 = 0.107. Zero bias, large variance: on average the model is exactly right, but any single fit swings. This is the degree-10 polynomial&rsquo;s signature: unbiased and chaotic.
+Variance. More samples pin the fit down, so the swings shrink. Bias from wrong assumptions survives infinite data: a line never learns a curve. Data fights variance. Flexibility fights bias. You need both moves.</p><div class="followup"><strong>Follow-up:</strong> Which enemy does more data fight?</div></div></div>
+<div class="qa"><div class="q">Applied design: your dev error is 5% but the held-out test error is 12%. Diagnose and fix.</div><div class="a"><p>A 7-point gap means the test set differs from dev or dev is contaminated. Suspects in order: distribution shift (test drawn later or from a different slice), adaptive overfitting (too many model selections on dev, so dev is optimistic), or a test pipeline bug (different preprocessing). Diagnose: check per-slice errors, audit every decision ever made on test, diff the pipelines. Fix the cause, not the number: refresh the test set if it leaked, fix the pipeline if it diverged, and never tune on test to close the gap.
+There is no number, only the trend: when dev keeps improving and your confidence in the test number keeps falling, you have adapted to dev. The defense is a fresh test set nobody has touched, or a dev set large enough that luck cannot move it.</p><div class="followup"><strong>Follow-up:</strong> How many dev decisions are too many?</div></div></div>
+<div class="qa"><div class="q">Ridge or Lasso? Give the decision rule and the geometry.</div><div class="a"><p>Lasso when you want feature selection: its diamond penalty has corners on the axes, so loss contours hit corners and set knobs exactly to zero. Ridge when features correlate and should share credit: its circle shrinks everything but deletes nothing. Lasso on 1,000 candidate features keeps 17 and names them. Ridge on 50 correlated sensors keeps all 50, calmed. Elastic net mixes both when you want selection plus sharing.
+The optimum sits where a loss contour first touches the penalty shape. The diamond&rsquo;s corners stick out along the axes: first touch happens at a corner, where all but one coordinate are zero. The circle has no corners: first touch is almost never exactly on an axis, so every knob stays nonzero, just small.</p><div class="followup"><strong>Follow-up:</strong> Why does the diamond give sparsity but the circle does not?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
 <li><strong>The job.</strong> A model that works on houses it has never seen.
@@ -419,11 +466,35 @@ On the dev set, not the training set: training error falls monotonically as rho 
 <li><strong>The honest price.</strong> Splits cost data, CV costs compute, ridge
    costs bias, Hyperband can kill slow starters, double descent
    humbles the simplicity sermon.</li>
+<li><strong>The decomposition, worked.</strong> Predictions 0.7, 0.9, 1.1 at truth
+    1.0: bias squared 0.01, variance 0.027, noise on top.</li>
+<li><strong>Lasso.</strong> L1 penalty is a diamond: corners delete knobs to
+    zero. Ridge shrinks, Lasso selects.</li>
+<li><strong>Random beats grid.</strong> 60 random trials miss the top 5% only
+    5% of the time. Never grid more than 2 dials.</li>
 </ol>
+<h2 id="what-is-used-where">What is used where</h2>
+<p><strong>Ridge is the default regularized linear model in production.</strong>
+Scikit-learn&rsquo;s Ridge fits in one line, and regularized logistic
+regression (the same penalty on the lecture-3 loss) scores credit,
+fraud, and ads. Lasso runs feature selection wherever readings are
+cheap and truth is sparse: genomics, sensor selection, marketing
+mix.</p>
+<p><strong>The split discipline runs every serious ML team.</strong> Train, dev,
+test with a locked test set is the industry standard. Cross
+validation covers small data. Hyperband&rsquo;s child ASHA and Optuna run
+hyperparameter search in production tuning loops.</p>
+<p><strong>Double descent shapes how the field spends money.</strong> Past the
+interpolation peak, bigger keeps helping: this is the empirical
+fact behind billion-parameter budgets. The classical U-curve still
+rules small models, where the peak is never crossed.</p>
+<h2 id="watch-next">Watch next</h2>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/EuBBz3bI-aA" title="StatQuest: Bias and Variance" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: StatQuest, Bias and Variance. Josh Starmer draws the bullseye picture and the U-curve from scratch. Watch after the bias-variance section.</p></div>
+
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Lecture 6 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=llnEgyyuYkQ — Chris Ré derives
+  - <a href="https://www.youtube.com/watch?v=llnEgyyuYkQ">Chris Ré derives</a>
   the bias-variance decomposition, presents double descent, the
   train/dev/test discipline, ridge regression, and Hyperband.
 - Official subtitle transcript (en-US): the lecture&rsquo;s spoken text.
@@ -448,7 +519,7 @@ original miniature demonstrating the lecture&rsquo;s claims. Hyperband&rsquo;s
 <li><strong>CS336:</strong> what the interpolation peak looks like in real
   training runs and how practitioners budget past it.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=llnEgyyuYkQ" target="_blank" rel="noopener">Lecture 6 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=llnEgyyuYkQ" target="_blank" rel="noopener">Lecture 6 video, Stanford Online YouTube</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=EuBBz3bI-aA" target="_blank" rel="noopener">Explainer: StatQuest, Bias and Variance</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
       <nav class="pager"><a href="../cs229/l05-gda-naive-bayes.html"><span class="lbl">← Previous</span>Lecture 5: Generative Models, GDA and Naive Bayes</a><a href="../cs229/l07-neural-networks-1.html"><span class="lbl">Next →</span>Lecture 7: Neural Networks, Architecture</a></nav>
     </article>
     <footer class="pagefoot">
