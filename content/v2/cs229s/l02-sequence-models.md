@@ -10,6 +10,9 @@ summary: "From sequences to the transformer, built from zero: the RNN, why it br
 date: "2024-09-27"
 instructor: "Azalia Mirhoseini"
 offering: "Fall 2024"
+video_id: "eMlx5fFNoYc"
+video_title: "Attention in transformers, step-by-step | Deep Learning Chapter 6"
+video_caption: "3Blue1Brown builds attention from zero with visuals: the exact mechanism this lesson derives by hand. Verified live on YouTube."
 concepts: [sequence-modeling, language-model, chain-rule, rnn, attention, transformer, encoder, decoder]
 sources:
   - tag: slides
@@ -159,7 +162,7 @@ mattered more as sequences got longer.
 ### Subchapter: backprop through time (how the RNN learns)
 
 Training unrolls the chain and walks the error backward. The loss
-at step 7 produces a correction for h_7; the chain rule carries it
+at step 7 produces a correction for h_7. The chain rule carries it
 to h_6, then h_5, all the way to h_1. Each backward step multiplies
 by the same recurrent matrix W_h again. This is **backprop through
 time**: the RNN is a deep network where depth equals sequence
@@ -173,7 +176,7 @@ a thousand multiplications.
 
 ### Subchapter: the RNN family (LSTM and GRU)
 
-The vanilla RNN has one flaw at its core: every update
+The vanilla RNN has one central flaw: every update
 *overwrites*. The new hidden state is a fresh squash of old and new,
 and old information must survive the squash. Two famous variants
 fix this with **gates**: learned switches between 0 and 1 that
@@ -190,7 +193,7 @@ Three gates control it:
   state.
 
 The update: c_t = f_t x c_{t-1} + i_t x candidate_t. The key is the
-**addition**. Old memory is not squashed through a matrix; it is
+**addition**. Old memory is not squashed through a matrix. It is
 scaled by the forget gate and *added*. When the forget gate outputs
 0.9 for the slot holding "The", six steps keep 0.9^6 = 0.53, not
 0.016. The gradient gets the same highway: it flows back through
@@ -212,7 +215,7 @@ cell state, fewer parameters, nearly the same power.
 
 Where they stand today: LSTMs still run in production speech and
 on-device systems, and the gate idea (learned keep/drop switches)
-lives on inside modern architectures. But gates patch the chain;
+lives on inside modern architectures. But gates patch the chain.
 they do not delete it. The serial queue and the O(N) distance
 remain. That is why the field moved on.
 
@@ -335,7 +338,7 @@ representation, built without any chain.
 
 Now watch the mechanism on a toy, by hand. Three tokens,
 two-dimensional vectors. To keep the arithmetic visible, the
-projections are identity (the real model learns them; the mechanism
+projections are identity (the real model learns them. The mechanism
 is the same).
 
 ```ascii
@@ -362,7 +365,7 @@ from a fixed rule: the query-key match decided the mix. That is
 **attention**. Every token does this, against every other token,
 simultaneously.
 
-![A query collects its context from keys and values](assets/plate-attention-lookup.webp "The query for 'frame' matches three keys; the values mix by the resulting weights. Shell 3. Source: original toy for attention. Project: Stanford Frontier AI.")
+![A query collects its context from keys and values](assets/plate-attention-lookup.webp "The query for 'frame' matches three keys. The values mix by the resulting weights. Shell 3. Source: original toy for attention. Project: Stanford Frontier AI.")
 
 ## The full computation in four steps
 
@@ -388,7 +391,7 @@ flowchart LR
    matrices Wq, Wk, Wv are learned during training, so the model
    decides for itself what "needing" and "containing" mean. Early
    in training the projections are random and the attention is
-   diffuse; as training proceeds, heads specialize: one head may
+   diffuse. As training proceeds, heads specialize: one head may
    learn that verbs query their subjects, another that pronouns
    query recent nouns. The three-projection design is what makes
    this specialization possible. A single shared representation
@@ -409,7 +412,7 @@ flowchart LR
    genuine distribution: non-negative weights summing to 1. Read
    row i as "how token i distributes its attention budget."
 4. **Mix.** Output = WV. Each token's new vector is the
-   weight-blend of all values. The values carry the content; the
+   weight-blend of all values. The values carry the content. The
    weights decide the blend. The output has the same shape as the
    input (N x d), which is what makes stacking possible: the next
    layer consumes exactly what this layer produced.
@@ -457,7 +460,7 @@ through all 96 layers, untouched by the squashing inside each one.
 Without residuals, deep transformers do not train. Layer
 normalization sits between the blocks and keeps the activation
 values in a healthy range. (CS336 L03 builds the full block from
-zero; here the point stands: stacking works because each layer
+zero. Here the point stands: stacking works because each layer
 refines, and residuals keep the stack trainable.)
 
 ## Attention, in its many forms
@@ -489,7 +492,7 @@ possible (L04): when token N+1 arrives, rows 1..N never change.
 Queries come from one sequence, keys and values from another. In
 translation, the English decoder asks ("what should I output
 next?") and the French encoder answers (keys and values from the
-French sentence). Same four steps; the Q matrix and the K/V
+French sentence). Same four steps. The Q matrix and the K/V
 matrices just come from different places. This is the bridge inside
 every encoder-decoder model.
 
@@ -501,7 +504,7 @@ Each token attends to the W most recent tokens instead of all N.
 Cost drops from O(N^2) to O(N x W). With W = 4,096, a 32K-token
 document costs 8x less than full attention. Stacked layers recover
 long range indirectly: layer 2 reaches 2W back through layer 1's
-windows, like a relay race. Mistral 7B made this famous; it is the
+windows, like a relay race. Mistral 7B made this famous. It is the
 budget answer to long context.
 
 ![Sliding window: each token sees W back](assets/plate-sliding-window.webp "Window W = 2 over six tokens. Two stacked layers reach four back. Shell 3. Source: original toy for sliding-window attention. Project: Stanford Frontier AI.")
@@ -526,7 +529,7 @@ head cannot do this: a single softmax is one vote, not several.
 
 Attention is permutation-invariant: shuffle the tokens and every
 row shuffles identically. "dog bites man" and "man bites dog" give
-the same scores. The RNN got order for free (position was time);
+the same scores. The RNN got order for free (position was time).
 the transformer must inject it. The standard fix adds a position
 signal p_i to each token before attention. The original paper used
 **sinusoids** of many frequencies: each position gets a unique
@@ -583,7 +586,7 @@ drives the entire rest of CS229S. Lecture 4 shows why the
 autoregressive step is memory-bound. Lecture 6 (FlashAttention)
 recomputes instead of storing. Lecture 9 asks whether
 attention-free architectures can dodge the bill. The transformer won
-training; the course is about paying for inference.
+training. The course is about paying for inference.
 
 > [!QA]
 > Q: Why did transformers replace RNNs?
@@ -619,11 +622,11 @@ training; the course is about paying for inference.
 > Q: Attention has no notion of order. How does the transformer know "dog bites man" from "man bites dog"?
 > A: It does not, until you tell it. Attention is permutation-invariant: shuffle the input rows and the queries, keys, values, scores, and outputs all shuffle identically. The same pairs produce the same scores, so "dog bites man" and "man bites dog" give the same output up to permutation. The RNN got order for free: position was time. The transformer deleted the chain, so it must inject order another way. The standard fix: add a position signal p_i to each token's embedding before attention, x_i + p_i. The original paper used sinusoids of different frequencies: each position gets a unique pattern, and shifting by a fixed offset corresponds to a rotation, so relative distances stay expressible. Modern models use rotary embeddings (RoPE), which rotate each query and key by a position-dependent angle so the dot product itself depends on relative distance. Either way, position 1 and position 3 now carry different queries, and the scores differ.
 > Follow-up: Absolute or relative position: which matters more?
-> A: Relative. What "frame" needs to know is that "counselor" sits two tokens back, not that it is position 7 in the document. Absolute encodings give each position an identity; relative schemes (like RoPE) bake the distance between each pair directly into the score. That is why the field moved from absolute sinusoids to relative and rotary schemes.
+> A: Relative. What "frame" needs to know is that "counselor" sits two tokens back, not that it is position 7 in the document. Absolute encodings give each position an identity. Relative schemes (like RoPE) bake the distance between each pair directly into the score. That is why the field moved from absolute sinusoids to relative and rotary schemes.
 
 > [!QA]
 > Q: Walk me through the LSTM gates. Why do they fix the vanishing gradient?
-> A: The LSTM keeps two tracks: the hidden state and the cell state, a conveyor belt for long-term memory. Three learned gates, each a sigmoid between 0 and 1, guard it. The forget gate decides how much of the old cell survives; the input gate decides how much of the new candidate gets written; the output gate decides how much of the cell becomes the visible hidden state. The cell update is c_t = f_t x c_{t-1} + i_t x candidate: old memory is scaled and *added*, not squashed through a matrix. In the toy, a forget gate of 0.9 keeps "The" at 0.9^6 = 0.53 after six steps, against 0.016 for the vanilla RNN. The gradient rides the same highway: the cell path is a chain of additions, so the error signal flows back unmultiplied instead of shrinking geometrically. The LSTM learns what to remember; the vanilla RNN hopes the squash preserves it.
+> A: The LSTM keeps two tracks: the hidden state and the cell state, a conveyor belt for long-term memory. Three learned gates, each a sigmoid between 0 and 1, guard it. The forget gate decides how much of the old cell survives. The input gate decides how much of the new candidate gets written. The output gate decides how much of the cell becomes the visible hidden state. The cell update is c_t = f_t x c_{t-1} + i_t x candidate: old memory is scaled and *added*, not squashed through a matrix. In the toy, a forget gate of 0.9 keeps "The" at 0.9^6 = 0.53 after six steps, against 0.016 for the vanilla RNN. The gradient rides the same highway: the cell path is a chain of additions, so the error signal flows back unmultiplied instead of shrinking geometrically. The LSTM learns what to remember. The vanilla RNN hopes the squash preserves it.
 > Follow-up: Then why did transformers still win?
 > A: Gates patch the chain but keep it. The LSTM still reads token t after token t-1: the serial queue remains, and interaction distance is still O(N). Attention deletes the chain entirely, which buys parallelism and O(1) distance at the cost of O(N^2) memory.
 
@@ -631,7 +634,7 @@ training; the course is about paying for inference.
 > Q: Your product needs 1M-token context. Walk me through the design decision.
 > A: Start from the bill: full attention at N = 1M needs 10^12 score entries per layer per head. That does not fit anywhere, so full attention is out. The options from this chapter: sliding-window attention (Mistral's answer) cuts the cost to O(N x W) and recovers range through stacked layers, at the price of indirect long-range paths. GQA or MLA (Llama's and DeepSeek's answers) keep full attention but shrink what gets stored: MLA's 512-dim latent per token is the most aggressive public design. Mamba-style SSMs drop attention for O(N) recurrence. In practice the frontier answer is a hybrid: Gemini 1.5 ships 1M context on full attention plus MoE sparsity and massive scale, DeepSeek pairs MLA with a 128K window. The interview signal: name the exact bottleneck (the N^2 score matrix and the KV cache, two different costs), then pick the tool that attacks the binding one.
 > Follow-up: Which cost binds first at 1M tokens, compute or memory?
-> A: Memory, twice over. The score matrix is 10^12 entries (4 PB in fp32 per layer per head: impossible), and even with FlashAttention avoiding materialization, the KV cache at 1M tokens is tens of gigabytes per layer. Compute is large but parallel; memory capacity and bandwidth are the walls. That is why every 1M-context design in the table attacks storage first.
+> A: Memory, twice over. The score matrix is 10^12 entries (4 PB in fp32 per layer per head: impossible), and even with FlashAttention avoiding materialization, the KV cache at 1M tokens is tens of gigabytes per layer. Compute is large but parallel. Memory capacity and bandwidth are the walls. That is why every 1M-context design in the table attacks storage first.
 
 ## Three ways to use a transformer
 
@@ -676,9 +679,9 @@ quadratic bill paid.
 | Mamba-2 | no attention | selective SSM | none needed | O(N) | the RNN strikes back: recurrence with learned gates, no pairs at all |
 
 Read the table as answers to this chapter's questions. **GPT**
-picks causal masking because it generates; the mask is the price of
+picks causal masking because it generates. The mask is the price of
 not seeing the future. **BERT** drops the mask because it only
-reads; bidirectionality is worth losing generation. **Llama 3**
+reads. Bidirectionality is worth losing generation. **Llama 3**
 uses **GQA** (grouped-query attention): query heads share KV heads
 in groups, so the KV cache shrinks by the group size with almost no
 quality loss. It is the middle ground between full multi-head (big
@@ -724,7 +727,7 @@ The story in ten steps. Each step answers the one before it.
 3. **The RNN.** Read left to right, keep notes in a hidden state:
    h_t = tanh(W_h h_{t-1} + W_x x_t). Recent tokens loud, old
    tokens faded. LSTM adds gates and a cell highway (forget 0.9
-   keeps "The" at 0.53, not 0.016); GRU merges the gates, cheaper.
+   keeps "The" at 0.53, not 0.016). GRU merges the gates, cheaper.
 4. **Distance fades.** "The" survives six updates at (0.5)^6 =
    under 2%. Long-range meaning dilutes through the chain.
 5. **Gradients break.** Backprop multiplies per step: 0.9^10 =
@@ -732,7 +735,7 @@ The story in ten steps. Each step answers the one before it.
    learn long dependencies either.
 6. **Serial stalls.** Step t waits for t-1. Thousands of GPU cores
    idle through 1,000 sequential steps.
-7. **Attention deletes the chain.** Queries meet keys directly;
+7. **Attention deletes the chain.** Queries meet keys directly.
    values mix by match. "frame" = 0.21 counselor + 0.21 helped +
    0.58 self. O(1) distance, fully parallel, short gradient paths.
    Causal masks, cross-attention, sliding windows, and multiple
@@ -754,12 +757,11 @@ The story in ten steps. Each step answers the one before it.
 - Intro to Sequence Modeling slide deck (CS229S, Fall 2023): the
   lecture this chapter follows, in its order.
 - Vaswani et al., Attention Is All You Need (2017):
-  https://arxiv.org/abs/1706.03762 — the original transformer.
+  - [the original transformer.](https://arxiv.org/abs/1706.03762)
 
 **Further reading:**
 - Stanford CS324, Introduction lecture:
-  https://stanford-cs324.github.io/winter2022/lectures/introduction/
-  — the language modeling setup the slides cite.
+  [the language modeling setup the slides cite.](https://stanford-cs324.github.io/winter2022/lectures/introduction/).
 - The Pile (Gao et al., 2020): the 800 GB corpus named in the
   lecture.
 
