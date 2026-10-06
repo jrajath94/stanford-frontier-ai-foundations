@@ -49,7 +49,7 @@ smooth, maximum-entropy, convenient. [L04](l04-glms-softmax.html)
 The generative turn: model each class, not the boundary. **GDA**
 fits a Gaussian per class (MLE = class averages) and the shared
 covariance makes the boundary linear. **Naive Bayes** counts words
-for spam; **Laplace smoothing** (+1 to every count) stops unseen
+for spam. **Laplace smoothing** (+1 to every count) stops unseen
 words from vetoing everything. [L05](l05-gda-naive-bayes.html)
 
 **Bias** (wrong assumptions) vs **variance** (noise sensitivity):
@@ -61,7 +61,7 @@ inverts. **Hyperband** kills bad hyperparameters cheap via
 successive halving. [L06](l06-bias-variance.html)
 
 GLMs cannot invent features like walkability. A **neuron**
-(sigma(w^T x + b)) learns one bent feature; **ReLU** (max(0,z))
+(sigma(w^T x + b)) learns one bent feature. **ReLU** (max(0,z))
 is the default bend. The **MLP** stacks them into any shape.
 **Residuals** (out = x + F(x)) carry gradients through 100+
 layers. [L07](l07-neural-networks-1.html)
@@ -87,7 +87,7 @@ and samples from pure noise in T steps. **Foundation models**
 pre-train broad then adapt: **linear probing** tests
 representations, **LoRA** (W + AB, rank r) adapts with 256x fewer
 knobs. **Contrastive learning** pulls augmented views together
-without labels; **hard negatives** keep it honest. The embeddings
+without labels. **hard negatives** keep it honest. The embeddings
 power **semantic search** and **RAG** (knowledge in the store,
 not the weights). [L11](l11-diffusion-models.html)
 [L12](l12-foundation-models.html) [L13](l13-contrastive-rag.html)
@@ -97,7 +97,7 @@ The **transformer** predicts next tokens autoregressively.
 context directly: the toy gives weights [0.21, 0.21, 0.58]. The
 **causal mask** forbids peeking. Price: N^2 (16.7M scores at
 N=4,096). The **KV cache** cuts generation to O(t) per token but
-fills GPU memory; **GQA** and **MoE** diet it. **In-context
+fills GPU memory. **GQA** and **MoE** diet it. **In-context
 learning** teaches tasks via prompt examples with frozen weights.
 **SFT** teaches the assistant's job description. [L14](l14-transformers.html)
 [L15](l15-efficient-icl-sft.html)
@@ -116,7 +116,7 @@ the 1s. [L16](l16-reinforcement-learning.html)
 - 3-house GD step: J 6.33 -> 3.32, alpha = 0.05.
 - Alpha too large on theta^2: 4, -8, 16, -48. Diverges.
 - Normal equations toy: best line 1/3 + 1.5x, J = 0.083, exact.
-- Newton: O(n d^2 + d^3) per step. 408K ops at d=20; 10^27 at
+- Newton: O(n d^2 + d^3) per step. 408K ops at d=20. 10^27 at
   d=1B.
 - Sigmoid: g(-2)=0.12, g(0)=0.5, g(2)=0.88.
 - Softmax (2.0,1.0,0.5) -> (0.63,0.23,0.14). Loss 0.46 at 0.63.
@@ -129,6 +129,91 @@ the 1s. [L16](l16-reinforcement-learning.html)
 - ELBO toy: EM converges to mu = 0.33, 10.0.
 - PCA toy: eigenvalues (5, 0): one axis keeps 100 percent.
 - PPO clip: [0.8, 1.2]. Epsilon ~ 0.2.
+
+## Teaching figures: the four to stare at
+
+![Error times feature](assets/plate-l02-error-times-feature.webp "Every supervised gradient has the shape error times feature. Source: original plate for the gradient. Project: Stanford Frontier AI.")
+
+![The value walk, audited](assets/plate-l16-value-audit.webp "Values price the future exactly, including bad news. Source: original audit for the Bellman chain. Project: Stanford Frontier AI.")
+
+![The four cases, corrected](assets/plate-l17-clip-cases.webp "PPO clips in the direction the objective pulls. Source: original audit of the PPO objective. Project: Stanford Frontier AI.")
+
+![The cubic, audited](assets/plate-l15-cubic-audit.webp "The KV cache deletes an order of growth: 2.3e10 to 8.4M. Source: original audit for the generation cost. Project: Stanford Frontier AI.")
+
+## Rapid-fire self-test (answers below)
+
+1. Write the loss chip and say why the 1/2 is there.
+2. Least squares is MLE under what noise?
+3. Alpha too large on theta^2 starting at 4: what sequence?
+4. Newton per-step cost, and the d where it dies.
+5. Sigmoid at -2, 0, 2.
+6. Name the four whys of softmax.
+7. GDA decision boundary: why linear?
+8. One unseen word, no Laplace: what happens to naive Bayes?
+9. Bias vs variance in one line each.
+10. Ridge: what does it fix that least squares cannot?
+11. Backprop's one-line cost theorem.
+12. K-means: why do different seeds give different answers?
+13. EM: what rises every round, and what can still go wrong?
+14. PCA's eigenvalues mean what?
+15. Diffusion training target in three words.
+16. LoRA: what is stored, what is merged?
+17. Attention toy [1,1,2]: weights and output.
+18. KV cache per token for a 7B fp16 model.
+19. ICL vs SFT: what changes, weights or prompt?
+20. REINFORCE gradient in one line.
+21. Advantage: definition and why unbiased.
+22. PPO: A = -2, r = 1.5, eps = 0.2: clipped or not?
+23. RLVR reward climbs, traces rot: name it and fix it.
+
+**Answers.** 1. J = 1/(2m) sum (h-y)^2. The 1/2 cancels the
+derivative's 2. 2. Gaussian noise. 3. 4, -8, 16, -48:
+diverges. 4. O(n d^2 + d^3). Dead near d = 1B. 5. 0.12, 0.5,
+0.88. 6. GLM-dictated, smooth, maximum-entropy, numerically
+convenient. 7. Shared Sigma: the quadratic terms cancel,
+leaving w = Sigma^-1(mu_1 - mu_0). 8. Its zero probability
+vetoes the whole product: everything scores zero. 9. Bias:
+wrong assumptions. Variance: noise sensitivity. 10. Singular
+X^T X: (X^T X + rho I) always inverts. 11. Forward O(N)
+implies gradient O(N). 12. It converges to a local minimum.
+the seed picks which. 13. The likelihood (via the ELBO).
+local maxima, slow crawl, degenerate collapse. 14. Variance
+per principal axis. 15. Noise-prediction MSE. 16. Store tiny A,
+B. Merge W + AB at serve time: zero latency. 17. [0.21, 0.21,
+0.58] -> [0.79, 0.79]. 18. 512 KB. 19. ICL: prompt only,
+weights frozen. SFT: weights change. 20. grad E[R] = E[R grad
+log pi]. 21. Reward-to-go minus baseline. Unbiased because
+E[baseline * score] = 0. 22. Unclipped: min(-3, -2.4) = -3,
+full corrective push. 23. Reward hacking: audit traces,
+strengthen the verifier.
+
+## Exam traps: never-confuse pairs
+
+- **MLE vs MAP**: MAP adds the prior. Ridge is MAP with a
+  Gaussian prior.
+- **V vs Q**: V evaluates the state, Q chooses the action.
+- **ICL vs SFT vs RLVR**: prompt frozen / weights on pairs /
+  weights on verifiable reward.
+- **Ridge vs lasso**: shrink-all vs zero-some.
+- **On-policy vs off-policy**: REINFORCE needs fresh rollouts.
+  PPO reuses via the ratio.
+- **Temperature (softmax) vs diffusion noise schedule**: same
+  word, unrelated dials.
+- **ELBO in EM vs ELBO in diffusion**: same Jensen trick.
+  EM bounds likelihood, diffusion becomes noise MSE.
+
+## Debugging rules: if this, then that
+
+- Loss explodes: alpha down. Crawls: alpha up or scale
+  features.
+- d huge: SGD. Never Newton.
+- Tune rho on dev, never on train.
+- K-means unstable across seeds: k-means++ and restarts.
+- Attention uniform: missing sqrt(d). Attention spiky: tau
+  too low.
+- PPO ratios spread out: fewer epochs, fresh rollouts.
+- Serving OOM: it is the KV cache. GQA first, then batch,
+  then context.
 
 ## If you only remember seven sentences
 
