@@ -244,7 +244,7 @@ GPU. Each produces its own gradients for its own
 sub-batch. At the end of the backward pass, the gradients
 are aggregated across all GPUs and averaged. The GPUs
 share their gradients with an <strong>all-reduce</strong> operation.</p>
-<figure><img alt="Data parallel" src="assets/slide-l10-data-parallel.png"><figcaption>Shell 1. Partition the batch across GPUs; replicate the weights. Source: Stanford slides.</figcaption></figure>
+<figure><img alt="Data parallel" src="assets/slide-l10-data-parallel.png"><figcaption>Shell 1. Partition the batch across GPUs. Replicate the weights. Source: Stanford slides.</figcaption></figure>
 <p>Pros: the most direct throughput lever, since the global
 batch grows with each GPU, and easy to implement (PyTorch
 native support). Narayanan walks the tradeoffs on real
@@ -262,7 +262,7 @@ training:</p>
 <p>P = 175B. fp16 parameters: 350 GB. fp16 gradients: 350
 GB. Adam&rsquo;s three fp32 states: 3 x 700 GB = 2.1 TB. Total:
 2.8 TB, before a single activation. The lecture&rsquo;s 10B
-worked example (160 GB) already exceeds an 80 GB GPU; at
+worked example (160 GB) already exceeds an 80 GB GPU. At
 175B the bill is 35 GPUs of memory for one replica.</p>
 <figure><img alt="The 16P at GPT-3 scale" src="assets/plate-l10-16p-gpt3.webp"><figcaption>175B parameters need 2.8 TB in mixed-precision training: 350 plus 350 plus 2,100 GB. Shell 2. Source: original toy for the 16P sum. Project: Stanford Frontier AI.</figcaption></figure>
 <ul>
@@ -354,7 +354,7 @@ GPUs&rsquo; gradients. The <strong>ring all-reduce</strong> runs in 2(N-1)
 iterations for N GPUs. Each GPU splits its data into N
 fragments. The first N-1 iterations accumulate received
 values, the next N-1 propagate the completed sums.</p>
-<figure><img alt="Ring all-reduce" src="assets/slide-l10-ring-allreduce.png"><figcaption>Shell 4. 2(N-1) iterations; each node sends 2(N-1)X/N bytes. Bandwidth-optimal. Source: Stanford slides, Patarasuk and Yuan.</figcaption></figure>
+<figure><img alt="Ring all-reduce" src="assets/slide-l10-ring-allreduce.png"><figcaption>Shell 4. 2(N-1) iterations. Each node sends 2(N-1)X/N bytes. Bandwidth-optimal. Source: Stanford slides, Patarasuk and Yuan.</figcaption></figure>
 <h3 id="subchapter-the-ring-worked-on-n-4">Subchapter: the ring, worked on N = 4</h3>
 <p>Four GPUs, gradients X = 1 GB. Each GPU splits its 1 GB
 into 4 fragments of 250 MB. Iterations: 2 x (4-1) = 6:
@@ -365,7 +365,7 @@ wire time, and it stays near 2X no matter how many nodes
 join: per-node traffic approaches 2X as N grows.</p>
 <p>The latency caveat lives in the iteration count: 2(N-1)
 rounds of small messages pay latency, not bandwidth. The
-ring is optimal for large transfers (gradient sync); small
+ring is optimal for large transfers (gradient sync). Small
 messages want fewer, fatter hops.</p>
 <figure><img alt="The ring at N = 4" src="assets/plate-l10-ring-n4.webp"><figcaption>6 iterations, 1.5 GB per node, traffic near 2X at any scale. Shell 4. Source: original toy for the ring. Project: Stanford Frontier AI.</figcaption></figure>
 <p>Efficiency: each node sends 2(N-1) x X/N bytes for data of
@@ -401,7 +401,7 @@ slower <a href="https://www.youtube.com/watch?v=JA1l96tjrs4&amp;t=909s" target="
 inside the node, and its communication never crosses the
 slow links. The device block from L05 is the map. This is
 the route.</p>
-<figure><img alt="Device block: tensor parallelism stays in the node" src="assets/plate-device-block.svg"><figcaption>Shell 5. The device block, defined in L05. Tensor parallelism lives on NVLink; data parallelism spans InfiniBand. Source: original plate.</figcaption></figure>
+<figure><img alt="Device block: tensor parallelism stays in the node" src="assets/plate-device-block.svg"><figcaption>Shell 5. The device block, defined in L05. Tensor parallelism lives on NVLink. Data parallelism spans InfiniBand. Source: original plate.</figcaption></figure>
 <h2 id="the-key-question-once-more">The key question, once more</h2>
 <p>Tensor parallelism solved the memory problem but demands
 fast networking. What if you have many servers, or one
@@ -422,14 +422,14 @@ The cost: smaller microbatches mean lower arithmetic
 intensity. This is the knob the lecture names: microbatch
 size trades bubble size against compute efficiency, and no
 schedule removes the fill and drain entirely.</p>
-<figure><img alt="The pipeline bubble" src="assets/plate-l10-bubble.webp"><figcaption>4 stages, 8 microbatches: 27 percent idle; 16 microbatches cut it to 16 percent. Shell 6. Source: original toy for the bubble. Project: Stanford Frontier AI.</figcaption></figure>
+<figure><img alt="The pipeline bubble" src="assets/plate-l10-bubble.webp"><figcaption>4 stages, 8 microbatches: 27 percent idle. 16 microbatches cut it to 16 percent. Shell 6. Source: original toy for the bubble. Project: Stanford Frontier AI.</figcaption></figure>
 <p>Two tuning knobs. <strong>Microbatch size</strong>: larger means higher
 arithmetic intensity, but smaller means smaller pipeline
 bubbles. <strong>Schedule</strong>: which microbatch runs where and
 when. GPipe runs all forwards then all backwards. <strong>1F1B</strong>
 (one forward, one backward) interleaves them and shrinks
 both the bubble and the activation memory.</p>
-<figure><img alt="Pipeline schedule" src="assets/plate-pipeline-schedule.svg"><figcaption>Shell 7. 1F1B interleaves forwards and backwards to shrink idle bubbles. Source: original plate; Narayanan et al.</figcaption></figure>
+<figure><img alt="Pipeline schedule" src="assets/plate-pipeline-schedule.svg"><figcaption>Shell 7. 1F1B interleaves forwards and backwards to shrink idle bubbles. Source: original plate. Narayanan et al.</figcaption></figure>
 <p>Narayanan&rsquo;s talk shows an <strong>interleaved</strong> variant: device
 1 holds layers 1 and 5, device 2 holds layers 2 and 6, and
 so on, so each device does two phases of forward passes
@@ -543,15 +543,15 @@ Throughput collapses. Tensor parallelism all-reduces after every attention and M
 <div class="qa"><div class="q">How do microbatches and the 1F1B schedule fight the pipeline bubble?</div><div class="a"><p>Microbatches keep every stage fed: while stage 2 processes microbatch 1, stage 1 processes microbatch 2, so idle time shrinks to the fill and drain phases. 1F1B interleaves one forward and one backward per microbatch instead of running all forwards then all backwards, which shrinks the bubble further and cuts the activation memory that GPipe&rsquo;s schedule holds.
 Smaller microbatches mean lower arithmetic intensity: the math gets less efficient per byte moved. The microbatch size trades bubble size against compute efficiency, and the schedule trades implementation complexity against both.</p><div class="followup"><strong>Follow-up:</strong> Why not make microbatches tiny to kill the bubble entirely?</div></div></div>
 <div class="qa"><div class="q">Walk me through ZeRO stages 1 to 3 on a 10B model across 8 GPUs.</div><div class="a"><p>Baseline 16P = 160 GB per GPU: fits nowhere. Stage 1 partitions the 12P optimizer state: 4P + 12P/8 = 40 + 15 = 55 GB per GPU. Stage 2 also partitions the 2P gradients: 2P + 14P/8 = 20 + 17.5 = 37.5 GB. Stage 3 partitions the 2P parameters too: 16P/8 = 20 GB per GPU, with about 1.5x more communication for the parameter all-gathers. Each stage roughly halves the memory and costs bandwidth: stop at the stage that fits.
-FSDP is ZeRO-3-style: it shards parameters, gradients, and optimizer state across the data-parallel group. Use it when stage 3 is the answer; for stage 1 or 2, lighter sharding (or DeepSpeed ZeRO-1/2) communicates less.</p><div class="followup"><strong>Follow-up:</strong> Where does FSDP sit on this ladder?</div></div></div>
+FSDP is ZeRO-3-style: it shards parameters, gradients, and optimizer state across the data-parallel group. Use it when stage 3 is the answer. For stage 1 or 2, lighter sharding (or DeepSpeed ZeRO-1/2) communicates less.</p><div class="followup"><strong>Follow-up:</strong> Where does FSDP sit on this ladder?</div></div></div>
 <div class="qa"><div class="q">Ring all-reduce, N = 16, X = 4 GB. How much does each node send, and how many iterations?</div><div class="a"><p>Iterations: 2 x 15 = 30. Per node: 2 x 15 x 4/16 = 7.5 GB. Note the limit: as N grows the per-node traffic approaches 2X = 8 GB regardless of GPU count. That is the bandwidth-optimality claim in numbers: doubling the cluster never doubles anyone&rsquo;s traffic.
-Not necessarily. Thirty iterations of small messages pay latency each round, and the latency term dominates at small sizes. Bandwidth-optimality is about large transfers; for tiny messages, tree or hierarchical all-reduce with fewer hops can win.</p><div class="followup"><strong>Follow-up:</strong> The gradients are 4 MB instead of 4 GB. Does the ring still win?</div></div></div>
-<div class="qa"><div class="q">Applied design: train a 70B model on 64 H100s (8 nodes of 8). Plan the parallelism.</div><div class="a"><p>First the memory: 16P = 1.12 TB, so pure data parallelism is out. Tensor parallelism: 8 ways within each node over NVLink, the frequent per-block all-reduces stay on the fast links. Pipeline parallelism: 8 stages across the 8 nodes, point-to-point sends over InfiniBand, microbatches sized so the bubble stays under 20 percent. Data parallelism: the remaining factor (64 / 8 / 8 = 1 here, so grow tensor or pipeline first; with more GPUs, data parallel across replicas with ZeRO-1 for the optimizer state). The cardinal rules: tensor never crosses nodes, pipeline crosses cheaply, data scales throughput.
+Not necessarily. Thirty iterations of small messages pay latency each round, and the latency term dominates at small sizes. Bandwidth-optimality is about large transfers. For tiny messages, tree or hierarchical all-reduce with fewer hops can win.</p><div class="followup"><strong>Follow-up:</strong> The gradients are 4 MB instead of 4 GB. Does the ring still win?</div></div></div>
+<div class="qa"><div class="q">Applied design: train a 70B model on 64 H100s (8 nodes of 8). Plan the parallelism.</div><div class="a"><p>First the memory: 16P = 1.12 TB, so pure data parallelism is out. Tensor parallelism: 8 ways within each node over NVLink, the frequent per-block all-reduces stay on the fast links. Pipeline parallelism: 8 stages across the 8 nodes, point-to-point sends over InfiniBand, microbatches sized so the bubble stays under 20 percent. Data parallelism: the remaining factor (64 / 8 / 8 = 1 here, so grow tensor or pipeline first. With more GPUs, data parallel across replicas with ZeRO-1 for the optimizer state). The cardinal rules: tensor never crosses nodes, pipeline crosses cheaply, data scales throughput.
 Reduce the tensor-parallel degree (fewer all-reduce participants per block) and shift the split toward pipeline or data parallelism, or enable sequence parallelism (sharding activations along the sequence dimension) to cut the per-block traffic. Measure first: the all-reduce time per block against the compute time per block tells you which knob pays.</p><div class="followup"><strong>Follow-up:</strong> The run is communication-bound on the tensor all-reduces. What do you change?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <p>The story in eight steps. Each step answers the one before it.</p>
 <ol>
-<li><strong>One GPU is not enough.</strong> Models grow 10x per year;
+<li><strong>One GPU is not enough.</strong> Models grow 10x per year.
    GPU FLOPS double every 2.5 years. Split the work, and
    minimize communication and synchronization overhead.</li>
 <li><strong>Split the data first.</strong> Data parallelism: 4 GPUs,
@@ -565,19 +565,19 @@ Reduce the tensor-parallel degree (fewer all-reduce participants per block) and 
    gradients (2P + 14P/Nd). Stage 3: plus parameters
    (16P/Nd) for 1.5x communication. FSDP wraps it.</li>
 <li><strong>Ring all-reduce is bandwidth-optimal.</strong> 2(N-1)
-   iterations; per-node traffic approaches 2X regardless
+   iterations. Per-node traffic approaches 2X regardless
    of GPU count. The collective data parallelism stands
    on.</li>
 <li><strong>Split the model next.</strong> Tensor parallelism shards
    attention and MLP weights Megatron-style, all-reduces
    per block. It needs NVLink speed: never span nodes.</li>
 <li><strong>Pipeline when the network is slow.</strong> Stages hold
-   layer groups; microbatches flow through. 1F1B and
+   layer groups. Microbatches flow through. 1F1B and
    interleaved schedules shrink the bubble. Only
    point-to-point messages.</li>
 <li><strong>Combine and automate.</strong> Fits: data. One fast node:
    tensor. Many nodes: pipeline. PTD at thousand-GPU
-   scale; Alpa searches the combinatorial space.</li>
+   scale. Alpa searches the combinatorial space.</li>
 </ol>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
@@ -598,7 +598,7 @@ from the slides, not laws. The 16P figure excludes
 activations, which vary with sequence length and
 checkpointing. The 1.5x stage-3 communication factor is
 from the ZeRO paper&rsquo;s analysis. Talk timestamps point to
-the auto-captioned YouTube video; wording is the
+the auto-captioned YouTube video. Wording is the
 speaker&rsquo;s paraphrase, verified against the cleaned
 captions.</p>
 <h2 id="go-deeper">Go deeper</h2>
