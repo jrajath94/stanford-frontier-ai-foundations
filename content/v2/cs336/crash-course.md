@@ -14,9 +14,7 @@ summary: "Interview-speed review of CS336: the full story in 30 minutes, with im
 This page tells the whole story fast. Each section gives you the working
 version: enough to answer interview questions with confidence. Links at
 the end of each section take you into the full lesson when you want the
-derivations, the widget, and the follow-ups.
-
-Grows with the course. Each finished lecture adds its crash section here.
+derivations, the figures, and the follow-ups.
 
 <div class="crash-section" markdown="1">
 
@@ -162,6 +160,28 @@ is why vocabulary size is a real design decision, not a footnote.
 </div>
 
 <div class="crash-section" markdown="1">
+
+### 7. Tokenization sets three bills
+
+Everything downstream of the tokenizer runs on tokens, and that fact
+sets three bills. Context: the window counts tokens, so a 4,096-token
+window holds about 3,000 English words but far fewer words in a
+high-fertility language. Money: pricing is per token, so fertility
+multiplies the invoice directly. Speed: attention costs grow
+quadratically in tokens, so long token sequences are expensive twice
+over.
+
+<figure class="crash-fig"><img src="assets/media-generation-lm-pipeline-stages-0-06a4e821-a7ef-46b6-8cac-dc5c193b1d58.webp" alt="Language modeling pipeline"><figcaption>Five stages. Tokenization is the first, and every later stage counts in tokens.</figcaption></figure>
+
+This is why tokenizer choice is a product decision, not a detail.
+Pick the vocabulary, and you pick the cost structure of everything
+after it.
+
+<ul class="crash-links">
+<li><a href="l01-tokenization.html">Lecture 1: the full tokenization lesson</a></li>
+</ul>
+
+</div>
 
 <div class="crash-section" markdown="1">
 
@@ -414,7 +434,7 @@ arenas and LLM judges with debiasing. Agents get real tasks:
 SWE-bench (93 percent verified), terminal benchmarks, cyber ranges.
 
 Two warnings. The scaffold is half the score: the same model with a
-better harness wins. And contamination is everywhere: assume the
+better tooling wins. And contamination is everywhere: assume the
 model has seen the test unless the benchmark is private and recent.
 
 <figure class="crash-fig"><img src="assets/l12-perplexity.svg" alt="Perplexity"><figcaption>Mass on test text. Best equals entropy.</figcaption></figure>
@@ -574,6 +594,8 @@ parameters for flops.
 
 </div>
 
+<div class="crash-section" markdown="1">
+
 ### 25. Rapid-fire: say the answer before you read it
 
 **What is a language model?** It assigns probabilities to next tokens.
@@ -668,7 +690,7 @@ exams, arenas, agent benchmarks.
 GPQA, Humanity's Last Exam. Contamination speeds it up.
 
 **What is the scaffold warning?** The scaffold is half the score.
-Same model, better harness, better number.
+Same model, better tooling, better number.
 
 **What is the 50-epoch trap?** Small quality sources get over-repeated
 in the mix. UniMax caps repetition.
