@@ -141,7 +141,7 @@ refresh policies, dedup, mirror sites, dynamic URLs
 
 > [!QA]
 > Q: Walk me through the crawl. How does a page get from the web into a training run?
-> A: Step one: discovery. The crawler follows hyperlinks from seed pages, fetching robots.txt first and honoring it. Step two: download. The HTTP response is stored raw in a WARC file: headers, HTML, everything. Step three: extraction. Trafilatura strips the navigation, ads, and cookie banners, keeping the article text; the stock WET conversion does this crudely and keeps junk. Step four: filtering. fastText or rules decide whether the text looks like the target quality. Step five: dedup. Near-duplicate spans are removed globally. Step six: tokenization. Only then does it become training tokens. Each step loses or corrupts data: bad extraction poisons everything downstream, which is why the tooling matters as much as the crawl.
+> A: Step one: discovery. The crawler follows hyperlinks from seed pages, fetching robots.txt first and honoring it. Step two: download. The HTTP response is stored raw in a WARC file: headers, HTML, everything. Step three: extraction. Trafilatura strips the navigation, ads, and cookie banners, keeping the article text. The stock WET conversion does this crudely and keeps junk. Step four: filtering. fastText or rules decide whether the text looks like the target quality. Step five: dedup. Near-duplicate spans are removed globally. Step six: tokenization. Only then does it become training tokens. Each step loses or corrupts data: bad extraction poisons everything downstream, which is why the tooling matters as much as the crawl.
 > Follow-up: Why not just train on the WARC files directly?
 > A: Because the model would learn HTML. Tags, scripts, navigation bars, and duplicated chrome would dominate the token budget, and the model would spend capacity modeling page structure instead of language. Extraction is the step that converts "the web" into "text worth learning from." The lecture's point: same pages, different extraction, different model. The pipeline is the data.
 
@@ -286,9 +286,9 @@ possible. It costs you the frontier.
 
 > [!QA]
 > Q: What is data laundering, and why does the Common Pile refuse synthetic data?
-> A: Data laundering: training a model on unlicensed data, then using that model to generate "clean" synthetic data. The synthetic text is new, but the knowledge in it came from the unlicensed corpus. Legally it is untested whether this cleans the taint; practically, the Common Pile team decided it does not. They refused all synthetic data: 8TB of permissively licensed human text only. The price: competitive with 2023-era models, not with Qwen. The experiment's honest result: license-only training works, but the frontier's edge comes partly from data you cannot license. That is the cost of caution, measured.
+> A: Data laundering: training a model on unlicensed data, then using that model to generate "clean" synthetic data. The synthetic text is new, but the knowledge in it came from the unlicensed corpus. Legally it is untested whether this cleans the taint. Practically, the Common Pile team decided it does not. They refused all synthetic data: 8TB of permissively licensed human text only. The price: competitive with 2023-era models, not with Qwen. The experiment's honest result: license-only training works, but the frontier's edge comes partly from data you cannot license. That is the cost of caution, measured.
 > Follow-up: What is license laundering, and how does it differ?
-> A: License laundering is slapping a permissive license on a work you do not own, or trusting a dataset page's license claim. The Common Pile found many "permissively licensed" Hugging Face datasets fail at the individual-work level: the collection page says MIT, the individual files are copyrighted. Data laundering is about the training history of synthetic data; license laundering is about false license claims on real data. Both are ways "clean" data turns out dirty. The defense is the same: check per work, not per collection.
+> A: License laundering is slapping a permissive license on a work you do not own, or trusting a dataset page's license claim. The Common Pile found many "permissively licensed" Hugging Face datasets fail at the individual-work level: the collection page says MIT, the individual files are copyrighted. Data laundering is about the training history of synthetic data. License laundering is about false license claims on real data. Both are ways "clean" data turns out dirty. The defense is the same: check per work, not per collection.
 
 ### Subchapter: what is used where (who trains on what)
 
@@ -314,7 +314,7 @@ plus the DCLM recipe. If you cannot, the Common Pile. If you need
 code, The Stack v2. If you want the frontier, you are on your own:
 nobody publishes the recipe.
 
-![Data landscape](assets/media-generation-cs336-l13-data-landscape-0-a25ec3e9-73c0-49a1-b9e3-9c53ca228494.webp "Open and audited, license-only, synthetic, secret: four tiers. Source: original. Project: Stanford Frontier AI.")
+![Data map](assets/media-generation-cs336-l13-data-landscape-0-a25ec3e9-73c0-49a1-b9e3-9c53ca228494.webp "Open and audited, license-only, synthetic, secret: four tiers. Source: original. Project: Stanford Frontier AI.")
 
 > [!QA]
 > Q: You have 240T raw tokens and a 3T training budget. Design the funnel.
@@ -369,6 +369,16 @@ The story in eight steps. Each step answers the one before it.
    out. DCLM keeps 1.4% and wins. Filtering decides the model.
 8. **Code and caution.** The Stack: process, not just code. Common
    Pile: license-only works, reasonably. Watch license laundering.
+
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/AIOyPXtYsf8" title="How Pre-Training LLMs Stage Actually Works: The 44 Terabyte Internet Pipeline" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- The 44 Terabyte Internet Pipeline (the embed above): https://www.youtube.com/watch?v=AIOyPXtYsf8
+- Penedo et al., FineWeb: https://arxiv.org/abs/2406.17557
+- Gao et al., The Pile: https://arxiv.org/abs/2101.00027
+- Common Crawl: https://commoncrawl.org
 
 ## Official sources and further reading
 
