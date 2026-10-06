@@ -21,11 +21,14 @@ for label, formula, note in moves:
     p.text(206, yy + 14, formula, size=15, bold=True)
     p.text(206, yy + 42, note, size=13, color=MUTED)
     yy += 96
-p.rect(640, p.top + 16, 288, 220, NEW, label="L_simple", size=18, rx=12)
-p.text(664, p.top + 80, "E ||eps - eps_theta||^2", size=15, bold=True)
-p.text(664, p.top + 112, "toy: (0.688-0.5)^2", size=14)
-p.text(664, p.top + 140, "= 0.0354", size=16, bold=True, color=TEAL)
-p.text(664, p.top + 184, "one network, one MSE", size=13, color=MUTED)
+# "L_simple" drawn as a header above the formula: the centered rect label
+# stamped over the "toy: (0.688-0.5)^2" line.
+p.rect(640, p.top + 16, 288, 220, NEW, size=18, rx=12)
+p.text(664, p.top + 40, "L_simple", size=18, bold=True)
+p.text(664, p.top + 88, "E ||eps - eps_theta||^2", size=15, bold=True)
+p.text(664, p.top + 120, "toy: (0.688-0.5)^2", size=14)
+p.text(664, p.top + 148, "= 0.0354", size=16, bold=True, color=TEAL)
+p.text(664, p.top + 192, "one network, one MSE", size=13, color=MUTED)
 p.text(32, yy + 32, "price of move 3: per-step weights dropped. Reweighted bound.", size=14, bold=True, color=ORANGE)
 p.text(32, yy + 64, "slightly worse likelihood, much better samples. The field chose samples.", size=13, color=MUTED)
 p.save("l09-three-moves.webp")
