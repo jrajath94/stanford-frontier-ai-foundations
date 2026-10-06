@@ -4,16 +4,16 @@ course_slug: cs229
 course_name: "CS229: Machine Learning"
 course_order: 2
 order: 15
-nav: "L15 · Efficient Transformers, ICL, SFT"
+nav: "L15 · Efficient Attention, ICL, SFT"
 title: "Lecture 15: Attention Variants, In-Context Learning, and SFT"
 summary: "Making attention cheaper (KV cache, GQA, MoE), the shock of few-shot learning, and supervised fine-tuning as instruction tuning."
 date: "2026-05-25"
 instructor: "Tengyu Ma"
 offering: "Spring 2026"
-duration: "1:13:12"
+duration: "1:16:08"
 video_id: hHC-SF3utxg
-video_title: "Lecture 15: Attention Efficiency, In-Context Learning, SFT"
-video_caption: "Original lecture. Tengyu Ma covers attention variants, zero/few-shot learning, and supervised fine-tuning. [uncertain] The YouTube metadata title for this video is mislabeled; the title here follows the transcript."
+video_title: "Lecture 15: Efficient Attention and Adaptation"
+video_caption: "Original lecture. Tengyu Ma attacks the quadratic price with KV caching and attention variants, then covers in-context learning and SFT."
 concepts: [KV-cache, attention-variants, GQA, MoE, mixture-of-experts, in-context-learning, few-shot, zero-shot, SFT, instruction-tuning]
 sources:
   - tag: video
@@ -25,252 +25,207 @@ sources:
     label: "CS229 Spring 2026 official course notes (local PDF)"
 ---
 
-## How to read this lesson
+## The job: serve a million users without a million GPUs
 
-This lesson has two levels. **Level 1 (Core)** contains what you need to
-understand everything that follows in CS229 and the courses that build on
-it. **Level 2 (Deep)** contains what you need for correct, interview-grade
-understanding. Read Level 1 straight through. Return to Level 2 when you
-want depth.
+Lecture 14 priced attention at N^2 per forward pass. Generation
+makes it worse: each new token attends to all previous ones, so
+naive generation recomputes the whole matrix per token. A 4,096-token
+answer at 16.7M scores per layer per head per step is unservable.
+The job: cut the per-token cost, then cut the memory, then ask what
+the trained model can do without any weight updates at all.
 
-No prerequisites are assumed. Every term is defined at first use. The
-transformer and its quadratic cost were defined in [lecture
-14](l14-transformers.html); they are reused, not re-explained.
+## First attempt: recompute everything per token
 
-## Level 1: The KV cache
+The naive generator: to produce token 101, run the full transformer
+on tokens 1-100. To produce token 102, run it on 1-101 from scratch.
+Token t costs O(t^2). The full answer costs O(N^3). For N = 4,096,
+that is ~2.3 x 10^10 score computations per layer per head. Nobody
+serves this. The waste is visible: tokens 1-100 did not change
+between steps 101 and 102, but every one of their scores was
+recomputed.
 
-Generation is sequential: token by token. Naive generation recomputes
-every key and value at every step. Step t recomputes K and V for all t
-positions, then uses only the newest. That is O(T^2) repeated work.
+## The KV cache
 
-The **KV cache** [05:37](ts:05:37) stores keys and values across steps.
-At step t, compute K and V for the new token only. Reuse the cached
-rest. Each step costs O(T) instead of O(T^2). Total generation stays
-quadratic in the worst case, but with a far smaller constant and no
-recomputation.
+Keys and values for tokens 1-100 are identical whether you are
+generating token 101 or 102. So save them. The **KV cache** stores
+every layer's keys and values for all past tokens in GPU memory.
+Generating token t+1 needs only its own query, key, and value:
+attend the new query to the cached keys, mix the cached values,
+append the new K/V to the cache. Per-token cost drops from O(t^2)
+to O(t). The cubic becomes quadratic.
 
-![KV cache](assets/svg/l15-kvcache.svg "Store K,V across decode steps. Compute only the new token's. Original plate.")
+![KV cache](assets/svg/l15-kvcache.svg "The KV cache. Keys and values of past tokens are stored, not recomputed. Per-token cost falls from O(t^2) to O(t). Source: original plate for Stanford Frontier AI.")
 
-The cache is memory. Storing K and V for every layer, every head, every
-position costs real gigabytes at long contexts [05:05](ts:05:05). The
-cache trades memory for speed, and at long contexts the memory side
-hurts. Everything in this lecture's first half is a response to that
-trade.
+The price is memory. The cache is linear in sequence length T, and
+the lecture stresses how heavy it is: saving K and V for every head
+of every layer for one long sequence can fill most of a GPU's
+memory. Then batch size collapses: you can serve 10 sequences, not
+1,000. Small batches starve the GPU's compute units (nothing to
+parallelize across), so inference becomes **memory-bound**: the GPU
+waits on memory bandwidth, not arithmetic. The lecture's chain:
+KV cache fills memory -> batch shrinks -> parallelism dies ->
+throughput dies. Reducing the cache is the highest-leverage
+systems work in LLM serving.
+
+## Attention variants: shrink the cache
+
+**Grouped-query attention** (GQA): share one key/value head across
+a group of query heads. With 32 query heads and 8 KV heads, the
+cache shrinks 4x. The queries keep their expressiveness (each still
+attends differently). Only the stored K/V compress. Quality barely
+moves. Memory moves a lot.
+
+**Mixture of experts** (MoE): instead of one big MLP per block,
+have E expert MLPs and a router that sends each token to the top-k
+(usually 2). Parameters grow E-fold. Compute per token stays ~flat
+because each token visits 2 experts. A 8-expert model has 8x the
+MLP parameters for ~1.1x the compute. The price: the router must
+balance load (experts starve or flood), and all experts must sit in
+memory even though each token uses two.
+
+![MoE](assets/svg/l15-moe.svg "Mixture of experts. A router sends each token to 2 of 8 experts. Parameters grow 8x, compute per token stays nearly flat. Source: original plate for Stanford Frontier AI.")
+
+## The shock: in-context learning
+
+Now the pivot from systems to behavior. Take the trained model,
+freeze every weight, and prompt it:
+
+```ascii
+Translate English to French:
+  sea -> mer
+  sky -> ciel
+  cheese ->
+```
+
+The model answers "fromage". No gradient step. No weight moved.
+Three examples in the prompt taught it the task. This is
+**in-context learning** (ICL): few-shot learning with frozen
+weights. The lecture presents it as the shock of the GPT-3 era:
+nobody trained for this. It emerged from next-token prediction at
+scale.
+
+Why it works, roughly: the prompt's examples are processed by the
+same attention machinery as everything else. Attention can
+implement "find the pattern in the recent examples and continue
+it": the query for the blank position matches the example slots,
+and the values carry the mapping. The model learned, during
+pre-training, to complete patterns. Few-shot prompts are patterns
+with a job hidden inside. Scale matters: small models barely do
+this. Large ones do it reliably. The lecture's honest note: the
+mechanism is still partly mysterious, and ICL is brittle: change
+the example order or wording and accuracy swings.
+
+![In-context learning](assets/svg/l15-icl.svg "In-context learning. Examples live in the prompt, weights frozen. Attention implements 'continue the pattern'. Source: original plate for Stanford Frontier AI.")
+
+## SFT: teach the format
+
+Pre-trained models complete text. Users want assistants that
+follow instructions. **Supervised fine-tuning** (SFT), also called
+instruction tuning: collect (instruction, response) pairs written
+by humans, and train the model to predict the response given the
+instruction, with the usual cross-entropy loss. Ten thousand to a
+million pairs. The model learns the *format* of helpfulness:
+answer the question, be concise, refuse safely.
+
+The lecture's framing: pre-training teaches the world; SFT teaches
+the job description. The knowledge comes from pre-training; SFT
+barely adds facts. What it adds is behavior: which of the many
+possible completions is the one a user wants. The price: SFT
+narrows the model. Overdo it and the model forgets things it knew
+(catastrophic forgetting) or becomes sycophantic. And the pairs are
+human-written: expensive, slow, and the quality ceiling of the
+whole step.
+
+![SFT](assets/svg/l15-sft.svg "Supervised fine-tuning. Train on (instruction, response) pairs. Pre-training teaches the world; SFT teaches the job description. Source: original plate for Stanford Frontier AI.")
+
+## The honest price
+
+Efficiency buys servability and pays in complexity: GQA's sharing,
+MoE's routing and load balance, the KV cache's memory hunger that
+no variant fully removes. ICL buys task flexibility with zero
+training and pays in brittleness: prompt wording swings accuracy,
+long example lists eat the context window, and nobody can fully
+explain why it works. SFT buys helpful behavior and pays in human
+hours per pair plus the narrowing tax. The through-line: every step
+after pre-training is about spending the model's capability
+wisely, because the capability itself was the expensive part.
+
+## Mapping back
+
+| Idea | Pain it answers | How |
+|---|---|---|
+| KV cache | Naive generation is O(N^3): recompute everything per token | Cache K/V: per-token O(t^2) -> O(t); memory linear in T |
+| Memory-bound serving | Cache fills the GPU: batch of 10, not 1,000 | Diagnosis: memory, not compute, is the bottleneck; parallelism starves |
+| GQA | KV cache too big | Share KV heads across query groups: 4x smaller cache, quality holds |
+| MoE | Want 8x parameters at 1x compute | Router sends each token to 2 of 8 experts; price: load balance, memory |
+| ICL | New task, no training budget | Frozen weights, examples in prompt: "cheese ->" gets "fromage"; brittle but free |
+| SFT | Base models complete; users want assistants | (Instruction, response) pairs; teaches the job description, not the world |
 
 > [!QA]
-> Q: What does the KV cache actually store?
-> A: The key and value vectors for every previous token, at every layer and every head. When generating token t, the model needs keys and values of tokens 1 through t-1 for attention. Recomputing them each step repeats O(T^2) work. Caching makes each step O(T): only the new token's K and V are computed. The cost moves from compute to memory.
-> Follow-up: Why is the KV cache a problem at long contexts?
-> A: It grows linearly with sequence length times layers times heads times dimension. A million-token context needs terabytes of cache in naive form. This is why long-context serving is a memory problem first. GQA, quantization, and cache eviction all exist to shrink this exact buffer.
-
-## Level 1: Attention variants
-
-Three ideas shrink attention's cost. **Multi-query attention** (MQA)
-[22:11](ts:22:11): all query heads share one key head and one value
-head. The KV cache shrinks by the head count. **Grouped-query
-attention** (GQA): a middle ground, groups of query heads share K/V
-heads. Less cache than full multi-head, more expressive than MQA.
-
-**Mixture of experts** (MoE) [31:49](ts:31:49) attacks the MLP side. The
-feedforward network is replicated into experts, say 128. A router sends
-each token to a few experts, say 8. Each token pays for 8 experts'
-compute but the model holds 128 experts' capacity.
-
-![MoE](assets/svg/l15-moe.svg "Router picks 2 of 4 experts per token. Sparse compute, dense capacity. Original plate.")
-
-MoE is sparse: capacity without proportional FLOPs. The lecture notes
-the training subtlety: routing must stay balanced, or experts collapse
-and capacity is wasted. Load-balancing losses keep every expert fed.
-MoE is how the largest models afford their size.
+> Q: What is the KV cache and why does it make inference memory-bound?
+> A: During generation, each token's keys and values never change once computed, so the cache stores them instead of recomputing: per-token cost drops from O(t^2) to O(t). The cache grows linearly with sequence length across every layer and head, and the lecture stresses it can fill most of GPU memory for a single long sequence. Small memory headroom means small batches (10 sequences, not 1,000), which means nothing to parallelize across, so the GPU's compute units idle waiting on memory bandwidth. Memory-bound, not compute-bound.
+> Follow-up: How does GQA help?
+> A: Grouped-query attention shares each key/value head across a group of query heads: 32 query heads with 8 KV heads cuts the cache 4x. Queries keep their distinct attention patterns. Only the stored keys and values compress. The lecture presents it as the highest-leverage cache diet with minimal quality cost.
 
 > [!QA]
-> Q: MQA, GQA, or full multi-head: which do you pick?
-> A: Full multi-head for quality when memory allows. GQA for the standard tradeoff: near-full quality with a fraction of the KV cache. MQA for maximum memory savings at some quality cost. The choice is dominated by serving constraints: long contexts and many concurrent users push toward fewer KV heads. Most frontier models ship GQA.
-> Follow-up: Why does MoE need load balancing?
-> A: Without it, the router sends everything to a few experts. Those experts train, the rest starve, and the model's effective capacity collapses to the busy few. An auxiliary loss penalizes imbalanced routing, forcing tokens across experts. The balance loss is load-bearing infrastructure, not a refinement.
-
-## Level 1: The shock of in-context learning
-
-**Zero-shot** [59:51](ts:59:51): describe the task in the prompt, give no
-examples, let the model generate. **Few-shot** [00:51](ts:00:51): add a
-few input-output examples to the prompt. No parameter updates in either
-case. The prompt is the training set.
-
-![Zero vs few shot](assets/svg/l15-icl.svg "Zero-shot: task description only. Few-shot: examples in the prompt. Original plate.")
-
-This was the GPT-3 shock [60:55](ts:60:55). Nobody trained for it. The
-capability emerged from next-word prediction at scale, and researchers
-found it by trying. The lecture stresses how surprising this was: the
-field believed new tasks needed at least some training. They do not.
-Prompting replaced pipelines.
-
-The deployment story changed with it. Old way: collect domain data,
-label it, train a specialized model, deploy per company. New way: one
-off-the-shelf model, each company writes prompts, plus scaffolding for
-agentic tasks. The lecture presents this as the fundamental convenience
-shift of the LLM era.
+> Q: How can a model learn a task with frozen weights in in-context learning?
+> A: The task is encoded in the prompt as examples, and attention implements pattern continuation. For "sea -> mer, sky -> ciel, cheese ->", the blank position's query matches the example slots, and the values carry the English-to-French mapping the model must extend. Pre-training on billions of pattern-completion instances taught the machinery. The prompt supplies the pattern. No weights move. The lecture flags the mystery: this was not trained for explicitly, it emerged with scale, and it is brittle to wording and order.
+> Follow-up: When does ICL fail?
+> A: When the pattern needs more examples than fit in context, when the task contradicts pre-training priors too strongly, or when the wording buries the pattern. Small models barely do ICL at all: it is a scale-emergent capability. For reliability on a fixed task, SFT or fine-tuning beats prompting.
 
 > [!QA]
-> Q: Why is in-context learning surprising?
-> A: Because nothing in the training objective asks for it. Next-word prediction never shows the model a few-shot task during training, yet the trained model performs them. The ability emerges from scale: at some size, the model's context window becomes a workspace where it can infer the task from examples. Emergence means the capability was not designed, only discovered.
-> Follow-up: Few-shot or fine-tuning?
-> A: Few-shot for quick adaptation: no training, instant iteration, examples fit in context. Fine-tuning when the behavior change is deep, the examples do not fit, or inference must be cheap per query. Few-shot pays context tokens on every call. Fine-tuning pays training once. The economics decide.
-
-## Level 1: Supervised fine-tuning
-
-Capabilities that emerge can be strengthened deliberately.
-**Supervised fine-tuning** (SFT), also called **instruction tuning**
-[64:49](ts:64:49): collect (instruction, answer) pairs, continue
-training from the pre-trained checkpoint, and minimize the loss on the
-answers only.
-
-![SFT](assets/svg/l15-sft.svg "x is seen, y is predicted. Loss only on the answer tokens. Original plate.")
-
-The loss detail matters. The instruction x is context: seen, not
-predicted. The answer y is the target: the loss is the negative log
-likelihood of y given x, decomposed per token [67:43](ts:67:43). The
-model learns to produce answers shaped like the demonstrations. SFT is
-how base models become assistants: the knowledge is pre-trained, the
-behavior is fine-tuned.
-
-> [!QA]
-> Q: Why compute the loss only on the answer, not the instruction?
-> A: The instruction is given at test time too. Predicting it teaches nothing useful and wastes capacity modeling the prompt distribution. The behavior to learn is answer-given-instruction. Masking the instruction tokens focuses every gradient step on the mapping that matters. It also matches deployment: the user supplies x, the model supplies y.
-> Follow-up: What does SFT not do?
-> A: It does not teach new knowledge reliably. SFT shapes behavior: format, style, instruction-following. Facts come from pre-training. Trying to inject knowledge via SFT often produces confident hallucinations, because the loss rewards fluent answers, not true ones. Knowledge goes in pre-training or RAG. SFT is for conduct.
-
-## Level 2: Co-design with the GPU
-
-The lecture frames efficiency as **co-design**: architecture and hardware
-designed together. Attention's memory access pattern, not just its FLOP
-count, decides speed. GPUs move data slowly relative to computing on it,
-so algorithms that reuse cached data win beyond what operation counts
-predict.
-
-This is the lens for the whole efficiency zoo. FlashAttention tiles the
-computation to avoid materializing the T-by-T matrix. Quantization
-shrinks the KV cache. Speculative decoding drafts with a small model and
-verifies with the large one. Each is a response to a hardware fact, not
-just a math fact. The guest lecture on system ML continues here.
-
-## Level 2: The limits of prompting
-
-In-context learning has ceilings the lecture implies. Context length
-bounds the examples. Long prompts cost tokens on every call. The model
-can only learn what fits in context and what its pre-training prepared
-it to notice. Tasks needing many examples, or examples the model cannot
-use, still need fine-tuning.
-
-There is also a reliability gap. Few-shot behavior is sensitive to
-example choice, order, and phrasing. Small prompt changes move results.
-SFT reduces that sensitivity by baking the behavior into weights. The
-arc of the course is this tradeoff: prompting for flexibility, training
-for reliability, reinforcement for the rest.
+> Q: What does SFT add that pre-training does not?
+> A: Behavior, not knowledge. Pre-training teaches the world: facts, language, reasoning patterns. SFT on (instruction, response) pairs teaches the job description: answer the question directly, follow the format, refuse safely. The lecture's line: pre-training teaches the world, SFT teaches the format of helpfulness. SFT uses 10K-1M human-written pairs, a tiny fraction of pre-training data, because it steers rather than builds.
+> Follow-up: What is catastrophic forgetting in SFT?
+> A: Over-training on the instruction pairs erodes pre-training knowledge: the model gets helpful-shaped but dumber. The narrow pair distribution overwrites broad capabilities. Mitigations: mix pre-training data into SFT, keep SFT short, use low learning rates. It is lecture 6's bias-variance in new clothes: fit the instructions too hard and lose the world.
 
 ## Recap: the whole lesson on one screen
 
-Eight ideas carry this lecture. Read each card. Say the core sentence out
-loud. If you can, you own the lesson.
-
-<div class="recap-grid">
-<div class="recap-card">
-<img src="assets/svg/l15-kvcache.svg" alt="KV cache">
-<div class="rc-body">
-<strong>1. KV cache: store, do not recompute</strong>
-<p>Keys and values persist across decode steps. New token computes its
-own. Memory for speed. Long contexts strain it.</p>
-<p class="rc-num">Key: cache K,V per layer/head/position</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l15-kvcache.svg" alt="MQA and GQA">
-<div class="rc-body">
-<strong>2. Fewer KV heads: MQA and GQA</strong>
-<p>Share keys and values across query heads. MQA: one KV head. GQA:
-groups. Less cache, small quality cost.</p>
-<p class="rc-num">Key: shrink the cache</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l15-moe.svg" alt="Mixture of experts">
-<div class="rc-body">
-<strong>3. MoE: sparse compute, dense capacity</strong>
-<p>128 experts, 8 active per token. Router plus load balancing. Largest
-models afford size this way.</p>
-<p class="rc-num">Key: route, balance, scale</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l15-icl.svg" alt="Zero vs few shot">
-<div class="rc-body">
-<strong>4. Zero-shot and few-shot need no training</strong>
-<p>Task description, optionally plus examples, in the prompt. The GPT-3
-shock: unasked-for capability, emerged at scale.</p>
-<p class="rc-num">Key: the prompt is the training set</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l15-icl.svg" alt="Deployment shift">
-<div class="rc-body">
-<strong>5. Deployment: prompts replace pipelines</strong>
-<p>One model, many prompts, plus scaffolding. No per-company training.
-The convenience shift of the LLM era.</p>
-<p class="rc-num">Key: off-the-shelf plus prompts</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l15-sft.svg" alt="SFT">
-<div class="rc-body">
-<strong>6. SFT: instruction tuning</strong>
-<p>(Instruction, answer) pairs. Continue from checkpoint. Loss on answer
-tokens only. Behavior, not knowledge.</p>
-<p class="rc-num">Key: predict y given x</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l15-sft.svg" alt="What SFT does not do">
-<div class="rc-body">
-<strong>7. SFT shapes conduct, not facts</strong>
-<p>Format and instruction-following improve. Knowledge injection via SFT
-risks fluent hallucinations. Facts live in pre-training or RAG.</p>
-<p class="rc-num">Key: behavior in, knowledge stays out</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l15-moe.svg" alt="Co-design">
-<div class="rc-body">
-<strong>8. Co-design with hardware</strong>
-<p>Memory access decides speed, not just FLOPs. Every efficiency trick
-answers a hardware fact. System ML continues the thread.</p>
-<p class="rc-num">Key: architecture meets GPU</p>
-</div>
-</div>
-</div>
+1. **The job.** Serve generation without O(N^3) per answer.
+2. **Naive.** Recompute everything per token. 2.3 x 10^10 scores
+   per layer per head at N = 4,096. Unservable.
+3. **KV cache.** Store K/V: O(t^2) -> O(t) per token. Memory
+   linear in T.
+4. **Memory-bound.** Cache fills GPU. Batch collapses to ~10.
+   Compute idles. Shrink the cache = serve more.
+5. **GQA.** Share KV heads: 4x smaller cache. **MoE.** 8 experts,
+   top-2 routing: 8x params, ~1x compute.
+6. **The shock.** ICL: frozen weights, "cheese ->" gets
+   "fromage". Pattern continuation via attention. Brittle, free.
+7. **SFT.** (Instruction, response) pairs teach the job
+   description. Knowledge from pre-training. Behavior from SFT.
+8. **The honest price.** Systems complexity, prompt brittleness,
+   human hours, the narrowing tax.
 
 ## Official sources and further reading
 
 **Official:**
-- Lecture 15 video: few-shot agenda [00:51](ts:00:51), KV cache [05:37](ts:05:37), cache memory [05:05](ts:05:05), MQA [22:11](ts:22:11), MoE [31:49](ts:31:49), zero-shot [59:51](ts:59:51), GPT-3 shock [60:55](ts:60:55), instruction tuning [64:49](ts:64:49), SFT loss [67:43](ts:67:43).
-- CS229 Spring 2026 official course notes: efficient transformers chapter.
+- Lecture 15 video, Stanford Online YouTube:
+  https://www.youtube.com/watch?v=hHC-SF3utxg — Tengyu Ma derives
+  the KV cache and its memory-bound serving consequences, presents
+  GQA and MoE, demonstrates in-context few-shot learning, and
+  frames SFT as teaching the job description.
+- Official subtitle transcript (en-US): the lecture's spoken text.
+- CS229 Spring 2026 official course notes (local PDF): the formal
+  treatment.
 
-**Further reading:**
-- Brown et al. (2020), "Language Models are Few-Shot Learners": the GPT-3 paper.
-- Hu et al. (2021), LoRA: the low-rank adaptation paper from lecture 12, the SFT efficiency companion.
-
-**Caveats from these sources.** The video's YouTube metadata title is
-wrong; the content is attention variants plus ICL plus SFT, as the
-transcript shows. Few-shot sensitivity to phrasing is well documented;
-reported numbers depend on prompt details. MoE load-balancing recipes
-vary by lab; the lecture gives the principle, not a recipe.
+**Caveats from these sources.** The KV-cache memory arithmetic
+(batch of ~10 vs ~1,000) is the lecture's illustration of the
+memory-bound regime, not a benchmark. The ICL mechanism
+("attention implements pattern continuation") is the lecture's
+rough account of a still-partly-mysterious phenomenon. MoE load
+balancing is presented as the price, with the details in the
+literature.
 
 ## Connections to the other courses
 
-- **CS336:** inference efficiency is a full CS336 unit: KV cache, quantization, and serving build directly on this lecture.
-- **CS224N:** instruction tuning datasets and evaluation are covered from the language side.
-- **CS329H:** RLHF follows SFT in the post-training stack; this lecture is the step before.
-
-> [!CHEAT]
-> **Efficiency, ICL, SFT cheatsheet.** KV cache: store K,V across steps; new token only; memory-bound at long context. MQA: one KV head. GQA: grouped. MoE: route tokens to few of many experts; needs load balancing. Zero-shot: task description only. Few-shot: examples in prompt; no parameter updates; the GPT-3 shock. Deployment: one model plus prompts replaces per-company training. SFT: (x,y) pairs, loss on y only; behavior not knowledge.
-
-> [!MEMORY]
-> **Prompt for flexibility, train for reliability.** Few-shot adapts instantly and varies with phrasing. SFT bakes behavior into weights. The course arc moves from the first to the second, then to reinforcement.
+- **CS229 L14:** the quadratic price this lesson attacks. The
+  transformer block being served.
+- **CS229 L12:** pre-training: the capability SFT steers and ICL
+  exploits.
+- **CS229 L17:** RL: the next step after SFT in the post-training
+  stack.
+- **CS336:** the systems half: parallelism, batching, and serving
+  infrastructure for the KV cache era.
+- **CS224N:** instruction tuning and few-shot prompting from the
+  NLP side.
