@@ -113,7 +113,7 @@ attention. On paper it wins. But FlashAttention, a
 hardware-aware implementation of the exact O(N squared)
 algorithm, runs faster in measured wall-clock time.
 
-![Algorithmic scaling vs wall-clock](assets/slide-l01-algorithmic-scaling-meme.png "Shell 3. Linear attention wins on asymptotics; FlashAttention wins on the GPU. Source: Stanford slides, meme credit Michael Zhang.")
+![Algorithmic scaling vs wall-clock](assets/slide-l01-algorithmic-scaling-meme.png "Shell 3. Linear attention wins on asymptotics. FlashAttention wins on the GPU. Source: Stanford slides, meme credit Michael Zhang.")
 
 Why? Big-O notation hides constants and ignores how an
 algorithm uses memory. A linear algorithm that ignores the
@@ -132,7 +132,7 @@ shows inference cost rising steadily as the user base grows.
 Design for training when the bill is upfront. Design for
 serving when the bill compounds.
 
-![Training and inference costs](assets/slide-l01-train-infer-costs.png "Shell 4. Training is a large upfront cost; inference compounds with users. Source: Stanford slides, OctoML.")
+![Training and inference costs](assets/slide-l01-train-infer-costs.png "Shell 4. Training is a large upfront cost. Inference compounds with users. Source: Stanford slides, OctoML.")
 
 Three gaps, each demonstrated: compute demand outruns hardware
 (32x vs 2x), model size outruns memory (the OOM scene), and
@@ -187,7 +187,7 @@ outlier columns in FP16. Memory still drops by nearly 4x.
 Accuracy holds. The paper ran OPT-175B this way with no accuracy
 loss.
 
-![One outlier breaks naive INT8; LLM.int8 isolates it](assets/plate-l01-quant-outlier.webp "Outliers keep FP16, 99.9 percent of weights go INT8, accuracy holds. Shell 2. Source: original toy for the LLM.int8 fix. Project: Stanford Frontier AI.")
+![One outlier breaks naive INT8. LLM.int8 isolates it](assets/plate-l01-quant-outlier.webp "Outliers keep FP16, 99.9 percent of weights go INT8, accuracy holds. Shell 2. Source: original toy for the LLM.int8 fix. Project: Stanford Frontier AI.")
 
 ### Subchapter: the quantization family (GPTQ, AWQ, FP8)
 
@@ -215,7 +215,7 @@ kernels.
 
 **FP8** is a different animal: a floating format, not integer,
 used during training itself. DeepSeek-V3 trained in FP8, public
-in its paper; DeepSeek-V4 moved to NVFP4, a 4-bit microscaling
+in its paper. DeepSeek-V4 moved to NVFP4, a 4-bit microscaling
 format. What quantization GPT-5 uses, if any, is not public.
 Unknown.
 
@@ -257,9 +257,9 @@ public. DeepSeek-V3 routes 8 of 256 fine-grained experts plus one
 shared expert, public. GPT-4 is rumored to be MoE. Not confirmed.
 Unknown.
 
-![The gate routes; imbalance starves experts](assets/plate-l01-moe-routing.webp "Uneven gates collapse MoE into one dense expert; the balance loss spreads the load. Shell 3. Source: original toy for MoE routing. Project: Stanford Frontier AI.")
+![The gate routes. Imbalance starves experts](assets/plate-l01-moe-routing.webp "Uneven gates collapse MoE into one dense expert. The balance loss spreads the load. Shell 3. Source: original toy for MoE routing. Project: Stanford Frontier AI.")
 
-![Dense vs mixture of experts](assets/plate-moe.svg "Shell 5. The gate selects experts per token; only active experts compute. Source: original plate; Shazeer, Mirhoseini et al. 2017, Fedus et al. 2021.")
+![Dense vs mixture of experts](assets/plate-moe.svg "Shell 5. The gate selects experts per token. Only active experts compute. Source: original plate. Shazeer, Mirhoseini et al. 2017, Fedus et al. 2021.")
 
 **Software: parallelism and mapping.** Scaling across devices
 needs parallelization strategies, and the strategy must match
@@ -309,7 +309,7 @@ implementation. DeepSeek-V3's DualPipe overlaps communication with
 computation to hide the cost, public in its paper. GPT-4's
 strategy is not public. Unknown.
 
-![Three ways to split the work](assets/plate-l01-parallel-family.webp "Frequent fine traffic stays in the node; rare coarse traffic spans the cluster. Shell 3. Source: original toy for the parallelism family. Project: Stanford Frontier AI.")
+![Three ways to split the work](assets/plate-l01-parallel-family.webp "Frequent fine traffic stays in the node. Rare coarse traffic spans the cluster. Shell 3. Source: original toy for the parallelism family. Project: Stanford Frontier AI.")
 
 **Hardware: design for the device, not the FLOP count.**
 EfficientNet introduced depthwise convolutions with fewer FLOPs (floating-point operations)
@@ -391,7 +391,7 @@ as of October 2026.
 
 Read it as the course in miniature. DeepSeek is the full stack:
 train cheaper (FP8, then NVFP4), serve cheaper (MLA, then hybrid
-attention; MoE), scale wider (DualPipe). Llama 4 shows even Meta
+attention. MoE), scale wider (DualPipe). Llama 4 shows even Meta
 moved its flagship line to MoE. GPT-5 reminds you that the table
 records only what makers announce.
 
@@ -432,7 +432,7 @@ the work across a cluster (L10).
 
 > [!QA]
 > Q: Quote the two growth rates and say why they matter together.
-> A: Deep learning training compute grows 32x every 2 years; Moore's law gives roughly 2x every 2 years. The 16x gap per 2-year window compounds, so each generation of models demands far more than new hardware supplies. Every missing factor must come from better algorithms, better parallelism, or better utilization.
+> A: Deep learning training compute grows 32x every 2 years. Moore's law gives roughly 2x every 2 years. The 16x gap per 2-year window compounds, so each generation of models demands far more than new hardware supplies. Every missing factor must come from better algorithms, better parallelism, or better utilization.
 > Follow-up: Does this mean hardware progress is irrelevant?
 > A: No. Hardware still sets the ceiling: peak FLOPs and memory bandwidth bound every roofline analysis in Lecture 3. The point is that hardware alone cannot close the gap, so systems techniques carry the rest.
 
@@ -475,17 +475,17 @@ The story in eight steps. Each step answers the one before it.
    Emergent abilities like few-shot learning and chain of
    thought exist only at large scale.
 2. **Pretrained models need fine-tuning.** Next-token
-   prediction completes text; it does not follow
+   prediction completes text. It does not follow
    instructions. Fine-tuning on instruction data makes the
    assistant.
 3. **Hardware cannot keep up.** Training compute grows 32x
-   per 2 years; Moore's law gives 2x. The 16x gap per window
+   per 2 years. Moore's law gives 2x. The 16x gap per window
    compounds and must come from systems work.
 4. **Memory is the wall.** Accelerator memory sits near 32 to
    80 GB while models keep growing. Out-of-memory is the
    default failure, not the exception.
 5. **Asymptotics are not wall-clock.** Linear attention wins
-   on big-O; FlashAttention wins on the GPU. Judge by
+   on big-O. FlashAttention wins on the GPU. Judge by
    measured runtime on target hardware.
 6. **Two different bills.** Training is tens of millions
    upfront. Inference is under $0.0001 per call and compounds
@@ -502,7 +502,7 @@ The story in eight steps. Each step answers the one before it.
 
 **Official:**
 - Course site: https://cs229s.stanford.edu/fall2024/
-- Introduction slide deck (Fall 2023 headers; Fall 2024
+- Introduction slide deck (Fall 2023 headers. Fall 2024
   calendar lecture): the source of the figures above.
 
 **Further reading:**
@@ -520,12 +520,12 @@ The story in eight steps. Each step answers the one before it.
   hardware-software co-search.
 
 **Caveats from these sources.** The deck headers say Fall
-2023 while the calendar is Fall 2024; lecture numbering
+2023 while the calendar is Fall 2024. Lecture numbering
 follows the Fall 2024 calendar. The compute-trends and
 memory-wall figures are estimates, and the "GPT-4 is
 estimated to be here" markers are the lecturer's placement,
 not confirmed model sizes. Fine-tuning as alignment (LaMDA)
-is presented as motivation; the course's technical treatment
+is presented as motivation. The course's technical treatment
 of fine-tuning is L08.
 
 ## Go deeper
@@ -544,11 +544,11 @@ of fine-tuning is L08.
 ## Connections to the other courses
 
 - **CS336 L05/L06:** the GPU memory hierarchy and kernel view
-  behind the hardware-efficiency claims; the device block is
+  behind the hardware-efficiency claims. The device block is
   defined in [L05](l05-gpu-execution-model.html) here and
   reused by MS&E435.
 - **CS336 L07/L08:** data, tensor, and pipeline parallelism
-  in full; CS229S [L10](l10-parallelism.html) gives the
+  in full. CS229S [L10](l10-parallelism.html) gives the
   framing and the Megatron view.
 - **CS336 L10:** inference costs and KV caching continue the
   training-versus-inference cost split.
