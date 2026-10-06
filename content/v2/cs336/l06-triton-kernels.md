@@ -293,7 +293,7 @@ Each layer of the lowering stack has its production tool.
 | Paged KV | vLLM's paged-attention kernels | the serving standard |
 | Research peak | ThunderKittens, CUTLASS DSLs | squeezing the newest chips |
 
-Read it as the lecture's ladder in production. The compiler handles
+The compiler handles
 the easy fusions everywhere. FlashAttention handles the one op that
 matters most. Serving gets its own kernels because decode is a
 different economy (memory bound, batch sensitive). Research chases
@@ -372,6 +372,15 @@ The story in eight steps. Each step answers the one before it.
    kernel. Long rows tile with an accumulator.
 8. **Tile the matmul.** One C tile per block, sweep k-tiles through
    shared memory, write once. Fuse the epilogue free.
+
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/DdTsX6DQk24" title="gpu-mode Lecture 14: Practitioner's Guide to Triton" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- gpu-mode, Practitioner's Guide to Triton (the embed above): https://www.youtube.com/watch?v=DdTsX6DQk24
+- Triton documentation: https://triton-lang.org/main/index.html
+- Tillet et al., Triton: An Intermediate Language and Compiler: https://arxiv.org/abs/1904.00962
 
 ## Official sources and further reading
 
