@@ -87,7 +87,7 @@ summary: "Every key fact from CS229 on one dense page: definitions, formulas, nu
   minimum. Seed decides.
 - K-means++: seed proportional to squared distance. O(log k)
   approximation. Sklearn default.
-- Elbow: distortion 121.5, 4.0, 2.7, 1.5 -> k=2. Heuristic.
+- Elbow: distortion 125.5, 4.0, 2.7, 1.5 -> k=2. Heuristic.
 - GMM: responsibilities gamma_j(x). K-means is the hard limit.
 - EM: E-step sets Q to posterior (bound tight), M-step maximizes
   (weighted MLE). Likelihood rises every round. Local maxima,
@@ -122,7 +122,9 @@ summary: "Every key fact from CS229 on one dense page: definitions, formulas, nu
   on-policy, sample-hungry.
 - Advantage: reward-to-go minus baseline. +0.5/-0.5. Same
   expectation, less variance.
-- PPO: r = pi_new/pi_old clipped to [0.8, 1.2]. Four cases.
+- PPO: r = pi_new/pi_old, objective min(r*A, clip(r, 0.8,
+  1.2)*A). Clip binds in the pull direction: A>0 caps r at 1.2.
+  A<0 floors r at 0.8. A<0, r=1.5: unclipped full correction.
   Proximal: never jump far. RLVR: binary verifiable rewards
   train thinking.
 
@@ -140,6 +142,78 @@ summary: "Every key fact from CS229 on one dense page: definitions, formulas, nu
 - "LoRA: W+AB, rank r. 256x fewer dof at d=4096, r=8."
 - "PPO: clip the importance ratio. Stay proximal."
 - "RAG: knowledge in the store, not the weights."
+
+## Never-confuse pairs
+
+- **MLE vs MAP.** MLE: maximize P(data|theta). MAP: maximize
+  P(theta|data) = P(data|theta)P(theta): MLE plus a prior. Ridge
+  is MAP with a Gaussian prior.
+- **V vs Q.** V(s): value of the state under the policy. Q(s,a):
+  value of doing a now, then the policy. Q chooses (argmax), V
+  evaluates. V(s) = E_a[Q(s,a)].
+- **Bias (estimator) vs bias (model).** L06's bias-variance is
+  about model error. L16's baseline is unbiased as an estimator:
+  different "bias" word.
+- **On-policy vs off-policy.** REINFORCE: fresh rollouts only
+  (on-policy). PPO: reuses via importance weights (near-policy).
+  Q-learning: fully off-policy (not in this course).
+- **ICL vs SFT vs RLVR.** ICL: frozen weights, examples in the
+  prompt. SFT: weights change on (instruction, response) pairs.
+  RLVR: weights change on verifiable reward.
+- **Ridge vs lasso.** Ridge (L2): shrinks, keeps all features,
+  always invertible. Lasso (L1): zeroes features, selects.
+- **GDA vs naive Bayes.** GDA: Gaussian per class, features
+  correlated via Sigma. Naive Bayes: independence given class,
+  counts words. Both generative.
+- **Attention vs KV cache.** Attention: the O(N^2) computation.
+  KV cache: the O(N) memory that avoids recompute. GQA shrinks
+  the cache, not the math.
+- **Temperature (softmax) vs temperature (diffusion).** L04's
+  tau sharpens class probabilities. Diffusion has its own noise
+  schedule: unrelated dial, same name.
+- **ELBO (EM) vs ELBO (diffusion).** Same Jensen trick, different
+  job: EM's ELBO bounds the marginal likelihood for missing
+  labels. Diffusion's ELBO becomes noise-prediction MSE.
+
+## If this, then that
+
+- Loss bouncing or exploding: turn alpha down. Crawling: turn it
+  up or scale features.
+- d > 1M parameters: SGD/mini-batch, never Newton, never normal
+  equations.
+- Singular X^T X (redundant features, n < d): ridge, or drop
+  features.
+- Tuning rho on training error: stop. Rho falls to 0 on train.
+  Tune on dev.
+- Test accuracy far below dev: distribution shift or test
+  leakage into train. Check the pipeline, not the model.
+- K-means gives different answers per run: seed lottery. Use
+  k-means++, multiple restarts, keep the best distortion.
+- EM likelihood flat for rounds: slow crawl near a ridge. Check
+  for degenerate collapse (variance -> 0).
+- Attention weights all equal (~1/N): forgot sqrt(d), or tau
+  too high. Sharp collapse to one token: tau too low.
+- PPO ratio histogram spreads (many r near 0, few huge): too
+  many epochs per batch. Refresh rollouts.
+- RLVR reward climbs but traces look broken: reward hacking.
+  Audit traces, strengthen the verifier.
+- ICL accuracy swings with example order: brittleness, not a
+  bug. SFT the task if it is fixed.
+- GPU OOM in serving: KV cache. GQA, smaller batch, shorter
+  context, or quantization: in that order.
+
+## Mnemonics
+
+- **"Error times feature"**: every supervised gradient is
+  (prediction - truth) * input. If your gradient lacks this
+  shape, recheck.
+- **"Greedy is blind, values price"**: RL in six words.
+- **"Subtract the luck"**: baselines and advantages.
+- **"Clip the pull direction"**: PPO's four cases.
+- **"Prototype in prompt, ship in weights"**: ICL vs SFT.
+- **"Knowledge in the store, not the weights"**: RAG.
+- **"The 1/2 cancels the 2"**: why J has 1/(2m).
+- **"Train fits, dev compares, test reports once."**
 
 ## Classic mistakes
 
