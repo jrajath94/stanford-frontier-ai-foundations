@@ -319,7 +319,7 @@ its general path. Kernels track chips, not just papers.
 
 > [!QA]
 > Q: Why does FlashAttention-2 beat FlashAttention-1 if the math is identical?
-> A: Scheduling. FA1 parallelized over batch and heads only, which starved the GPU at small batch sizes: too few thread blocks to fill 108 SMs. FA2 also parallelizes along the sequence-length dimension, so every sequence length yields enough blocks. It also rewrote the rescaling math to halve non-matmul FLOPs. Same outputs, better occupancy, less overhead: about 2x faster. The lesson: the algorithm was fine; the mapping to hardware was not.
+> A: Scheduling. FA1 parallelized over batch and heads only, which starved the GPU at small batch sizes: too few thread blocks to fill 108 SMs. FA2 also parallelizes along the sequence-length dimension, so every sequence length yields enough blocks. It also rewrote the rescaling math to halve non-matmul FLOPs. Same outputs, better occupancy, less overhead: about 2x faster. The lesson: the algorithm was fine. The mapping to hardware was not.
 > Follow-up: What does that imply for writing your own kernels?
 > A: Parallelism structure matters as much as the math. Always ask: along which dimensions does this kernel split work, and is there enough work per SM? A correct kernel with a bad split is a slow kernel.
 
@@ -366,7 +366,7 @@ deployed H100s still compete.
 
 > [!QA]
 > Q: Your kernel runs at 10% of peak. Debug it in order.
-> A: First, compute arithmetic intensity and check the roofline. If the op sits left of the knee, it is memory bound and no tuning reaches peak: fuse it or remove passes. Second, check occupancy: wave quantization means a bad tile count leaves SMs idle, so count tiles against SMs. Third, check divergence: profile warp execution efficiency; branches idle threads, so mask instead. Fourth, check precision: are tensor cores actually engaged, or is the math running on CUDA cores in fp32? Fifth, check alignment: sizes divisible by 16 or 32 coalesce, and padding buys real speed. The order matters: intensity first, because a memory-bound op defeats all the other fixes.
+> A: First, compute arithmetic intensity and check the roofline. If the op sits left of the knee, it is memory bound and no tuning reaches peak: fuse it or remove passes. Second, check occupancy: wave quantization means a bad tile count leaves SMs idle, so count tiles against SMs. Third, check divergence: profile warp execution efficiency. Branches idle threads, so mask instead. Fourth, check precision: are tensor cores actually engaged, or is the math running on CUDA cores in fp32? Fifth, check alignment: sizes divisible by 16 or 32 coalesce, and padding buys real speed. The order matters: intensity first, because a memory-bound op defeats all the other fixes.
 > Follow-up: When do you stop tuning?
 > A: When the kernel sits at its roofline ceiling: actual throughput matches bandwidth times intensity for memory-bound ops, or a high fraction of peak for compute-bound ones. FlashAttention-3 reaches 75% of H100 peak. That is the neighborhood of done.
 
@@ -424,6 +424,16 @@ The story in eight steps. Each step answers the one before it.
 8. **FlashAttention is all six.** Tiled matmuls, online softmax with
    running max, one fused kernel, recomputed backward. Never
    materialize n x n.
+
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/9vcsZK3a76w" title="FlashAttention Explained" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- FlashAttention Explained (the embed above): https://www.youtube.com/watch?v=9vcsZK3a76w
+- Dao et al., FlashAttention: https://arxiv.org/abs/2205.14135
+- Dao, FlashAttention-2: https://arxiv.org/abs/2307.08691
+- Shah et al., FlashAttention-3: https://arxiv.org/abs/2407.08608
 
 ## Official sources and further reading
 
