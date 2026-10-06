@@ -726,6 +726,248 @@ never share GPUs. 40 percent faster.</p>
 Overlap every load. 72 percent of peak bandwidth.</p>
 <p><strong>Parcae in one line?</strong> Loop transformer blocks with spectral radius
 under 1. Flops without parameters.</p>
+<p><strong>What is the std-0 trap?</strong> In GRPO, groups where all rollouts agree
+have std near 0. Dividing by it explodes the update on groups with
+no learning signal.</p>
+<p><strong>What does Dr. GRPO delete?</strong> The std normalization and the length
+normalization. Advantages become reward minus group mean.</p>
+<p><strong>Work the decode tax.</strong> 70B params in bf16 is 140 GB. One decode step
+loads all 140 GB for one token. At 3.3 TB/s that is 42 ms per token.</p>
+<p><strong>When does disaggregation hurt?</strong> When traffic is uniform. The
+routing and KV transfer are pure cost with no bimodal mix to exploit.</p>
+<p><strong>Why is resolution a token purchase?</strong> A 1344px document page costs
+9,792 image tokens (16 crops plus 1 overview at 576 each). The context
+window is the bottleneck, not the encoder.</p>
+<p><strong>CLIP vs SigLIP loss?</strong> CLIP: softmax over the batch, the batch is the
+objective. SigLIP: per-pair sigmoid, batch-size independent.</p>
+<p><strong>What is M-RoPE?</strong> RoPE over height, width, and time, concatenated.
+Position gets three axes.</p>
+<p><strong>muP in one line?</strong> Parametrize so the optimal learning rate transfers
+across widths.</p>
+<p><strong>What is the 50-epoch trap?</strong> Small high-quality sources get
+over-repeated in the mix. Cap them with UniMax.</p>
+<p><strong>Why did DeepSeek drop process supervision?</strong> Outcome supervision was
+enough and scaled better. Cheapest supervision that works wins.</p>
+<p><strong>What is cache-aware routing?</strong> Route low cache-hit requests to a cold
+prefill pool, warm ones to a warm pool. Two lines of code, 40 percent
+faster.</p>
+<p><strong>Batch 17 and the megakernel?</strong> The schedule is hand-tuned per batch
+size. A new size means retuning from scratch.</p>
+<p><strong>RLVR over RLHF: why?</strong> Verifiable rewards (math, tests) cannot be
+gamed the way learned rewards can. Compute keeps helping.</p>
+<p><strong>The reward-hacking lesson?</strong> The agent optimizes the reward, not the
+task. Every reward needs an adversary.</p>
+</div>
+<div class="crash-section">
+<h3 id="26-one-glance-tables">26. One-glance tables</h3>
+<p><strong>Key formulas</strong></p>
+<table>
+<thead>
+<tr>
+<th>Formula</th>
+<th>Meaning</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6ND</td>
+<td>Training FLOPs: 6 x params x tokens</td>
+<td>L02</td>
+</tr>
+<tr>
+<td>2BDK</td>
+<td>One matmul&rsquo;s FLOPs</td>
+<td>L02</td>
+</tr>
+<tr>
+<td>12 B/param</td>
+<td>AdamW memory per parameter</td>
+<td>L02</td>
+</tr>
+<tr>
+<td>2BDL</td>
+<td>Activation memory (approx)</td>
+<td>L02</td>
+</tr>
+<tr>
+<td>O(n^2 d) -&gt; O(n d^2)</td>
+<td>Linear attention savings</td>
+<td>L04</td>
+</tr>
+<tr>
+<td>20 tok/param</td>
+<td>Chinchilla-optimal data ratio</td>
+<td>L09</td>
+</tr>
+<tr>
+<td>B<em>S</em>layers<em>KVheads</em>H<em>2</em>2B</td>
+<td>KV cache bytes</td>
+<td>L10</td>
+</tr>
+<tr>
+<td>P(collision) = Jaccard</td>
+<td>MinHash LSH guarantee</td>
+<td>L14</td>
+</tr>
+<tr>
+<td>(1/b)^(1/r)</td>
+<td>LSH S-curve threshold</td>
+<td>L14</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Numbers that answer interviews</strong></p>
+<table>
+<thead>
+<tr>
+<th>Number</th>
+<th>Fact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>42 ms</td>
+<td>Per-token decode latency, 70B bf16 on H100</td>
+</tr>
+<tr>
+<td>140 GB</td>
+<td>Weights loaded per decode step (70B bf16)</td>
+</tr>
+<tr>
+<td>295</td>
+<td>H100 roofline knee (FLOPs/byte)</td>
+</tr>
+<tr>
+<td>0.5 / 0.1</td>
+<td>MFU: good / broken</td>
+</tr>
+<tr>
+<td>9,792</td>
+<td>Image tokens for one 1344px document page</td>
+</tr>
+<tr>
+<td>32,768</td>
+<td>CLIP batch size (the loss is the batch)</td>
+</tr>
+<tr>
+<td>5 vs 10 days</td>
+<td>SigLIP vs CLIP training (32 vs 256 TPUs)</td>
+</tr>
+<tr>
+<td>40%</td>
+<td>Cache-aware routing speedup</td>
+</tr>
+<tr>
+<td>72%</td>
+<td>Megakernel peak H100 bandwidth</td>
+</tr>
+<tr>
+<td>70.6%</td>
+<td>Qwen3-Coder SWE-bench at 3B active</td>
+</tr>
+<tr>
+<td>$1.5B</td>
+<td>Anthropic piracy settlement (pirating != fair use)</td>
+</tr>
+<tr>
+<td>4 epochs</td>
+<td>Safe data repetition limit</td>
+</tr>
+</tbody>
+</table>
+<p><strong>What is used where</strong></p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Attention</th>
+<th>Position</th>
+<th>Norm</th>
+<th>Activation</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Llama 3</td>
+<td>GQA (8 KV heads)</td>
+<td>RoPE (base 500k)</td>
+<td>RMSNorm</td>
+<td>SwiGLU</td>
+<td>tiktoken BPE 128K</td>
+</tr>
+<tr>
+<td>DeepSeek-V3</td>
+<td>MLA</td>
+<td>Decoupled RoPE</td>
+<td>RMSNorm</td>
+<td>SwiGLU MoE</td>
+<td>256 experts, top-8</td>
+</tr>
+<tr>
+<td>Gemma 2</td>
+<td>GQA (groups=2), SWA</td>
+<td>RoPE</td>
+<td>RMSNorm sandwich</td>
+<td>GeGLU</td>
+<td>Softcap 50/30</td>
+</tr>
+<tr>
+<td>Qwen3-235B</td>
+<td>GQA (64Q/4KV)</td>
+<td>RoPE (theta 1e6)</td>
+<td>RMSNorm, QK-norm</td>
+<td>SwiGLU MoE</td>
+<td>128 experts top-8</td>
+</tr>
+<tr>
+<td>Kimi K2</td>
+<td>MLA</td>
+<td>RoPE</td>
+<td>RMSNorm</td>
+<td>SwiGLU MoE</td>
+<td>384 experts top-8</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="crash-section">
+<h3 id="27-memory-aids">27. Memory aids</h3>
+<p><strong>Mnemonics</strong></p>
+<ul>
+<li><strong>6ND</strong> = &ldquo;six end&rdquo;: six times params times tokens. Training FLOPs.</li>
+<li><strong>BREAD</strong> = the serving stack: <strong>B</strong>atch (continuous), <strong>R</strong>adix (prefix
+  sharing), <strong>E</strong>vict (LRU tiers), <strong>A</strong>mplify (speculative),
+  <strong>D</strong>isaggregate (fleets).</li>
+<li><strong>FROZEN BRIDGE</strong>: LLaVA = freeze both ends, train the bridge.</li>
+<li><strong>MEDIUM</strong>: Kimi&rsquo;s curriculum trains on the medium-difficulty middle.</li>
+<li><strong>The reward is the ceiling</strong>: RLVR in one line.</li>
+</ul>
+<p><strong>Never-confuse pairs</strong></p>
+<ul>
+<li><strong>FLOPs vs FLOP/s</strong>: work vs speed. Time = FLOPs / FLOP/s.</li>
+<li><strong>Prefill vs decode</strong>: compute-bound once vs memory-bound per token.</li>
+<li><strong>PPO vs GRPO</strong>: value network + clipping vs group baseline, no critic.</li>
+<li><strong>SFT vs RL</strong>: imitate demonstrations vs optimize a reward.</li>
+<li><strong>CLIP vs SigLIP</strong>: softmax over batch vs per-pair sigmoid.</li>
+<li><strong>Dedup vs decontaminate</strong>: repeats within train vs test inside train.</li>
+<li><strong>Data vs tensor parallel</strong>: split batch vs split matrices.</li>
+</ul>
+<p><strong>If-this-then-that</strong></p>
+<ul>
+<li>If decode is slow, buy bandwidth. If prefill is slow, buy compute.</li>
+<li>If the batch is the objective, batch size is not a hyperparameter.</li>
+<li>If all rollouts agree, the advantage is 0. No update.</li>
+<li>If the mix is bimodal, disaggregate. If uniform, do not.</li>
+<li>If the context is long, compress the KV cache before adding GPUs.</li>
+<li>If the reward is learnable, expect over-optimization.</li>
+<li>If resolution matters, budget tokens first: 9,792 per page.</li>
+<li>If the mix has small quality sources, cap repetition (UniMax).</li>
+</ul>
+<ul class="crash-links">
+<li><a href="cheatsheet.html">CS336 Cheatsheet: every number on one page</a></li>
+</ul>
 </div>
       
       <nav class="pager"><a href="../cs336/cheatsheet.html"><span class="lbl">← Previous</span>CS336 Cheatsheet</a><span></span></nav>
