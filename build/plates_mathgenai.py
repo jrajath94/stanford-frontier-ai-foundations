@@ -27,12 +27,30 @@ class Plate:
     def __init__(self, title, claim, footer, source="original toy",
                  width=960, inner_h=360):
         self.w = width
-        self.top = 104
+        # Wrap an over-wide title onto two lines instead of clipping it.
+        fb30 = _font(FB, 30)
+        meas = ImageDraw.Draw(Image.new("RGB", (8, 8)))
+        title_lines = [title]
+        extra = 0
+        if meas.textlength(title, font=fb30) > width - 64:
+            words = title.split()
+            best, bestd = 1, float("inf")
+            for i in range(1, len(words)):
+                d = abs(meas.textlength(" ".join(words[:i]), font=fb30)
+                        - meas.textlength(" ".join(words[i:]), font=fb30))
+                if d < bestd:
+                    bestd, best = d, i
+            title_lines = [" ".join(words[:best]), " ".join(words[best:])]
+            extra = 38
+        self.top = 104 + extra
         self.h = self.top + inner_h + 72
         self.img = Image.new("RGB", (self.w, self.h), BG)
         self.d = ImageDraw.Draw(self.img)
-        self.d.text((32, 36), title, font=_font(FB, 30), fill=INK)
-        self.d.text((32, 72), claim, font=_font(FR, 16), fill=MUTED)
+        yy = 36
+        for tl in title_lines:
+            self.d.text((32, yy), tl, font=fb30, fill=INK)
+            yy += 38
+        self.d.text((32, 72 + extra), claim, font=_font(FR, 16), fill=MUTED)
         self._title, self._claim, self._footer, self._source = title, claim, footer, source
 
     # -- primitives -----------------------------------------------------
@@ -96,9 +114,12 @@ class Plate:
 
     def bars(self, x, y_base, items, maxv, bar_w=56, gap=24, height=200,
              size=13, color=INK, neg_down=True):
-        """items: list of (label, value, fill). Negative values hang below baseline."""
+        """items: (label, value, fill) or (label, value, fill, displabel).
+        Negative values hang below baseline."""
         xx = x
-        for label, val, fill in items:
+        for it in items:
+            label, val, fill = it[0], it[1], it[2]
+            disp = it[3] if len(it) > 3 else f"{val}"
             bh = height * abs(val) / maxv
             top, bot = (y_base - bh, y_base) if val >= 0 else (y_base, y_base + bh)
             self.d.rectangle([xx, top, xx + bar_w, bot],
@@ -106,10 +127,10 @@ class Plate:
             f = _font(FR, size)
             tw = self.d.textlength(label, font=f)
             self.d.text((xx + (bar_w - tw) / 2, y_base + 8), label, font=f, fill=MUTED)
-            vw = self.d.textlength(f"{val}", font=_font(FB, size))
+            vw = self.d.textlength(disp, font=_font(FB, size))
             vy = top - 24 if val >= 0 else bot + 8
             self.d.text((xx + (bar_w - vw) / 2, vy),
-                        f"{val}", font=_font(FB, size), fill=color)
+                        disp, font=_font(FB, size), fill=color)
             xx += bar_w + gap
         return xx
 
