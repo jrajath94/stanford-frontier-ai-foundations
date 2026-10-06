@@ -25,261 +25,212 @@ sources:
     label: "CS229 Spring 2026 official course notes (local PDF)"
 ---
 
-## How to read this lesson
+## The job: a million unlabeled customer records
 
-This lesson has two levels. **Level 1 (Core)** contains what you need to
-understand everything that follows in CS229 and the courses that build on
-it. **Level 2 (Deep)** contains what you need for correct, interview-grade
-understanding. Read Level 1 straight through. Return to Level 2 when you
-want depth.
+A store has one million customer records: age, yearly spend, visit
+frequency. No labels. Nobody tagged anyone "bargain hunter" or
+"whale". The job: find the natural groups, so marketing can treat
+each group differently. This is **clustering**, the flagship
+unsupervised task. No y anywhere. The machine must invent the
+categories from the shape of the data.
 
-No prerequisites are assumed. Every term is defined at first use. This
-is the unsupervised block: no labels anywhere. Supervised concepts from
-[lectures 2](l02-linear-regression.html) through [8](l08-backpropagation.html)
-are reused, not re-explained.
+## First attempt: k-means
 
-## Level 1: The unsupervised question
+The intuitive algorithm: pick k group centers, assign each customer
+to the nearest center, move each center to its group's average,
+repeat. That is **k-means**, and the lecture calls it ad hoc on
+purpose: it is not derived from a probability model, it is just the
+obvious thing, and it works.
 
-No labels. The data is x only. The question changes from "predict y" to
-"what structure is hiding here?" The lecture's pedagogical goal is that
-question itself: what are we modeling, what structure do we assume, what
-do we pull out? The algorithms take five minutes to look up. The judgment
-takes the lecture.
-
-**Clustering** is the canonical unsupervised task: split points into
-groups so that similar points share a group. Two algorithms, one
-intuition. **K-means** is ad hoc but obvious. **Gaussian mixture models**
-(GMMs) are the probabilistic, softer version [01:34](ts:01:34). The EM
-algorithm that fits GMMs is lecture 10. This lecture builds the
-intuition.
-
-Unsupervised methods had a renaissance in the last ten years. The
-motivation in the lecture is concrete: photons hitting a plate
-[30:43](ts:30:43). You count photon arrivals and must infer how many
-sources there are and where they sit. No one labels the photons. The
-structure, sources plus noise, must be hypothesized.
-
-> [!QA]
-> Q: What is the core difference between supervised and unsupervised learning?
-> A: Labels. Supervised training pairs (x, y) tell the algorithm what the right answer is. Unsupervised data is x only, so the algorithm must propose its own structure: clusters, directions, densities. Evaluation is also harder: without labels there is no single score, which is why the lecture stresses the modeling questions over the algorithms.
-> Follow-up: When is clustering the right tool?
-> A: When you suspect discrete hidden structure and want it made explicit: customer segments, cell types, photon sources. If you only need the structure as features for a later supervised task, softer representations often beat hard cluster assignments. Know what you will do with the clusters before you compute them.
-
-## Level 1: K-means
-
-Pick k. **Initialize** k centers mu_1..mu_k randomly [08:45](ts:08:45).
-Then repeat two steps. Assign each point to its nearest center. Move each
-center to the mean of its assigned points. Stop when assignments stop
+The two steps, precisely. **Assignment**: each point joins the
+cluster whose center mu_j is closest. **Update**: each center moves
+to the mean of its assigned points. Repeat until assignments stop
 changing.
 
-![K-means iterations](assets/figs-notes/notes-kmeans-a.png "Raw points, no labels. Source: Stanford notes.")
+Watch it on a toy. Six points on a line: {1, 2, 3, 10, 11, 12}.
+k = 2. Start centers at mu_1 = 1, mu_2 = 12 (bad luck: the extremes).
 
-![Assign to nearest center](assets/figs-notes/notes-kmeans-b.png "Each point joins its nearest center. Source: Stanford notes.")
+```ascii
+start:   mu_1 = 1, mu_2 = 12
+assign:  {1,2,3} -> mu_1,  {10,11,12} -> mu_2
+update:  mu_1 = 2, mu_2 = 11
+assign:  unchanged. Done in 1 round.
+```
 
-![Recompute means](assets/figs-notes/notes-kmeans-c.png "Centers move to their cluster means. Source: Stanford notes.")
+Lucky start. Now start at mu_1 = 1, mu_2 = 2 (both in the left
+clump):
 
-![Converged](assets/figs-notes/notes-kmeans-d.png "Assignments stabilize. Source: Stanford notes.")
+```ascii
+start:   mu_1 = 1, mu_2 = 2
+assign:  {1} -> mu_1,  {2,3,10,11,12} -> mu_2
+update:  mu_1 = 1, mu_2 = 7.6
+assign:  {1,2,3} -> mu_1,  {10,11,12} -> mu_2
+update:  mu_1 = 2, mu_2 = 11.  Done in 2 rounds.
+```
 
-The **distortion** is the sum of squared distances from points to their
-centers [31:33](ts:31:33). Each step lowers it or leaves it unchanged, so
-the algorithm **converges** [17:49](ts:17:49). Converges to what? A
-**local minimum**. Different random starts give different answers. The
-deterministic steps hide one random choice at the top: the
-initialization. That choice decides which minimum you land in.
+Same data, different start, same good answer here. But the lecture
+stresses the general truth: the final clusters depend on where the
+centers start. K-means converges (the **distortion**, the sum of
+squared distances to centers, falls every round and cannot fall
+forever), but it converges to a **local minimum**, not the global
+one. Different seeds, different answers. The NP-hardness result the
+lecture cites says no efficient algorithm guarantees the global
+optimum.
 
-The key unsupervised insight: cluster labels are meaningless
-[03:24](ts:03:24). The professor states that cluster identity is unknown:
-which cluster is mu 1 or mu 2 is unknowable, because there are no labels.
-Swapping all labels changes nothing. What matters is where
-the centers ended up, not what they are called.
+## Where it breaks: the seed decides
 
-![K-means restarts](assets/figs-notes/notes-kmeans-e.png "A different start can land in a different minimum. Source: Stanford notes.")
+Demonstrate with numbers. Eight points: four at x = 0 (call them
+A), four at x = 10 (B), and the true groups are {A} and {B}. Start
+centers at 0 and 0.1 (both inside A). Round 1: all eight points go
+to mu_2 = 0.1 (closer than 0 to every B point? B at 10: distance to
+0.1 is 9.9, to 0 is 10: yes, mu_2 wins everything). mu_1 gets zero
+points. The implementation must handle the empty cluster (common
+fix: reinitialize it randomly). Depending on the fix, you can end
+with both centers inside A and B unclustered: distortion far above
+optimal. The seed decided the answer. On real data with hundreds of
+dimensions, bad seeds are the norm, not the exception.
 
-![K-means final](assets/figs-notes/notes-kmeans-f.png "Compare runs by distortion, not by labels. Source: Stanford notes.")
+## The key question
+
+Can we seed the centers so cleverly that the local minimum is
+probably a good one, with a guarantee?
+
+## k-means++: seed far apart
+
+**K-means++**, from Stanford graduate students (Arthur and
+Vassilvitskii), seeds one center at a time: pick the first center
+uniformly at random among the points. Pick each next center with
+probability proportional to its squared distance from the nearest
+existing center. Points far from all centers are likely seeds.
+Points near a center are unlikely.
+
+On the toy {1,2,3,10,11,12}: first center lands somewhere, say 2.
+Squared distances: 10 is 64 away, 11 is 81, 12 is 100; 1 is 1, 3 is
+1. The next seed is overwhelmingly likely to come from {10,11,12}.
+The two clumps get one seed each with high probability. The lecture
+reports the payoff: k-means++ guarantees an expected approximation
+ratio of O(log k) to the optimal distortion. Not optimal (NP-hard
+forbids that), but provably close, from seeding alone. It is the
+default in sklearn.
+
+## How many clusters? The elbow
+
+K-means needs k up front. The **elbow method**: run k-means for
+k = 1, 2, 3, ..., plot the final distortion. Distortion always falls
+as k rises (k = n gives distortion 0: every point its own center).
+Look for the **elbow**, the k where the curve bends: gains slow
+down after it. Toy distortions: k=1: 121.5, k=2: 4.0, k=3: 2.7,
+k=4: 1.5. The elbow is at k = 2: the drop from 121.5 to 4.0 dwarfs
+everything after. The lecture's honest note: elbows are often
+ambiguous on real data. It is a heuristic, not a rule.
+
+![Elbow method](assets/svg/l09-elbow.svg "The elbow method. Distortion falls with k. The bend at k = 2 marks the natural cluster count. Source: original plate for Stanford Frontier AI.")
+
+## Softening: Gaussian mixture models
+
+K-means makes hard assignments: each point belongs to exactly one
+cluster. Real groups overlap. A **Gaussian mixture model** (GMM)
+softens everything: the data is a mix of k Gaussians, each point has
+a probability of belonging to each one.
+
+The model: pick a cluster j with probability phi_j, then draw x
+from Gaussian(mu_j, Sigma_j). The **responsibility** gamma_j(x) is
+the posterior probability that point x came from cluster j: how much
+cluster j "claims" x. A point between two clumps might be 70 percent
+cluster 1, 30 percent cluster 2, instead of k-means' all-or-nothing.
+
+K-means is the limiting case: let every Sigma shrink toward zero
+and the responsibilities harden to 0 or 1. The lecture frames GMM as
+the probabilistic grown-up of the ad-hoc algorithm: same spirit,
+with uncertainty quantified.
+
+![GMM](assets/svg/l09-gmm.svg "Gaussian mixture model. Each point carries responsibilities across clusters: 70 percent cluster 1, 30 percent cluster 2. K-means is the hard limit. Source: original plate for Stanford Frontier AI.")
+
+## The honest price
+
+K-means buys simplicity and pays in guarantees: local minima, seed
+dependence, and no notion of uncertainty. It assumes spherical
+clusters of similar size: stretch one cluster into a long ellipse
+and k-means splits it wrongly, because Euclidean distance is the
+only geometry it knows. Choosing k is a heuristic. GMM buys soft
+assignments and pays in fitting: the cluster labels are hidden, so
+MLE has no closed form, and the next lecture's EM algorithm must
+iterate. Both assume you know the right k and the right distance.
+When clusters are non-convex (two interleaved crescents), both fail
+and density methods take over.
+
+## Mapping back
+
+| Idea | Pain it answers | How |
+|---|---|---|
+| K-means | No labels, need groups | Alternate assignment and mean-update; distortion falls every round; toy converges in 1-2 rounds |
+| Local-minima diagnosis | Same data, different answers per seed | Convergence is to a local minimum; NP-hard globally; seeds at 0 and 0.1 can strand a cluster |
+| K-means++ | Bad seeds are the norm | Seed proportional to squared distance; O(log k) expected approximation ratio; sklearn default |
+| Elbow method | k is unknown | Distortion 121.5, 4.0, 2.7, 1.5: the bend at k=2; heuristic, often ambiguous |
+| GMM | Hard assignments lie about overlap | Responsibilities: 70/30 splits; k-means is the zero-variance limit |
 
 > [!QA]
 > Q: Why does k-means converge, and to what?
-> A: Each of the two steps minimizes the distortion with the other fixed: assignment picks the nearest center, and the mean minimizes squared distance to assigned points. Distortion never increases, and there are finitely many assignments, so it must stabilize. It stabilizes at a local minimum, not necessarily the global one. Restarts with different seeds explore different minima.
-> Follow-up: How do you pick k?
-> A: The **elbow method**: plot distortion against k and stop where the curve bends [01:15](ts:01:15). More clusters always fit better, so the curve always falls. The elbow is where extra clusters stop buying much. It is a heuristic, not a theorem. Domain knowledge beats the elbow when you have it.
-
-## Level 1: K-means++
-
-Random initialization is the weak point. **K-means++** fixes the start
-[18:57](ts:18:57). Pick the first center uniformly at random. Pick each
-next center with probability proportional to its squared distance from
-the nearest existing center. Far-flung points become likely seeds.
-Centers spread out instead of piling up.
-
-The result is a theorem, not a trick: k-means++ guarantees an
-**approximation ratio** [19:03](ts:19:03), a bound on how far the final
-distortion can be from optimal. The optimal clustering is NP-hard, so no
-efficient method guarantees perfection. A provable ratio is the best
-possible kind of promise. It is the default in sklearn, written by
-Stanford graduate students.
+> A: Each round has two steps and neither raises the distortion (sum of squared distances to centers). Assignment moves each point to its nearest center, lowering or holding its term. Update moves each center to its points' mean, which is the unique minimizer of its term. Distortion falls every round, is bounded below by 0, so it converges. It converges to a local minimum: no single reassignment or mean-move improves it, but a different seed could reach a better one. The seed-dependence is fundamental, not a bug.
+> Follow-up: What do you do about empty clusters?
+> A: Common fixes: reinitialize the empty center to a random data point (often the point farthest from its center), or drop it and continue with k-1. The lecture's implementation note: handle it explicitly, because bad seeds produce empty clusters routinely in high dimensions.
 
 > [!QA]
-> Q: What does k-means++ actually do differently?
-> A: It seeds centers far apart instead of uniformly at random. Each new center is sampled with probability proportional to squared distance from the closest existing center. This spreads seeds across the data's extent and comes with a provable approximation ratio. In practice: better minima, fewer restarts.
-> Follow-up: Why is the optimal k-means solution NP-hard relevant?
-> A: It tells you to stop looking for the perfect algorithm. NP-hard means no efficient method finds the global optimum in general. The field therefore competes on approximation guarantees and practical behavior. K-means++ is the canonical example: provably good seeding plus a local optimizer.
-
-## Level 1: GMMs, the soft version
-
-K-means assigns each point to exactly one cluster. A **Gaussian mixture
-model** softens that: each cluster is a Gaussian with its own mean,
-covariance, and mixing weight, and each point belongs to every cluster
-partially. The partial memberships are **responsibilities**: the
-probability each cluster generated the point.
-
-![Hard vs soft](assets/svg/l09-gmm.svg "K-means: 100% one cluster. GMM: 60/40 splits. Original plate.")
-
-Hard assignments are a limiting case of soft ones. Let the Gaussians get
-narrow and the responsibilities collapse to 0 or 1: you recover k-means.
-GMMs also model cluster shape through covariances, where k-means only
-knows spherical distance to a center.
-
-Fitting a GMM means maximizing the likelihood over means, covariances,
-and weights. The likelihood has a sum inside the log that resists
-closed-form attack. The weapon is the EM algorithm: guess the soft
-assignments, then fit the Gaussians to the weighted points, then repeat.
-Lecture 10 derives it. The photon plate is the running example: each
-photon partially belongs to each candidate source.
-
-![Choosing k](assets/svg/l09-elbow.svg "Distortion always falls with k. Stop at the bend. Original plate.")
+> Q: How does k-means++ seeding work, and what does it guarantee?
+> A: Seed centers one at a time. First center uniform at random. Each next center chosen with probability proportional to its squared distance from the nearest existing center: far-apart points are likely seeds. On {1,2,3,10,11,12} with first seed at 2, the squared distances (64, 81, 100 for the right clump vs 1, 1 for the left) make the second seed land in the right clump with high probability. Guarantee: expected distortion within O(log k) of optimal. It cannot promise optimal: the problem is NP-hard.
+> Follow-up: Why squared distance and not distance?
+> A: Because the objective is squared distance (distortion). Seeding proportional to squared distance samples proportionally to each point's current contribution to the objective, which is what the approximation proof needs. Linear distance would under-seed far outliers relative to their cost.
 
 > [!QA]
-> Q: K-means or GMM: which do you pick?
-> A: K-means for speed and simplicity: spherical clusters, hard assignments, one distance computation per point per center. GMM for shape and uncertainty: elliptical clusters, soft responsibilities, a real likelihood you can compare across models. If clusters overlap or have different shapes, k-means' hard spherical assumption visibly fails and GMM earns its cost.
-> Follow-up: What do the mixing weights mean?
-> A: The prior probability of each cluster: what fraction of the data each Gaussian generates. They must sum to one. A tiny weight means a rare cluster the model keeps around because some points need explaining. Weights near zero suggest you picked k too large.
-
-## Level 2: What the distortion leaves out
-
-Distortion measures compactness, not correctness. A clustering can have
-low distortion and miss the real structure: elongated clusters get
-chopped, overlapping ones get merged. K-means assumes spherical clusters
-of similar size because Euclidean distance to a center is its only
-notion of belonging. When the assumption fails, the algorithm fails
-confidently.
-
-There is also the scaling trap. Features on different scales distort
-Euclidean distance: the lecture 10 rescaling discussion applies here
-too. Standardize features before clustering, or the large-scale feature
-decides every assignment. K-means has no built-in sense of units.
-
-## Level 2: EM as the general pattern
-
-Step back. K-means alternates: assign points given centers, move centers
-given assignments. EM will alternate: estimate hidden assignments given
-parameters (E-step), maximize parameters given assignments (M-step).
-K-means is the hard, zero-temperature limit of EM on a GMM. Learn to see
-the alternating pattern and lecture 10 is a derivation, not a new idea.
-The pattern recurs anywhere hidden variables meet maximum likelihood.
+> Q: What is a responsibility in a GMM?
+> A: The posterior probability that a point came from each cluster: gamma_j(x) = phi_j * Gaussian(x. Mu_j, Sigma_j) / sum over clusters. It is how much cluster j claims the point. A point dead center in cluster 1 has responsibility near 1 for it. A point between clusters splits, e.g., 0.7 and 0.3. K-means' hard assignment is the limit as cluster variances go to zero: responsibilities collapse to 0 or 1.
+> Follow-up: When does k-means fail where GMM succeeds?
+> A: Overlapping clusters of different sizes or shapes. K-means draws a hard bisector and assumes spheres. A small dense clump next to a big diffuse one gets mis-split. GMM's responsibilities and per-cluster covariances model the overlap and the shapes. The price: fitting needs EM (lecture 10), and you still choose k.
 
 ## Recap: the whole lesson on one screen
 
-Eight ideas carry this lecture. Read each card. Say the core sentence out
-loud. If you can, you own the lesson.
-
-<div class="recap-grid">
-<div class="recap-card">
-<img src="assets/figs-notes/notes-kmeans-a.png" alt="K-means raw points, Stanford notes">
-<div class="rc-body">
-<strong>1. Unsupervised: x only, find structure</strong>
-<p>No labels. The questions are what to model and what structure to
-assume. Photon plate: infer sources from arrival counts.</p>
-<p class="rc-num">Key: structure, not prediction</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/figs-notes/notes-kmeans-b.png" alt="Assign step, Stanford notes">
-<div class="rc-body">
-<strong>2. K-means: assign, then move</strong>
-<p>Random centers. Assign each point to nearest. Move centers to means.
-Repeat until assignments freeze.</p>
-<p class="rc-num">Key: two steps, alternating</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/figs-notes/notes-kmeans-c.png" alt="Update step, Stanford notes">
-<div class="rc-body">
-<strong>3. Distortion never increases</strong>
-<p>Sum of squared distances to centers. Each step lowers it. Converges
-to a local minimum, not the global one.</p>
-<p class="rc-num">Key: monotone, local</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/figs-notes/notes-kmeans-e.png" alt="Restarts, Stanford notes">
-<div class="rc-body">
-<strong>4. Initialization decides the minimum</strong>
-<p>Random starts land in different minima. Labels are meaningless: only
-center positions matter. Restart and compare by distortion.</p>
-<p class="rc-num">Key: labels permute freely</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/figs-notes/notes-kmeans-f.png" alt="K-means final, Stanford notes">
-<div class="rc-body">
-<strong>5. K-means++ seeds far apart</strong>
-<p>Sample new centers proportional to squared distance from existing
-ones. Provable approximation ratio. The sklearn default.</p>
-<p class="rc-num">Key: spread seeds, bound the cost</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l09-elbow.svg" alt="Elbow method">
-<div class="rc-body">
-<strong>6. Elbow picks k</strong>
-<p>Plot distortion vs k. Stop at the bend. Heuristic, not theorem. More
-clusters always fit better.</p>
-<p class="rc-num">Key: diminishing returns</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l09-gmm.svg" alt="Hard vs soft clustering">
-<div class="rc-body">
-<strong>7. GMM: soft, shaped clusters</strong>
-<p>Each cluster a Gaussian with own covariance. Responsibilities split
-points across clusters. K-means is the hard limit.</p>
-<p class="rc-num">Key: partial membership</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/figs-notes/notes-kmeans-d.png" alt="Converged clustering, Stanford notes">
-<div class="rc-body">
-<strong>8. The alternating pattern</strong>
-<p>Assign given parameters, fit given assignments. EM generalizes it.
-See the pattern and lecture 10 is a derivation.</p>
-<p class="rc-num">Key: alternate until stable</p>
-</div>
-</div>
-</div>
+1. **The job.** One million unlabeled customers. Find the natural
+   groups. No y anywhere.
+2. **K-means.** Assign to nearest center, move centers to means,
+   repeat. Toy {1,2,3,10,11,12} converges in 1-2 rounds.
+3. **Where it breaks.** Seeds decide: centers at 0 and 0.1 strand
+   a cluster. Local minima, NP-hard globally.
+4. **The key question.** Can seeding alone guarantee a good local
+   minimum?
+5. **K-means++.** Seed proportional to squared distance. O(log k)
+   expected approximation ratio. Sklearn default.
+6. **The elbow.** Distortions 121.5, 4.0, 2.7, 1.5: bend at k=2.
+   Heuristic, often ambiguous.
+7. **GMM.** Soft assignments via responsibilities: 70/30 splits.
+   K-means is the hard limit.
+8. **The honest price.** Local minima, spherical bias, heuristic k,
+   EM needed for GMM, both die on crescents.
 
 ## Official sources and further reading
 
 **Official:**
-- Lecture 9 video: softer clustering [01:34](ts:01:34), elbow [01:15](ts:01:15), no labels [03:24](ts:03:24), random init [08:45](ts:08:45), k-means++ [18:57](ts:18:57), photon plate [30:43](ts:30:43).
-- CS229 Spring 2026 official course notes: clustering chapter; the k-means figures above are from it.
+- Lecture 9 video, Stanford Online YouTube:
+  https://www.youtube.com/watch?v=bSmIGBCoffA — Chris Ré runs
+  k-means live, proves convergence to local minima, presents
+  k-means++ with its approximation guarantee, and sets up GMMs.
+- Official subtitle transcript (en-US): the lecture's spoken text.
+- CS229 Spring 2026 official course notes (local PDF): the full
+  k-means and GMM treatment.
 
-**Further reading:**
-- Arthur and Vassilvitskii (2007), "k-means++: The Advantages of Careful Seeding": the seeding paper.
-- MacQueen (1967): the original k-means paper, for historical flavor.
-
-**Caveats from these sources.** The elbow is a heuristic with no
-guarantee; automated elbow-finders disagree. K-means++ bounds the
-expected cost, not the worst case. The photon example is illustrative;
-real source-separation problems add backgrounds the lecture omits.
+**Caveats from these sources.** The lecture calls k-means "ad hoc"
+deliberately: it is the intuitive algorithm, not a derived one.
+The k-means++ attribution (Stanford graduate students Arthur and
+Vassilvitskii) and the sklearn-default status are the lecture's.
+The toy runs in this lesson are original miniatures of the
+lecture's live demos. GMM fitting (EM) is deferred to lecture 10
+by the lecture's own ordering.
 
 ## Connections to the other courses
 
-- **CS336:** vector quantization for efficient inference clusters activations; k-means is the algorithm.
-- **CS224N:** word-sense clusters and topic models are clustering over text representations.
-- **CS329H:** mixture models are the simplest latent-variable decision models; EM is the inference pattern.
-
-> [!CHEAT]
-> **Clustering cheatsheet.** Unsupervised: x only, find structure. K-means: random centers, assign nearest, means of assigned, repeat; distortion = sum squared distances, monotone decreasing, local minima; labels meaningless; elbow picks k. K-means++: seed proportional to squared distance; approximation ratio; sklearn default. GMM: Gaussians with own covariances and weights; soft responsibilities; k-means is its hard limit. Pattern: alternate assignment and fitting.
-
-> [!MEMORY]
-> **Labels are a luxury.** Without them, every answer is a hypothesis about structure. State the hypothesis before running the algorithm. K-means assumes spheres. If your clusters are bananas, say so first.
+- **CS229 L05:** GDA's Gaussians with known labels; GMM is GDA
+  with the labels hidden.
+- **CS229 L10:** EM: the algorithm that fits GMMs, and PCA for
+  visualizing clusters.
+- **CS229 L06:** the elbow as model selection. Distortion vs k as
+  a bias-variance curve.
+- **CS224N:** clustering word vectors: k-means on embeddings.
