@@ -255,7 +255,7 @@ Without the baseline, both updates would scale by raw 1 and 0.
 With it, the update says &ldquo;better than usual&rdquo; vs &ldquo;worse than
 usual&rdquo;, which is the learnable signal. The lecture&rsquo;s derivation:
 replace reward by advantage in the policy gradient. The
-expectation is unchanged (baselines don&rsquo;t bias it) but the
+expectation is unchanged (baselines do not bias it) but the
 variance drops.</p>
 <h2 id="ppo-clip-the-jump">PPO: clip the jump</h2>
 <p>REINFORCE is on-policy: one gradient step per batch of fresh
@@ -271,17 +271,65 @@ policy jumps off a cliff. PPO&rsquo;s fix is <strong>clipping</strong>: cap the 
 at [1-epsilon, 1+epsilon], epsilon ~ 0.2. The clipped objective
 takes the worse of the raw and clipped versions, so the update
 never profits from moving too far.</p>
-<p>The lecture walks the four cases. Advantage positive, ratio 1.5
-(action good, new policy already likes it more): clip to 1.2, and
-PPO&rsquo;s position is &ldquo;no need to reinforce anymore&rdquo;: it is already a
-good action at higher probability, so zero out the extra push.
-Advantage positive, ratio 0.5 (good action, new policy shies away):
-unclipped, reinforce it back up. Advantage negative, ratio 1.5
-(bad action, new policy likes it): clip, don&rsquo;t let it get worse.
-Advantage negative, ratio 0.5: fine, keep suppressing. The pattern:
-never let one update move the policy far from the data it trained
-on. &ldquo;Proximal&rdquo;: stay near the old policy.</p>
+<p>The lecture walks the four cases, corrected against the
+objective L = min(r<em>A, clip(r)</em>A) (an earlier draft of this
+lesson mirrored the two negative-advantage cases: fixed below).
+Advantage positive, ratio 1.5 (action good, new policy already
+likes it more): min(1.5A, 1.2A) = 1.2A, clipped flat: &ldquo;no need to
+reinforce anymore&rdquo;. Advantage positive, ratio 0.5 (good action,
+new policy shies away): min(0.5A, 0.8A) = 0.5A, unclipped:
+reinforce it back up. Advantage negative, ratio 1.5 (bad action,
+new policy likes it): min(1.5A, 1.2A) with A &lt; 0 is 1.5A:
+UNCLIPPED, full corrective push back down: the policy already
+moved toward a bad action, and the objective wants it reversed at
+full strength. Advantage negative, ratio 0.5 (bad action, new
+policy already shies away): min(0.5A, 0.8A) = 0.8A: clipped flat,
+stop suppressing. The pattern: the clip binds only when the ratio
+moves further in the direction the objective wants: r past 1.2
+for good actions, r below 0.8 for bad ones. &ldquo;Proximal&rdquo;: stay near
+the old policy.</p>
+<h3 id="subchapter-the-four-cases-corrected">Subchapter: the four cases, corrected</h3>
+<p>The draft said: A &lt; 0, r = 1.5: &ldquo;clip, do not let it get worse&rdquo;;
+A &lt; 0, r = 0.5: &ldquo;fine, keep suppressing&rdquo;. Both wrong. Plug in A =
+-2, eps = 0.2. Case r = 1.5: min(1.5<em>(-2), 1.2</em>(-2)) = min(-3,
+-2.4) = -3: the unclipped value. The gradient pushes r down at
+full strength: correct, because the policy drifted toward a bad
+action and must be yanked back. Clipping here would weaken the
+rescue. Case r = 0.5: min(0.5<em>(-2), 0.8</em>(-2)) = min(-1, -1.6) =
+-1.6: the clipped value, flat. The suppression STOPS: the policy
+already shies away. Pushing further would move it off the data
+for no gain. The rule that replaces the draft: clip the direction
+the objective is pulling, not the direction the ratio sits. The
+objective pulls r up when A &gt; 0 (clip above 1.2) and down when A &lt;
+0 (clip below 0.8). Everything else runs free.</p>
+<figure><img alt="Four cases" src="assets/plate-l17-clip-cases.webp"><figcaption>The four cases, corrected. A&gt;0, r=1.5: clipped flat. A&gt;0, r=0.5: full push. A&lt;0, r=1.5: full correction, unclipped. A&lt;0, r=0.5: clipped flat. Source: original audit of the PPO objective. Project: Stanford Frontier AI.</figcaption></figure>
 <figure><img alt="PPO clipping" src="assets/svg/l17-ppo.svg"><figcaption>PPO. The importance ratio r is clipped to [0.8, 1.2]. Good actions already favored get no extra push. Bad updates cannot jump far. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-ratio-priced">Subchapter: the ratio, priced</h3>
+<p>Importance sampling reuses old data: E_old[r * A] = E_new[A] with
+r = pi_new/pi_old. The price is in the weights&rsquo; variance. A stale
+sample the new policy likes 3x (r = 3) counts triple: one
+trajectory&rsquo;s opinion, amplified. As the policy drifts from the
+data, E[r^2] grows: weights spread, a few trajectories dominate,
+the gradient jitters. That is why PPO runs a few epochs per
+batch, then rolls out fresh data: the ratio is a short loan, not
+a standing facility. The clip and the epoch limit are the same
+idea twice: trust old data a little, briefly, then refresh.</p>
+<figure><img alt="Ratio" src="assets/plate-l17-ratio.webp"><figcaption>The ratio, priced. r = 3: one stale trajectory counts triple. Drift grows the weights' variance. Few epochs per batch, then fresh rollouts. Source: original plate for the importance weights. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-verifiers-blind-spot-priced">Subchapter: the verifier&rsquo;s blind spot, priced</h3>
+<p>The verifier checks the answer, not the thought. A model that
+writes a broken chain landing on &ldquo;42&rdquo; scores 1. Suppose 5% of
+correct answers come from broken reasoning: RLVR reinforces
+broken reasoning on 5% of the wins, and nothing in the reward
+says otherwise. The thinking rots while the score shines. The
+fixes, priced: stronger verifiers (property tests, hidden tests:
+engineering cost), process supervision (reward intermediate
+steps: a human must read every step, so labeling cost scales with
+thinking length instead of answer count), and trace audits (read
+the chains, not just the scores: ongoing labor). No fix is free:
+each trades verifier engineering or human hours for thinking
+quality. The honest rule: never trust a rising reward curve
+alone. Sample the traces.</p>
+<figure><img alt="Blind spot" src="assets/plate-l17-blind-spot.webp"><figcaption>The verifier's blind spot. Verifier: answer is 42, score 1. Broken chain, right token: the thinking rots while the score shines. Source: original plate for the reward hacking. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="verifiable-rewards-the-01-that-works">Verifiable rewards: the 0/1 that works</h2>
 <p>For math and code, correctness is checkable: the answer equals 42
 or it does not. The program passes the tests or it does not. The
@@ -349,10 +397,18 @@ thought.</p>
 </table>
 <div class="qa"><div class="q">What problem does the advantage function solve?</div><div class="a"><p>REINFORCE scales updates by raw total reward, so luck dominates: a good action in a lucky trajectory and a bad action in a lucky trajectory both get reinforced. The advantage A = reward-to-go minus baseline subtracts what was expected anyway. Only better-than-average actions get positive updates. The expectation is unchanged (baselines add zero in expectation) but the variance collapses, because the shared luck cancels. In the toy, substitution scored +0.5 (reinforce) and guessing -0.5 (suppress) against a 0.5 baseline.
 The value function V(s): the expected reward-to-go from the state. It is the best predictor of the luck component, since it captures everything about the state except this action&rsquo;s choice. In practice a separate network (the critic) estimates V, trained alongside the policy (the actor): actor-critic.</p><div class="followup"><strong>Follow-up:</strong> What is usually the baseline?</div></div></div>
-<div class="qa"><div class="q">How does PPO&#x27;s clipping work, case by case?</div><div class="a"><p>The objective uses r = pi_new/pi_old clipped to [1-eps, 1+eps] (eps ~ 0.2), taking the minimum of raw and clipped times advantage. Four cases. Advantage &gt; 0, r = 1.5: good action already favored. Clip and stop pushing (&ldquo;no need to reinforce&rdquo;). Advantage &gt; 0, r = 0.5: good action disfavored. Reinforce normally. Advantage &lt; 0, r = 1.5: bad action favored. Clip the damage. Advantage &lt; 0, r = 0.5: bad action disfavored. Keep suppressing. Net effect: the policy never moves far from the data it learned on in one update.
+<div class="qa"><div class="q">How does PPO&#x27;s clipping work, case by case?</div><div class="a"><p>The objective is min(r<em>A, clip(r, 0.8, 1.2)</em>A) with eps ~ 0.2. Four cases, corrected. Advantage &gt; 0, r = 1.5: min(1.5A, 1.2A) = 1.2A: clipped flat, &ldquo;no need to reinforce&rdquo;. Advantage &gt; 0, r = 0.5: min(0.5A, 0.8A) = 0.5A: unclipped, reinforce it up. Advantage &lt; 0, r = 1.5: min is the unclipped 1.5A (A negative flips the min): full corrective push back down, because the policy drifted toward a bad action and must be yanked back. Advantage &lt; 0, r = 0.5: min is the clipped 0.8A: flat, stop suppressing. Rule: the clip binds only in the direction the objective pulls: r above 1.2 for good actions, r below 0.8 for bad ones.
 Proximal means near. PPO constrains each update to stay proximal to the old policy: the trust region is enforced by the clip instead of a hard constraint. It is the practical descendant of TRPO, which enforced the region exactly and was harder to implement. The clip is the whole trick.</p><div class="followup"><strong>Follow-up:</strong> Why &quot;proximal&quot;?</div></div></div>
 <div class="qa"><div class="q">Why do verifiable rewards work for reasoning when sparse 0/1 rewards failed in the naive attempt?</div><div class="a"><p>Three differences. One, advantages replace raw totals: credit goes to better-than-average trajectories, not lucky ones. Two, PPO stabilizes the updates so the sparse signal accumulates instead of jittering away. Three, scale: dozens of sampled thinking trajectories per problem let statistics separate systematically-good thinking from lucky guesses. The verifier&rsquo;s binary signal is honest (the answer is right or not), and with the variance tamed, honesty suffices. The naive attempt had none of these: raw REINFORCE on single trajectories with 0/1 totals.
 The model finds ways to score 1 without reasoning well: pattern-matching the answer format, exploiting verifier bugs, or writing broken chains that stumble onto the right final token. The verifier checks the answer, not the thought, so the thinking can rot while the score shines. Mitigations: stronger verifiers, process supervision (rewarding intermediate steps), and auditing the thinking traces, not just the scores.</p><div class="followup"><strong>Follow-up:</strong> What is reward hacking in RLVR?</div></div></div>
+<div class="qa"><div class="q">Walk me through the mechanism: compute the PPO objective for A = -2, r = 1.5 and r = 0.5, eps = 0.2. Which is clipped?</div><div class="a"><p>Objective: min(r<em>A, clip(r, 0.8, 1.2)</em>A). r = 1.5: min(-3, -2.4) = -3: UNCLIPPED. The gradient pushes the ratio down at full strength: the policy drifted toward a bad action, yank it back. r = 0.5: min(-1, -1.6) = -1.6: CLIPPED, flat. The policy already shies away from the bad action. Pushing further gains nothing and leaves the data. The negative flips the min: for A &lt; 0 the clip binds below 0.8, not above 1.2.
+min(4, 2.4) = 2.4: clipped. The objective wants r up (good action), so the clip caps it at 1.2. Flat gradient beyond: no extra push. Symmetric rule: clip the direction the objective pulls.</p><div class="followup"><strong>Follow-up:</strong> A = +2, r = 2.0. Clipped or not?</div></div></div>
+<div class="qa"><div class="q">Applied design: your RLVR code model starts emitting `if task_id == 7: print(expected)` to pass the tests. Diagnose and fix.</div><div class="a"><p>Reward hacking: the verifier (the test suite) is gamed. The model scores 1 without reasoning. Fixes, in order of cost. One: hidden tests the model never sees: engineering cost, and the model may still overfit the visible ones&rsquo; style. Two: property-based tests and mutation testing: generate test variants, kill mutants: stronger, more engineering. Three: process supervision: reward intermediate reasoning steps: labeling cost scales with thinking length. Four: trace audits: humans read sampled chains: ongoing labor. Decision rule: the verifier is part of the product. Budget for it like training compute, and never trust the reward curve alone.
+Then the game is test quality, permanently. Rotate and expand the hidden set, add property tests that no memorized answer can satisfy, and keep a human audit loop. There is no final fix: any fixed verifier becomes a target. The honest price of verifiable rewards is verifier maintenance.</p><div class="followup"><strong>Follow-up:</strong> Hidden tests also get gamed eventually. Then what?</div></div></div>
+<div class="qa"><div class="q">Why only a few epochs per PPO batch?</div><div class="a"><p>The importance ratio r = pi_new/pi_old is a loan against old data. Each epoch moves pi_new further from pi_old: the weights&rsquo; variance grows, a few stale trajectories dominate, and the gradient estimate degrades. The clip slows the damage but does not stop it. Standard practice is a few epochs, then fresh rollouts. More epochs = training on increasingly fictional weights: the policy jumps off the data cliff the clip was built to prevent.
+The ratio histogram spreads: many r near 0, a few huge. Updates become all-or-nothing: most samples contribute nothing, one stale trajectory decides the step. Training loss looks fine (the clipped objective hides it) while behavior collapses. Watch the ratio stats, not just the loss.</p><div class="followup"><strong>Follow-up:</strong> What does the failure look like?</div></div></div>
+<div class="qa"><div class="q">RLVR vs RLHF: when does each win?</div><div class="a"><p>RLVR wins where answers are checkable: math, code, games. The verifier is honest (the answer is right or not) and scales without humans. Its price is scope and reward hacking. RLHF wins where no verifier exists: open-ended writing, chat, taste. Human preferences train a reward model. Its price is bias, cost, and the reward model becoming the target. They combine in practice: RLVR for reasoning correctness, RLHF for style, helpfulness, and safety.
+Only what you can verify: format constraints (JSON valid, length limits), refusal on disallowed content (checkable), citation presence. Style and taste have no verifier: that stays RLHF&rsquo;s job. Map the reward to the checkable: verify structure with RLVR, judge quality with humans.</p><div class="followup"><strong>Follow-up:</strong> Can RLVR train the chat style too?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
 <li><strong>The job.</strong> Teach thinking, not just answering. Reward only
@@ -369,11 +425,32 @@ The model finds ways to score 1 without reasoning well: pattern-matching the ans
    RLVR: thinking improves because good thinking earns the 1s.</li>
 <li><strong>The honest price.</strong> Clipping discards signal. Epsilon tuned.
    Verifiers only exist for checkable domains. Reward hacking.</li>
+<li><strong>The four cases, corrected.</strong> A&lt;0, r=1.5: unclipped full
+   correction. A&lt;0, r=0.5: clipped flat. Clip the pull
+   direction.</li>
+<li><strong>The ratio, priced.</strong> r = 3: stale counts triple. Few epochs,
+   then fresh rollouts.</li>
+<li><strong>The blind spot.</strong> Verifier checks the answer. Broken chain<ul>
+<li>&ldquo;42&rdquo; = 1. Audit the traces.</li>
+</ul>
+</li>
 </ol>
+<h2 id="what-is-used-where">What is used where</h2>
+<p><strong>PPO and RLVR run modern post-training.</strong> PPO trained the
+original RLHF ChatGPT: human preferences as reward, clipping for
+stability. <strong>RLVR trains reasoning models:</strong> DeepSeek-R1&rsquo;s
+breakthrough was RL on verifiable rewards producing
+chain-of-thought without SFT on thinking traces. The o-series
+lineage follows the same recipe. The TRL library ships PPO and
+its successors as the standard post-training loop. The lesson&rsquo;s
+four cases are the production update.</p>
+<h2 id="watch-next">Watch next</h2>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/iSvC5VmDHL4" title="Explainer: PPO and RL for language models" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: PPO and RL for language models. Advantages, clipping, and verifiable rewards in one visual pass. Watch after the PPO section.</p></div>
+
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Lecture 17 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=J7CossjMvEg — Tengyu Ma derives
+  - <a href="https://www.youtube.com/watch?v=J7CossjMvEg">Tengyu Ma derives</a>
   advantages and baselines, walks PPO&rsquo;s four clipping cases, and
   presents RLVR with verifiable binary rewards for reasoning
   models.
@@ -387,7 +464,7 @@ toy is an original miniature of the lecture&rsquo;s RLVR framing.
 Epsilon ~ 0.2 is the standard PPO setting the lecture cites.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
-<li><strong>CS229 L15:</strong> SFT: the post-training step before RL; PPO
+<li><strong>CS229 L15:</strong> SFT: the post-training step before RL. PPO
   continues where SFT stops.</li>
 <li><strong>CS229 L16:</strong> REINFORCE and the MDP: everything this lesson
   stabilizes.</li>
@@ -396,7 +473,7 @@ Epsilon ~ 0.2 is the standard PPO setting the lecture cites.</p>
 <li><strong>CS336:</strong> PPO at scale: rollout farms and the infrastructure
   behind RLVR.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=J7CossjMvEg" target="_blank" rel="noopener">Lecture 17 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=J7CossjMvEg" target="_blank" rel="noopener">Lecture 17 video, Stanford Online YouTube</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=iSvC5VmDHL4" target="_blank" rel="noopener">Explainer: PPO and RL for language models</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1707.06347" target="_blank" rel="noopener">PPO paper (Schulman et al., 2017)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2501.12948" target="_blank" rel="noopener">DeepSeek-R1 paper (RLVR reasoning)</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
       <nav class="pager"><a href="../cs229/l16-reinforcement-learning.html"><span class="lbl">← Previous</span>Lecture 16: Reinforcement Learning Basics and Policy Gradient</a><a href="../cs229/cheatsheet.html"><span class="lbl">Next →</span>CS229 Cheatsheet</a></nav>
     </article>
     <footer class="pagefoot">
