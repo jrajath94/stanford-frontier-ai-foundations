@@ -19,6 +19,12 @@ sources:
   - tag: video
     label: "Lecture 11 video, Stanford Online YouTube"
     url: https://www.youtube.com/watch?v=dqUMCzWjZSI
+  - tag: video
+    label: "Explainer: how diffusion models work"
+    url: https://www.youtube.com/watch?v=iv-5mZ_9CPY
+  - tag: paper
+    label: "Ho et al., Denoising Diffusion Probabilistic Models (2020)"
+    url: https://arxiv.org/abs/2006.11239
   - tag: notes
     label: "Official subtitle transcript (en-US)"
   - tag: notes
@@ -82,6 +88,35 @@ independent of the 0.8 it started from.
 
 ![Diffusion forward process](assets/svg/l11-diffusion.svg "The diffusion forward process. A clean image is destroyed step by step into pure noise. No learning: the destruction is fixed. Source: original plate for Stanford Frontier AI.")
 
+### Subchapter: the pixel toy, audited
+
+Check the arithmetic. beta_1 = 0.01, so sqrt(1 - beta_1) =
+sqrt(0.99) = 0.9950. Times x_0 = 0.8: 0.796. sqrt(beta_1) = 0.1,
+times epsilon_1 = 0.5: 0.05. Sum: 0.846. The lesson's number is
+exact. Now extend it: hold beta = 0.01 constant and run 100 steps.
+The signal fraction is alpha_bar_100 = 0.99^100 = 0.366. Signal
+left: sqrt(0.366) * 0.8 = 0.484. Noise std: sqrt(1 - 0.366) =
+0.80. The pixel started at 0.8 with no noise. After 100 steps it is
+0.48 of signal inside 0.80 of noise. "Wandered far" is now a
+number. After 1,000 steps alpha_bar = 0.99^1000 ~ 0: pure static.
+
+![Pixel audit](assets/plate-l11-pixel-audit.webp "The pixel toy, audited. x_0 = 0.8, one step: 0.796 plus 0.05 = 0.846. After 100 steps: 0.48 of signal inside 0.80 of noise. Source: original audit for the forward toy. Project: Stanford Frontier AI.")
+
+### Subchapter: the closed-form shortcut
+
+Simulating the chain step by step to reach x_t costs O(t). The
+shortcut: Gaussians compose, so x_t = sqrt(alpha_bar_t) * x_0 +
+sqrt(1 - alpha_bar_t) * epsilon, with alpha_bar_t the product of
+(1 - beta_s) up to t. One formula, O(1), any t. This is why
+training is cheap: pick a random image, a random t, a random noise,
+and you have a training pair instantly, no chain simulation. The
+forward process is not just fixed: it is jumpable. Every diffusion
+training loop in production samples t uniformly and uses this
+formula. Without it, training would cost O(T) per example and the
+method would be dead.
+
+![Closed form](assets/plate-l11-closed-form.webp "Skip the chain. Simulate t steps: O(t). Closed form: x_t from x_0 in one formula, O(1). Source: original plate for the Gaussian composition. Project: Stanford Frontier AI.")
+
 ## The reverse process: the learned denoiser
 
 The **reverse process** learns p(x_{t-1} | x_t): given the noisy
@@ -99,6 +134,38 @@ true noise epsilon and the network's prediction. The lecture's
 bottom line: diffusion trains by denoising score matching, which
 walks and talks like a pile of regression problems, one per noise
 level. Stable, no adversary, no mode collapse games.
+
+### Subchapter: the sampling bill, priced
+
+Count the evaluations. T = 1,000 steps means 1,000 neural network
+evaluations per image. A GAN needs 1. The ratio is 1,000 to 1:
+diffusion's quality costs three orders of magnitude in sampling
+compute. The discounts, priced the same way: DDIM-style samplers
+take larger principled steps, cutting T from 1,000 to 50: 20x
+cheaper. Distillation trains a student to mimic the teacher in 4
+steps: 250x cheaper. Each discount trades a little sample quality
+for speed, and the trade is measured in FID points per step
+removed. The bill is why image APIs charge per image and why video
+models distill aggressively: the method is correct, the meter is
+running.
+
+![Sampling bill](assets/plate-l11-sampling-bill.webp "The sampling bill. GAN: 1 network eval per image. Diffusion: 1,000. DDIM: 50. Distilled: 4. Source: original plate for the sampling cost. Project: Stanford Frontier AI.")
+
+### Subchapter: noise points uphill
+
+"Predict the noise" has a second name: **score matching**. The
+score of a distribution is the gradient of its log density:
+the direction of steepest uphill toward likely images. It turns out
+that the noise added at step t points, in expectation, downhill
+away from the clean image: so predicting the noise is estimating
+the downhill direction, and subtracting the predicted noise steps
+uphill toward likely images. Each denoising step is a small uphill
+step on the landscape of natural images. The U-Net is a learned
+compass: at every noise level, it points toward "more like a real
+image". Sampling is hill-climbing from pure noise, guided by T
+compass readings. Same method, geometric name.
+
+![Score](assets/plate-l11-score.webp "Noise points uphill. Predicting the noise estimates the downhill direction. Subtracting it steps toward likely images. Source: original plate for the score view. Project: Stanford Frontier AI.")
 
 ## Sampling: noise to image
 
@@ -178,14 +245,59 @@ most elegant.
    the text prompt.
 7. **Large T.** Tiny steps keep reversals learnable and the bound
    tight. Price: T network evals per image.
-8. **The honest price.** Slow sampling, bound not likelihood, huge
-   data. Won by trainability, not elegance.
+> [!QA]
+> Q: Walk me through the mechanism: audit the pixel toy and extend it to 100 steps.
+> A: beta_1 = 0.01. sqrt(0.99) = 0.9950, times 0.8 = 0.796. sqrt(0.01) = 0.1, times 0.5 = 0.05. Sum: 0.846. Exact. Extend: constant beta = 0.01, alpha_bar_100 = 0.99^100 = 0.366. Signal: sqrt(0.366)*0.8 = 0.484. Noise std: sqrt(1-0.366) = 0.80. After 100 steps the pixel is 0.48 of signal inside 0.80 of noise: "wandered far", quantified. After 1,000 steps alpha_bar ~ 0: pure static.
+> Follow-up: Why does the closed-form shortcut matter for training cost?
+> A: Without it, making one training pair at level t costs t simulation steps: O(T) per example. With x_t = sqrt(alpha_bar_t) x_0 + sqrt(1-alpha_bar_t) eps, any t costs O(1). Training samples random (image, t, noise) triples directly. The shortcut is what makes training cost independent of T.
+
+> [!QA]
+> Q: Applied design: you need 10,000 product images by tomorrow. Your diffusion model takes 100 network evals per second per GPU and needs 1,000 evals per image. Plan.
+> A: 1,000 evals at 100/s = 10 s per image per GPU. 10,000 images = 100,000 GPU-seconds = 27.8 GPU-hours. Options: distill to 4 steps (0.04 s/image, 7 minutes on one GPU, small quality loss), or DDIM at 50 steps (0.5 s/image, 1.4 GPU-hours), or parallelize 28 GPUs at full 1,000 steps for max quality. Decision rule: batch product shots tolerate the distilled model. Hero images get full steps. The bill is per image, so price the quality tier, not the method.
+> Follow-up: Your distilled 4-step model looks worse on hands. Why hands, specifically?
+> A: Few-step samplers compress the fine-correction phase where details resolve. Coarse structure survives 4 steps. High-frequency detail (fingers, text) needs the late small steps. Mitigation: keep full steps for detail-critical images, or distill with extra weight on late timesteps. The failure concentrates where the corrections were smallest.
+
+> [!QA]
+> Q: Why does the ELBO become noise-prediction MSE?
+> A: The chain ELBO decomposes into a sum of per-step terms, each a KL divergence between the true reversal posterior q(x_{t-1}|x_t, x_0) and the learned p(x_{t-1}|x_t). Both are Gaussian, so the KL has a closed form: it penalizes the difference of their means. Reparameterize the means in terms of the noise, and the penalty becomes MSE between the true noise epsilon and the network's prediction. The probabilistic objective collapses into T regression problems. That collapse is the whole reason diffusion trains stably.
+> Follow-up: Where did the "score matching" name come from?
+> A: Predicting the added noise is mathematically equivalent to estimating the score: the gradient of the log data density. The denoiser learns, at each noise level, which direction is uphill toward real images. Score matching is the older name for the same idea. Diffusion is score matching run as a chain.
+
+> [!QA]
+> Q: Your diffusion model draws nearly the same cat for every prompt. Diagnose.
+> A: Mode collapse is the GAN disease. In diffusion, suspect the conditioning path first. Tests: fix the prompt, vary the seed. If images are identical, the model ignores the initial noise: over-conditioning or a broken stochastic sampler. Fix the seed, vary the prompt. If images are identical, the model ignores the prompt: the text embedding is not reaching the denoiser (broken cross-attention) or the guidance scale is misconfigured. If both vary the image but every cat looks alike, the training data lacked diversity: the model learned one cat. Each test isolates one suspect.
+> Follow-up: The seed test shows variation but the prompt test shows none. The text encoder works fine standalone. Where is the break?
+> A: Between the encoder and the denoiser: the cross-attention layers that inject the text embedding into each denoising step. Check that the conditioning tensors have the right shape and are not zeroed or detached. A common bug: the text embedding is computed but never passed, so the model trains and samples unconditionally while the prompt pipeline looks healthy.
+
+9. **The audit.** 0.796 + 0.05 = 0.846. 100 steps: 0.48 signal
+   in 0.80 noise. Numbers, not adjectives.
+10. **The shortcut.** Closed form makes training O(1) per pair.
+    Jumpable, not simulable.
+11. **The bill.** 1,000 evals vs 1. DDIM 50, distilled 4. Price
+    the quality tier.
+12. **The compass.** Noise prediction is score estimation.
+    Sampling is hill-climbing from static.
+
+## What is used where
+
+**Diffusion runs production image and video generation.**
+Stable Diffusion (open weights), DALL-E 3, Midjourney, and the
+video models (Sora and its peers) are diffusion-based: the lesson's
+forward-reverse-ELBO loop is the deployed architecture. GANs
+survive in niche real-time jobs where one-eval sampling matters.
+The distillation and few-step sampler industry (DDIM, DPM-Solver,
+consistency models) exists to pay down the sampling bill the
+lesson prices.
+
+## Watch next
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/iv-5mZ_9CPY" title="Explainer: how diffusion models work" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: how diffusion models work. A visual walkthrough of the forward destruction and the learned reversal. Watch after the pixel toy.</p></div>
 
 ## Official sources and further reading
 
 **Official:**
 - Lecture 11 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=dqUMCzWjZSI — Tengyu Ma derives
+  - [Tengyu Ma derives](https://www.youtube.com/watch?v=dqUMCzWjZSI)
   the forward process, the ELBO training objective, and sampling,
   contrasting with GANs and VAEs.
 - Official subtitle transcript (en-US): the lecture's spoken text.
