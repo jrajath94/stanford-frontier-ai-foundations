@@ -167,6 +167,75 @@ Total noise variance: 0.3² = 0.09 = 1 − 0.81 ✓, and
 digit. Training uses this constantly: pick a random t,
 jump straight there, no chaining.
 
+### Why Gaussian noise
+
+Three reasons the forward process uses Gaussians,
+and each one is load-bearing. First, Gaussians are
+closed under addition: the sum of independent
+Gaussians is Gaussian. The induction above used
+exactly this: without it, the closed-form jump
+fails and training must chain all t steps. Second,
+the central limit theorem: sums of many small
+independent noises look Gaussian regardless of the
+individual noise shapes, so the Gaussian is the
+honest choice for accumulated corruption. Third,
+the reverse step is Gaussian only because the
+forward step is Gaussian and small: change the
+noise family and the "learn a Gaussian reverse"
+argument collapses. The decision rule: the noise
+family is not a detail. It is what makes every
+closed form in Lessons 8-9 true.
+
+### Cold diffusion: what if the forward process is not noise
+
+**Cold diffusion** asks whether the corruption must
+be noise at all. Replace the Gaussian steps with
+deterministic degradations: blur the image a little
+more each step, or mask out a few more pixels. The
+reverse learns to deblur, to inpaint. The chain is
+still fixed, still Markov in the degradation level,
+and the closed-form jump still works if the
+degradation composes cleanly. [uncertain] Beyond the
+lecture's scope. The point stands: the fixed-encoder
+idea does not require randomness. It requires a
+known, gradual destruction the reverse can learn to
+undo.
+
+### The induction, shown
+A math course proves the jump, not just checks it.
+Assume the form holds at step t−1:
+
+```ascii
+x_{t-1} = sqrt(a_bar_{t-1}) * x_0 + sqrt(1 - a_bar_{t-1}) * e_{t-1}
+```
+
+Apply one forward step:
+
+```ascii
+x_t = sqrt(a_t) * x_{t-1} + sqrt(1 - a_t) * e_t
+    = sqrt(a_t * a_bar_{t-1}) * x_0
+      + sqrt(a_t) * sqrt(1 - a_bar_{t-1}) * e_{t-1}
+      + sqrt(1 - a_t) * e_t
+```
+
+The signal coefficient is √(α_t·ᾱ_{t−1}) = √ᾱ_t by the
+definition of ᾱ. The two noise terms are independent
+Gaussians, so they merge into one Gaussian whose
+variance is the sum of the variances:
+
+```ascii
+noise variance = a_t * (1 - a_bar_{t-1}) + (1 - a_t)
+               = a_t - a_t*a_bar_{t-1} + 1 - a_t
+               = 1 - a_bar_t
+```
+
+So the merged noise is √(1−ᾱ_t)·ε with ε ~ N(0,1).
+Base case t = 1 holds by definition (ᾱ_1 = α_1).
+By induction the closed form holds for every t.
+Preconditions: each ε_t independent with unit
+variance, and α_t in (0,1) so the square roots are
+real.
+
 ![The closed form agrees with chaining, to the digit](assets/l08-closed-form.webp "x_2 = 3.6 + 0.4359*eps matches the chained 3.900 at eps = 0.688. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
 
 ![Forward diffusion](assets/l08-forward-chain.webp "The fixed forward chain destroys data one small noise step at a time until only static remains. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
@@ -191,6 +260,43 @@ noise. The decision rule: the schedule should spend
 roughly equal learning effort at each noise level. In
 practice that means a schedule where ᾱ_t falls smoothly,
 not one that kills the signal in the first 10 steps.
+
+### Two schedules, on numbers
+
+The original DDPM uses a linear schedule: β_t rises
+linearly from 10^{−4} to 0.02 over T = 1000 steps
+(β_t = 1 − α_t). The endpoint: ᾱ_1000 = 0.00004. The
+signal is thoroughly dead: 0.004% remains. But the
+death is front-loaded: most of the signal vanishes in
+the first 200 steps, starving the later steps of
+learning signal.
+
+The cosine schedule (Nichol and Dhariwal 2021) fixes
+the shape: ᾱ_t = cos²(((t/T) + 0.008)/1.008 · π/2),
+normalized to start at 1. It falls slowly at first,
+linearly in the middle, slowly at the end. Numbers:
+ᾱ_500 = 0.494, ᾱ_1000 ≈ 0. The signal dies evenly,
+so every noise level gets its share of training.
+
+The **signal-to-noise ratio** SNR_t = ᾱ_t/(1−ᾱ_t)
+measures the mix. At ᾱ_t = 0.5, SNR = 1: half signal,
+half noise (0 dB). Training samples t uniformly, so
+the schedule decides which SNRs the network practices
+on. A schedule that rushes through SNR = 1 produces a
+denoiser that never learned the middle game.
+
+![Linear vs cosine: where the signal dies](assets/l08-schedules-compare.webp "Linear: abar_1000 = 0.00004, front-loaded. Cosine: abar_500 = 0.494, even. Shell 2. Source: original computation. Project: Stanford Frontier AI.")
+
+### The continuous-time view (enrichment)
+
+Beyond the lecture: as T → ∞ and step sizes shrink,
+the chain becomes a stochastic differential equation.
+The variance-preserving SDE is dx = −½β(t)x·dt +
+√β(t)·dw. The forward process, the closed form, and
+the score all have continuous-time twins. [uncertain]
+The lecture stays discrete. The SDE view is the
+standard enrichment from the score-based modeling
+literature.
 
 ![The schedule decides how fast the signal dies](assets/l08-schedule.webp "alpha = 0.9: at t = 100, only 0.003% of the signal remains. Shell 2. Source: original computation. Project: Stanford Frontier AI.")
 
@@ -268,9 +374,11 @@ compressed space instead.
 
 ### Where the forward process runs in real systems
 
-The DDPM forward process is the noising procedure inside
-every diffusion image generator: the same √ᾱ scaling,
-the same closed-form jump, the same N(0,1) endpoint.
+Verified October 2026: the DDPM forward process is the
+noising procedure inside DDPM (Ho et al. 2020), Stable
+Diffusion 1.x/2.x (Rombach et al. 2022), and ADM
+(Dhariwal and Nichol 2021): the same √ᾱ scaling, the
+same closed-form jump, the same N(0,1) endpoint.
 Latent diffusion keeps the process identical and changes
 only the space it runs in (a VAE's compressed grid
 instead of pixels). The schedule is the main thing that
@@ -283,6 +391,8 @@ schedules in current production models are not public.
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/N0OOnTKMYJE" title="W7L26: Denoising Diffusion Probabilistic Models (DDPMs)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: the DDPM idea, why a fixed noising chain replaces the learned encoder. If the embed is blocked: <a href="https://www.youtube.com/watch?v=N0OOnTKMYJE" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/9FjzUSM3Ni4" title="Diffusion Models: How to turn Noise into Art" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">External explainer: the forward process x_t = √ᾱ_t x_0 + √(1−ᾱ_t) ε built step by step, with real trained toy models and a real text-to-image run. If the embed is blocked: <a href="https://www.youtube.com/watch?v=9FjzUSM3Ni4" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
+![Chapter plate: destroy slowly, reverse easily](assets/plate-l08-chap-forward.webp "The fixed chain buys a tractable reverse, one small step at a time. Chapter plate. Shell 5. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 > [!QA]
 > Q: What is the forward process, concretely?
