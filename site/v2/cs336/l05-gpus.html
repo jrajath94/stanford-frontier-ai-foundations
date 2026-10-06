@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.classList.remove('no-js');</script>
 <title>Lecture 5: How GPUs Work — Stanford Frontier AI</title>
-<meta name="description" content="The GPU hardware model, the memory hierarchy, six speed tricks (divergence, precision, fusion, recompute, coalescing, tiling), and FlashAttention as the victory">
+<meta name="description" content="The GPU hardware model with real chip numbers, the memory hierarchy, tensor cores, six speed tricks with worked waste (divergence, precision, fusion, recompute,">
 <link rel="stylesheet" href="../assets/vendor/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
 </head>
@@ -81,6 +81,7 @@
 <li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
 <li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
 <li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../cs229s/crash-course-02.html" data-page="cs229s-crash-02">CS229S · Crash course 2</a></li>
 </ul>
 <h3>CS224N: NLP with Deep Learning</h3><ul>
 <li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
@@ -146,18 +147,14 @@
 </ul>
 <h3>CS329A: Self-Improving AI Agents</h3><ul>
 <li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
-<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
-<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
-<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
-<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
-<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
-<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
-<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
-<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
-<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
-<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
-<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
-<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+<li><a href="../cs329a/l01-course-overview.html" data-page="cs329a-l01">L01 · Course Overview</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Compute Scaling</a></li>
+<li><a href="../cs329a/l03-feedback-tools-code.html" data-page="cs329a-l03">L03 · Feedback, Tools, Code</a></li>
+<li><a href="../cs329a/l04-planning-multistep-reasoning.html" data-page="cs329a-l04">L04 · Planning and Multi-Step Reasoning</a></li>
+<li><a href="../cs329a/l05-search-at-scale.html" data-page="cs329a-l05">L05 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l06-train-time-scaling.html" data-page="cs329a-l06">L06 · Train-Time Scaling</a></li>
+<li><a href="../cs329a/l07-agentic-evaluations.html" data-page="cs329a-l07">L07 · Agentic Evaluations</a></li>
+<li><a href="../cs329a/l08-future-directions.html" data-page="cs329a-l08">L08 · Future Directions</a></li>
 </ul>
 <h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
 <li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
@@ -219,190 +216,293 @@
       <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 5: How GPUs Work</nav>
       <h1>Lecture 5: How GPUs Work</h1>
       <p class="meta-line">2026-04-13 · Instructor: Tatsunori Hashimoto · 1:18:29 · Spring 2026</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="izZba4UA7iY"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/izZba4UA7iY" title="Stanford CS336 Spring 2026 Lecture 5: GPUs and Systems" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=izZba4UA7iY" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=izZba4UA7iY" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tatsu Hashimoto builds the GPU mental model and derives FlashAttention from six performance tricks.</p></div><h2 id="the-problem-the-chip-is-fast-your-code-is-not">The problem: the chip is fast, your code is not</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="izZba4UA7iY"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/izZba4UA7iY" title="Stanford CS336 Spring 2026 Lecture 5: GPUs and Systems" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=izZba4UA7iY" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=izZba4UA7iY" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tatsu Hashimoto builds the GPU mental model and derives FlashAttention from six performance tricks.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>No prerequisites are assumed. Every term is defined at first use.
+This lecture has three parts: the hardware, the tricks, the victory
+lap. The hardware tells you what the chip can do. The tricks tell you
+why naive code gets a tenth of it. FlashAttention is an exact-attention
+algorithm. It applies all six tricks to one op at once.</p>
+<h2 id="the-problem-the-chip-is-fast-your-code-is-not">The problem: the chip is fast, your code is not</h2>
 <p>An A100 has 108 streaming multiprocessors, thousands of cores, and a
 spec sheet promising hundreds of TFLOP/s. Naive code gets a tenth of
 that. The gap between the spec and your kernel is the entire subject
-of systems work. This lecture closes it, in three parts: the hardware,
-the tricks, the victory lap <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=200s" target="_blank" rel="noopener">03:20 <span class="ts">⏱03:20</span></a>.</p>
+of systems work.</p>
 <h2 id="the-old-mental-model-and-why-it-broke">The old mental model, and why it broke</h2>
 <p>In the 1990s, computers got faster by raising clock speed. That ended
 in the 2000s: smaller transistors stopped meaning faster clocks
-(Dennard scaling ended) <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=296s" target="_blank" rel="noopener">04:56 <span class="ts">⏱04:56</span></a>. The field switched from
-faster serial execution to wider parallel execution. GPUs are that
-switch made silicon. The FLOPS curve tells the story: modest gains
-through K20/M40, then a takeoff at P100/V100 driven by tensor cores,
-structured sparsity, and lower number formats <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=386s" target="_blank" rel="noopener">06:26 <span class="ts">⏱06:26</span></a>.</p>
+(Dennard scaling ended). The field switched from faster serial
+execution to wider parallel execution. GPUs are that switch made
+silicon. The FLOPS curve tells the story: modest gains through
+K20/M40, then a takeoff at P100/V100 driven by tensor cores (dedicated
+matrix-multiply units), structured sparsity, and lower number formats.</p>
 <p>So the first mental model to build: a CPU runs a few complex cores
-with big control units. Complex branches, complex control flow, minimal
-time from instruction to result. Design goal: <strong>latency</strong>
-<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=451s" target="_blank" rel="noopener">07:31 <span class="ts">⏱07:31</span></a>. A GPU runs hundreds of simple cores executing in
-parallel. One task may take long to finish, but aggregate throughput
-across all tasks is enormous. Design goal: <strong>throughput</strong>.</p>
-<figure><img alt="CPU vs GPU" src="assets/l05-cpu-vs-gpu.svg"><figcaption>CPU: few complex cores, low latency. GPU: 108 SMs, SIMT execution, high throughput. V100 added tensor cores in 2017.</figcaption></figure>
+with big control units. Complex branches, complex control flow,
+minimal time from instruction to result. Design goal: <strong>latency</strong>.
+A GPU runs hundreds of simple cores executing in parallel. One task
+may take long to finish, but aggregate throughput across all tasks
+is enormous. Design goal: <strong>throughput</strong>.</p>
+<figure><img alt="CPU vs GPU" src="assets/l05-cpu-vs-gpu.svg"><figcaption>Shell 2. Count the cores: 108 SMs, SIMT execution. Source: lecture hardware slides.</figcaption></figure>
+<h3 id="subchapter-the-numbers-behind-the-switch">Subchapter: the numbers behind the switch</h3>
+<p>A modern CPU: 32 to 96 cores, each ~5 GHz, each doing ~64 FLOPs per
+cycle with vector units. Peak: roughly 10 to 30 TFLOP/s fp32. An
+H100: 144 SMs, each with 128 CUDA cores and 4 tensor cores. Peak:
+989 TFLOP/s dense bf16. The GPU&rsquo;s peak is 30 to 100x the CPU&rsquo;s. The
+catch: the GPU only reaches it on parallel matrix math. Serial code
+runs slower on a GPU than on a CPU. The switch was not free. It
+traded latency for throughput, and ML happened to be the workload
+that only needs throughput.</p>
 <h2 id="the-sm-is-the-unit">The SM is the unit</h2>
-<p>The <strong>streaming multiprocessor</strong> (SM) is the discrete compute unit of
-a GPU: an independent core with its own subcomponents and memory access
-<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=565s" target="_blank" rel="noopener">09:25 <span class="ts">⏱09:25</span></a>. Inside each SM sit streaming processors running
-threads in parallel. An A100 carries 108 SMs, each independently
-programmable.</p>
-<p>Three terms carry the programming model <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=815s" target="_blank" rel="noopener">13:35 <span class="ts">⏱13:35</span></a>.</p>
+<p>The <strong>streaming multiprocessor</strong> (SM) is the discrete compute unit
+of a GPU: an independent core with its own subcomponents and memory
+access. Inside each SM sit streaming processors running threads in
+parallel. An A100 carries 108 SMs, each independently programmable.
+An H100 carries 144.</p>
+<h3 id="subchapter-thread-block-warp">Subchapter: thread, block, warp</h3>
+<p>Three terms carry the programming model.</p>
 <ul>
-<li><strong>Thread:</strong> one lightweight parallel worker. All threads obey SIMT:
-  every thread executes the same instruction on different data.</li>
-<li><strong>Block:</strong> a group of threads guaranteed to run on one SM, sharing
-  that SM&rsquo;s shared memory. Blocks matter for tiling later.</li>
+<li><strong>Thread:</strong> one lightweight parallel worker. All threads obey
+  SIMT: every thread executes the same instruction on different
+  data.</li>
+<li><strong>Block:</strong> a group of threads guaranteed to run on one SM,
+  sharing that SM&rsquo;s shared memory. Blocks matter for tiling later.</li>
 <li><strong>Warp:</strong> 32 consecutively numbered threads, the scheduling unit.
   The scheduler swaps whole warps quickly when one stalls.</li>
 </ul>
 <p>Shared memory is programmable: you put things in and take them out.
-The L1 cache is automatic: it just holds recent data
-<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=774s" target="_blank" rel="noopener">12:54 <span class="ts">⏱12:54</span></a>. Beyond shared memory, everything is slow. Grouping
-blocks to cut global reads is the name of the game
-<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1028s" target="_blank" rel="noopener">17:08 <span class="ts">⏱17:08</span></a>.</p>
+The L1 cache is automatic: it just holds recent data. Beyond shared
+memory, everything is slow. Grouping blocks to cut global reads is
+the name of the game.</p>
+<h3 id="subchapter-the-sms-own-memory-with-numbers">Subchapter: the SM&rsquo;s own memory, with numbers</h3>
+<p>Each H100 SM holds: a 256 KB register file (65,536 32-bit registers
+shared by all resident threads), up to 228 KB of combined L1/shared
+memory, and 4 tensor cores. Times 144 SMs: 36 MB of registers and up
+to 32 MB of shared memory chip-wide, against 80 GB of HBM.</p>
+<p>Read the ratio. The fast memory is 0.1 percent of the total. Every
+byte the SM touches must be fetched from HBM through this tiny
+window. The whole lecture is about managing that window: what to
+keep in it, how to reuse it, and how to avoid going back for more.</p>
 <div class="qa"><div class="q">What is the difference between a block and a warp?</div><div class="a"><p>A block is a programming unit: a group of threads guaranteed to land on one SM, sharing its shared memory. A warp is a hardware scheduling unit: 32 threads that always execute the same instruction together under SIMT. You organize work into blocks to control data sharing. The hardware schedules it in warps. Confusing them leads to bugs about what memory threads can share.
 It amortizes scheduler overhead: one scheduling decision drives 32 threads. The number is architectural, not mathematical. What matters for you is the consequence: 32 threads move in lockstep, so make their memory accesses land in the same burst.</p><div class="followup"><strong>Follow-up:</strong> Why 32 threads per warp?</div></div></div>
 <h2 id="where-data-lives-the-memory-hierarchy">Where data lives: the memory hierarchy</h2>
-<p>Compute is only half the story. Modern LLM optimization is defined by
-memory: where data lives and how fast it moves <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=627s" target="_blank" rel="noopener">10:27 <span class="ts">⏱10:27</span></a>.</p>
-<figure><img alt="Memory hierarchy" src="assets/l05-mem-hierarchy.svg"><figcaption>Registers ~1 cycle. L1/shared 20-30 cycles. L2 slower. HBM global ~10x L1. SRAM costs hundreds of times more than DRAM.</figcaption></figure>
-<p>Registers are fastest and most local. L1 and shared memory answer in
-20-30 cycles. L2 is slower. Global HBM is about 10x L1 latency.
-Physically, global memory chips sit outside the compute die. L2 and L1
-live on the chip, close to the SMs <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=700s" target="_blank" rel="noopener">11:40 <span class="ts">⏱11:40</span></a>.</p>
+<p>Compute is only half the story. Modern LLM optimization is defined
+by memory: where data lives and how fast it moves.</p>
+<figure><img alt="Memory hierarchy" src="assets/l05-mem-hierarchy.svg"><figcaption>Shell 2. Name the latencies: registers 1 cycle, HBM ~10x L1. Source: lecture memory slides.</figcaption></figure>
+<h3 id="subchapter-the-ladder-rung-by-rung">Subchapter: the ladder, rung by rung</h3>
+<p>Registers are fastest and most local: ~1 cycle. L1 and shared memory
+answer in 20-30 cycles. L2 is slower. Global HBM is about 10x L1
+latency. Physically, global memory chips sit outside the compute
+die. L2 and L1 live on the chip, close to the SMs.</p>
+<p>Work the H100&rsquo;s ladder: 80 GB HBM3 at 3.35 TB/s, 50 MB L2 at ~12
+TB/s, 32 MB shared/L1, 36 MB registers at ~100+ TB/s effective.
+Each rung is ~10x smaller and ~3x faster than the one below. The
+kernel&rsquo;s job is to keep data as high on the ladder as possible for
+as long as possible.</p>
+<h3 id="subchapter-why-not-all-sram">Subchapter: why not all SRAM</h3>
 <p>Why not build everything from fast SRAM? It costs hundreds of times
-more than DRAM and burns far more power <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=730s" target="_blank" rel="noopener">12:10 <span class="ts">⏱12:10</span></a>. Groq tried
-giant SRAM (great for inference, expensive always). Everyone else lives
-with the hierarchy and programs against it.</p>
+more than DRAM and burns far more power. Groq tried giant SRAM
+(great for inference, expensive always). Everyone else lives with
+the hierarchy and programs against it. The hierarchy is an economic
+fact, not a design choice anyone would reverse.</p>
+<h2 id="tensor-cores-the-matmul-engine">Tensor cores: the matmul engine</h2>
+<p>Before V100, no dedicated matmul unit existed: researchers
+hand-programmed shaders to multiply matrices. Tensor cores changed
+the game: matmul throughput exceeds other FP ops by 10x or more. Any
+architecture that scales with compute will contain a matmul, because
+nothing else converts silicon to FLOPs as efficiently.</p>
+<h3 id="subchapter-what-a-tensor-core-computes">Subchapter: what a tensor core computes</h3>
+<p>A tensor core computes D = A x B + C on small matrices in one
+instruction. V100/A100: 4x4x4 per clock per core. H100&rsquo;s wgmma
+(warpgroup matrix-multiply-accumulate): much larger tiles, async.
+The programming consequence: matrix dims should be multiples of 8
+(minimum) or 16 (good). Odd sizes leave tensor cores idle and fall
+back to slow CUDA cores.</p>
+<h3 id="subchapter-the-10x-gap-worked">Subchapter: the 10x gap, worked</h3>
+<p>H100 dense bf16: 989 TFLOP/s on tensor cores. H100 fp32 on CUDA
+cores: 67 TFLOP/s. Ratio: 14.8x. Code that accidentally runs in
+fp32 (a forgotten cast, a CPU-side op) pays 15x. This is the most
+expensive common bug in training: everything looks correct, the
+loss falls, but the run takes 15 times longer than it should. Check
+dtypes before checking anything else.</p>
 <h2 id="three-curves-diverge">Three curves diverge</h2>
 <p>Compute throughput climbs fast. Memory bandwidth climbs slowly.
-Interconnect climbs slowest <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1531s" target="_blank" rel="noopener">25:31 <span class="ts">⏱25:31</span></a>. The growing gap is why
-this lecture&rsquo;s tricks are memory tricks: every year, utilizing the
-hardware takes more data-movement work. Inference hardware splits
-already reflect this: prefill (matmul heavy) and decode (bandwidth
-heavy) want different chips <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1732s" target="_blank" rel="noopener">28:52 <span class="ts">⏱28:52</span></a>.</p>
-<p>One more fact before the tricks. Before V100, no dedicated matmul unit
-existed: researchers hand-programmed shaders to multiply matrices
-<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1475s" target="_blank" rel="noopener">24:35 <span class="ts">⏱24:35</span></a>. Tensor cores changed the game: matmul throughput
-exceeds other FP ops by 10x or more. Any architecture that scales with
-compute will contain a matmul, because nothing else converts silicon
-to FLOPs as efficiently.</p>
+Interconnect climbs slowest. The growing gap is why this lecture&rsquo;s
+tricks are memory tricks: every year, utilizing the hardware takes
+more data-movement work. Inference hardware splits already reflect
+this: prefill (matmul heavy) and decode (bandwidth heavy) want
+different chips.</p>
+<h3 id="subchapter-the-curves-with-numbers">Subchapter: the curves, with numbers</h3>
+<p>H100: 989 TFLOP/s dense bf16 compute (NVIDIA&rsquo;s 1,979 headline figure assumes 2x structured sparsity), 3.35 TB/s memory, 900 GB/s NVLink (the GPU-to-GPU link).
+B200: ~4,500 TFLOP/s dense FP8 compute (NVIDIA&rsquo;s 9,000 figure assumes 2x structured sparsity), 8 TB/s memory, 1.8 TB/s NVLink.
+Like-for-like (dense FP8): 4,500 vs 1,979, about 2.3x. Memory grew 2.4x. Interconnect grew 2x. The headline 9x mixes three doublings: 2.3x chip growth, 2x from the bf16-to-FP8 precision change, 2x from sparsity. Every
+generation, the chip gets relatively more starved for data. The
+tricks in this lecture are not optimizations. They are the price of
+admission, rising every generation.</p>
 <h2 id="where-naive-code-breaks-six-demonstrations">Where naive code breaks, six demonstrations</h2>
 <h3 id="break-1-branches-idle-the-warp">Break 1: branches idle the warp</h3>
-<p>SIMT means every thread in a warp executes the same instruction. An if
-statement runs both branches: each side executes while the other side&rsquo;s
-threads sit idle and masked <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1977s" target="_blank" rel="noopener">32:57 <span class="ts">⏱32:57</span></a>.</p>
-<figure><img alt="SIMT divergence" src="assets/l05-simt-divergence.svg"><figcaption>One warp hits an if. Both branches execute. The threads on the wrong side idle. This is control divergence.</figcaption></figure>
+<p>SIMT means every thread in a warp executes the same instruction. An
+if statement runs both branches: each side executes while the other
+side&rsquo;s threads sit idle and masked.</p>
+<figure><img alt="SIMT divergence" src="assets/l05-simt-divergence.svg"><figcaption>Shell 3. The divergence rule: both branches execute, idle threads pay. Source: lecture SIMT slides.</figcaption></figure>
 <p>This is <strong>control divergence</strong>. Work the waste: a warp of 32 threads
-hits <code>if (x &gt; 0)</code>. Sixteen take the branch, sixteen do not. Both paths
-execute. Sixteen threads idle through each path. Half the warp&rsquo;s
-throughput is gone. The fix: multiply by a mask instead of branching.
-ReLU as <code>x * (x &gt; 0)</code> beats <code>if (x &gt; 0) x else 0</code>, because the multiply
-runs uniformly <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2066s" target="_blank" rel="noopener">34:26 <span class="ts">⏱34:26</span></a>.</p>
+hits <code>if (x &gt; 0)</code>. Sixteen take the branch, sixteen do not. Both
+paths execute. Sixteen threads idle through each path. Half the
+warp&rsquo;s throughput is gone. The fix: multiply by a mask instead of
+branching. ReLU as <code>x * (x &gt; 0)</code> beats <code>if (x &gt; 0) x else 0</code>,
+because the multiply runs uniformly.</p>
+<h3 id="subchapter-the-nested-branch-disaster">Subchapter: the nested-branch disaster</h3>
+<p>One if costs half the warp. Nested ifs cost more: 4 paths, each
+executing, each with 3/4 of the warp idle. A warp with 4 nested
+branches runs at 1/4 throughput. The fix is the same: flatten the
+branches into arithmetic. <code>out = a * c1 + b * c2 + d * c3</code> with
+one-hot conditions runs at full throughput. Branchy code is the
+slowest code on a GPU, and the profiler will not flag it: the
+instructions all execute, they just execute idle.</p>
 <h3 id="break-2-half-the-bits-half-the-traffic">Break 2: half the bits, half the traffic</h3>
 <p>Halve the bits, halve the bytes moved, halve the memory bottleneck.
-The subtlety: tensor cores downcast inputs, accumulate partial sums in
-full precision, and emit fp32 <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2194s" target="_blank" rel="noopener">36:34 <span class="ts">⏱36:34</span></a>. The black art is
-choosing which op gets which format: matmuls can be low precision,
-softmax and exponentials usually need fp32.</p>
-<p>FP8 has no single format: E4M3 (range) vs E5M2 (precision), chosen per
-use <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2284s" target="_blank" rel="noopener">38:04 <span class="ts">⏱38:04</span></a>. MXFP8 goes further: one scale factor per 32
-elements, scales stored as E8M0 (pure powers of two)
-<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2385s" target="_blank" rel="noopener">39:45 <span class="ts">⏱39:45</span></a>. The trap: transposing an MXFP8 matrix breaks the
-scaling pattern, so training keeps two copies of every quantized
-matrix, one for each orientation <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2476s" target="_blank" rel="noopener">41:16 <span class="ts">⏱41:16</span></a>. Real savings are
-20-30%, not 2x: quantization overhead eats the rest. MXFP4 (-6 to 6,
-per-16 scales) is next. First and last layers resist quantization: the
-last layer drives the loss directly <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2568s" target="_blank" rel="noopener">42:48 <span class="ts">⏱42:48</span></a>.</p>
+The subtlety: tensor cores downcast inputs, accumulate partial sums
+in full precision, and emit fp32. The black art is choosing which op
+gets which format: matmuls can be low precision, softmax and
+exponentials usually need fp32.</p>
+<p>FP8 has no single format: E4M3 (range) vs E5M2 (precision), chosen
+per use. MXFP8 goes further: one scale factor per 32 elements,
+scales stored as E8M0 (pure powers of two). The trap: transposing an
+MXFP8 matrix breaks the scaling pattern, so training keeps two
+copies of every quantized matrix, one for each orientation. Real
+savings are 20-30%, not 2x: quantization overhead eats the rest.
+MXFP4 (-6 to 6, per-16 scales) is next. First and last layers resist
+quantization: the last layer drives the loss directly.</p>
 <div class="qa"><div class="q">Why does MXFP8 keep two copies of every matrix?</div><div class="a"><p>MXFP8 attaches one scale factor to each block of 32 elements. Transpose the matrix and the blocks land in different positions: the scaling pattern no longer matches the data. Requantizing on every transpose would be prohibitive, so the framework stores both orientations pre-quantized. It is a memory-for-sanity trade that shows how exotic sub-8-bit formats get.
 The last layer&rsquo;s outputs feed the loss directly, so quantization error there propagates undiluted into every gradient. The first layer sees raw input distributions with the widest dynamic range. Both are high-stakes, low-redundancy positions: the accuracy cost of quantizing them exceeds the throughput gain.</p><div class="followup"><strong>Follow-up:</strong> Why not quantize the first and last layers?</div></div></div>
+<h3 id="subchapter-the-e4m3-vs-e5m2-choice-worked">Subchapter: the E4M3 vs E5M2 choice, worked</h3>
+<p>A gradient tensor with values up to 1,000: E4M3 maxes near 448, so
+it overflows. E5M2 maxes near 57,344, so it fits. An activation
+tensor with values in [0, 1]: E4M3&rsquo;s 3 mantissa bits give 8 steps
+per power of two, E5M2&rsquo;s 2 bits give 4. E4M3 resolves the small
+values better. The framework assigns E5M2 to gradients and E4M3 to
+activations by default. Override it when your tensors are unusual.
+Silent overflow is the failure: the numbers look fine until the
+loss explodes three hours later.</p>
 <h3 id="break-3-small-ops-mean-round-trips">Break 3: small ops mean round trips</h3>
-<p>Think of the GPU as a factory with a warehouse (memory) and a conveyor
-belt between them. Five small ops mean five round trips. Fuse them into
-one kernel: read once, compute everything inside the SM, write once
-<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=2863s" target="_blank" rel="noopener">47:43 <span class="ts">⏱47:43</span></a>.</p>
-<figure><img alt="Fusion" src="assets/l05-fusion.svg"><figcaption>sin^2+cos^2 as five kernels: five global round trips. Fused: one read, one write.</figcaption></figure>
+<p>Think of the GPU as a factory with a warehouse (memory) and a
+conveyor belt between them. Five small ops mean five round trips.
+Fuse them into one kernel: read once, compute everything inside the
+SM, write once.</p>
+<figure><img alt="Fusion" src="assets/l05-fusion.svg"><figcaption>Shell 4. The fused kernel: one read, one write. Source: lecture fusion slides.</figcaption></figure>
 <p>Easy fusions (sin^2+cos^2) are automatic via torch.compile or JAX.
 Hard fusions (FlashAttention) are hand-written kernels. Same idea,
 different effort.</p>
+<h3 id="subchapter-the-layernorm-fusion-worked">Subchapter: the LayerNorm fusion, worked</h3>
+<p>LayerNorm as five PyTorch ops: mean, subtract, variance, divide,
+scale. Each op reads the full vector from HBM and writes it back:
+5 reads + 5 writes = 10 passes over the data. Fused: 1 read, 1
+write, the statistics computed in registers. 10 passes become 2.
+At 4,096 dims in bf16: 10 x 8 KB = 80 KB of traffic becomes 16 KB.
+This is why every framework ships a fused LayerNorm: the unfused
+version is 5x the memory traffic for identical math.</p>
 <h3 id="break-4-storing-costs-more-than-recomputing">Break 4: storing costs more than recomputing</h3>
-<p>Backprop stores activations, then reads them on the backward pass. With
-compute cheap and memory dear, throw the activations away and
-recompute them during backward <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3013s" target="_blank" rel="noopener">50:13 <span class="ts">⏱50:13</span></a>.</p>
+<p>Backprop stores activations, then reads them on the backward pass.
+With compute cheap and memory dear, throw the activations away and
+recompute them during backward.</p>
 <pre class="ascii">naive     : 1 read + 3 writes fwd, 3 reads + 1 write bwd = 8 accesses
 recompute : 1 read + 1 write fwd, recompute on the fly = 5 accesses
 same math, 5/8 the memory traffic
 </pre>
-<p>Example: x through three sigmoids. Naive: 1 read + 3 writes forward, 3
-reads + 1 write backward = 8 accesses. Recompute: forward 1 read + 1
-write. Backward re-runs the sigmoids on the fly: 5 total. Same math,
-5/8 the memory traffic, a little extra compute. (This is Lecture 2&rsquo;s
-checkpointing, seen from the kernel&rsquo;s point of view.)</p>
+<p>Example: x through three sigmoids. Naive: 1 read + 3 writes forward,
+3 reads + 1 write backward = 8 accesses. Recompute: forward 1 read +
+1 write. Backward re-runs the sigmoids on the fly: 5 total. Same
+math, 5/8 the memory traffic, a little extra compute. (This is
+Lecture 2&rsquo;s checkpointing, seen from the kernel&rsquo;s point of view.)</p>
 <h3 id="break-5-scattered-reads-waste-the-burst">Break 5: scattered reads waste the burst</h3>
-<p>DRAM serves bursts: one access returns about 128 contiguous bytes, the
-rest effectively free <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3232s" target="_blank" rel="noopener">53:52 <span class="ts">⏱53:52</span></a>. If all threads in a warp fall
-in one burst, the access is <strong>coalesced</strong>: full utilization of the
-burst.</p>
-<figure><img alt="Coalescing" src="assets/l05-coalesce.svg"><figcaption>Four threads in four bursts: wasteful. Four threads in one burst: coalesced. Row-major matrices favor row reads.</figcaption></figure>
-<p>Work the waste. Four threads need four 4-byte values: 16 bytes of real
-data. Scattered across four bursts, that costs 4 x 128 = 512 bytes of
-bandwidth: 3% utilization. Inside one burst, 16 bytes out of 128: 12.5%
-utilization, 4x better. For row-major matrices, threads sweeping along
-rows coalesce. Threads sweeping down columns touch four bursts for
-four values. Mnemonic: threads moving along the major axis are not
-coalesced <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3382s" target="_blank" rel="noopener">56:22 <span class="ts">⏱56:22</span></a>.</p>
+<p>DRAM serves bursts: one access returns about 128 contiguous bytes,
+the rest effectively free. If all threads in a warp fall in one
+burst, the access is <strong>coalesced</strong>: full utilization of the burst.</p>
+<figure><img alt="Coalescing" src="assets/l05-coalesce.svg"><figcaption>Shell 3. The burst rule: one burst for four threads. Source: lecture coalescing slides.</figcaption></figure>
+<p>Work the waste. Four threads need four 4-byte values: 16 bytes of
+real data. Scattered across four bursts, that costs 4 x 128 = 512
+bytes of bandwidth: 3% utilization. Inside one burst, 16 bytes out
+of 128: 12.5% utilization, 4x better. For row-major matrices,
+threads sweeping along rows coalesce. Threads sweeping down columns
+touch four bursts for four values. Mnemonic: threads moving along
+the major axis are not coalesced.</p>
+<h3 id="subchapter-the-transpose-tax">Subchapter: the transpose tax</h3>
+<p>A matrix read row-wise coalesces. Read it column-wise and every warp
+scatters. The fix is a transpose: pay one coalesced read plus one
+coalesced write to flip the layout, then read the transposed matrix
+row-wise. The transpose costs 2 passes. The scattered reads cost 32x
+on every access. One transpose pays for itself the second time you
+read the matrix. Libraries transpose eagerly for this reason.</p>
 <h3 id="break-6-every-element-read-n-times">Break 6: every element read N times</h3>
-<p>Cut matrices into tiles, load each tile into shared memory once, and do
-all reuse there <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3471s" target="_blank" rel="noopener">57:51 <span class="ts">⏱57:51</span></a>.</p>
-<figure><img alt="Tiling" src="assets/l05-tiling.svg"><figcaption>Naive: each element read N times from HBM. Tiled with size T: N/T HBM reads, T fast shared reads.</figcaption></figure>
-<p>Naive N x N matmul reads each element N times from HBM. With tile size
-T, each element is read N/T times from HBM and T times from shared
-memory. At T = N, one HBM read and N fast reuses. Tile sizes are tuned,
-not guessed: torch.compile max-autotune benchmarks candidates for
-minutes <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3811s" target="_blank" rel="noopener">63:31 <span class="ts">⏱63:31</span></a>. Misaligned tiles break coalescing, hence
+<p>Cut matrices into tiles, load each tile into shared memory once, and
+do all reuse there.</p>
+<figure><img alt="Tiling" src="assets/l05-tiling.svg"><figcaption>Shell 3. The reuse rule: N/T HBM reads, T fast shared reads. Source: lecture tiling slides.</figcaption></figure>
+<p>Naive N x N matmul reads each element N times from HBM. With tile
+size T, each element is read N/T times from HBM and T times from
+shared memory. At T = N, one HBM read and N fast reuses. Tile sizes
+are tuned, not guessed: torch.compile max-autotune benchmarks
+candidates for minutes. Misaligned tiles break coalescing, hence
 padding: Karpathy&rsquo;s vocab 50257 to 50304 bought 25% speedup through
-alignment alone <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3918s" target="_blank" rel="noopener">65:18 <span class="ts">⏱65:18</span></a>.</p>
+alignment alone.</p>
+<h3 id="subchapter-the-padding-math">Subchapter: the padding math</h3>
+<p>50257 is prime-ish: 50257 = 29 x 1733. No power of two divides it.
+Tensor cores want multiples of 8 at minimum, 16 for good
+throughput. 50304 = 2^7 x 3 x 131: divisible by 64. Padding the
+vocab from 50257 to 50304 wastes 47 embedding rows (47 x 12,288 x 2
+bytes = 1.2 MB) and buys 25% speedup on every embedding lookup and
+every unembedding matmul. The waste is megabytes. The win is
+forever. Pad everything the hardware touches.</p>
 <h2 id="two-mystery-plots-solved">Two mystery plots, solved</h2>
-<p>Plot matmul throughput vs matrix size and color by divisibility. Sizes
-divisible by 1 or 2 crawl. 8 improves. 16 and 32 are equivalent and
-fast <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=3999s" target="_blank" rel="noopener">66:39 <span class="ts">⏱66:39</span></a>. Not magic: 16 and 32 fill whole burst windows,
+<p>Plot matmul throughput vs matrix size and color by divisibility.
+Sizes divisible by 1 or 2 crawl. 8 improves. 16 and 32 are
+equivalent and fast. Not magic: 16 and 32 fill whole burst windows,
 so tiles read coalesced.</p>
+<h3 id="subchapter-wave-quantization-worked">Subchapter: wave quantization, worked</h3>
 <p>The periodic craters are <strong>wave quantization</strong>. At 1792 with 256x128
-tiles: 98 tiles, fits in 108 SMs, one wave. At 1793: 120 tiles, needs
-two waves, and the second wave runs 12 tiles while 96 SMs idle
-<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=4088s" target="_blank" rel="noopener">68:08 <span class="ts">⏱68:08</span></a>.</p>
-<figure><img alt="Wave quantization" src="assets/l05-wave-quant.svg"><figcaption>98 tiles fit 108 SMs: one wave. 120 tiles need a second wave where 96 SMs idle. One extra dimension, one crater.</figcaption></figure>
+tiles: 98 tiles, fits in 108 SMs, one wave. At 1793: 120 tiles,
+needs two waves, and the second wave runs 12 tiles while 96 SMs idle.</p>
+<figure><img alt="Wave quantization" src="assets/l05-wave-quant.svg"><figcaption>Shell 4. Count tiles vs SMs: 120 tiles, 96 SMs idle. Source: lecture mystery-plot slides.</figcaption></figure>
 <p>One extra dimension. Twelve tiles in the second wave. Ninety-six SMs
 idle. A crater in the throughput plot. Count your tiles against your
 SMs.</p>
+<p>Work the general rule. Tiles T, SMs S. Waves = ceil(T / S). Idle
+SMs in the last wave = S - (T mod S). At T = 120, S = 108: 2 waves,
+96 idle. The fix: pick tile counts near multiples of the SM count.
+215 tiles: 2 waves, 1 idle&hellip; still 2 waves. 108 tiles: 1 wave, 0
+idle. The plot&rsquo;s craters are at every T just above a multiple of S.</p>
 <h2 id="the-key-question">The key question</h2>
-<p>Six breaks, one theme. Branches idle threads. Bits cost traffic. Small
-ops cost round trips. Storage costs reads. Scatter wastes bursts.
-Untiled reads repeat N times. What if every optimization is a
-data-movement optimization? Then the fastest attention kernel ever
+<p>Six breaks, one theme. Branches idle threads. Bits cost traffic.
+Small ops cost round trips. Storage costs reads. Scatter wastes
+bursts. Untiled reads repeat N times. What if every optimization is
+a data-movement optimization? Then the fastest attention kernel ever
 written is just these six tricks, applied to one op, all at once.</p>
 <h2 id="flashattention-the-victory-lap">FlashAttention: the victory lap</h2>
-<p>Attention = three matmuls + one global softmax. The softmax couples all
-tiles, which seems to defeat tiling. The escape is the <strong>online
+<p>Attention = three matmuls + one global softmax. The softmax couples
+all tiles, which seems to defeat tiling. The escape is the <strong>online
 softmax</strong>: sweep blocks, track the running max m and running sum l,
-rescale when a new max appears <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=4447s" target="_blank" rel="noopener">74:07 <span class="ts">⏱74:07</span></a>.</p>
+rescale when a new max appears.</p>
 <pre class="ascii">m_new = max(m, rowmax of this tile)
 rescale accumulated sum by exp(m_old - m_new)
 each tile's softmax needs no future tiles
 </pre>
-<p>Work the idea on one row. Tiles arrive left to right. After tile 1, the
-max is 3, the sum is 12. Tile 2 has max 5. Rescale: multiply the old
-sum by e^(3-5) = 0.135, add tile 2&rsquo;s sum. The running statistics are
-exact, and no tile ever waits for a future one. Keep K/Q/V tiles in
-SRAM, accumulate the softmax statistics in registers, multiply by V in
-tiles, divide once at the end. Fuse it all into one kernel. On the
-backward pass, recompute instead of storing the n x n matrix
-<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=4611s" target="_blank" rel="noopener">76:51 <span class="ts">⏱76:51</span></a>.</p>
-<figure><img alt="FlashAttention" src="assets/l05-flashattn.svg"><figcaption>Tile the matmuls. Online softmax per tile. Fuse into one kernel. Recompute on backward. Never materialize n x n.</figcaption></figure>
+<p>Work the idea on one row. Tiles arrive left to right. After tile 1,
+the max is 3, the sum is 12. Tile 2 has max 5. Rescale: multiply the
+old sum by e^(3-5) = 0.135, add tile 2&rsquo;s sum. The running statistics
+are exact, and no tile ever waits for a future one. Keep K/Q/V tiles
+in SRAM, accumulate the softmax statistics in registers, multiply by
+V in tiles, divide once at the end. Fuse it all into one kernel. On
+the backward pass, recompute instead of storing the n x n matrix.</p>
+<figure><img alt="FlashAttention" src="assets/l05-flashattn.svg"><figcaption>Shell 3. Tile the matmuls: dashed tiles live in SRAM. Source: FlashAttention paper.</figcaption></figure>
 <p>That is FlashAttention: tiling + online softmax + fusion +
 recomputation. Every trick in this lecture, in one kernel. The n x n
-score matrix is never materialized. The backward pass recomputes it on
-the fly.</p>
+score matrix is never materialized. The backward pass recomputes it
+on the fly.</p>
+<h3 id="subchapter-the-backward-pass-why-recompute-wins">Subchapter: the backward pass, why recompute wins</h3>
+<p>The forward pass could save the n x n scores for the backward pass.
+At n = 32K: 1B scores, 2 GB in bf16, per head, per layer. Times 32
+heads: 64 GB. The scores do not fit. Recompute: re-run the tiled
+forward during backward, regenerating each tile&rsquo;s scores in SRAM
+and immediately consuming them. Extra compute: one more forward
+pass, about 1/3 of the step. Memory saved: the entire n x n matrix.
+The trade is the chapter&rsquo;s Break 4 at full scale.</p>
 <h3 id="subchapter-flashattention-1-2-3-one-idea-per-version">Subchapter: FlashAttention 1, 2, 3 (one idea per version)</h3>
 <p>Same math, three generations. Each version adds one idea about the
 hardware.</p>
@@ -426,26 +526,81 @@ exploit the chip&rsquo;s async hardware.</p>
 <p>The ladder: correct IO, then schedule, then async hardware. As of
 early 2026, FA3 has no full Blackwell port: FA2 runs on B200 through
 its general path. Kernels track chips, not just papers.</p>
-<figure><img alt="FlashAttention 1, 2, 3" src="assets/media-generation-cs336-l05-fa-versions-0-ed34b967-3807-41e4-9ff0-0a9b6d36b53b.webp"><figcaption>Same math, three generations. Each version exploits new hardware. Source: Dao et al. papers. Project: Stanford Frontier AI.</figcaption></figure>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>The one idea</th>
+<th>Hardware payoff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FA1 (2022)</td>
+<td>make attention IO-aware: tiling, online softmax, fusion, recompute</td>
+<td>the n x n matrix is never materialized</td>
+</tr>
+<tr>
+<td>FA2 (2023)</td>
+<td>schedule better: sequence-dim parallelism, halved non-matmul FLOPs</td>
+<td>about 2x over FA1</td>
+</tr>
+<tr>
+<td>FA3 (2024)</td>
+<td>exploit Hopper async: warp specialization, ping-pong GEMM-softmax, FP8</td>
+<td>740 TFLOPS: 75% of the H100&rsquo;s 989 peak</td>
+</tr>
+</tbody>
+</table>
 <div class="qa"><div class="q">Walk me through the online softmax on one row with numbers.</div><div class="a"><p>Row scores arrive in two tiles. Tile 1: [3, 1]. Running max m = 3. Running sum l = e^(3-3) + e^(1-3) = 1 + 0.135 = 1.135. Tile 2: [5, 2]. New max m = 5. Rescale the old sum: 1.135 x e^(3-5) = 1.135 x 0.135 = 0.153. Add tile 2&rsquo;s sum: e^(5-5) + e^(2-5) = 1 + 0.050 = 1.050. New l = 1.203. True denominator for [3,1,5,2]: 20.09 + 2.72 + 148.41 + 7.39 = 178.6. Rescaled: 1.203 x e^5 = 1.203 x 148.41 = 178.5. Exact up to rounding. No tile ever waited for a future tile.
 Exponentials overflow: e^90 exceeds fp32. Subtracting the running max keeps every exponent at or below 0, so nothing overflows. The rescale step corrects for the max changing. It is numerical hygiene that also enables tiling: one mechanism solves both problems.</p><div class="followup"><strong>Follow-up:</strong> Why track the max at all instead of just summing exponentials?</div></div></div>
 <div class="qa"><div class="q">Why does FlashAttention-2 beat FlashAttention-1 if the math is identical?</div><div class="a"><p>Scheduling. FA1 parallelized over batch and heads only, which starved the GPU at small batch sizes: too few thread blocks to fill 108 SMs. FA2 also parallelizes along the sequence-length dimension, so every sequence length yields enough blocks. It also rewrote the rescaling math to halve non-matmul FLOPs. Same outputs, better occupancy, less overhead: about 2x faster. The lesson: the algorithm was fine. The mapping to hardware was not.
 Parallelism structure matters as much as the math. Always ask: along which dimensions does this kernel split work, and is there enough work per SM? A correct kernel with a bad split is a slow kernel.</p><div class="followup"><strong>Follow-up:</strong> What does that imply for writing your own kernels?</div></div></div>
 <div class="qa"><div class="q">When does FlashAttention not help?</div><div class="a"><p>When attention is not the bottleneck. During decode, each step is a memory-bound matrix-vector operation: the KV cache reads dominate, and no attention kernel changes that. FlashAttention helps prefill and training, where the n x n computation actually happens. It also does not help short sequences: launch and tiling overhead exceed the savings. The interview signal: name the regime (long-sequence prefill and training) before prescribing the tool.
 Everything that shrinks memory traffic: GQA and MLA (smaller KV cache), cache quantization, and speculative decoding (fewer steps). Decode is a bandwidth problem, so the fixes are bandwidth fixes.</p><div class="followup"><strong>Follow-up:</strong> What helps decode instead?</div></div></div>
+<h2 id="multi-gpu-nvlink-and-the-node">Multi-GPU: NVLink and the node</h2>
+<p>One GPU is the unit. Eight is the node. The node connects its GPUs
+with <strong>NVLink</strong>: 900 GB/s per GPU on Hopper, 1.8 TB/s on Blackwell.
+Compare PCIe: 64 GB/s. NVLink is 14x faster. The all-reduce from the
+last lecture runs over NVLink inside the node and over InfiniBand
+(~50 GB/s per GPU) between nodes.</p>
+<h3 id="subchapter-the-node-as-a-memory-pool">Subchapter: the node as a memory pool</h3>
+<p>8 H100s: 640 GB of HBM, 27 TB/s of aggregate bandwidth, 900 GB/s
+between any two GPUs. A 70B model in bf16 is 140 GB: it fits on one
+GPU, but the KV cache at long context does not. Tensor parallelism
+splits the model across the 8 GPUs: each holds 17.5 GB of weights,
+and the NVLink all-reduce synchronizes every layer. The node is the
+reason 70B models serve at all: no single GPU holds the working
+set, but the node does.</p>
+<h3 id="subchapter-why-interconnect-is-the-slowest-curve">Subchapter: why interconnect is the slowest curve</h3>
+<p>NVLink 4 (Hopper): 900 GB/s. NVLink 5 (Blackwell): 1.8 TB/s. Two
+generations, 2x. Compute in the same span: 2.3x like-for-like (the
+9x headline mixes precision and sparsity). The interconnect
+falls further behind every generation, which is why the parallelism
+lectures minimize cross-GPU traffic: the less you move, the less
+the slowest curve matters.</p>
 <h2 id="tpus-the-convergent-cousin">TPUs, the convergent cousin</h2>
 <p>TPUs are the alternative evolution of the same idea: an
-energy-efficient ML accelerator converges to the same shape
-<a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1038s" target="_blank" rel="noopener">17:18 <span class="ts">⏱17:18</span></a>. Same memory hierarchy (HBM + fast local memory),
-same matrix-multiply unit (systolic arrays underneath both), same
-concepts with different names.</p>
-<p>The differences: TPUs use few giant matrix units (2 cores, 8 MXUs) vs
-the GPU&rsquo;s many small ones (100+ SMs, hundreds of tensor cores). Giant
-units are less flexible: a TPU tensor core refuses inputs below 64
-dims, so batch sweeps stop at 64 <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1306s" target="_blank" rel="noopener">21:46 <span class="ts">⏱21:46</span></a>. Naming trap: a TPU
-&ldquo;tensor core&rdquo; is a processor. A GPU &ldquo;tensor core&rdquo; is a matrix-multiply
-unit <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1230s" target="_blank" rel="noopener">20:30 <span class="ts">⏱20:30</span></a>.</p>
-<h3 id="subchapter-what-is-used-where-the-chip-census-october-2026">Subchapter: what is used where (the chip census, October 2026)</h3>
+energy-efficient ML accelerator converges to the same shape. Same
+memory hierarchy (HBM + fast local memory), same matrix-multiply
+unit (systolic arrays underneath both), same concepts with different
+names.</p>
+<p>The differences: TPUs use few giant matrix units (2 cores, 8 MXUs)
+vs the GPU&rsquo;s many small ones (100+ SMs, hundreds of tensor cores).
+Giant units are less flexible: a TPU tensor core refuses inputs
+below 64 dims, so batch sweeps stop at 64. Naming trap: a TPU
+&ldquo;tensor core&rdquo; is a processor. A GPU &ldquo;tensor core&rdquo; is a
+matrix-multiply unit.</p>
+<h3 id="subchapter-the-systolic-array-one-idea">Subchapter: the systolic array, one idea</h3>
+<p>A GPU&rsquo;s tensor core is a small parallel multiplier. A TPU&rsquo;s MXU is
+a <strong>systolic array</strong>: data flows through a grid of multiply-add
+units like blood through a heart, each unit adding its product and
+passing the sum along. The array computes a full matmul with each
+weight loaded once and each activation flowing past. Same math as
+the GPU. Different dataflow: the TPU moves the data through the
+compute, the GPU moves the compute to the data (tiles in shared
+memory). Convergent evolution, two implementations.</p>
+<h2 id="what-is-used-where-the-chip-census-october-2026">What is used where: the chip census, October 2026</h2>
 <p>Verified against vendor specs as of October 2026.</p>
 <table>
 <thead>
@@ -459,24 +614,24 @@ unit <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1230s" target="_
 </thead>
 <tbody>
 <tr>
-<td>H100</td>
+<td>H100 SXM</td>
 <td>80GB HBM3</td>
 <td>3.35 TB/s</td>
 <td>989 TFLOP/s bf16</td>
 <td>the training workhorse</td>
 </tr>
 <tr>
-<td>H200</td>
+<td>H200 SXM</td>
 <td>141GB HBM3e</td>
 <td>4.8 TB/s</td>
 <td>989 TFLOP/s bf16</td>
 <td>same compute, 1.8x memory: the inference pick</td>
 </tr>
 <tr>
-<td>B200</td>
+<td>B200 SXM</td>
 <td>192GB HBM3e</td>
 <td>8 TB/s</td>
-<td>9 PFLOP/s FP4</td>
+<td>~4.5 PFLOP/s FP8 (dense)</td>
 <td>2.4x memory and bandwidth over H100</td>
 </tr>
 <tr>
@@ -486,19 +641,31 @@ unit <a href="https://www.youtube.com/watch?v=izZba4UA7iY&amp;t=1230s" target="_
 <td>[uncertain]</td>
 <td>the memory-capacity alternative</td>
 </tr>
+<tr>
+<td>TPU v5p</td>
+<td>95GB HBM</td>
+<td>4.6 TB/s [uncertain]</td>
+<td>[uncertain]</td>
+<td>Google&rsquo;s fleet chip</td>
+</tr>
 </tbody>
 </table>
-<p>Read the trend. Compute leaps (989 TFLOP/s to 9 PFLOP/s). Memory
+<p>Read the trend. Compute leaps (989 TFLOP/s to 4.5 PFLOP/s dense, part
+precision change, part chip). Memory
 crawls (80GB to 192GB). The gap between the curves is the whole
-lecture, and it widens every generation. Inference fleets buy memory:
-an 8xB200 node holds 1.5TB of HBM, so a 405B model in FP4 with a 32K
-context fits on one node. Training fleets buy FLOPs per dollar, where
-deployed H100s still compete.</p>
-<figure><img alt="The chip census" src="assets/media-generation-cs336-l05-chip-census-0-af52998b-d316-4495-bfab-688f33b155f1.webp"><figcaption>Bandwidth and capacity grow slower than compute. That gap is the whole lecture. Source: vendor specs. Project: Stanford Frontier AI.</figcaption></figure>
+lecture, and it widens every generation. Inference fleets buy
+memory: an 8xB200 node holds 1.5TB of HBM, so a 405B model in FP4
+with a 32K context fits on one node. Training fleets buy FLOPs per
+dollar, where deployed H100s still compete. AMD&rsquo;s MI300X competes
+on memory capacity (192GB) for inference fleets that want an
+alternative.</p>
+<p>The census table above is the figure.</p>
 <div class="qa"><div class="q">Your kernel runs at 10% of peak. Debug it in order.</div><div class="a"><p>First, compute arithmetic intensity and check the roofline. If the op sits left of the knee, it is memory bound and no tuning reaches peak: fuse it or remove passes. Second, check occupancy: wave quantization means a bad tile count leaves SMs idle, so count tiles against SMs. Third, check divergence: profile warp execution efficiency. Branches idle threads, so mask instead. Fourth, check precision: are tensor cores actually engaged, or is the math running on CUDA cores in fp32? Fifth, check alignment: sizes divisible by 16 or 32 coalesce, and padding buys real speed. The order matters: intensity first, because a memory-bound op defeats all the other fixes.
 When the kernel sits at its roofline ceiling: actual throughput matches bandwidth times intensity for memory-bound ops, or a high fraction of peak for compute-bound ones. FlashAttention-3 reaches 75% of H100 peak. That is the neighborhood of done.</p><div class="followup"><strong>Follow-up:</strong> When do you stop tuning?</div></div></div>
 <div class="qa"><div class="q">H100 or B200 for an inference fleet in late 2026?</div><div class="a"><p>B200, on memory grounds. Inference is memory bound: the KV cache and weights must fit, and bandwidth sets tokens per second. B200 has 192GB vs 80GB and 8 TB/s vs 3.35 TB/s, plus native FP4 that halves weight memory. H100 remains the cost-efficient training workhorse where it is already deployed. The rule: training buys FLOPs, inference buys memory.
 Because allocation is the constraint. The newest chips are supply-limited and priced accordingly. The fleet decision is total cost per token, not peak specs. Buy the chip you can actually get at the price that clears your margin.</p><div class="followup"><strong>Follow-up:</strong> Why not always wait for the next chip?</div></div></div>
+<div class="qa"><div class="q">Your training run is 10x slower than expected but the loss looks fine. What do you check?</div><div class="a"><p>Dtypes first. The most expensive common bug is math silently running in fp32 on CUDA cores instead of bf16 on tensor cores: a 15x throughput gap with correct-looking loss. Check every tensor&rsquo;s dtype, check that AMP is actually casting, and profile one step to see which kernels ran. If the profile shows fp32 GEMMs where bf16 was expected, you found it. Only after dtypes check out do you look at batch size, fusion, and communication.
+Because fp32 is more precise than bf16. The math is correct, just slow. The bug is invisible to the loss curve and visible only in the step time. This is why the check is &ldquo;profile the kernels&rdquo; and not &ldquo;watch the loss&rdquo;.</p><div class="followup"><strong>Follow-up:</strong> Why does the loss still look fine in fp32?</div></div></div>
 <h2 id="mapping-back-what-each-trick-fixes">Mapping back: what each trick fixes</h2>
 <table>
 <thead>
@@ -549,42 +716,57 @@ Because allocation is the constraint. The newest chips are supply-limited and pr
 <td>FlashAttention</td>
 <td>Online softmax + tiling + fusion + recompute.</td>
 </tr>
+<tr>
+<td>8 GPUs, one model</td>
+<td>NVLink node</td>
+<td>900 GB/s inside the node. The node is the memory pool.</td>
+</tr>
 </tbody>
 </table>
 <h2 id="the-honest-price">The honest price</h2>
-<p>Every trick has a tax. Low precision needs format archaeology per op.
-Fusion that compilers cannot do is hand-written and brittle. Tiling
-sizes are tuned per chip, and the tuning takes minutes per shape.
-Wave quantization means one extra dimension can crater throughput for
-no mathematical reason. And the three curves keep diverging: compute
-climbs fast, bandwidth slowly, interconnect slowest. Every year the
-tricks matter more. The hardware will not save you. The memory model
-will.</p>
+<p>Every trick has a tax. Low precision needs format archaeology per
+op. Fusion that compilers cannot do is hand-written and brittle.
+Tiling sizes are tuned per chip, and the tuning takes minutes per
+shape. Wave quantization means one extra dimension can crater
+throughput for no mathematical reason. And the three curves keep
+diverging: compute climbs fast, bandwidth slowly, interconnect
+slowest. Every year the tricks matter more. The hardware will not
+save you. The memory model will.</p>
+<figure><img alt="Chapter plate: the tricks" src="assets/l05-chap-tricks.svg"><figcaption>Chapter plate. Left: naive passes. Center: the round trip. Right: the fused form. Source: lesson GPU tricks.</figcaption></figure>
+<figure><img alt="Chapter plate: FlashAttention" src="assets/l05-chap-flashattn.svg"><figcaption>Chapter plate. Left: the materialized matrix. Center: tiles only. Right: the ladder. Source: lesson FlashAttention section.</figcaption></figure>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <p>The story in eight steps. Each step answers the one before it.</p>
 <ol>
 <li><strong>The chip is fast, your code is not.</strong> Dennard ended. Clocks
    stopped scaling. GPUs are the parallel switch made silicon:
-   throughput, not latency.</li>
-<li><strong>The SM is the unit.</strong> 108 on an A100. Threads run SIMT. Blocks
-   share one SM&rsquo;s memory. Warps of 32 schedule together.</li>
-<li><strong>Memory is the hierarchy.</strong> Registers ~1 cycle, shared 20-30, HBM
-   ~10x L1. SRAM costs hundreds of times DRAM. Program against the
-   hierarchy or pay.</li>
-<li><strong>Branches idle the warp.</strong> if/else runs both sides. Mask instead:
-   <code>x * (x &gt; 0)</code>.</li>
-<li><strong>Bits cost traffic.</strong> Halve the bits, halve the bottleneck. bf16
-   for range, fp8 per op, MXFP8 per-32 scales with two copies for
-   transpose. Real savings 20-30%.</li>
-<li><strong>Fuse, recompute, coalesce, tile.</strong> One kernel: read once, write
-   once. 8 accesses become 5. One burst per warp. N/T HBM reads.</li>
+   throughput, not latency. 30-100x the CPU&rsquo;s peak on matmuls.</li>
+<li><strong>The SM is the unit.</strong> 108 on A100, 144 on H100. Threads run
+   SIMT. Blocks share one SM&rsquo;s memory. Warps of 32 schedule
+   together. Fast memory is 0.1% of the total.</li>
+<li><strong>Memory is the hierarchy.</strong> Registers ~1 cycle, shared 20-30,
+   HBM ~10x L1. SRAM costs hundreds of times DRAM. The kernel keeps
+   data high on the ladder.</li>
+<li><strong>Tensor cores are the engine.</strong> 4x4x4 MMA per instruction,
+   wgmma on Hopper. 15x the CUDA-core fp32 rate. Check dtypes first.</li>
+<li><strong>Six breaks, six tricks.</strong> Mask branches. Halve bits. Fuse
+   kernels. Recompute. Coalesce bursts. Tile with padding. Each
+   demonstrated with its waste in numbers.</li>
 <li><strong>Count tiles against SMs.</strong> 1792 fits 108 SMs in one wave. 1793
    needs two waves and 96 SMs idle. Divisibility 16/32 wins.</li>
 <li><strong>FlashAttention is all six.</strong> Tiled matmuls, online softmax with
-   running max, one fused kernel, recomputed backward. Never
-   materialize n x n.</li>
+   running max, one fused kernel, recomputed backward. FA2
+   schedules better. FA3 exploits async hardware. 75% of peak.</li>
+<li><strong>The node is the unit of serving.</strong> 8 GPUs, NVLink 900 GB/s,
+   640 GB pooled. Interconnect is the slowest curve. TPUs converge
+   to the same shape with systolic arrays.</li>
 </ol>
 <h2 id="go-deeper">Go deeper</h2>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/izZba4UA7iY" title="Stanford CS336 Spring 2026 Lecture 5: GPUs and Systems" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+<ul>
+<li>Lecture 5, the session this chapter follows (the embed above): https://www.youtube.com/watch?v=izZba4UA7iY</li>
+</ul>
 <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
 <iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/9vcsZK3a76w" title="FlashAttention Explained" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
@@ -600,27 +782,200 @@ will.</p>
 - Dao et al. (2022): FlashAttention, the tiled exact-attention paper.</p>
 <p><strong>Further reading:</strong>
 - Horace He&rsquo;s GPU blogs: the clearest written versions of these
-  mechanics.
-- GPU Mode community: kernels, exercises, and the speedrun culture.
-- Google&rsquo;s TPU/GPU book: exercises matching the assignment style.</p>
-<p><strong>Caveats from these sources.</strong> SM counts and latencies are A100-era
+  mechanics: https://horace.io/
+- GPU Mode community: kernels, exercises, and the speedrun culture:
+  https://github.com/gpu-mode
+- NVIDIA H100 datasheet: https://www.nvidia.com/en-us/data-center/h100/</p>
+<p><strong>Caveats from these sources.</strong> SM counts and latencies are A100/H100-era
 numbers. Newer chips differ in degree, not in kind. MXFP8/MXFP4 details
 track NVIDIA&rsquo;s evolving formats. Check the current spec before
-implementing. The 20-30% MXFP8 savings are workload-dependent.</p>
+implementing. The 20-30% MXFP8 savings are workload-dependent. TPU v5p
+numbers are marked uncertain: verify against Google&rsquo;s current specs.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
 <li><strong>CS336 L06:</strong> Triton kernels are hand-written versions of these
   tricks: blocks, tiling, coalescing, fusion.</li>
 <li><strong>CS336 L07/L08:</strong> parallelism lectures tile across devices the way
   this lecture tiles across SMs.</li>
-<li><strong>CS336 L10:</strong> inference reuses fusion and recomputation. Decode is
-  the bandwidth-heavy half of the diverging curves.</li>
+<li><strong>CS329Z:</strong> the agents course uses these systems facts for
+  cost-aware agent design.</li>
 <li><strong>CS229S:</strong> the device block starts here: SM counts, HBM sizes, and
   the compute/bandwidth gap curves.</li>
 <li><strong>CS229:</strong> the roofline here is the same diagnostic as the intensity
   analysis in L02.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=izZba4UA7iY" target="_blank" rel="noopener">Lecture 5 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2205.14135" target="_blank" rel="noopener">Dao et al., FlashAttention: Fast and Memory-Efficient Exact Attention (2022)</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://horace.io/" target="_blank" rel="noopener">Horace He: GPU blogs and explainers</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://github.com/gpu-mode" target="_blank" rel="noopener">GPU Mode (ex CUDA Mode): community kernel resources</a></li></ul></section>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>GPU cheatsheet.</strong> Unit: SM (144 on H100). Model: thread/block/warp-32, SIMT. Memory: registers 1c, shared 20-30c, HBM 10x L1. Engine: tensor cores, 15x CUDA fp32. Tricks: mask, halve bits, fuse, recompute, coalesce, tile+pad. Waves: count tiles vs SMs. FlashAttention: tiling + online softmax + fusion + recompute; FA2 schedules, FA3 async. Node: 8 GPUs, NVLink 900 GB/s. Curves: compute 2.3x like-for-like (the 9x headline mixes precision and sparsity), memory 2.4x, interconnect 2x per gen.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Every optimization is a data-movement optimization.</strong> The chip is fast. The memory is slow. The gap grows every generation.</p></div>
+<h2 id="coverage-map-every-lecture-claim-mapped">Coverage map: every lecture claim, mapped</h2>
+<p>Each row ties a claim from Lecture 5 (transcript <code>sources/cs336/text/lec05.txt</code>,
+video izZba4UA7iY) to the section that covers it.</p>
+<table>
+<thead>
+<tr>
+<th>Session claim</th>
+<th>Covered in</th>
+<th>File line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chip is fast, code is not; three parts: hardware, tricks, victory lap</td>
+<td>The problem: the chip is fast, your code is not</td>
+<td>49</td>
+</tr>
+<tr>
+<td>Dennard scaling ended; serial to parallel switch</td>
+<td>The old mental model, and why it broke</td>
+<td>56</td>
+</tr>
+<tr>
+<td>CPU latency vs GPU throughput; 30-100x peak gap on matmuls</td>
+<td>the numbers behind the switch</td>
+<td>75</td>
+</tr>
+<tr>
+<td>SM as the unit; A100 108 SMs, H100 144</td>
+<td>The SM is the unit</td>
+<td>86</td>
+</tr>
+<tr>
+<td>Thread, block, warp; SIMT; shared vs L1</td>
+<td>thread, block, warp</td>
+<td>94</td>
+</tr>
+<tr>
+<td>SM memory: 256 KB registers, 228 KB shared/L1 per SM</td>
+<td>the SM&rsquo;s own memory, with numbers</td>
+<td>111</td>
+</tr>
+<tr>
+<td>Memory hierarchy ladder; Groq SRAM; hierarchy as economic fact</td>
+<td>Where data lives</td>
+<td>129</td>
+</tr>
+<tr>
+<td>H100 ladder: 80 GB HBM, 50 MB L2, 32 MB shared, 36 MB registers</td>
+<td>the ladder, rung by rung</td>
+<td>136</td>
+</tr>
+<tr>
+<td>Tensor cores: V100 first; 10x+ over other FP ops</td>
+<td>Tensor cores: the matmul engine</td>
+<td>157</td>
+</tr>
+<tr>
+<td>4x4x4 MMA, wgmma; dims multiples of 8/16</td>
+<td>what a tensor core computes</td>
+<td>165</td>
+</tr>
+<tr>
+<td>fp32 accident costs 15x; check dtypes first</td>
+<td>the 10x gap, worked</td>
+<td>174</td>
+</tr>
+<tr>
+<td>Three curves: compute fast, bandwidth slow, interconnect slowest</td>
+<td>Three curves diverge</td>
+<td>183</td>
+</tr>
+<tr>
+<td>Curve numbers: compute 2.3x like-for-like, memory 2.4x, interconnect 2x per gen</td>
+<td>the curves, with numbers</td>
+<td>192</td>
+</tr>
+<tr>
+<td>Control divergence: both branches execute; mask instead</td>
+<td>Break 1: branches idle the warp</td>
+<td>203</td>
+</tr>
+<tr>
+<td>Nested branches: 4 paths, 1/4 throughput</td>
+<td>the nested-branch disaster</td>
+<td>218</td>
+</tr>
+<tr>
+<td>bf16/fp8/MXFP8; two copies for transpose; 20-30% real savings</td>
+<td>Break 2: half the bits, half the traffic</td>
+<td>228</td>
+</tr>
+<tr>
+<td>E4M3 vs E5M2 worked: gradients need range, activations need resolution</td>
+<td>the E4M3 vs E5M2 choice, worked</td>
+<td>251</td>
+</tr>
+<tr>
+<td>Fusion: 5 round trips become 1; easy vs hard fusions</td>
+<td>Break 3: small ops mean round trips</td>
+<td>262</td>
+</tr>
+<tr>
+<td>LayerNorm fusion: 10 passes become 2</td>
+<td>the LayerNorm fusion, worked</td>
+<td>275</td>
+</tr>
+<tr>
+<td>Recomputation: 8 accesses become 5; checkpointing from kernel view</td>
+<td>Break 4: storing costs more than recomputing</td>
+<td>285</td>
+</tr>
+<tr>
+<td>Coalescing: 128-byte bursts; 3% vs 12.5% utilization</td>
+<td>Break 5: scattered reads waste the burst</td>
+<td>303</td>
+</tr>
+<tr>
+<td>Transpose tax: 2 passes now vs 32x on every read</td>
+<td>the transpose tax</td>
+<td>319</td>
+</tr>
+<tr>
+<td>Tiling: N/T HBM reads; 50257-&gt;50304 padding buys 25%</td>
+<td>Break 6: every element read N times</td>
+<td>328</td>
+</tr>
+<tr>
+<td>Divisibility plot: 16/32 fast; burst windows</td>
+<td>Two mystery plots, solved</td>
+<td>353</td>
+</tr>
+<tr>
+<td>Wave quantization: 1792 one wave, 1793 two waves, 96 idle</td>
+<td>wave quantization, worked</td>
+<td>360</td>
+</tr>
+<tr>
+<td>Online softmax: running max m, running sum l, rescale</td>
+<td>FlashAttention: the victory lap</td>
+<td>386</td>
+</tr>
+<tr>
+<td>Backward recompute: 64 GB saved at n=32K</td>
+<td>the backward pass, why recompute wins</td>
+<td>414</td>
+</tr>
+<tr>
+<td>FA1/FA2/FA3: IO, scheduling, async hardware; 740 TFLOPS</td>
+<td>FlashAttention 1, 2, 3</td>
+<td>424</td>
+</tr>
+<tr>
+<td>NVLink 900 GB/s; node as 640 GB memory pool</td>
+<td>Multi-GPU: NVLink and the node</td>
+<td>473</td>
+</tr>
+<tr>
+<td>TPUs: systolic arrays, giant MXUs, 64-dim minimum</td>
+<td>TPUs, the convergent cousin</td>
+<td>500</td>
+</tr>
+<tr>
+<td>Chip census: H100/H200/B200/MI300X/TPU v5p, Oct 2026</td>
+<td>What is used where</td>
+<td>526</td>
+</tr>
+</tbody>
+</table>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=izZba4UA7iY" target="_blank" rel="noopener">Lecture 5 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2205.14135" target="_blank" rel="noopener">Dao et al., FlashAttention: Fast and Memory-Efficient Exact Attention (2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2307.08691" target="_blank" rel="noopener">Dao, FlashAttention-2 (2023)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2407.08608" target="_blank" rel="noopener">Shah et al., FlashAttention-3 (2024)</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://horace.io/" target="_blank" rel="noopener">Horace He: GPU blogs and explainers</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://github.com/gpu-mode" target="_blank" rel="noopener">GPU Mode (ex CUDA Mode): community kernel resources</a></li></ul></section>
       <nav class="pager"><a href="../cs336/l04-linear-attention-moe.html"><span class="lbl">← Previous</span>Lecture 4: Linear Attention and Mixture of Experts</a><a href="../cs336/l06-triton-kernels.html"><span class="lbl">Next →</span>Lecture 6: Benchmarking, Profiling, and Triton Kernels</a></nav>
     </article>
     <footer class="pagefoot">
