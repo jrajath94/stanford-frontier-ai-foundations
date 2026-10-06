@@ -282,6 +282,18 @@ zeroed a whole row of W1&rsquo;s gradient: that neuron learns nothing
 this step, exactly lecture 7&rsquo;s dying neuron, now visible in the
 arithmetic. One forward pass, one backward pass, all gradients. No
 finite differences.</p>
+<h3 id="subchapter-the-two-billion-multiply-audit">Subchapter: the two-billion-multiply audit</h3>
+<p>O(N) is a claim. Audit it on the toy. Forward pass multiplies:
+W1 x is a 2x2 matrix-vector product: 4 multiplies, 2 adds. ReLU:
+2 comparisons. W2 a1: 2 multiplies, 1 add. Loss: about 3 ops. Total
+forward: roughly 12 operations. Backward pass: dL/dW2 is a scalar
+times a vector: 2 multiplies. dL/da1 is a vector times a scalar: 2.
+dL/dz1: 2. dL/dW1 is an outer product: 4 multiplies. Total
+backward: roughly 10 operations. The backward pass costs about the
+same as the forward, not N times more. Scale this audit to 1
+billion knobs: each module&rsquo;s backward does work shaped like its
+forward, so the ratio stays near 2 to 1. Count, do not fear.</p>
+<figure><img alt="Operation audit" src="assets/plate-l08-op-audit.webp"><figcaption>Count the multiplies. The toy forward pass uses about 12 operations, the backward pass about 10. The ratio stays near 2 to 1 at any scale. Source: original audit for the O(N) theorem. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-fundamental-theorem">The fundamental theorem</h2>
 <p>The lecture states it as an informal theorem. A differentiable
 circuit with N operations computing one real-valued output: the
@@ -303,6 +315,18 @@ reverse order and the gradient pops out. Modern frameworks
 (PyTorch, JAX) are exactly this: a library of modules, each with a
 forward and a backward, composed into a graph.</p>
 <figure><img alt="Backpropagation" src="assets/svg/l08-backprop.svg"><figcaption>Backpropagation. Forward pass computes values. Backward pass chains each module's backward function in reverse. Full gradient costs O(N), like the forward pass. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-gradient-checking-the-ritual">Subchapter: gradient checking, the ritual</h3>
+<p>Finite differences are too slow to train with and exactly right to
+debug with. The ritual: after implementing a backward pass, compare
+it against centered differences, (L(w+e) - L(w-e)) / 2e, with
+e = 1e-5. Check the toy&rsquo;s dL/dW2[1] = -3.75: nudge W2[1] by 1e-5
+both ways, recompute the loss, and the difference quotient should
+match -3.75 to about 7 digits. The pass criterion is relative
+error below 1e-7 for float64. Every deep learning framework runs
+this check in its test suite: the slow method certifies the fast
+one. When your custom layer&rsquo;s gradients look wrong, this is the
+first tool, not printf debugging.</p>
+<figure><img alt="Gradient checking" src="assets/plate-l08-gradcheck.webp"><figcaption>Trust, then verify. Backprop is fast and hand-derived. Finite differences are slow and ground truth. The ritual: relative error below 1e-7. Source: original plate for the gradient check ritual. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-rank-1-gradient">The rank-1 gradient</h2>
 <p>Look again at dL/dW2 = [0, -3.75]. It equals (dL/dy_hat) * a1: a
 column vector times a row vector, an <strong>outer product</strong>. An outer
@@ -316,6 +340,19 @@ and compression schemes possible. It also explains a subtle fact:
 the gradient never has more independent directions than the batch
 provides. With batch size 1, every weight update is rank 1.</p>
 <figure><img alt="Rank-1 gradient" src="assets/svg/l08-rank1.svg"><figcaption>The rank-1 gradient. dL/dW is an outer product of the backward signal and the forward input. One example, rank one. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-memory-bill-priced">Subchapter: the memory bill, priced</h3>
+<p>The backward pass needs the forward pass&rsquo;s intermediates: a1, z1
+in the toy. Price it. A layer with batch B and hidden size h
+stores B*h floats per activation tensor. A 12-layer network with
+B = 32 and h = 1024 stores 12 * 32 * 1024 = 393,216 floats per
+tensor type, about 1.5 MB per type in float32: small here,
+gigabytes at transformer scale. Weights are fixed cost. Activations
+grow with depth times batch, and they dominate training memory.
+The escape hatch is activation checkpointing: save only every
+k-th layer and recompute the rest on the backward pass. It trades
+one extra forward pass for a large memory cut. The O(N) theorem
+buys speed. Memory is the invoice.</p>
+<figure><img alt="Memory bill" src="assets/plate-l08-memory-bill.webp"><figcaption>Speed costs memory. Weights are fixed cost. Saved activations grow with depth times batch and dominate training memory. Checkpointing trades one extra forward pass for a large cut. Source: original plate for the memory bill. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="second-order-without-the-matrix">Second order without the matrix</h2>
 <p>Lecture 3 priced Newton&rsquo;s method at O(n d^2 + d^3): the Hessian
 (second-derivative matrix) is d by d, and inverting it is hopeless
@@ -331,6 +368,19 @@ information is not fully closed at scale. It is open exactly as far
 as matrix-free methods can walk through. The lecture&rsquo;s contrast:
 the matrix is too big to exist, but its action on any vector is
 cheap.</p>
+<h3 id="subchapter-when-the-chain-snaps">Subchapter: when the chain snaps</h3>
+<p>Backprop needs differentiability, and three common ops break it.
+ReLU at exactly 0: the slope is undefined, and frameworks pick a
+convention (usually 0 or 1). It almost never matters in practice,
+because landing exactly on 0 has probability zero with float
+arithmetic. Discrete sampling: you cannot differentiate through a
+coin flip, so lecture 16&rsquo;s REINFORCE scores the sample instead of
+differentiating through it. Ties in max-pooling: two equal maxima
+make the &ldquo;which input won&rdquo; choice ambiguous, and the gradient goes
+to one of them arbitrarily. The rule: wherever the chain snaps, you
+need a substitute rule, a stochastic estimator, or a tie-break.
+Know the three snaps and you know where backprop&rsquo;s guarantees end.</p>
+<figure><img alt="Chain snaps" src="assets/plate-l08-chain-snaps.webp"><figcaption>Where the chain snaps. ReLU at 0: convention picks 0 or 1. Discrete sampling: cannot differentiate, use REINFORCE. Max-pool ties: gradient picks one winner. Source: original plate for the differentiability breaks. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-honest-price">The honest price</h2>
 <p>Backprop buys O(N) gradients and pays three prices. First, memory:
 the backward pass needs the forward pass&rsquo;s intermediate values
@@ -405,13 +455,40 @@ Forming the Hessian needs d^2 entries and inverting it d^3 work: dead at d = 1B.
    caps update rank.</li>
 <li><strong>Hessian-vector.</strong> H*v in O(N). The matrix never exists.
    Curvature stays affordable for matrix-free methods.</li>
-<li><strong>The honest price.</strong> Activation memory, vanishing/exploding
-   chains, differentiability required. Cheap, exact, local.</li>
 </ol>
+<div class="qa"><div class="q">Walk me through the mechanism: compute dL/dW1[1,1] from scratch using only the rule &quot;downstream signal times input&quot;.</div><div class="a"><p>The weight W1[1,1] multiplies input x[1] = 2 to feed z1[1]. The downstream signal at z1[1] is dL/dz1[1] = 2.5: every unit z1[1] rises moves the loss by 2.5. The rule: gradient = downstream signal times the weight&rsquo;s own input = 2.5 * 2 = 5. That matches the toy&rsquo;s matrix [[0,0],[2.5,5]]. Every entry of every weight gradient is this product: how much the loss cares about the output side, times what the input side fed in.
+The first row feeds z1[0], whose downstream signal dL/dz1[0] = 0: the dead ReLU at z1[0] = -1 killed it. Zero signal times any input is zero. The neuron learns nothing this step: the dying-ReLU phenomenon, visible as a row of zeros.</p><div class="followup"><strong>Follow-up:</strong> Why is the whole first row of dL/dW1 zero?</div></div></div>
+<div class="qa"><div class="q">Applied design: training runs out of memory at batch 64 but fits at batch 32, and you need batch-64 gradients. Options?</div><div class="a"><p>Three, in order of preference. Gradient accumulation: run two batch-32 forward-backward passes and sum the gradients before stepping. The math is identical to one batch-64 step. Activation checkpointing: save fewer intermediates, recompute on backward. Same math, about 30% slower, large memory cut. Mixed precision: float16 activations halve memory, but the math changes slightly and some ops need float32 master weights. Decision rule: accumulation first (free correctness), checkpointing second, mixed precision when speed matters too.
+No, if you sum the full gradients before one optimizer step: the gradient of the 64-example loss equals the sum of the two 32-example gradients. Batch normalization is the exception: its statistics are per-mini-batch, so two batches of 32 normalize differently than one of 64. With layer norm or no norm, accumulation is exact.</p><div class="followup"><strong>Follow-up:</strong> Does gradient accumulation change the learning dynamics at all?</div></div></div>
+<div class="qa"><div class="q">When does backprop silently give the wrong answer?</div><div class="a"><p>Three classic silent bugs. In-place operations that overwrite a saved activation before the backward pass reads it: the gradient is computed from corrupted values with no error raised. Custom backward functions with a wrong formula: the chain runs fine and returns wrong numbers. Nondeterministic ops (some GPU reductions) make the gradient irreproducible across runs. The defense is the gradient-check ritual: centered differences with relative error below 1e-7 certify any backward pass. If the check fails, the bug is in your backward, not in calculus.
+One-sided (L(w+e)-L(w))/e has error O(e): with e = 1e-5 the truncation error is 1e-5, too coarse to certify 1e-7. Centered (L(w+e)-L(w-e))/2e has error O(e^2) = 1e-10, which is below float64 noise and actually tests the implementation.</p><div class="followup"><strong>Follow-up:</strong> Why centered differences and not one-sided?</div></div></div>
+<div class="qa"><div class="q">The rank-1 gradient sounds like trivia. Why should I care?</div><div class="a"><p>Because it constrains what the optimizer can do in one step. A batch-32 update to any weight matrix has rank at most 32: only 32 independent directions, no matter how many millions of weights. Optimizer designers exploit this: K-FAC approximates the curvature with Kronecker factors that respect the outer-product structure, and low-rank adaptation (LoRA) fine-tunes with rank-r updates that echo the gradient&rsquo;s own low rank. The interview answer: one example, one direction per layer. The batch size is the rank budget.
+One direction per layer per step, not one thing: the rank-1 update still touches every weight, just along a single direction in weight space. Over many steps the directions accumulate into full-rank learning. But the per-step budget is real, and it is why tiny batches train noisily: each step commits to one direction.</p><div class="followup"><strong>Follow-up:</strong> So with batch size 1, the network can only learn one thing per layer per step?</div></div></div>
+<ol start="10">
+<li><strong>The audit.</strong> Toy forward ~12 ops, backward ~10. The ratio
+    stays near 2 to 1 at any scale.</li>
+<li><strong>The ritual.</strong> Centered differences, relative error below
+    1e-7. The slow method certifies the fast one.</li>
+<li><strong>The memory bill.</strong> Activations grow with depth times batch
+    and dominate. Checkpointing trades compute for memory.</li>
+<li><strong>The snaps.</strong> ReLU at 0, discrete sampling, max-pool ties.
+    Know where the guarantees end.</li>
+</ol>
+<h2 id="what-is-used-where">What is used where</h2>
+<p><strong>Every training pipeline runs this lesson.</strong> PyTorch autograd and
+JAX grad are module-and-backward-function systems exactly as the
+lecture frames them: each op ships a vector-Jacobian product, and
+the framework chains them. Gradient checkpointing is standard in
+large-model training runs. The gradient-check ritual lives in
+every framework&rsquo;s test suite and in any team that writes custom
+CUDA kernels or custom autograd functions.</p>
+<h2 id="watch-next">Watch next</h2>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/Ilg3gGewQ5U" title="3Blue1Brown: What is backpropagation really doing?" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: 3Blue1Brown, What is backpropagation really doing? Grant Sanderson animates the chain rule on a tiny network. Watch after the toy walkthrough.</p></div>
+
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Lecture 8 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=ne2ngVAoMG8 — Tengyu Ma states
+  - <a href="https://www.youtube.com/watch?v=ne2ngVAoMG8">Tengyu Ma states</a>
   the complexity theorem, builds the chain rule via modules and
   backward functions, and derives the rank-1 gradient and
   Hessian-vector products.
@@ -438,7 +515,7 @@ motivating regime for the theorem.</p>
 <li><strong>CS224N:</strong> backprop through time: the chain rule unrolled over
   sequences.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=ne2ngVAoMG8" target="_blank" rel="noopener">Lecture 8 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=ne2ngVAoMG8" target="_blank" rel="noopener">Lecture 8 video, Stanford Online YouTube</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=Ilg3gGewQ5U" target="_blank" rel="noopener">Explainer: 3Blue1Brown, What is backpropagation really doing?</a></li><li><span class="src-tag">ARTICLE</span><a href="https://karpathy.medium.com/yes-you-should-understand-backprop-e2f92405c9e7" target="_blank" rel="noopener">Karpathy, Yes you should understand backprop (2016)</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
       <nav class="pager"><a href="../cs229/l07-neural-networks-1.html"><span class="lbl">← Previous</span>Lecture 7: Neural Networks, Architecture</a><a href="../cs229/l09-kmeans-gmm.html"><span class="lbl">Next →</span>Lecture 9: Clustering, K-Means and Gaussian Mixtures</a></nav>
     </article>
     <footer class="pagefoot">
