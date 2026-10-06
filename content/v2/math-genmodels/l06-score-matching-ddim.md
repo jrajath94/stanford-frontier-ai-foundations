@@ -128,15 +128,31 @@ noise levels (annealed Langevin): coarse scores first, fine
 scores later. That annealing schedule is exactly DDPM's reverse
 chain from L05, wearing different notation.
 
-### Subchapter: the SDE view: one equation to rule them
+### Subchapter: the forward SDE: destruction in continuous time
 
 Discrete steps become a continuous story. The **forward SDE**
 (stochastic differential equation) destroys data in continuous
-time: dx = f(x,t) dt + g(t) dw, drift plus noise. Anderson's
-theorem gives the **reverse SDE**: it runs backward in time and
-needs exactly one learned object, the score s(x,t). Drop the
-randomness and the same score drives the **probability-flow
-ODE**: a deterministic path from noise to data.
+time: dx = f(x,t) dt + g(t) dw. The drift f(x,t) steers the
+destruction. The noise g(t) dw shakes it. L05's 1,000 discrete
+steps are one discretization of this equation.
+
+### Subchapter: the reverse SDE: Anderson's theorem
+
+**Anderson's theorem** (1982) says reversing time in a diffusion
+gives another diffusion. The reverse drift is the forward drift
+minus the noise squared times the score, so the reverse run needs
+exactly one learned object: the score s(x,t). This is the
+**reverse SDE**: it runs backward in time, from noise to data,
+driven by the learned score.
+
+### Subchapter: the probability-flow ODE: drop the noise
+
+Drop the randomness from the reverse SDE and the same score
+drives a deterministic path from noise to data: the
+**probability-flow ODE**. It keeps the same per-time marginals
+as the SDE, so the score learned by denoising still applies, but
+every run is reproducible: the same starting noise gives the same
+sample.
 
 ![One score drives three machines](assets/plate-l06-sde.webp "Forward SDE destroys, reverse SDE restores, the probability-flow ODE walks straight. Shell 4. Source: original (Song et al., 2021). Project: Stanford Frontier AI.")
 
@@ -156,8 +172,8 @@ predicting the score. The relation is one division:
 s(x_t) = - epsilon-hat(x_t, t) / sqrt(1 - alpha-bar_t)
 ```
 
-Work it on L05's toy. At t = 1, alpha-bar_1 = 0.99,
-sqrt(1 - 0.9801)... precisely sqrt(1 - 0.99) = 0.1. The toy's
+Work it on L05's toy. At t = 1, alpha-bar_1 = 0.99, so
+sqrt(1 - 0.99) = 0.1. The toy's
 predicted noise was epsilon-hat = 0.42:
 
 ```ascii
@@ -169,7 +185,7 @@ saying "the log-density slopes downward with steepness 4.2
 here." DDPM training (MSE on noise) is denoising score matching
 at every noise level simultaneously. Two lectures, one machine.
 
-<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/B4oHJpEJBAA" title="Diffusion Models From Scratch: Score-Based Generative Models Explained" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: Diffusion Models From Scratch, score-based generative models. Score, score matching, denoising score matching, sampling, and the link to DDPM, DDIM, and EDM. Watch after the DDPM-predicts-scores section.</p></div>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/B4oHJpEJBAA" title="Diffusion Models From Scratch: Score-Based Generative Models Explained" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: Diffusion Models From Scratch, score-based generative models. Score, score matching, denoising score matching, sampling, and the link to DDPM, DDIM, and EDM (EDM: Elucidating the Design Space of diffusion models, Karras et al.). Watch after the DDPM-predicts-scores section.</p></div>
 
 ## Mapping back: what each property fixes
 
@@ -271,8 +287,8 @@ regression. The target is simpler.
 
 Straight paths need fewer steps to integrate: this is why
 **Stable Diffusion 3** trains on rectified flow (Esser et al.,
-2024). The ODE view from the SDE subchapter is the bridge: flow
-matching learns the velocity field of the probability-flow ODE
+2024). The probability-flow ODE from the subchapters above is the bridge: flow
+matching learns its velocity field
 directly, without simulating any SDE. The decision rule: when
 few-step sampling matters most, straighten the path. Diffusion
 curves, flow matching draws the chord.
@@ -285,7 +301,7 @@ curves, flow matching draws the chord.
 | DDIM / DPM-Solver schedulers | HuggingFace diffusers: the default few-step samplers | Public: diffusers library, open source |
 | Rectified flow | Stable Diffusion 3: straight-line training objective | Public: Esser et al., 2024, arxiv 2403.03206 |
 | Flow matching | Meta's Movie Gen and recent video models [uncertain] | Research direction. Exact production use varies |
-| EDM (Karras et al.) | The preconditioning recipe behind many tuned samplers | Public research: arxiv 2206.00364 |
+| EDM (Karras et al., 2022) | Elucidating the Design Space of diffusion models: the preconditioning recipe behind many tuned samplers | Public research: arxiv 2206.00364 |
 
 The pattern: nobody samples DDPM's raw 1,000 steps in
 production. The stack is latent diffusion (L05) plus a
