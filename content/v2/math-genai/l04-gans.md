@@ -11,6 +11,8 @@ date: "2026-10-05"
 instructor: "Prof. Prathosh A P"
 offering: "2025"
 video_id: pLD5Q5cS4kI
+video_title: "W2_L7: Generative adversarial networks: formulation"
+video_caption: "The lecture video for this lesson: the minimax formulation on the board. Timestamps in the text link to the exact moment."
 concepts: [gan, minimax, discriminator, generator, saturation, mode-collapse, non-saturating-loss]
 sources:
   - tag: video
@@ -47,6 +49,8 @@ discriminator steps, then a generator step, repeat.
 
 ## First attempt: trace two rounds by hand
 
+### The setup: a one-point world
+
 Make everything tiny. Real data is a single point: x = 0,
 always. The generator ignores noise and outputs a constant:
 G(z) = θ. The discriminator is D(x) = sigmoid(w·x + b), one
@@ -60,10 +64,13 @@ D(2) = sigmoid(0) = 0.5        (fake point: coin flip)
 J = log 0.5 + log(1 - 0.5) = -0.693 + -0.693 = -1.386
 ```
 
-**Discriminator step.** Maximize J. The gradient with respect
-to w: D(0) does not depend on w (x = 0 kills it), but D(2)
-does. ∂J/∂w = −2·D(2) = −1.0 at the start. Take a step of size
-0.5: w = −0.5.
+Both players are blind. The game starts at maximum confusion.
+
+### The discriminator step: w 0 → −0.5
+
+Maximize J. The gradient with respect to w: D(0) does not
+depend on w (x = 0 kills it), but D(2) does. ∂J/∂w = −2·D(2)
+= −1.0 at the start. Take a step of size 0.5: w = −0.5.
 
 ```ascii
 D(0) = sigmoid(0) = 0.5        (unchanged)
@@ -75,16 +82,27 @@ J rose from −1.386 to −1.006. The discriminator learned: real
 stays 0.5, fake drops to 0.27. Note it could not raise D(0)
 with w alone. The bias b would handle that on the next step.
 
-**Generator step.** Minimize J over θ. ∂J/∂θ = −D(θ)·w.
+### The generator step: θ 2 → 1.93
+
+Minimize J over θ. ∂J/∂θ = −D(θ)·w.
 At θ = 2: D = 0.269, w = −0.5, so ∂J/∂θ = +0.1345. Descend
 with step 0.5: θ = 2 − 0.067 = 1.93.
 
 The generator moved its output from 2 toward 0, toward the
 real data. The discriminator's slope (w < 0: D falls as x
-grows) told it which way was "more real". Two rounds, real
-numbers, and the game works: the fake inches toward the data.
+grows) told it which way was "more real".
 
-![The GAN game](assets/l04-gan-game.webp "The minimax game: the critic scores real versus fake, the generator fools the critic. Source: original toy. Shell 3. Stanford Frontier AI.")
+### What the trace teaches
+
+Two rounds, real numbers, and the game works: the fake inches
+toward the data. The mechanism to remember: the generator
+never sees the data directly. It only feels the discriminator's
+slope. The slope is a compass, and the compass only works if
+the discriminator is informative: not perfect, not useless.
+That balance is the whole training problem, and both failures
+below are the compass breaking.
+
+![The GAN game](assets/l04-gan-game.webp "The minimax game: the critic scores real versus fake, the generator fools the critic. Source: original toy. Shell 3. Project: Stanford Frontier AI.")
 
 ```mermaid
 flowchart LR
@@ -95,6 +113,8 @@ flowchart LR
 ```
 
 ## Where it breaks, part 1: the saturating loss
+
+### The flat curve, counted
 
 Now break it. Early in training the generator is terrible and
 the discriminator is confident: D(G(z)) ≈ 0.001 on fakes. The
@@ -116,6 +136,8 @@ The gradient vanishes exactly when the generator needs it
 most: at the start, when it is bad. This is the **saturation**
 of GAN training, the subject of W4L10.
 
+### The fix: the non-saturating loss
+
 The standard fix changes the generator's target. Instead of
 minimizing log(1 − D(G(z))), maximize log D(G(z)): push the
 fake's "real" score up directly. Same fixed point (both want
@@ -130,17 +152,32 @@ non-saturating:  L = -log(d)
 
 Early in training the non-saturating loss screams while the
 original whispers. Every practical GAN uses this variant.
+
+### Same fixed point, different dynamics
+
 The lecture's lesson: the minimax game is not one game. The
 choice of which side's loss the generator optimizes decides
-whether training moves at all.
+whether training moves at all. The fixed point is identical:
+at D = 1 on fakes, both losses agree the generator is done.
+But the path there differs completely. One path has gradients
+at the start. The other does not. The decision rule: always
+check the gradient magnitude at initialization, not just at
+the solution. A loss with the right fixed point and dead
+gradients is a broken loss.
+
+![The original loss is flat where the generator starts](assets/l04-saturation.webp "Doubling 0.001 to 0.002 moves the saturating loss 0.001, the fix 0.693. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
 
 ## Where it breaks, part 2: mode collapse
+
+### The collapsed equilibrium
 
 The second failure is sneakier. The truth has two modes:
 P_X = {0: 0.5, 10: 0.5}. Half the data sits at 0, half at 10.
 The generator discovers that outputting 0 always fools the
 discriminator half the time: D(0) = 0.5 forever (real 0s and
 fake 0s are indistinguishable), and it never tries 10.
+
+### JS = 0.216, computed
 
 Compute what the objective thinks of this. The model is
 P_θ = {0: 1.0, 10: 0.0}. The Jensen-Shannon divergence
@@ -164,15 +201,24 @@ at 0 and never explores. This is **mode collapse**: the model
 covers one mode and abandons the rest, and neither the loss
 nor the divergence complains loudly enough.
 
+### Why the discriminator cannot save it
+
 Why does the discriminator not fix it? It can: D(10) = 1.0
 (real 10s are always real). But the generator never samples
 near 10, so it never feels that gradient. The two-player
 dynamics have a stable bad equilibrium, and gradient descent
 walks straight into it. Lesson 2's forward KL would have
-punished this (it is mode-covering), but the GAN's JS-like
-divergence does not.
+punished this (it is mode-covering: it visits the abandoned
+mode and charges for the zero), but the GAN's JS-like
+divergence does not. The decision rule for diagnosis: if
+sample diversity collapses while the loss looks healthy,
+suspect the divergence, not the architecture.
+
+![Mode collapse: half the world missing, JS = 0.216](assets/l04-mode-collapse.webp "Truth {0: 0.5, 10: 0.5}. Model {0: 1.0}. The divergence shrugs. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
 
 ## The honest price: the saddle point
+
+### Three concrete costs
 
 The GAN's bill comes due in the optimization itself. MLE
 (Lessons 2, 6-9) minimizes one function: go downhill. The GAN
@@ -190,6 +236,8 @@ two GANs by a number from training. Lesson 5 builds the
 external judge (FID). Third, mode collapse as demonstrated:
 0.216 JS for a model missing half the world.
 
+### The verdict
+
 The lecture ends the adversarial block here with a verdict,
 confirmed in the evaluation transcript: the instability of
 saddle-point optimization is why state-of-the-art generation
@@ -202,11 +250,38 @@ Lessons 6 through 10 are that move.
 | Mode collapse | Truth {0: 0.5, 10: 0.5}, model {0: 1.0} | JS = 0.216. Generator loss stuck at 0.693 |
 | No likelihood | Generator gives samples only | Cannot compute log P_θ(x). Need FID (Lesson 5) |
 
+### Where GANs run in real systems
+
+The non-saturating loss from this lesson is the standard
+generator objective in every practical GAN lineage: the
+DCGAN architecture family, StyleGAN's progressive growing
+line, and BigGAN's large-batch training all optimize it.
+[uncertain] The exact loss variants and schedules differ per
+paper. The shared core is the Lesson 3 game with the
+non-saturating generator fix. What changed across the years
+was not the game but the scaffolding: normalization,
+progressive resolution, and bigger batches to keep the two
+players balanced. When diffusion models arrived (Lessons
+8-10), they won on training stability, not on sample quality
+alone: a plain minimization has no saddle point to fall off.
+
+## Videos for this lesson
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/2RMeQ5YxIxI" title="W4L10: Saturation of GAN training" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: saturation of GAN training, the flat-gradient failure, on the board. If the embed is blocked: <a href="https://www.youtube.com/watch?v=2RMeQ5YxIxI" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/pWyRGWRUt6I" title="Generative Adversarial Networks (GANs) Explained" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">External explainer: the GAN game, both losses, mode collapse, and the DCGAN architecture, with a PyTorch training loop. If the embed is blocked: <a href="https://www.youtube.com/watch?v=pWyRGWRUt6I" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
 > [!QA]
 > Q: What is the GAN game, exactly?
 > A: Two networks, one objective J = E[log D(x)] + E[log(1 − D(G(z)))]. The discriminator maximizes J: output near 1 on real data, near 0 on fakes. The generator minimizes J: make fakes score near 1. In the hand trace, the discriminator step moved w from 0 to −0.5 (J rose from −1.386 to −1.006) and the generator step moved θ from 2 to 1.93, toward the data.
 > Follow-up: Why alternate instead of training one then the other?
 > A: Because each player's best move depends on the other's current state. A fully trained discriminator against a fixed bad generator gives no useful gradient (saturation), and a generator trained against a fixed weak discriminator fools only that weakling. They must co-evolve.
+
+> [!QA]
+> Q: Walk me through one more round of the hand trace. Where does θ go next?
+> A: After round one: θ = 1.93, w = −0.5, b = 0. Discriminator step: D(0) = 0.5 still (x = 0 kills w), D(1.93) = sigmoid(−0.965) = 0.276. The w gradient is −2·D(θ)·(1−D(θ))·θ ≈ −2·0.276·0.724·1.93 ≈ −0.77, so w moves to about −0.89 with step 0.5. Generator step: ∂J/∂θ = −D·(1−D)·w·... with the steeper w, θ moves further toward 0. Each round the compass gets sharper as the discriminator improves.
+> Follow-up: When does this trace stop converging?
+> A: When the discriminator gets too good too fast. If w plunges to −10, D(θ) hits ~0, the sigmoid saturates, and the generator's gradient dies. That is saturation in miniature: the compass needle slams to the pin and stops pointing.
 
 > [!QA]
 > Q: What is saturation, and how do you fix it?
@@ -219,6 +294,24 @@ Lessons 6 through 10 are that move.
 > A: The generator covers one mode and ignores the rest: truth {0: 0.5, 10: 0.5}, model {0: 1.0}. The JS divergence is only 0.216, so the objective barely objects, and the generator's loss sits at a stable 0.693 with no incentive to explore 10. The discriminator knows 10 is real, but the generator never goes there to feel the gradient.
 > Follow-up: Would forward KL have prevented it?
 > A: Yes. Forward KL averages over the truth, visits the abandoned mode at 10, and charges infinity (the model assigns it probability zero). That is why the lecture calls forward KL mode-covering, and why VAE samples look blurry instead of collapsed: opposite failure, opposite cause.
+
+> [!QA]
+> Q: Your GAN's samples all look alike but the loss curve looks fine. Diagnose it.
+> A: Mode collapse with a healthy-looking loss is the classic signature. Check sample diversity directly: cluster a few thousand samples and count occupied clusters, or eyeball a grid. If one cluster dominates, the generator found the collapsed equilibrium. The loss cannot see it because JS = 0.216 barely punishes the missing mode. Fixes, in order: check the critic is not too strong (a perfect critic hides the collapse), add minibatch discrimination or diversity pressure, or switch divergence families (Lesson 5).
+> Follow-up: How do you tell collapse apart from a genuinely narrow dataset?
+> A: Compare against the training data's own diversity. Cluster the real data the same way. If the real data fills 40 clusters and your samples fill 3, the generator collapsed. If the real data fills 3, the model is faithful.
+
+> [!QA]
+> Q: Why is GAN training harder to monitor than MLE training?
+> A: MLE minimizes one function, so the loss going down means progress. The GAN solves a saddle point: the discriminator climbs while the generator descends. The generator's loss can fall because the generator improved or because the discriminator got worse. There is no single number to watch. Practitioners watch samples and external metrics (FID) instead of the training loss.
+> Follow-up: What is the one training number you do watch?
+> A: The discriminator's accuracy on a held-out split of real versus recent fake batches. If it sits near 100%, the critic is too strong and the generator gets no gradient. If it sits near 50%, the generator is winning or the critic is broken. Healthy training keeps it in between, moving slowly.
+
+> [!QA]
+> Q: Design a GAN training run for 64×64 face images. Name the failure guards.
+> A: Generator: noise z through transposed convolutions to 64×64 (the DCGAN pattern). Discriminator: convolutions down to one score. Loss: non-saturating generator loss, never the original minimax form. Guards: (1) watch D's fake-batch accuracy. If it pins near 100% on real and 0% on fakes, the critic is too strong: rebalance update ratios. (2) Sample a grid every epoch and count distinct-looking faces to catch mode collapse early. (3) Track FID against a held-out set (Lesson 5) since the training loss is uninformative.
+> Follow-up: The grid shows 50 near-identical faces by epoch 3. What broke?
+> A: Mode collapse, early. The generator found one face that fools D and stopped exploring. Standard responses: strengthen diversity pressure, restart with a different seed, or accept that the JS-like divergence permits this equilibrium and move to a latent-variable model. Do not just train longer. The equilibrium is stable.
 
 ## Recap: the whole lesson on one screen
 
@@ -234,16 +327,14 @@ Lessons 6 through 10 are that move.
 ## Official sources and further reading
 
 **Official:**
-- W2_L7: GANs formulation:
-  https://www.youtube.com/watch?v=pLD5Q5cS4kI
-- W4L10: Saturation of GAN training:
-  https://www.youtube.com/watch?v=2RMeQ5YxIxI
+- W2_L7: GANs formulation: [paper](https://www.youtube.com/watch?v=pLD5Q5cS4kI)
+- W4L10: Saturation of GAN training: [paper](https://www.youtube.com/watch?v=2RMeQ5YxIxI)
 
 **Further reading:**
 - Goodfellow et al., "Generative Adversarial Nets" (2014):
-  https://arxiv.org/abs/1406.2661: the original minimax game.
+  - [the original minimax game.](https://arxiv.org/abs/1406.2661)
 - Arjovsky, Chintala, Bottou, "Wasserstein GAN" (2017):
-  https://arxiv.org/abs/1701.07875: the answer to saturation (Lesson 5).
+  - [the answer to saturation (Lesson 5).](https://arxiv.org/abs/1701.07875)
 
 **Caveats.** The objective, the two-player structure, and the saturation topic are confirmed in the W2_L6 and evaluation transcripts. The hand trace, the 0.001/0.693 saturation numbers, and the 0.216 mode-collapse computation are the lesson's own worked examples. [uncertain] The lecture's exact numeric demonstrations are unknown.
 
