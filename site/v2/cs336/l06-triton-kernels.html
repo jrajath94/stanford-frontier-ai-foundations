@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.classList.remove('no-js');</script>
 <title>Lecture 6: Benchmarking, Profiling, and Triton Kernels — Stanford Frontier AI</title>
-<meta name="description" content="From measurement to metal: benchmark discipline, profiler literacy, warps and occupancy, bank conflicts, and writing Triton kernels for GeLU, softmax, and tiled">
+<meta name="description" content="From measurement to metal: benchmark discipline, profiler literacy, warps and occupancy, bank conflicts, the Triton kernel shape, GeLU/softmax/tiled-matmul kern">
 <link rel="stylesheet" href="../assets/vendor/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
 </head>
@@ -81,6 +81,7 @@
 <li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
 <li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
 <li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../cs229s/crash-course-02.html" data-page="cs229s-crash-02">CS229S · Crash course 2</a></li>
 </ul>
 <h3>CS224N: NLP with Deep Learning</h3><ul>
 <li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
@@ -146,18 +147,14 @@
 </ul>
 <h3>CS329A: Self-Improving AI Agents</h3><ul>
 <li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
-<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
-<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
-<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
-<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
-<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
-<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
-<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
-<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
-<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
-<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
-<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
-<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+<li><a href="../cs329a/l01-course-overview.html" data-page="cs329a-l01">L01 · Course Overview</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Compute Scaling</a></li>
+<li><a href="../cs329a/l03-feedback-tools-code.html" data-page="cs329a-l03">L03 · Feedback, Tools, Code</a></li>
+<li><a href="../cs329a/l04-planning-multistep-reasoning.html" data-page="cs329a-l04">L04 · Planning and Multi-Step Reasoning</a></li>
+<li><a href="../cs329a/l05-search-at-scale.html" data-page="cs329a-l05">L05 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l06-train-time-scaling.html" data-page="cs329a-l06">L06 · Train-Time Scaling</a></li>
+<li><a href="../cs329a/l07-agentic-evaluations.html" data-page="cs329a-l07">L07 · Agentic Evaluations</a></li>
+<li><a href="../cs329a/l08-future-directions.html" data-page="cs329a-l08">L08 · Future Directions</a></li>
 </ul>
 <h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
 <li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
@@ -219,109 +216,200 @@
       <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / Lecture 6: Benchmarking, Profiling, and Triton Kernels</nav>
       <h1>Lecture 6: Benchmarking, Profiling, and Triton Kernels</h1>
       <p class="meta-line">2026-04-15 · Instructor: Percy Liang · 1:26:34 · Spring 2026</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="xnDHaNUvHBg"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/xnDHaNUvHBg" title="Stanford CS336 Spring 2026 Lecture 6: Triton and Benchmarking" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=xnDHaNUvHBg" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Percy Liang goes from benchmarking discipline to hand-written Triton kernels: GeLU, softmax, and tiled matmul.</p></div><h2 id="the-problem-same-math-375x-slower">The problem: same math, 3.75x slower</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="xnDHaNUvHBg"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/xnDHaNUvHBg" title="Stanford CS336 Spring 2026 Lecture 6: Triton and Benchmarking" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=xnDHaNUvHBg" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Percy Liang goes from benchmarking discipline to hand-written Triton kernels: GeLU, softmax, and tiled matmul.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>No prerequisites are assumed. Every term is defined at first use.
+The lecture&rsquo;s order is deliberate: measure first, understand the
+hardware second, write kernels third. The philosophy: benchmark and
+profile first, change code second, measure again. This chapter
+follows that order.</p>
+<h2 id="the-problem-same-math-375x-slower">The problem: same math, 3.75x slower</h2>
 <p>Three implementations of GeLU. Same function. Same input. The naive
 PyTorch version runs at 3.75 (slowest in the demo). The compiled
-version is fast. The built-in is fastest <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=1814s" target="_blank" rel="noopener">30:14 <span class="ts">⏱30:14</span></a>. Nothing
-about the math changed. Everything about the memory traffic did.</p>
-<p>This lecture is about that gap. Philosophy first: benchmark and
-profile first, change code second, measure again
-<a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=1309s" target="_blank" rel="noopener">21:49 <span class="ts">⏱21:49</span></a>. Then the hardware details that decide speed. Then
-writing the kernels yourself.</p>
+version is fast. The built-in is fastest. Nothing about the math
+changed. Everything about the memory traffic did.</p>
+<h3 id="subchapter-the-gelu-race-explained">Subchapter: the GeLU race, explained</h3>
+<p>Naive PyTorch GeLU: tanh, multiply, add, each a separate kernel.
+Between kernels, every intermediate returns to HBM. Five kernels,
+ten HBM passes. The compiled version (torch.compile): the graph
+fuses into one Triton kernel, one read, one write. The built-in:
+one hand-written kernel, same shape. The race is not about
+arithmetic. It is about round trips. The naive version loses
+because it commutes to the warehouse between every step.</p>
 <h2 id="the-hardware-once-more-with-numbers">The hardware, once more, with numbers</h2>
 <p>SMs: 100-200 per GPU. Registers: 65K per thread-block budget class,
 256K per SM on B200. L1/shared per SM, L2 chip-wide, HBM large and
 growing. Bandwidth runs inverse to size: registers fastest, HBM
-slowest at about 8 TB/s and still the bottleneck <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=30s" target="_blank" rel="noopener">00:30 <span class="ts">⏱00:30</span></a>.
-Newer chips add wrinkles (H100/B200 thread-block clusters, tensor
-memory between registers and shared), but the model from the GPUs
-lecture holds.</p>
+slowest at about 8 TB/s and still the bottleneck. Newer chips add
+wrinkles (H100/B200 thread-block clusters, tensor memory between
+registers and shared), but the model from the GPUs lecture holds.</p>
+<h3 id="subchapter-the-grid">Subchapter: the grid</h3>
+<p>Kernels launch as a <strong>grid</strong> of thread blocks. The grid is 1D, 2D,
+or 3D. Each block knows its position via <code>program_id</code>. The GeLU
+kernel launches a 1D grid: block i handles elements [i<em>BLOCK,
+(i+1)</em>BLOCK). The matmul launches a 2D grid: block (i, j) handles
+C tile (i, j). The grid is the work decomposition. Get it wrong and
+elements are skipped or computed twice.</p>
+<figure><img alt="Grid of blocks" src="assets/l06-grid-blocks.svg"><figcaption>Shell 4. The block symbol: grid, SM, shared memory, registers. Source: lecture programming-model slides.</figcaption></figure>
 <h2 id="why-thread-blocks-exist">Why thread blocks exist</h2>
 <p>Threads alone suffice for elementwise ops: GeLU maps one thread per
-element <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=274s" target="_blank" rel="noopener">04:34 <span class="ts">⏱04:34</span></a>. Softmax and matmul need threads to
-communicate: a softmax row must agree on a max and a sum, a matmul
-tile must share its inputs. The thread block is the unit that shares
-memory: one block lands on one SM, reads from HBM into shared memory,
-lets threads talk, writes back.</p>
-<figure><img alt="Grid of blocks" src="assets/l06-grid-blocks.svg"><figcaption>Launch a grid of blocks. Each block runs on one SM with shared memory. Threads own registers. HBM is global.</figcaption></figure>
-<p><strong>Triton</strong> (from OpenAI) is built on this. You specify what each block
-does, not what each thread does. For communicating ops, block-thinking
-removes CUDA&rsquo;s synchronization bookkeeping <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=405s" target="_blank" rel="noopener">06:45 <span class="ts">⏱06:45</span></a>. It sits
-between PyTorch (whole tensors) and CUDA (single threads).</p>
+element. Softmax and matmul need threads to communicate: a softmax
+row must agree on a max and a sum, a matmul tile must share its
+inputs. The thread block is the unit that shares memory: one block
+lands on one SM, reads from HBM into shared memory, lets threads
+talk, writes back.</p>
+<h3 id="subchapter-triton-thinks-in-blocks">Subchapter: Triton thinks in blocks</h3>
+<p><strong>Triton</strong> (from OpenAI) is built on this. You specify what each
+block does, not what each thread does. For communicating ops,
+block-thinking removes CUDA&rsquo;s synchronization bookkeeping. It sits
+between PyTorch (whole tensors) and CUDA (single threads). The
+compiler maps your block program to threads, warps, and PTX. You
+think at the level the hardware rewards.</p>
 <h2 id="where-naive-code-breaks-the-hardware-decides-speed">Where naive code breaks: the hardware decides speed</h2>
 <p>The programming model (threads, blocks, grid) gives correctness. The
-hardware (warps, banks, SM counts) decides speed
-<a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=424s" target="_blank" rel="noopener">07:04 <span class="ts">⏱07:04</span></a>. Four demonstrations.</p>
+hardware (warps, banks, SM counts) decides speed. Four
+demonstrations.</p>
 <h3 id="break-1-warps-stall-on-hbm">Break 1: warps stall on HBM</h3>
 <p>Thirty-two threads execute in lockstep as a warp. The SM runs many
-warps and switches between them at zero cost: while one warp waits 100
-cycles on HBM, another runs tensor cores <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=614s" target="_blank" rel="noopener">10:14 <span class="ts">⏱10:14</span></a>. Latency
-hiding is free, but only if enough warps are resident to switch
-between. A kernel with too few warps stalls: nothing to switch to.</p>
+warps and switches between them at zero cost: while one warp waits
+100 cycles on HBM, another runs tensor cores. Latency hiding is
+free, but only if enough warps are resident to switch between. A
+kernel with too few warps stalls: nothing to switch to.</p>
+<h3 id="subchapter-the-latency-math">Subchapter: the latency math</h3>
+<p>HBM latency: ~400 cycles. A warp switch: ~0 cycles. To hide 400
+cycles of latency, the SM needs enough warps that one is always
+ready. If each warp computes for 50 cycles between memory waits, you
+need 8 warps in flight per stalled warp. This is why occupancy
+matters: resident warps are the latency-hiding budget. Few warps,
+no hiding, the SM idles.</p>
 <h3 id="break-2-registers-cap-occupancy">Break 2: registers cap occupancy</h3>
 <p>Each thread caps at 255 registers. More registers per thread means
 fewer threads per SM.</p>
-<figure><img alt="Occupancy" src="assets/l06-occupancy.svg"><figcaption>128 threads x 160 registers = 3 blocks per SM = 12 of 64 warps = 18% occupancy. Fewer, fatter threads can win.</figcaption></figure>
+<figure><img alt="Occupancy" src="assets/l06-occupancy.svg"><figcaption>Shell 2. Count registers: 128 x 160 = 3 blocks per SM = 18% occupancy. Source: lecture occupancy slides.</figcaption></figure>
 <p>Work it: 128 threads/block x 160 registers = about 20K registers per
-block. At 65K registers per SM, 3 blocks fit: 12 warps out of a 64-warp
-max = 18% occupancy <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=769s" target="_blank" rel="noopener">12:49 <span class="ts">⏱12:49</span></a>. Low occupancy is not
-automatically bad: <strong>thread coarsening</strong> (one thread, 8 elements) does
-more work per thread with fewer threads, and the compiler does this
-for you in PTX <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=730s" target="_blank" rel="noopener">12:10 <span class="ts">⏱12:10</span></a>. Fix occupancy when profiling shows
-the SM stalling for lack of ready warps. Otherwise chase memory
-coalescing and tiling first: they move the needle more.</p>
+block. At 65K registers per SM, 3 blocks fit: 12 warps out of a
+64-warp max = 18% occupancy. Low occupancy is not automatically bad:
+<strong>thread coarsening</strong> (one thread, 8 elements) does more work per
+thread with fewer threads, and the compiler does this for you in
+PTX. Fix occupancy when profiling shows the SM stalling for lack of
+ready warps. Otherwise chase memory coalescing and tiling first:
+they move the needle more.</p>
+<h3 id="subchapter-the-occupancy-tradeoff-worked">Subchapter: the occupancy tradeoff, worked</h3>
+<p>Two designs for the same GeLU on 1M elements. Design A: 1,024
+threads per block, 32 registers each. Blocks per SM: limited by the
+2,048-thread cap to 2 blocks, 64 warps, 100% occupancy. Each thread
+does little. Design B: 128 threads per block, 160 registers each, 8
+elements per thread (coarsened). 3 blocks per SM, 12 warps, 18%
+occupancy. Each thread does 8x the work with values in registers.</p>
+<p>Design B often wins: fewer threads means less scheduling overhead,
+and register-resident values never touch shared memory. The lesson:
+occupancy is a means, not a goal. The goal is useful work per
+cycle. Measure the kernel time, not the occupancy ratio.</p>
+<div class="qa"><div class="q">Your kernel reports 18% occupancy. Should you fix it?</div><div class="a"><p>Not necessarily. Occupancy measures how many warps are resident, not how much work gets done. If each thread does substantial work (high registers from thread coarsening), low occupancy with fat threads can beat high occupancy with thin threads. Fix occupancy when profiling shows the SM stalling for lack of ready warps. Otherwise, chase memory coalescing and tiling first: they move the needle more.
+Bank conflicts govern shared memory. It has 32 banks, one accessor per cycle, and conflicts serialize. Coalescing governs HBM: a warp&rsquo;s accesses merge into 128-byte cache-line transactions. One is about on-chip parallelism, the other about off-chip bursts. Profile both. They fail independently.</p><div class="followup"><strong>Follow-up:</strong> Bank conflicts vs coalescing: which memory do they govern?</div></div></div>
 <h3 id="break-3-bank-conflicts-serialize-shared-memory">Break 3: bank conflicts serialize shared memory</h3>
 <p>Shared memory has 32 banks of 4 bytes. One thread per bank per cycle.
 Thirty-two threads reading one column all hit bank 0: a 32-way
-conflict, 32x serialized <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=864s" target="_blank" rel="noopener">14:24 <span class="ts">⏱14:24</span></a>. Work the waste: 32 threads
-that should finish in 1 cycle take 32. Matmul needs rows and columns,
-so conflicts are unavoidable by layout alone. <strong>Swizzling</strong> rearranges
+conflict, 32x serialized. Work the waste: 32 threads that should
+finish in 1 cycle take 32. Matmul needs rows and columns, so
+conflicts are unavoidable by layout alone. <strong>Swizzling</strong> rearranges
 shared memory to dodge them.</p>
-<figure><img alt="Bank conflicts" src="assets/l06-bank-conflict.svg"><figcaption>32 banks. Column access: all threads hit bank 0 and serialize. Swizzling rearranges the layout.</figcaption></figure>
+<figure><img alt="Bank conflicts" src="assets/l06-bank-conflict.svg"><figcaption>Shell 3. The bank rule: 32 banks, swizzle the layout. Source: lecture bank-conflict slides.</figcaption></figure>
+<h3 id="subchapter-swizzling-the-idea">Subchapter: swizzling, the idea</h3>
+<p>Swizzling permutes the shared-memory layout so that the access
+pattern that was conflicted becomes spread. The classic: XOR the row
+index into the column index when storing a tile. Thread (i, j)
+stores at column (j XOR i) instead of j. Now the column access that
+hit bank 0 thirty-two times hits thirty-two different banks. The
+data is the same. The layout changed. One XOR in the address math,
+32x on the access. This is the kind of trick that separates a
+working matmul from a fast one.</p>
 <h3 id="break-4-block-counts-leave-sms-idle">Break 4: block counts leave SMs idle</h3>
 <p>With 148 SMs and 160 blocks, the last wave runs 12 blocks while 136
-SMs idle <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=1095s" target="_blank" rel="noopener">18:15 <span class="ts">⏱18:15</span></a>. Size block counts to divide SM counts. Same
-wave-quantization idea as the GPUs lecture&rsquo;s tiles: one extra unit of
-work can cost a whole extra wave.</p>
-<div class="qa"><div class="q">Your kernel reports 18% occupancy. Should you fix it?</div><div class="a"><p>Not necessarily. Occupancy measures how many warps are resident, not how much work gets done. If each thread does substantial work (high registers from thread coarsening), low occupancy with fat threads can beat high occupancy with thin threads. Fix occupancy when profiling shows the SM stalling for lack of ready warps. Otherwise, chase memory coalescing and tiling first: they move the needle more.
-Bank conflicts govern shared memory. It has 32 banks, one accessor per cycle, and conflicts serialize. Coalescing governs HBM: a warp&rsquo;s accesses merge into 128-byte cache-line transactions. One is about on-chip parallelism, the other about off-chip bursts. Profile both. They fail independently.</p><div class="followup"><strong>Follow-up:</strong> Bank conflicts vs coalescing: which memory do they govern?</div></div></div>
+SMs idle. Size block counts to divide SM counts. Same
+wave-quantization idea as the GPUs lecture&rsquo;s tiles: one extra unit
+of work can cost a whole extra wave.</p>
+<h3 id="subchapter-the-grid-size-rule">Subchapter: the grid-size rule</h3>
+<p>Grid size G, SM count S. Waves = ceil(G / S). The last wave runs
+G mod S blocks. Pick G as a multiple of S when you can. When you
+cannot (the problem size decides G), pick the tile size so that G
+lands near a multiple. The autotuner tries several tile sizes: the
+ones that wave-quantize badly lose. This is not a separate
+optimization. It falls out of tuning.</p>
 <h2 id="measure-first-benchmark-rules">Measure first: benchmark rules</h2>
 <p>Benchmarking measures end-to-end time. It does not say where time
 goes, but it is the number you ultimately care about, and it shows
-scaling with dimension <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=1356s" target="_blank" rel="noopener">22:36 <span class="ts">⏱22:36</span></a>.</p>
-<figure><img alt="Benchmark rules" src="assets/l06-bench-rules.svg"><figcaption>Warm up, CUDA events, synchronize, repeat, profile. In that order, every time.</figcaption></figure>
-<p>The rules: warm up first (lazy compilation pollutes the first run).
-Time with CUDA events recorded on the device, then synchronize: the
-GPU is async, and without the barrier you time nothing
-<a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=1481s" target="_blank" rel="noopener">24:41 <span class="ts">⏱24:41</span></a>. Repeat and average. Use P95 if picky. Then scale the
-problem: matmul time is flat until dim ~2000, then grows cubically,
-because small matrices cannot fill the machine <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=1555s" target="_blank" rel="noopener">25:55 <span class="ts">⏱25:55</span></a>.</p>
+scaling with dimension.</p>
+<figure><img alt="Benchmark rules" src="assets/l06-bench-rules.svg"><figcaption>Shell 1. The measurement loop: warm up, time, repeat, profile. Source: lecture benchmarking slides.</figcaption></figure>
+<h3 id="subchapter-the-five-rules-each-with-its-reason">Subchapter: the five rules, each with its reason</h3>
+<p><strong>Warm up.</strong> Run the kernel 10 times before timing. The first run
+includes lazy compilation, cold caches, and clock ramp-up. Timing it
+measures the setup, not the kernel.</p>
+<p><strong>CUDA events.</strong> Record start and end events on the device, then
+synchronize. The GPU is async: without the barrier you time the
+launch, not the work. <code>torch.cuda.synchronize()</code> before and after,
+or your numbers are fiction.</p>
+<p><strong>Repeat and average.</strong> Run 100 times. Report the median. The mean
+is dragged by outliers: a context switch during one run poisons the
+average. Report P95 too when tail latency matters.</p>
+<p><strong>Scale the problem.</strong> Matmul time is flat until dim ~2000, then
+grows cubically, because small matrices cannot fill the machine.
+Report the size where throughput flattens: that is the kernel&rsquo;s
+real number.</p>
+<p><strong>Compare against the roofline.</strong> The ceiling for your op&rsquo;s
+intensity tells you when to stop. A kernel at its ceiling is done.
+A kernel below it has headroom.</p>
+<h3 id="subchapter-a-benchmark-harness-sketched">Subchapter: a benchmark harness, sketched</h3>
+<pre><code class="language-python">def bench(fn, *args, warmup=10, iters=100):
+    for _ in range(warmup):
+        fn(*args)                          # flush compile + caches
+    torch.cuda.synchronize()
+    start = torch.cuda.Event(enable_timing=True)
+    end = torch.cuda.Event(enable_timing=True)
+    times = []
+    for _ in range(iters):
+        start.record(); fn(*args); end.record()
+        torch.cuda.synchronize()
+        times.append(start.elapsed_time(end))  # milliseconds
+    times.sort()
+    return times[len(times)//2]            # median
+</code></pre>
+<p>Every benchmark that skips a step is fiction. Warmup, events,
+synchronize, repeat, median. In that order, every time.</p>
 <h2 id="profiling-reads-the-kernel-names">Profiling reads the kernel names</h2>
 <p>Profiling says where time goes and what actually ran. PyTorch&rsquo;s
 profiler (Nsight in the assignment) reveals the kernels underneath
-<code>a + b</code> and <code>a @ b</code> <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=1585s" target="_blank" rel="noopener">26:25 <span class="ts">⏱26:25</span></a>.</p>
+<code>a + b</code> and <code>a @ b</code>.</p>
 <pre class="ascii">cutlass _ sm100 _ f32 _ 64x64x16
 library   arch    dtype  tile shape
 </pre>
 <p>The names are informative: <code>cutlass</code> (NVIDIA&rsquo;s linear-algebra
-library), <code>sm100</code> (Blackwell), <code>f32</code> (dtype), <code>64x64x16</code> (tile shape).
-Change dimensions and the kernel changes: 128x128 picks a different
-tile than 64x64. What looks like one PyTorch op is a dispatch over many
-hand-tuned kernels <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=1726s" target="_blank" rel="noopener">28:46 <span class="ts">⏱28:46</span></a>. The GeLU race is explained the
-same way: naive builds one kernel per primitive with HBM round trips
-between each. Built-in is one hand-written kernel. Compiled fuses the
-graph into one Triton kernel automatically.</p>
-<figure><img alt="GeLU race" src="assets/l06-gelu-race.svg"><figcaption>Naive: one kernel per op, HBM round trips between each. Compiled/built-in: one fused kernel.</figcaption></figure>
+library), <code>sm100</code> (Blackwell), <code>f32</code> (dtype), <code>64x64x16</code> (tile
+shape). Change dimensions and the kernel changes: 128x128 picks a
+different tile than 64x64. What looks like one PyTorch op is a
+dispatch over many hand-tuned kernels. The GeLU race is explained
+the same way: naive builds one kernel per primitive with HBM round
+trips between each. Built-in is one hand-written kernel. Compiled
+fuses the graph into one Triton kernel automatically.</p>
+<figure><img alt="GeLU race" src="assets/l06-gelu-race.svg"><figcaption>Shell 4. Fusion measured: naive kernels vs one fused kernel. Source: lecture GeLU slides.</figcaption></figure>
+<h3 id="subchapter-reading-a-profiler-timeline">Subchapter: reading a profiler timeline</h3>
+<p>The timeline shows kernels as blocks on a row per stream. Wide
+blocks are slow kernels. Gaps between blocks are launch overhead or
+synchronization. The first question: which block is widest? The
+second: are there gaps? A timeline of many thin blocks with gaps is
+the launch-overhead failure. A timeline with one wide block is the
+tuning target. Profile before you optimize. The widest block is the
+only one that matters.</p>
 <div class="qa"><div class="q">Why is the naive GeLU so much slower if it computes the same function?</div><div class="a"><p>It launches one kernel per primitive (tanh, multiply, add), and between kernels every intermediate returns to HBM. The runtime is dominated by memory round trips, not arithmetic: the op is memory bound, so kernel count is the cost. The fused versions read once and write once. Same FLOPs, far fewer bytes moved.
 For correctness first: get the math right in PyTorch, verify against the built-in, then compile or hand-write the kernel. The lecture&rsquo;s order is deliberate: naive for understanding, profiler for diagnosis, Triton for speed.</p><div class="followup"><strong>Follow-up:</strong> When would you still write the naive version?</div></div></div>
 <h2 id="the-key-question">The key question</h2>
-<p>The breaks are all about the gap between the programming model and the
-hardware. Threads are the wrong unit of thought for speed: they are too
-fine. What if you think in blocks instead? One block, one SM, one chunk
-of shared memory, one trip to HBM. That is the Triton shape.</p>
+<p>The breaks are all about the gap between the programming model and
+the hardware. Threads are the wrong unit of thought for speed: they
+are too fine. What if you think in blocks instead? One block, one
+SM, one chunk of shared memory, one trip to HBM. That is the Triton
+shape.</p>
 <h2 id="the-triton-kernel-shape">The Triton kernel shape</h2>
-<p>Every kernel follows one shape <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=2384s" target="_blank" rel="noopener">39:44 <span class="ts">⏱39:44</span></a>:</p>
-<figure><img alt="Triton kernel shape" src="assets/l06-triton-gelu.svg"><figcaption>pid: which block am I. offsets: my slice. tl.load, compute, tl.store. Pointers are integers. Masks guard the tail.</figcaption></figure>
+<p>Every kernel follows one shape:</p>
+<figure><img alt="Triton kernel shape" src="assets/l06-triton-gelu.svg"><figcaption>Shell 4. The kernel shape: pid, offsets, load, compute, store, mask. Source: lecture Triton slides.</figcaption></figure>
 <pre><code class="language-python">@triton.jit
 def gelu_kernel(x_ptr, y_ptr, n, BLOCK: tl.constexpr):
     pid = tl.program_id(0)              # which block am I
@@ -332,60 +420,184 @@ def gelu_kernel(x_ptr, y_ptr, n, BLOCK: tl.constexpr):
     tl.store(y_ptr + offs, y, mask=mask)   # write back
 # launch: gelu_kernel[(n // BLOCK,)](x, y, n, BLOCK)
 </code></pre>
-<p>Read it line by line. <code>pid</code>: which block am I. <code>offs</code>: my slice of the
-array. <code>mask</code>: the tail guard, for when n does not divide BLOCK.
-<code>tl.load</code>: one HBM read into registers or shared memory (the compiler
-decides which). Compute. <code>tl.store</code>: one write back. Pointers are
-integers: addresses, not objects. The grid <code>(n // BLOCK,)</code> says how
-many blocks run.</p>
+<p><code>BLOCK: tl.constexpr</code> marks BLOCK as a compile-time constant. The
+compiler builds a separate specialized kernel for each BLOCK value.
+The subchapter below unpacks why that matters.</p>
+<p>Read it line by line. <code>pid</code>: which block am I. <code>offs</code>: my slice of
+the array. <code>mask</code>: the tail guard, for when n does not divide BLOCK.
+<code>tl.load</code>: one HBM read into registers or shared memory (the
+compiler decides which). Compute. <code>tl.store</code>: one write back.
+Pointers are integers: addresses, not objects. The grid <code>(n //
+BLOCK,)</code> says how many blocks run.</p>
+<h3 id="subchapter-the-mask-why-it-matters">Subchapter: the mask, why it matters</h3>
+<p>Without the mask, the last block reads past the array when n does
+not divide BLOCK. Reading past the end is undefined: it can return
+garbage or fault. The mask sets out-of-range positions to a safe
+value (0 for loads) and skips the store. Every Triton kernel has
+one. Forgetting it is the most common correctness bug, and it is
+silent: the kernel runs, the numbers are almost right, the tail is
+wrong.</p>
+<h3 id="subchapter-tlconstexpr-the-compile-time-knob">Subchapter: tl.constexpr, the compile-time knob</h3>
+<p><code>BLOCK: tl.constexpr</code> means BLOCK is known at compile time. The
+compiler unrolls loops over it, sizes the shared memory, and picks
+the thread count. Change BLOCK and the kernel recompiles: a new
+specialization, tuned for that size. This is why autotuning works:
+each candidate BLOCK is a separate compiled kernel, benchmarked
+against the others.</p>
+<h3 id="subchapter-the-ptx-underneath">Subchapter: the PTX underneath</h3>
 <p>Underneath, Triton compiles to PTX: <code>ld.global</code> into registers,
-arithmetic, <code>st.global</code> back <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=3041s" target="_blank" rel="noopener">50:41 <span class="ts">⏱50:41</span></a>. The PTX shows the
-compiler&rsquo;s thread coarsening: one thread processing 8 elements because
-the per-element work was too thin. PTX is generated, not hand-written,
+arithmetic, <code>st.global</code> back. The PTX shows the compiler&rsquo;s thread
+coarsening: one thread processing 8 elements because the
+per-element work was too thin. PTX is generated, not hand-written,
 unless you believe you beat NVIDIA&rsquo;s compiler.</p>
+<p>Read one line: <code>ld.global.v4.b32</code> loads 4 32-bit values at once
+(vectorized: one instruction, 16 bytes). The compiler vectorized
+your scalar loads because the addresses were contiguous. Write
+scattered addresses and you get 4 scalar loads. The PTX tells you
+whether the compiler saw what you meant.</p>
 <h2 id="softmax-one-row-per-block">Softmax: one row per block</h2>
-<p>Naive PyTorch softmax: max, subtract, exp, sum, divide = 5MN reads +
-3MN writes across separate kernels <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=3580s" target="_blank" rel="noopener">59:40 <span class="ts">⏱59:40</span></a>. Triton: one row
-per block, everything in one kernel.</p>
-<figure><img alt="Softmax blocks" src="assets/l06-softmax-block.svg"><figcaption>Row fits: one block, PyTorch-like code. Row too long: loop over tiles with an accumulator.</figcaption></figure>
-<p>Blocksize = next power of two above the column count. Masked-out tail
-elements become -inf (zero after softmax). If the row exceeds the
-block, loop over tiles: each thread accumulates its tile&rsquo;s partial sum,
-then reduce across threads <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=3923s" target="_blank" rel="noopener">65:23 <span class="ts">⏱65:23</span></a>. Blocks do not share
-memory, so rows never interact: the decomposition is clean.</p>
-<p>Work the savings. M rows, N columns. Naive: 5MN reads + 3MN writes = 8
-MN memory accesses across 5 kernels. Triton: MN reads + MN writes in
-one kernel = 2 MN. Four times fewer accesses, one kernel launch
-instead of five. The max-subtract-exp-sum-divide all happen in fast
-memory.</p>
+<p>Naive PyTorch softmax: max, subtract, exp, sum, divide = 5MN reads
++ 3MN writes across separate kernels. Triton: one row per block,
+everything in one kernel.</p>
+<figure><img alt="Softmax blocks" src="assets/l06-softmax-block.svg"><figcaption>Shell 4. The reduction pattern: one block, or tiles with an accumulator. Source: lecture softmax slides.</figcaption></figure>
+<h3 id="subchapter-the-kernel-line-by-line">Subchapter: the kernel, line by line</h3>
+<pre><code class="language-python">@triton.jit
+def softmax_kernel(x_ptr, y_ptr, n_cols, BLOCK: tl.constexpr):
+    pid = tl.program_id(0)                    # which row am I
+    row = pid * n_cols + tl.arange(0, BLOCK)  # my row's offsets
+    mask = tl.arange(0, BLOCK) &lt; n_cols       # tail guard
+    x = tl.load(x_ptr + row, mask=mask, other=-float('inf'))
+    m = tl.max(x, axis=0)                     # row max
+    x = x - m                                 # subtract max
+    e = tl.exp(x)                             # exp
+    s = tl.sum(e, axis=0)                     # row sum
+    y = e / s                                 # normalize
+    tl.store(y_ptr + row, y, mask=mask)
+</code></pre>
+<p>Blocksize = next power of two above the column count. Masked-out
+tail elements become -inf (zero after softmax). The max-subtract
+keeps the exp in range. One block, one row, one kernel. Rows never
+interact: blocks do not share memory, so the decomposition is clean.</p>
+<h3 id="subchapter-the-savings-worked">Subchapter: the savings, worked</h3>
+<p>M rows, N columns. Naive: 5MN reads + 3MN writes = 8MN memory
+accesses across 5 kernels. Triton: MN reads + MN writes in one
+kernel = 2MN. Four times fewer accesses, one kernel launch instead
+of five. The max-subtract-exp-sum-divide all happen in fast memory.</p>
+<h3 id="subchapter-long-rows-tile-with-an-accumulator">Subchapter: long rows tile with an accumulator</h3>
+<p>If the row exceeds the block, loop over tiles: each thread
+accumulates its tile&rsquo;s partial max and sum, then reduce across
+threads. This is the online softmax from the GPUs lecture, now as
+code: track running m and l, rescale when a new max appears. Same
+math as FlashAttention&rsquo;s inner loop. The kernel shape scales from
+one row to any row by adding the accumulator.</p>
 <h2 id="tiled-matmul">Tiled matmul</h2>
 <p>Naive per-element kernel: for each C element, loop over k reading A
 and B from HBM. Reads scale as MxKxN: arithmetic intensity O(1),
-terrible <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=4364s" target="_blank" rel="noopener">72:44 <span class="ts">⏱72:44</span></a>.</p>
+terrible.</p>
 <p>Idealized: load all of A and B into shared memory, compute, write
-once. Reads O(n^2), intensity O(n). Impossible: matrices do not fit
-<a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=4555s" target="_blank" rel="noopener">75:55 <span class="ts">⏱75:55</span></a>.</p>
+once. Reads O(n^2), intensity O(n). Impossible: matrices do not fit.</p>
 <p>Tiled: globally naive, locally ideal. Each C tile gets one thread
 block. The block sweeps row-tiles of A and column-tiles of B into
 shared memory, accumulates <code>tl.dot</code> partials, writes the tile once.
-Intensity rises to O(tile size) <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=4574s" target="_blank" rel="noopener">76:14 <span class="ts">⏱76:14</span></a>.</p>
-<figure><img alt="Tiled matmul" src="assets/l06-matmul-tiling.svg"><figcaption>One C tile per block. Sweep k tiles of A rows and B columns. Accumulate in shared memory. Fuse the ReLU epilogue free.</figcaption></figure>
-<p>Bonus fusion: apply the ReLU to the accumulator before the write. The
-epilogue rides free <a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=4716s" target="_blank" rel="noopener">78:36 <span class="ts">⏱78:36</span></a>: the data is already in
-registers, so the activation costs no extra memory traffic. Strides map
-(row, col) to linear addresses. Transposes flip them
-<a href="https://www.youtube.com/watch?v=xnDHaNUvHBg&amp;t=4743s" target="_blank" rel="noopener">79:03 <span class="ts">⏱79:03</span></a>.</p>
-<p>The ladder of examples: elementwise (GeLU), reduction in one block
-(softmax), tiled reduction (long rows), tiled matmul. Each adds one
-idea. Together they are the full assignment toolkit, including
-FlashAttention.</p>
+Intensity rises to O(tile size).</p>
+<figure><img alt="Tiled matmul" src="assets/l06-matmul-tiling.svg"><figcaption>Shell 5. Tiling returns in FlashAttention: one C tile per block. Source: lecture matmul slides.</figcaption></figure>
+<h3 id="subchapter-the-k-loop-worked-with-numbers">Subchapter: the k-loop, worked with numbers</h3>
+<p>C is 1024x1024, tile 128x128. Block (0,0) owns C[0:128, 0:128]. Its
+k-loop runs 8 iterations (1024/128). Iteration 0: load A[0:128,
+0:128] and B[0:128, 0:128] into shared memory, tl.dot gives a
+128x128 partial, add it to the accumulator. Iteration 1: load
+A[0:128, 128:256] and B[128:256, 0:128], accumulate. After 8
+iterations the accumulator holds the full C tile. One HBM write. A
+and B elements were read from HBM once each instead of 1024 times.
+That is the whole loop: stream, multiply, accumulate, write once.</p>
+<h3 id="subchapter-why-128-and-not-1024">Subchapter: why 128 and not 1024</h3>
+<p>Shared memory is about 228KB per SM on Hopper. A 1024x1024 bf16 tile
+is 2MB: it does not fit. A 128x128 bf16 tile is 32KB: the A tile,
+the B tile, and the accumulator fit together. Tile size is set by
+the fastest memory that must hold the working set. The autotuner
+tries 64, 128, 256 and keeps the winner: the answer varies by chip
+and dtype.</p>
+<h3 id="subchapter-strides-map-row-col-to-addresses">Subchapter: strides map (row, col) to addresses</h3>
+<p>Triton has no 2D arrays. Block (i, j) computes its offsets as
+<code>i * BLOCK_M * stride_am + j * BLOCK_N * stride_bn</code>-style
+arithmetic. Strides map (row, col) to linear addresses. Transposes
+flip them: the same kernel with swapped strides reads B^T. This is
+why the kernel takes stride arguments: the caller decides the
+layout, the kernel just does the address math.</p>
+<h3 id="subchapter-the-free-epilogue">Subchapter: the free epilogue</h3>
+<p>Bonus fusion: apply the ReLU to the accumulator before the write.
+The epilogue rides free: the data is already in registers, so the
+activation costs no extra memory traffic.</p>
 <div class="qa"><div class="q">Why does the tiled matmul assign one C tile per thread block?</div><div class="a"><p>The C tile is the natural unit of shared-memory reuse. Computing it needs one row-band of A and one column-band of B, which the block streams through shared memory in k-tiles. The accumulator lives in fast memory for the whole sweep, and the block writes HBM exactly once. Assigning finer units (per element) would forfeit the reuse. Coarser units would not fit in shared memory.
 On the accumulator, after the k-loop, before the single HBM write. The data is already in registers/shared memory, so the activation costs no extra memory traffic: the kernel was already going to touch every element once. This is the same fusion principle as the GeLU race, applied as an epilogue.</p><div class="followup"><strong>Follow-up:</strong> Where does the ReLU go and why is it free?</div></div></div>
-<h3 id="subchapter-the-pytorch-compiler-vs-hand-written-triton">Subchapter: the PyTorch compiler vs hand-written Triton</h3>
+<div class="qa"><div class="q">Walk me through the tiled matmul&#x27;s k-loop with numbers. One C tile.</div><div class="a"><p>C is 1024x1024, tile 128x128. Block (0,0) owns C[0:128, 0:128]. Its k-loop runs 8 iterations (1024/128). Iteration 0: load A[0:128, 0:128] and B[0:128, 0:128] into shared memory, tl.dot gives a 128x128 partial, add it to the accumulator. Iteration 1: load A[0:128, 128:256] and B[128:256, 0:128], accumulate. After 8 iterations the accumulator holds the full C tile. One HBM write. A and B elements were read from HBM once each instead of 1024 times. That is the whole loop: stream, multiply, accumulate, write once.
+Shared memory is about 228KB per SM on Hopper. A 1024x1024 bf16 tile is 2MB: it does not fit. A 128x128 bf16 tile is 32KB: the A tile, the B tile, and the accumulator fit together. Tile size is set by the fastest memory that must hold the working set.</p><div class="followup"><strong>Follow-up:</strong> Why 128 and not 1024?</div></div></div>
+<h2 id="autotuning-let-the-machine-pick-the-tile">Autotuning: let the machine pick the tile</h2>
+<p>Tile size, block size, number of warps: these are tunables, and the
+right answer varies by chip, shape, and dtype. <strong>Autotuning</strong>
+benchmarks the candidates and keeps the winner.</p>
+<h3 id="subchapter-tritonautotune-the-mechanism">Subchapter: @triton.autotune, the mechanism</h3>
+<pre><code class="language-python">@triton.autotune(
+    configs=[
+        triton.Config({'BLOCK': 128}, num_warps=4),
+        triton.Config({'BLOCK': 256}, num_warps=8),
+        triton.Config({'BLOCK': 512}, num_warps=8),
+    ],
+    key=['n'],
+)
+@triton.jit
+def gelu_kernel(x_ptr, y_ptr, n, BLOCK: tl.constexpr):
+    ...
+</code></pre>
+<p>The <code>key=['n']</code> means: retune when n changes. Each config compiles
+to a separate kernel. The first call with a new n benchmarks all
+three and caches the winner. Later calls reuse it. The tuning cost
+is paid once per shape. The win is every call after.</p>
+<h3 id="subchapter-what-the-tuner-finds">Subchapter: what the tuner finds</h3>
+<p>The tuner finds what the rules predict: BLOCK sizes near multiples
+of the SM count win (wave quantization), sizes divisible by 128 win
+(coalescing), and the winner changes between A100 and H100 (different
+SM counts, different shared memory). Hand-pick a default, let the
+tuner correct you. The tuner is never wrong about the chip it runs
+on.</p>
+<h2 id="debugging-a-triton-kernel">Debugging a Triton kernel</h2>
+<p>Kernels fail silently: wrong numbers, not crashes. Four common bugs,
+each with its signature.</p>
+<h3 id="subchapter-bug-1-the-missing-mask">Subchapter: bug 1, the missing mask</h3>
+<p>Symptom: the output is correct except the last few elements, which
+are garbage or zero. Cause: no tail mask, the last block read past
+the array. Fix: add the mask. This is the most common Triton bug.
+Check it first.</p>
+<h3 id="subchapter-bug-2-the-wrong-offsets">Subchapter: bug 2, the wrong offsets</h3>
+<p>Symptom: the output looks like the input, shifted or scrambled.
+Cause: the offset math maps blocks to the wrong slice. Common
+variant: forgetting the stride, so a 2D problem is read as 1D.
+Fix: print the offsets for a 2-block launch by hand. Two blocks,
+small n, verify each element lands once.</p>
+<h3 id="subchapter-bug-3-the-dtype-surprise">Subchapter: bug 3, the dtype surprise</h3>
+<p>Symptom: the kernel runs but the numbers are wrong by a scale
+factor, or NaN. Cause: tl.load with the wrong dtype (fp32 tensor
+read as bf16 reinterprets the bits), or the accumulator in too
+narrow a type. Fix: check every pointer&rsquo;s dtype against the
+tensor&rsquo;s. Accumulate in fp32, store in the target dtype.</p>
+<h3 id="subchapter-bug-4-the-grid-that-skips-the-tail">Subchapter: bug 4, the grid that skips the tail</h3>
+<p>Symptom: the last elements are never written (stale values from a
+previous allocation). Cause: grid = n // BLOCK drops the remainder
+when n does not divide BLOCK. Fix: grid = (n + BLOCK - 1) // BLOCK
+(the ceiling), plus the mask. The mask guards the extra block&rsquo;s
+overrun. Ceiling division and masking are a pair: never one without
+the other.</p>
+<div class="qa"><div class="q">Design the benchmark harness for a kernel you just wrote.</div><div class="a"><p>Five steps in order. Warm up: run the kernel 10 times to flush lazy compilation and cold caches. Time with CUDA events recorded on the device, then synchronize: without the barrier you time the launch, not the work. Repeat 100 times and report the median, plus P95 if tail latency matters. Sweep the problem size: small sizes cannot fill the machine, so report the size where throughput flattens. Compare against the roofline ceiling for your op&rsquo;s intensity, not against zero: the ceiling tells you when to stop. Every benchmark that skips a step is fiction.
+The mean is dragged by outliers: a context switch or a thermal throttle during one run poisons the average. The median ignores them. Report P95 too when the kernel serves live traffic, because tail latency is the user experience.</p><div class="followup"><strong>Follow-up:</strong> Why median and not mean?</div></div></div>
+<div class="qa"><div class="q">The PyTorch compiler vs hand-written Triton: when do you hand-write?</div><div class="a"><p>When the compiler cannot see the optimization. The compiler fuses elementwise and simple reduction patterns for free: the GeLU race shows compiled matching built-in. Hand-write when the win needs cross-block communication (tiled matmul with a custom epilogue), a schedule the compiler will not invent (FlashAttention&rsquo;s online softmax), or hardware features Triton hides (async copies, warpgroup matmuls). The decision flow: compiler first, Triton second, ThunderKittens or CUTLASS for the last 10%. Hand-writing is a cost: brittle, per-chip, per-shape. Pay it only where the compiler leaves real money.
+Yes, on maintenance: the compiler re-tunes for each new chip automatically, while a hand-written kernel rots. On raw speed for exotic patterns, no: the hand-written kernel wins until the compiler learns the pattern. Most teams compile first and hand-write only the two or three kernels that dominate the profile.</p><div class="followup"><strong>Follow-up:</strong> Does the compiler ever beat hand-written Triton?</div></div></div>
+<div class="qa"><div class="q">What breaks when you move a tuned kernel from A100 to H100?</div><div class="a"><p>Everything sized to the old chip. SM count changed (108 to 144): tile counts that divided 108 now wave-quantize on 144. Shared memory grew: tiles sized for A100 underuse H100. Tensor core instructions changed: H100 has warpgroup MMA and TMA async copies that A100 lacks, so the old kernel leaves the new hardware&rsquo;s best features unused. Register budgets shifted. The fix is re-tuning, not porting: rerun the autotuner, recheck the roofline, and consider whether async patterns now beat your old schedule. Kernels are per-chip artifacts.
+You do not, fully. You parametrize: tile sizes, block counts, and stages as tunables, and autotune per chip at install time. The PyTorch compiler does this for you. Hand-written kernels carry a tuning table per architecture. The honest answer: portability is a compiler feature, not a kernel property.</p><div class="followup"><strong>Follow-up:</strong> How do you write kernels that survive chip changes?</div></div></div>
+<h2 id="the-pytorch-compiler-vs-hand-written-triton">The PyTorch compiler vs hand-written Triton</h2>
 <p>The PyTorch compiler (Inductor backend) traces your code into a
-graph, fuses elementwise and reduction ops, and emits Triton
-kernels automatically. The GeLU race is the demo: compiled matched
-built-in. One idea: free fusion for fusable patterns.</p>
+graph, fuses elementwise and reduction ops, and emits Triton kernels
+automatically. The GeLU race is the demo: compiled matched built-in.
+One idea: free fusion for fusable patterns.</p>
 <p>Hand-write when the compiler cannot see the optimization. Three
 cases: the pattern needs cross-block communication (a tiled matmul
 with a custom epilogue), the schedule matters more than the math
@@ -399,15 +611,27 @@ complexity and brittleness.</p>
 <p>The decision flow: compiler first, Triton second, lower third.
 Hand-writing is a cost: tuned per chip, per shape, per dtype. Pay it
 only where the compiler leaves real money.</p>
-<figure><img alt="Compiler vs Triton vs lower" src="assets/media-generation-cs336-l06-compile-vs-triton-0-8f645e34-8a8f-4fa3-bd75-ad1f39a82c62.webp"><figcaption>Can the compiler fuse it? Then free fusion. If not, write Triton. The last 10 percent needs lower tools. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
-<h3 id="subchapter-what-is-used-where-the-kernel-stack-in-production">Subchapter: what is used where (the kernel stack in production)</h3>
-<p>Each layer of the lowering stack has its production tool.</p>
+<div class="mermaid">flowchart TD
+    A["Can the compiler fuse it?"] -->|Yes| B["Free fusion via Inductor"]
+    A -->|No| C["Need cross-block or hardware control?"]
+    C -->|Custom schedule| D["Write Triton"]
+    C -->|Async, warpgroup| E["ThunderKittens / CUTLASS"]
+</div><pre class="mermaid-fallback"><code>flowchart TD
+    A[&quot;Can the compiler fuse it?&quot;] --&gt;|Yes| B[&quot;Free fusion via Inductor&quot;]
+    A --&gt;|No| C[&quot;Need cross-block or hardware control?&quot;]
+    C --&gt;|Custom schedule| D[&quot;Write Triton&quot;]
+    C --&gt;|Async, warpgroup| E[&quot;ThunderKittens / CUTLASS&quot;]
+</code></pre>
+<h2 id="what-is-used-where-the-kernel-stack-in-production">What is used where: the kernel stack in production</h2>
+<p>Each layer of the lowering stack has its production tool. Tools
+verified against their public project pages as of October 2026.</p>
 <table>
 <thead>
 <tr>
 <th>Layer</th>
 <th>Tool</th>
 <th>Where it ships</th>
+<th>Source</th>
 </tr>
 </thead>
 <tbody>
@@ -415,43 +639,56 @@ only where the compiler leaves real money.</p>
 <td>Graph fusion</td>
 <td>PyTorch compiler (Inductor)</td>
 <td>every training stack: free fusion</td>
+<td>PyTorch docs</td>
 </tr>
 <tr>
 <td>Attention</td>
 <td>FlashAttention-2/3, hand-written CUDA</td>
 <td>every training run at scale</td>
+<td>lecture 6</td>
 </tr>
 <tr>
 <td>Serving decode</td>
 <td>FlashInfer kernel library</td>
 <td>vLLM and SGLang serving</td>
+<td>FlashInfer project docs</td>
 </tr>
 <tr>
 <td>Paged KV</td>
 <td>vLLM&rsquo;s paged-attention kernels</td>
 <td>the serving standard</td>
+<td>vLLM project docs</td>
+</tr>
+<tr>
+<td>Fused LLM ops</td>
+<td>Liger-Kernel (Triton)</td>
+<td>RMSNorm, RoPE, cross-entropy patches</td>
+<td>Liger-Kernel project docs</td>
+</tr>
+<tr>
+<td>Custom masks</td>
+<td>FlexAttention (PyTorch 2.5)</td>
+<td>user-defined attention masks as Triton kernels</td>
+<td>PyTorch 2.5 docs</td>
 </tr>
 <tr>
 <td>Research peak</td>
 <td>ThunderKittens, CUTLASS DSLs</td>
 <td>squeezing the newest chips</td>
+<td>project repos</td>
 </tr>
 </tbody>
 </table>
-<p>The compiler handles
-the easy fusions everywhere. FlashAttention handles the one op that
-matters most. Serving gets its own kernels because decode is a
-different economy (memory bound, batch sensitive). Research chases
-the last 10% on hardware the compilers have not learned yet.</p>
-<figure><img alt="The kernel stack" src="assets/media-generation-cs336-l06-kernel-stack-0-e06a6f3c-7e3b-4473-9730-13390b88be1b.webp"><figcaption>Each layer lowers one level. Hand-write at the lowest layer you need. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
-<div class="qa"><div class="q">Walk me through the tiled matmul&#x27;s k-loop with numbers. One C tile.</div><div class="a"><p>C is 1024x1024, tile 128x128. Block (0,0) owns C[0:128, 0:128]. Its k-loop runs 8 iterations (1024/128). Iteration 0: load A[0:128, 0:128] and B[0:128, 0:128] into shared memory, tl.dot gives a 128x128 partial, add it to the accumulator. Iteration 1: load A[0:128, 128:256] and B[128:256, 0:128], accumulate. After 8 iterations the accumulator holds the full C tile. One HBM write. A and B elements were read from HBM once each instead of 1024 times. That is the whole loop: stream, multiply, accumulate, write once.
-Shared memory is about 228KB per SM on Hopper. A 1024x1024 bf16 tile is 2MB: it does not fit. A 128x128 bf16 tile is 32KB: the A tile, the B tile, and the accumulator fit together. Tile size is set by the fastest memory that must hold the working set.</p><div class="followup"><strong>Follow-up:</strong> Why 128 and not 1024?</div></div></div>
-<div class="qa"><div class="q">Design the benchmark harness for a kernel you just wrote.</div><div class="a"><p>Five steps in order. Warm up: run the kernel 10 times to flush lazy compilation and cold caches. Time with CUDA events recorded on the device, then synchronize: without the barrier you time the launch, not the work. Repeat 100 times and report the median, plus P95 if tail latency matters. Sweep the problem size: small sizes cannot fill the machine, so report the size where throughput flattens. Compare against the roofline ceiling for your op&rsquo;s intensity, not against zero: the ceiling tells you when to stop. Every benchmark that skips a step is fiction.
-The mean is dragged by outliers: a context switch or a thermal throttle during one run poisons the average. The median ignores them. Report P95 too when the kernel serves live traffic, because tail latency is the user experience.</p><div class="followup"><strong>Follow-up:</strong> Why median and not mean?</div></div></div>
-<div class="qa"><div class="q">The PyTorch compiler vs hand-written Triton: when do you hand-write?</div><div class="a"><p>When the compiler cannot see the optimization. The compiler fuses elementwise and simple reduction patterns for free: the GeLU race shows compiled matching built-in. Hand-write when the win needs cross-block communication (tiled matmul with a custom epilogue), a schedule the compiler will not invent (FlashAttention&rsquo;s online softmax), or hardware features Triton hides (async copies, warpgroup matmuls). The decision flow: compiler first, Triton second, ThunderKittens or CUTLASS for the last 10%. Hand-writing is a cost: brittle, per-chip, per-shape. Pay it only where the compiler leaves real money.
-Yes, on maintenance: the compiler re-tunes for each new chip automatically, while a hand-written kernel rots. On raw speed for exotic patterns, no: the hand-written kernel wins until the compiler learns the pattern. Most teams compile first and hand-write only the two or three kernels that dominate the profile.</p><div class="followup"><strong>Follow-up:</strong> Does the compiler ever beat hand-written Triton?</div></div></div>
-<div class="qa"><div class="q">What breaks when you move a tuned kernel from A100 to H100?</div><div class="a"><p>Everything sized to the old chip. SM count changed (108 to 144): tile counts that divided 108 now wave-quantize on 144. Shared memory grew: tiles sized for A100 underuse H100. Tensor core instructions changed: H100 has warpgroup MMA and TMA async copies that A100 lacks, so the old kernel leaves the new hardware&rsquo;s best features unused. Register budgets shifted. The fix is re-tuning, not porting: rerun the autotuner, recheck the roofline, and consider whether async patterns now beat your old schedule. Kernels are per-chip artifacts.
-You do not, fully. You parametrize: tile sizes, block counts, and stages as tunables, and autotune per chip at install time. The PyTorch compiler does this for you. Hand-written kernels carry a tuning table per architecture. The honest answer: portability is a compiler feature, not a kernel property.</p><div class="followup"><strong>Follow-up:</strong> How do you write kernels that survive chip changes?</div></div></div>
+<p>The compiler handles the easy fusions everywhere. FlashAttention
+handles the one op that matters most. Liger-Kernel ships
+production-quality fused Triton kernels for the LLM ops every
+training run needs (RMSNorm, RoPE, fused cross-entropy). Serving
+gets its own kernels because decode is a different economy (memory
+bound, batch sensitive). Research chases the last 10% on hardware
+the compilers have not learned yet.</p>
+<p>The kernel stack table above is the figure: each layer has its production tool.</p>
+<div class="qa"><div class="q">Your Triton softmax returns correct values except the last row block is all zeros. Diagnose it.</div><div class="a"><p>Two suspects, in order. First, the grid: grid = n // BLOCK drops the remainder, so the last partial block never launched and its outputs were never written (stale zeros). Fix: grid = (n + BLOCK - 1) // BLOCK. Second, the mask: if the grid is right but the mask is wrong (mask = offs &lt; n computed with the wrong n, or missing entirely), the tail block&rsquo;s stores were skipped. Check the grid first because it is the more common bug, then the mask. The signature &ldquo;all zeros in exactly the tail&rdquo; points at launch coverage, not arithmetic.
+Because the output tensor was freshly allocated (torch.empty or zeros) and the kernel never wrote those positions. Fresh allocations read as zeros. If the tensor had been reused, the tail would show stale values from the previous use instead. Either way, the cause is the same: those elements were never written.</p><div class="followup"><strong>Follow-up:</strong> Why stale zeros and not garbage?</div></div></div>
 <h2 id="mapping-back-what-each-idea-fixes">Mapping back: what each idea fixes</h2>
 <table>
 <thead>
@@ -475,7 +712,7 @@ You do not, fully. You parametrize: tile sizes, block counts, and stages as tuna
 <tr>
 <td>Warps stall on HBM</td>
 <td>Enough resident warps</td>
-<td>Zero-cost switching hides 100-cycle latency.</td>
+<td>Zero-cost switching hides 400-cycle latency.</td>
 </tr>
 <tr>
 <td>18% occupancy panic</td>
@@ -485,7 +722,7 @@ You do not, fully. You parametrize: tile sizes, block counts, and stages as tuna
 <tr>
 <td>32-way bank conflicts</td>
 <td>Swizzling</td>
-<td>Rearrange shared memory. Rows and columns both needed.</td>
+<td>XOR the layout. Rows and columns both needed.</td>
 </tr>
 <tr>
 <td>136 SMs idle</td>
@@ -502,6 +739,16 @@ You do not, fully. You parametrize: tile sizes, block counts, and stages as tuna
 <td>One row per block</td>
 <td>2MN accesses, one kernel. Accumulate in fast memory.</td>
 </tr>
+<tr>
+<td>Silent wrong numbers</td>
+<td>The four bugs</td>
+<td>Mask, offsets, dtype, ceiling grid. In that order.</td>
+</tr>
+<tr>
+<td>Tile-size guessing</td>
+<td>Autotune</td>
+<td>Benchmark configs per shape. Cache the winner.</td>
+</tr>
 </tbody>
 </table>
 <h2 id="the-honest-price">The honest price</h2>
@@ -510,11 +757,14 @@ per dtype: change any of the three and the tuning may rot. The
 compiler does the easy fusions for you (torch.compile), so hand-write
 only what the compiler cannot fuse. Triton does not expose every new
 hardware feature: the last 10% needs lower-level tools like
-ThunderKittens or CUTLASS DSLs. Kernel timings are demo numbers on one
-chip, not guarantees. And the deepest price: kernel skill is necessary
-but not sufficient. The parallelism lectures show that single-GPU speed
-is only one axis. The fastest kernel on one GPU still loses to a
-slower kernel on eight.</p>
+ThunderKittens or CUTLASS DSLs. Kernel timings are demo numbers on
+one chip, not guarantees. And the deepest price: kernel skill is
+necessary but not sufficient. The parallelism lectures show that
+single-GPU speed is only one axis. The fastest kernel on one GPU
+still loses to a slower kernel on eight.</p>
+<figure><img alt="Chapter plate: the kernel" src="assets/l06-chap-kernel.svg"><figcaption>Chapter plate. Left: thread thinking. Center: the block shape. Right: grid coverage. Source: lesson Triton slides.</figcaption></figure>
+<figure><img alt="Chapter plate: tiling" src="assets/l06-chap-tiling.svg"><figcaption>Chapter plate. Left: naive reads. Center: the accumulator tile. Right: tiled reuse. Source: lesson matmul slides.</figcaption></figure>
+<figure><img alt="Chapter plate: the stack" src="assets/l06-chap-stack.svg"><figcaption>Chapter plate. Left: everything by hand. Center: the compiler. Right: the decision ladder. Source: lesson compiler section.</figcaption></figure>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <p>The story in eight steps. Each step answers the one before it.</p>
 <ol>
@@ -522,21 +772,31 @@ slower kernel on eight.</p>
    version pays HBM round trips between kernels. The fused versions
    read once and write once.</li>
 <li><strong>Think in blocks.</strong> One block per SM, shared memory per block.
-   Triton specifies per-block work. The compiler handles threads.</li>
+   Triton specifies per-block work. The compiler handles threads.
+   Masks guard tails. constexpr specializes.</li>
 <li><strong>Warps hide latency.</strong> 32 threads in lockstep. Zero-cost switching
-   covers 100-cycle HBM waits, but only with enough resident warps.</li>
+   covers 400-cycle HBM waits, but only with enough resident warps.</li>
 <li><strong>Registers cap occupancy.</strong> 128 x 160 = 3 blocks per SM = 12 of 64
    warps = 18%. Fat threads beat thin threads. Fix stalls, not ratios.</li>
 <li><strong>Banks serialize.</strong> 32 banks, one thread per cycle. Column access:
-   32-way conflict. Swizzle the layout.</li>
+   32-way conflict. Swizzle with XOR.</li>
 <li><strong>Measure before you optimize.</strong> Warm up, CUDA events, synchronize,
-   repeat, profile. The GPU is async: no barrier, no measurement.</li>
+   repeat, median, scale, roofline. The GPU is async: no barrier, no
+   measurement.</li>
 <li><strong>Softmax: one row per block.</strong> 5MN+3MN accesses become 2MN in one
-   kernel. Long rows tile with an accumulator.</li>
-<li><strong>Tile the matmul.</strong> One C tile per block, sweep k-tiles through
-   shared memory, write once. Fuse the epilogue free.</li>
+   kernel. Long rows tile with an accumulator. The mask makes -inf.</li>
+<li><strong>Tile the matmul, tune the tiles.</strong> One C tile per block, sweep
+   k-tiles through shared memory, write once. Fuse the epilogue free.
+   Autotune per chip per shape. Debug in order: mask, offsets, dtype,
+   grid.</li>
 </ol>
 <h2 id="go-deeper">Go deeper</h2>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/xnDHaNUvHBg" title="Stanford CS336 Spring 2026 Lecture 6: Triton and Benchmarking" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+<ul>
+<li>Lecture 6, the session this chapter follows (the embed above): https://www.youtube.com/watch?v=xnDHaNUvHBg</li>
+</ul>
 <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
 <iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/DdTsX6DQk24" title="gpu-mode Lecture 14: Practitioner's Guide to Triton" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
@@ -544,6 +804,7 @@ slower kernel on eight.</p>
 <li>gpu-mode, Practitioner&rsquo;s Guide to Triton (the embed above): https://www.youtube.com/watch?v=DdTsX6DQk24</li>
 <li>Triton documentation: https://triton-lang.org/main/index.html</li>
 <li>Tillet et al., Triton: An Intermediate Language and Compiler: https://arxiv.org/abs/1904.00962</li>
+<li>Liger-Kernel: production Triton kernels for LLMs: https://github.com/linkedin/Liger-Kernel</li>
 </ul>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
@@ -554,9 +815,9 @@ slower kernel on eight.</p>
 - ThunderKittens and CUTLASS DSLs: alternatives below/above Triton for
   squeezing the last drops from new hardware.</p>
 <p><strong>Caveats from these sources.</strong> Kernel timings are hardware-dependent
-demo numbers, not guarantees. Register/SM counts are B200-era figures.
-Triton does not expose every new hardware feature: the last 10% needs
-lower-level tools.</p>
+demo numbers, not guarantees. Register/SM counts are H100/B200-era
+figures. Triton does not expose every new hardware feature: the last
+10% needs lower-level tools.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
 <li><strong>CS336 L07/L08:</strong> the block/grid mental model scales to devices:
@@ -568,7 +829,203 @@ lower-level tools.</p>
 <li><strong>CS229:</strong> the roofline/intensity diagnostic from L02 is what the
   profiler checks.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=xnDHaNUvHBg" target="_blank" rel="noopener">Lecture 6 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">CODE</span><a href="https://cs336.stanford.edu/lectures/?trace=lecture_06" target="_blank" rel="noopener">lecture_06.py, executable lecture code</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://triton-lang.org/" target="_blank" rel="noopener">Triton documentation and tutorials</a></li></ul></section>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Triton cheatsheet.</strong> Shape: pid, offsets, mask, tl.load, compute, tl.store. Grid: (n+BLOCK-1)//BLOCK, mask guards tail. Perf: warps hide latency, registers cap occupancy, banks serialize (swizzle), count blocks vs SMs. Softmax: one row per block, 2MN accesses. Matmul: one C tile per block, k-loop streams, epilogue free. Tune: @triton.autotune per shape. Debug: mask, offsets, dtype, grid. Stack: compiler first, Triton second, lower third.</p></div>
+<div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>Think in blocks.</strong> One block, one SM, one chunk of shared memory, one trip to HBM. Threads are too fine. Blocks are the unit.</p></div>
+<h2 id="coverage-map-every-lecture-claim-mapped">Coverage map: every lecture claim, mapped</h2>
+<p>Each row ties a claim from Lecture 6 (transcript <code>sources/cs336/text/lec06.txt</code>,
+video xnDHaNUvHBg) to the section that covers it.</p>
+<table>
+<thead>
+<tr>
+<th>Session claim</th>
+<th>Covered in</th>
+<th>File line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Same math, 3.75x slower: naive vs compiled vs built-in GeLU</td>
+<td>The problem: same math, 3.75x slower</td>
+<td>43</td>
+</tr>
+<tr>
+<td>GeLU race explained: 5 kernels and 10 HBM passes vs 1</td>
+<td>the GeLU race, explained</td>
+<td>50</td>
+</tr>
+<tr>
+<td>Hardware numbers: SMs, registers, L1/shared, HBM 8 TB/s</td>
+<td>The hardware, once more, with numbers</td>
+<td>60</td>
+</tr>
+<tr>
+<td>Grid of blocks: 1D/2D/3D, program_id, work decomposition</td>
+<td>the grid</td>
+<td>69</td>
+</tr>
+<tr>
+<td>Thread blocks exist for communication: softmax rows, matmul tiles</td>
+<td>Why thread blocks exist</td>
+<td>80</td>
+</tr>
+<tr>
+<td>Triton thinks in blocks, not threads</td>
+<td>Triton thinks in blocks</td>
+<td>89</td>
+</tr>
+<tr>
+<td>Warps stall on HBM; zero-cost switching needs resident warps</td>
+<td>Break 1: warps stall on HBM</td>
+<td>104</td>
+</tr>
+<tr>
+<td>Latency math: 400-cycle HBM, 8 warps in flight per stalled warp</td>
+<td>the latency math</td>
+<td>112</td>
+</tr>
+<tr>
+<td>Registers cap occupancy: 128x160 = 3 blocks = 18%</td>
+<td>Break 2: registers cap occupancy</td>
+<td>121</td>
+</tr>
+<tr>
+<td>Occupancy tradeoff: fat coarsened threads beat thin threads</td>
+<td>the occupancy tradeoff, worked</td>
+<td>137</td>
+</tr>
+<tr>
+<td>Bank conflicts: 32 banks, column access 32x serialized</td>
+<td>Break 3: bank conflicts</td>
+<td>157</td>
+</tr>
+<tr>
+<td>Swizzling: XOR layout dodge for the 32-way conflict</td>
+<td>swizzling, the idea</td>
+<td>168</td>
+</tr>
+<tr>
+<td>Block counts vs SMs: 160 blocks on 148 SMs, 136 idle</td>
+<td>Break 4: block counts leave SMs idle</td>
+<td>179</td>
+</tr>
+<tr>
+<td>Grid-size rule: multiples of SM count; tuner finds it</td>
+<td>the grid-size rule</td>
+<td>186</td>
+</tr>
+<tr>
+<td>Benchmark rules: warmup, CUDA events, synchronize, repeat, scale</td>
+<td>Measure first: benchmark rules</td>
+<td>195</td>
+</tr>
+<tr>
+<td>Five rules each with its reason</td>
+<td>the five rules, each with its reason</td>
+<td>203</td>
+</tr>
+<tr>
+<td>Benchmark harness sketched in code</td>
+<td>a benchmark harness, sketched</td>
+<td>227</td>
+</tr>
+<tr>
+<td>Profiler reads kernel names: cutlass sm100 f32 64x64x16</td>
+<td>Profiling reads the kernel names</td>
+<td>248</td>
+</tr>
+<tr>
+<td>Reading a profiler timeline: widest block, gaps</td>
+<td>reading a profiler timeline</td>
+<td>270</td>
+</tr>
+<tr>
+<td>Triton kernel shape: pid, offsets, mask, load, compute, store</td>
+<td>The Triton kernel shape</td>
+<td>294</td>
+</tr>
+<tr>
+<td>Mask: tail guard; most common silent bug</td>
+<td>the mask, why it matters</td>
+<td>323</td>
+</tr>
+<tr>
+<td>tl.constexpr: compile-time specialization; autotune hook</td>
+<td>tl.constexpr, the compile-time knob</td>
+<td>333</td>
+</tr>
+<tr>
+<td>PTX underneath: ld.global.v4.b32 vectorization signal</td>
+<td>the PTX underneath</td>
+<td>342</td>
+</tr>
+<tr>
+<td>Softmax: one row per block; -inf tail; 8MN to 2MN</td>
+<td>Softmax: one row per block</td>
+<td>356</td>
+</tr>
+<tr>
+<td>Softmax kernel line by line</td>
+<td>the kernel, line by line</td>
+<td>364</td>
+</tr>
+<tr>
+<td>Long rows: tiled accumulator = online softmax as code</td>
+<td>long rows tile with an accumulator</td>
+<td>393</td>
+</tr>
+<tr>
+<td>Tiled matmul: naive O(1), idealized O(n), tiled O(tile)</td>
+<td>Tiled matmul</td>
+<td>402</td>
+</tr>
+<tr>
+<td>k-loop worked: 8 iterations, stream-multiply-accumulate</td>
+<td>the k-loop, worked with numbers</td>
+<td>418</td>
+</tr>
+<tr>
+<td>Tile 128: 32 KB fits the 228 KB shared budget</td>
+<td>why 128 and not 1024</td>
+<td>429</td>
+</tr>
+<tr>
+<td>Strides map (row, col) to addresses; transposes flip them</td>
+<td>strides map (row, col) to addresses</td>
+<td>438</td>
+</tr>
+<tr>
+<td>Free epilogue: ReLU on the accumulator before the write</td>
+<td>the free epilogue</td>
+<td>447</td>
+</tr>
+<tr>
+<td>Autotune: configs, key=[&lsquo;n&rsquo;], compile-cache-benchmark</td>
+<td>Autotuning</td>
+<td>465</td>
+</tr>
+<tr>
+<td>What the tuner finds: SM multiples, /128, per-chip winners</td>
+<td>what the tuner finds</td>
+<td>492</td>
+</tr>
+<tr>
+<td>Debug bugs: mask, offsets, dtype, ceiling grid</td>
+<td>Debugging a Triton kernel</td>
+<td>501</td>
+</tr>
+<tr>
+<td>Compiler vs Triton vs ThunderKittens/CUTLASS decision flow</td>
+<td>The PyTorch compiler vs hand-written Triton</td>
+<td>556</td>
+</tr>
+<tr>
+<td>Kernel stack: Inductor, FA2/3, FlashInfer, Liger, FlexAttention</td>
+<td>What is used where</td>
+<td>581</td>
+</tr>
+</tbody>
+</table>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=xnDHaNUvHBg" target="_blank" rel="noopener">Lecture 6 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">CODE</span><a href="https://cs336.stanford.edu/lectures/?trace=lecture_06" target="_blank" rel="noopener">lecture_06.py, executable lecture code</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://triton-lang.org/" target="_blank" rel="noopener">Triton documentation and tutorials</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://arxiv.org/abs/1904.00962" target="_blank" rel="noopener">Tillet et al., Triton: An Intermediate Language and Compiler (2019)</a></li></ul></section>
       <nav class="pager"><a href="../cs336/l05-gpus.html"><span class="lbl">← Previous</span>Lecture 5: How GPUs Work</a><a href="../cs336/l07-parallelism.html"><span class="lbl">Next →</span>Lecture 7: Parallelism, Data, Tensor, Pipeline</a></nav>
     </article>
     <footer class="pagefoot">
