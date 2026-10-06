@@ -207,7 +207,10 @@ noise, say uniform numbers. Learn a warping function that bends the
 noise into data. The warp must be invertible: you can go from noise
 to image and back. Because the warp is invertible, the machine can
 compute exact probabilities through the **change of variables**
-formula. No approximation in the density. The price is rigidity:
+formula: the rule that tells how a probability density transforms
+under a warp. Stretch the space by 2 and the density halves, as
+L04 works by hand. No approximation in the density. The price is
+rigidity:
 the warp must stay invertible, which limits its shape.
 
 **Machine 4: the restorer (diffusion).** Take a photo and corrupt
@@ -288,18 +291,18 @@ marked unknown.
 
 | Machine | Where it runs | Evidence |
 |---|---|---|
-| Storyteller | GPT-4, Claude, Gemini: all generate left to right with next-token prediction | Public: decoder-only transformers, the standard LLM recipe |
+| Storyteller | GPT-4, Claude, Gemini: all generate left to right with next-token prediction | Public: the standard LLM recipe. OpenAI, 2023, arxiv 2303.08774 (GPT-4). Google DeepMind, 2023, arxiv 2312.11805 (Gemini) |
 | Storyteller | WaveNet (DeepMind, 2016): raw audio, one sample at a time | Public: arxiv 1609.03499 |
-| Storyteller | DALL-E 1: autoregressive transformer over discrete image codes | Public: Ramesh et al., 2021 |
+| Storyteller | DALL-E 1: autoregressive transformer over discrete image codes | Public: Ramesh et al., 2021, arxiv 2102.12092 |
 | Sculptor | Stable Diffusion 1/2: a VAE compresses 512x512 images to 64x64 latents before diffusion | Public: Rombach et al., 2022, arxiv 2112.10752 |
 | Sculptor | VITS: conditional VAE for end-to-end text-to-speech | Public: Kim et al., 2021, arxiv 2106.06103 |
 | Warper | WaveGlow (NVIDIA, 2018): flow-based neural vocoder for speech | Public: Prenger et al., 2018, arxiv 1811.00002 |
-| Warper | Glow: 1x1 convolutions for image generation | Research: Kingma and Dhariwal, 2018 |
-| Restorer | Stable Diffusion 1/2, DALL-E 2, Imagen: text-to-image diffusion | Public: Rombach et al., 2022, Ramesh et al., 2022, Saharia et al., 2022 |
+| Warper | Glow: 1x1 convolutions for image generation | Public research: Kingma and Dhariwal, 2018, arxiv 1807.03039 |
+| Restorer | Stable Diffusion 1/2, DALL-E 2, Imagen: text-to-image diffusion | Public: Rombach et al., 2022, arxiv 2112.10752. Ramesh et al., 2022, arxiv 2204.06125. Saharia et al., 2022, arxiv 2205.11487 |
 | Restorer | Sora: video generation with a diffusion transformer | Public: OpenAI technical report, Feb 2024 |
-| Restorer | Stable Diffusion 3: rectified flow (the flow-matching cousin of diffusion) | Public: Esser et al., 2024, arxiv 2403.03206 |
-| Critic | Research stage: image modeling (Du and Mordatch, 2019), classifier energies (JEM, 2020) | No verified production deployment: unknown |
-| Sixth machine (GAN) | StyleGAN face generation. Real-ESRGAN photo upscaling ships adversarial loss | Public research and open source |
+| Restorer | Stable Diffusion 3: rectified flow (straight-line diffusion training: L06's flow matching, which trains on straight noise-to-data paths instead of curved diffusion paths) | Public: Esser et al., 2024, arxiv 2403.03206 |
+| Critic | Research stage: image modeling (Du and Mordatch, 2019), classifier energies (JEM, 2020) | No verified production deployment: unknown. Du and Mordatch, 2019, arxiv 1903.08689. JEM: Grathwohl et al., 2020, arxiv 1912.03263 |
+| Sixth machine (GAN) | StyleGAN face generation. Real-ESRGAN photo upscaling ships adversarial loss | Public: Karras et al., 2019, arxiv 1812.04948 (StyleGAN). Wang et al., 2021, arxiv 2107.10833 (Real-ESRGAN) |
 
 Read the table as the course's promise kept: the mathematics you
 learn here is the mathematics running in production. The critic's
@@ -322,7 +325,7 @@ deployed products at the time of writing.
 > Q: What is the difference between density estimation and sampling?
 > A: Density estimation learns the numbers: given an outcome, what is its probability? Sampling runs the rule forward: produce a fresh outcome. The counting machine does both from one table. Real families often split them: the storyteller estimates densities step by step and samples the same way, while the critic (energy-based) samples by rolling downhill without ever computing normalized probabilities.
 > Follow-up: Which families give exact densities?
-> A: The storyteller and the warper. The storyteller's chain rule multiplies exact step probabilities. The warper's change-of-variables formula is exact by construction. The sculptor and restorer give only lower bounds (ELBO-style approximations), and the critic gives unnormalized energies. This exactness column is the first thing to check when comparing families.
+> A: The storyteller and the warper. The storyteller's chain rule multiplies exact step probabilities. The warper's change-of-variables formula is exact by construction. The sculptor and restorer give only lower bounds (ELBO-style: like L03's evidence lower bound, a stand-in training target that sits below the true likelihood), and the critic gives unnormalized energies. This exactness column is the first thing to check when comparing families.
 
 > [!QA]
 > Q: Why is counting called maximum likelihood, and why should I care?
