@@ -148,9 +148,9 @@ internet, and so does the training data [26:14](ts:26:14).
 
 > [!QA]
 > Q: Why does multiple choice survive when every benchmark saturates?
-> A: Because difficulty is a free parameter. Open-ended generation is bounded by what a judge can score; multiple choice is bounded only by the question writer's imagination. MMLU saturated, so MMLU-Pro added choices and chain of thought; GPQA hired PhD contractors; HLE crowdsourced the hardest questions humans can write. Each step is harder to write than the last, but the format never runs out of headroom. The price is realism: the format tests exam-taking, not doing. It survives as a measure of knowledge and reasoning under controlled conditions, not as a measure of the product.
+> A: Because difficulty is a free parameter. Open-ended generation is bounded by what a judge can score. Multiple choice is bounded only by the question writer's imagination. MMLU saturated, so MMLU-Pro added choices and chain of thought. GPQA hired PhD contractors. HLE crowdsourced the hardest questions humans can write. Each step is harder to write than the last, but the format never runs out of headroom. The price is realism: the format tests exam-taking, not doing. It survives as a measure of knowledge and reasoning under controlled conditions, not as a measure of the product.
 > Follow-up: What kills a multiple-choice benchmark if not saturation?
-> A: Contamination. The questions are public, so the training data absorbs them. A saturated benchmark is honest about being easy; a contaminated one lies about being hard. The order-preference test (validity section) is one lie detector. The deeper fix is private held-out sets like HLE's: questions nobody has seen. But private sets cannot be audited by the community, so you trade transparency for signal. Every benchmark dies one of the two deaths: saturation or contamination.
+> A: Contamination. The questions are public, so the training data absorbs them. A saturated benchmark is honest about being easy. A contaminated one lies about being hard. The order-preference test (validity section) is one lie detector. The deeper fix is private held-out sets like HLE's: questions nobody has seen. But private sets cannot be audited by the community, so you trade transparency for signal. Every benchmark dies one of the two deaths: saturation or contamination.
 
 ## Chat evaluation: judge the judge
 
@@ -185,7 +185,7 @@ Now X beats Y as expected: X's expected was 0.76, update = 32 x
 (1 - 0.76) = 8. X rises to 1184, Y falls to 1016.
 
 The asymmetry is the point: upsets move ratings 3x more than
-expected wins. A new model that beats the champion jumps; a
+expected wins. A new model that beats the champion jumps. A
 champion that beats a newcomer barely moves. That is why the
 Arena's leaderboard reshuffles fast when a strong model debuts:
 each upset win is worth 24 points, and a dozen of them is 300.
@@ -193,7 +193,7 @@ The vice: the rating conflates the model with the rater pool. A
 model tuned for the Arena's demographics (style, sycophancy)
 outranks a better model the raters misjudge.
 
-![ELO worked](assets/media-generation-cs336-l12-elo-worked-0-02993903-93a0-4b4e-a4df-54e98ba00f1f.webp "Upset win: plus 24. Expected win: plus 6. Upsets move ratings. Source: original. Project: Stanford Frontier AI.")
+![ELO worked](assets/media-generation-cs336-l12-elo-worked-fixed-0-adf29f08.webp "Upset win: plus 24. Expected win: plus 8. Upsets move ratings. Source: original. Project: Stanford Frontier AI.")
 
 > [!QA]
 > Q: Work the ELO update. New model Z at 1000 beats the champion at 1400.
@@ -276,7 +276,7 @@ that memorized the test set in its published order: higher accuracy
 in the memorized order. The gap is the tell.
 
 Why it works: memorization is order-specific. The model saw "Q ...
-A) Tungsten ..." in training; it learned the association between
+A) Tungsten ..." in training. It learned the association between
 the question and the letter. Reasoning is order-free: the correct
 answer is Tungsten whether it sits at A or C. So the test separates
 the two hypotheses with no access to the training data: a purely
@@ -318,7 +318,7 @@ And we evaluate models and systems now, not methods: anything goes,
 which is why the shipped artifact is what matters [76:45](ts:76:45).
 Declare the purpose first.
 
-### Subchapter: what is used where (the evaluation landscape, Oct 2026)
+### Subchapter: what is used where (the evaluation map, Oct 2026)
 
 The lecture's toolbox, mapped to the benches that actually decide
 things.
@@ -326,7 +326,7 @@ things.
 - **Improve the model**: perplexity on held-out text. Every lab's
   inner loop. White-box, trust-based, cleanest signal.
 - **Measure intelligence**: Humanity's Last Exam (still hard, private
-  held-out), ARC-AGI (reasoning isolated from knowledge; o-series
+  held-out), ARC-AGI (reasoning isolated from knowledge. O-series
   models moved it, ARC-3 interactive is the frontier).
 - **Compare assistants**: LMArena (the renamed Chatbot Arena):
   pairwise human votes, ELO. The public scoreboard for chat
@@ -340,16 +340,16 @@ things.
 
 Leaderboard numbers are snapshots: they decay with contamination
 and saturation, and the lecture's "Mythos" figures are
-illustrative. The landscape above is the durable part: purposes,
+illustrative. The map above is the durable part: purposes,
 not scores.
 
-![Eval landscape](assets/media-generation-cs336-l12-eval-landscape-0-4c36444b-5ed1-40c4-b890-3c582407574f.webp "Five purposes, five benches. Declare the purpose first. Source: original. Project: Stanford Frontier AI.")
+![Eval map](assets/media-generation-cs336-l12-eval-landscape-0-4c36444b-5ed1-40c4-b890-3c582407574f.webp "Five purposes, five benches. Declare the purpose first. Source: original. Project: Stanford Frontier AI.")
 
 > [!QA]
 > Q: Design the eval suite for buying a coding model for your company. What goes in?
-> A: Four layers. One: ecological validity first. Collect 50 real tasks from your engineers: the repos, the bug reports, the refactors they actually do. This is your private eval; it never goes public. Two: SWE-bench Verified as the public anchor: checkable, audited, comparable across vendors. Three: a contamination probe on the vendor's headline numbers: rerun a sample with shuffled option orders or paraphrased prompts and watch for the gap. Four: the scaffold control: run every candidate in your harness, not theirs. The suite's output is not a ranking but a purchase memo: model X wins on our tasks in our harness, with contamination checks passed, at price Y. Purpose picks the bench: here the purpose is buying, so the private tasks outrank every public leaderboard.
+> A: Four layers. One: ecological validity first. Collect 50 real tasks from your engineers: the repos, the bug reports, the refactors they actually do. This is your private eval. It never goes public. Two: SWE-bench Verified as the public anchor: checkable, audited, comparable across vendors. Three: a contamination probe on the vendor's headline numbers: rerun a sample with shuffled option orders or paraphrased prompts and watch for the gap. Four: the scaffold control: run every candidate in your harness, not theirs. The suite's output is not a ranking but a purchase memo: model X wins on our tasks in our harness, with contamination checks passed, at price Y. Purpose picks the bench: here the purpose is buying, so the private tasks outrank every public leaderboard.
 > Follow-up: How often do you refresh the private eval?
-> A: Continuously, and never publicly. Add new tasks as your engineers do new work; retire tasks the vendors' models have clearly absorbed. A private eval is a perishable good: its signal decays the moment it leaks. Budget maintenance like any instrument: quarterly task refresh, annual full rebuild. The cost is the price of an honest number.
+> A: Continuously, and never publicly. Add new tasks as your engineers do new work. Retire tasks the vendors' models have clearly absorbed. A private eval is a perishable good: its signal decays the moment it leaks. Budget maintenance like any instrument: quarterly task refresh, annual full rebuild. The cost is the price of an honest number.
 
 ## The honest price
 
@@ -388,6 +388,16 @@ The story in eight steps. Each step answers the one before it.
 8. **Purpose picks the bench.** Buy, measure, improve, ship:
    different goals, different evals. Evaluate shipped systems, not
    methods.
+
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/Rg5P9Yd0btE" title="Why LLM Benchmarks Are Misleading" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- Why LLM Benchmarks Are Misleading (the embed above): https://www.youtube.com/watch?v=Rg5P9Yd0btE
+- Hendrycks et al., MMLU: https://arxiv.org/abs/2009.03300
+- Jimenez et al., SWE-bench: https://arxiv.org/abs/2310.06770
+- LMArena (Chatbot Arena): https://lmarena.ai
 
 ## Official sources and further reading
 
