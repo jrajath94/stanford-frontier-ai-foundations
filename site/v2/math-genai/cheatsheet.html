@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.classList.remove('no-js');</script>
 <title>MATH-GENAI Cheatsheet — Stanford Frontier AI</title>
-<meta name="description" content="Every formula and key number from the course on one page.">
+<meta name="description" content="Every formula, decision rule, and key number from the course on one page.">
 <link rel="stylesheet" href="../assets/vendor/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
 </head>
@@ -220,14 +220,17 @@
       <h1>MATH-GENAI Cheatsheet</h1>
       <p class="meta-line">Instructor: Prof. Prathosh A P · 2025</p>
       <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h2 id="the-recipe">The recipe</h2>
-<p><code>θ* = argmin_θ D(P_X, P_θ)</code>: family, divergence, optimization.</p>
-<h2 id="divergences">Divergences</h2>
+<p><code>θ* = argmin_θ D(P_X, P_θ)</code>: family, divergence, optimization.
+Three gaps: wrong family, finite samples, local minima.</p>
+<h2 id="divergences-one-glance">Divergences: one-glance</h2>
 <table>
 <thead>
 <tr>
 <th>Name</th>
 <th>Formula</th>
 <th>Coin toy {0.5,0.5} vs {0.9,0.1}</th>
+<th>Personality</th>
+<th>Use when</th>
 </tr>
 </thead>
 <tbody>
@@ -235,71 +238,154 @@
 <td>KL (forward)</td>
 <td>Σ P_X log(P_X/P_θ)</td>
 <td>0.511 nats</td>
+<td>Asymmetric, infinite on zeros, mode-covering</td>
+<td>Default; you have data and a density</td>
+</tr>
+<tr>
+<td>Reverse KL</td>
+<td>Σ P_θ log(P_θ/P_X)</td>
+<td>∞ on sharp toy</td>
+<td>Mode-seeking, drops modes</td>
+<td>You want a compact approximation</td>
 </tr>
 <tr>
 <td>Jensen-Shannon</td>
 <td>½KL(P_X‖M) + ½KL(P_θ‖M), M = average</td>
 <td>0.102</td>
+<td>Symmetric, calm, saturates</td>
+<td>GAN theory; not far-apart training</td>
 </tr>
 <tr>
 <td>Total variation</td>
 <td>½Σ|P_X − P_θ|</td>
 <td>0.4</td>
+<td>Symmetric, simple, kinked gradient</td>
+<td>Proofs, not gradient descent</td>
 </tr>
 <tr>
 <td>Wasserstein-1</td>
 <td>min cost of moving mass</td>
-<td>|θ| on point masses (10 vs 100, not 0.693 both)</td>
+<td>|θ| on point masses</td>
+<td>Never saturates, gradient 1</td>
+<td>Distributions may not overlap</td>
 </tr>
 </tbody>
 </table>
 <p>f-divergence: <code>D_f = ∫ p_θ(x) f(p_X(x)/p_θ(x)) dx</code>, f convex, f(1) = 0.
-Non-negative. Zero iff distributions match.</p>
+Non-negative. Zero iff distributions match. KL = u log u member.</p>
 <h2 id="mle-identity">MLE identity</h2>
 <p><code>argmin_θ KL(P_X‖P_θ) = argmax_θ (1/n) Σ log P_θ(x_i)</code>
-Cross-entropy = entropy + KL. On H,H,T: 0.7-model wins (−1.918 vs −2.079).</p>
+Cross-entropy = entropy + KL. Entropy is the floor: no model beats it.
+On H,H,T: 0.7-model wins (−1.918 vs −2.079).</p>
 <h2 id="variational-bound-gan">Variational bound (→ GAN)</h2>
 <p><code>D_f = max_T E[T(x)] − E[f*(T(x̂))]</code>, samples only, no densities.
+Bound, not value: a weak critic underestimates. Train the critic first.
 GAN&rsquo;s f: <code>f(u) = u log u − (u+1) log(u+1)</code>.
 <code>J = E[log D(x)] + E[log(1 − D(G(z)))]</code>: D maximizes, G minimizes.
 Non-saturating G loss: <code>−log D(G(z))</code> (0.693 vs 0.001 signal at d = 0.001→0.002).
 Mode collapse: truth {0:.5, 10:.5}, model {0:1} → JS = 0.216, G stuck at 0.693.</p>
 <h2 id="wgan">WGAN</h2>
-<p><code>J = E[f(x)] − E[f(x̂)]</code>, f 1-Lipschitz (speed limit ≤ 1). No sigmoid, no logs.</p>
+<p><code>J = E[f(x)] − E[f(x̂)]</code>, f 1-Lipschitz (speed limit ≤ 1). No sigmoid, no logs.
+Enforce by weight clipping (crude) or gradient penalty <code>(‖∇f‖−1)²</code>.</p>
 <h2 id="fid">FID</h2>
 <p><code>FID = ‖μ−μ̂‖² + Tr(Σ + Σ̂ − 2(ΣΣ̂)^{1/2})</code>: Inception features, Gaussian fit.
-Toy: identical clouds shifted by 2 → FID = 4. Lower is better.</p>
+Toy: identical clouds shifted by 2 → FID = 4. Lower is better. 0 = match.
+Blind spots: memorization scores ~0. Pair with nearest-neighbor + diversity checks.</p>
 <h2 id="elbo">ELBO</h2>
 <p><code>log p_θ(x) ≥ E_q[log p_θ(x,z) − log q(z|x)]</code> (Jensen: log E ≥ E log).
 Gap = <code>KL(q(z|x) ‖ p_θ(z|x))</code>.
 Split: <code>E_q[log p_θ(x|z)] − KL(q(z|x) ‖ p(z))</code>: reconstruction minus rent.
-Toy: ELBO −1.031, truth −0.968, gap 0.063 = KL exactly.</p>
+Toy: ELBO −1.031, truth −0.968, gap 0.063 = KL exactly.
+q choices: exact posterior (EM, gap 0) · learned network (VAE) · fixed process (diffusion).</p>
 <h2 id="vae">VAE</h2>
 <p>Encoder <code>q(z|x) = N(μ(x), σ(x))</code>, prior N(0,1), decoder <code>p(x|z)</code>.
 Reparameterize: <code>z = μ + σ·ε</code>, ε ~ N(0,1). <code>∂z/∂μ = 1</code>, <code>∂z/∂σ = ε</code>.
 KL per dim: <code>−½(1 + log σ² − μ² − σ²)</code>. Toy μ=0.5, σ²=0.25 → 0.443.
-Loss = pixel error + KL. Posterior collapse: KL → 0 with good reconstructions = dead latents.</p>
+Loss = reconstruction + KL. Posterior collapse: KL → 0 with good reconstructions = dead latents.
+β-VAE: β·KL (disentanglement vs fidelity). VQ-VAE: discrete codebook, no Gaussian KL.</p>
 <h2 id="ddpm-forward">DDPM forward</h2>
 <p><code>x_t = √α_t x_{t−1} + √(1−α_t) ε_t</code>: fixed Markov chain, nothing learned.
 Jump: <code>x_t = √ᾱ_t x_0 + √(1−ᾱ_t) ε</code>, <code>ᾱ_t = α_1···α_t</code>.
-Toy: 4.0 → 4.111 → 3.900 (α = 0.9). Stationary: x_T ≈ N(0,1).</p>
+Toy: 4.0 → 4.111 → 3.900 (α = 0.9). Stationary: x_T ≈ N(0,1).
+Schedule: tuned by experiment. Too fast kills the signal early.</p>
 <h2 id="ddpm-loss">DDPM loss</h2>
 <p><code>L_simple = E‖ε − ε_θ(x_t, t)‖²</code>: predict the noise. Toy: (0.688−0.5)² = 0.0354.
 Equivalent faces: predict ε, predict x_0, predict score <code>−ε/√(1−ᾱ_t)</code> (−1.578).
 Sample: <code>x_{t−1} = (1/√α_t)(x_t − (β_t/√(1−ᾱ_t))ε_θ) + √β̃_t·z</code>.
-Toy: x_2 = 3.9 → x_1 = 4.059 (z = 0.3).</p>
+Toy: x_2 = 3.9 → x_1 = 4.059 (z = 0.3). Reweighted bound: samples over likelihood.</p>
 <h2 id="score-ddim-guidance-latent">Score / DDIM / guidance / latent</h2>
 <p>Langevin: <code>x ← x + (δ/2)·score + √δ·z</code>. Toy: 3.9 → 3.947.
 DDIM stride: <code>x̂_0 = (x_t − √(1−ᾱ_t)ε_θ)/√ᾱ_t</code>, <code>x_s = √ᾱ_s x̂_0 + √(1−ᾱ_s)ε_θ</code>.
-Toy: x_100 = 1.5 → x_50 = 2.844 via x̂_0 = 3.221.
-Guidance: <code>score + s·∇log p(y|x_t)</code>. Toy: −1.578 + 2·0.5 = −0.578.
-Latent: 512×512×3 → 64×64×4 = 48× cheaper per step.</p>
+Toy: x_100 = 1.5 → x_50 = 2.844 via x̂_0 = 3.221. 20× fewer steps, less diversity.
+Guidance: <code>score + s·∇log p(y|x_t)</code>. Toy: −1.578 + 2·0.5 = −0.578. Too much s caricatures.
+Latent: 512×512×3 → 64×64×4 = 48× cheaper per step. Price: VAE artifacts.</p>
 <h2 id="autoregressive">Autoregressive</h2>
 <p><code>p(x_1..x_n) = Π p(x_i|x_&lt;i)</code>. Toy: p(a,b,a) = 0.6·0.3·0.2 = 0.036.
-Exact likelihood, sequential sampling.</p>
+Exact likelihood, sequential sampling. Next-token prediction = AR + MLE.</p>
 <h2 id="four-families-four-prices">Four families, four prices</h2>
 <p>GAN: saddle point (saturation, mode collapse). VAE: blur (mode-covering + Gaussian decoder).
 Diffusion: slow sampling (T steps). AR: sequential generation.</p>
+<h2 id="failure-diagnostic-fix">Failure → diagnostic → fix</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely cause</th>
+<th>Check</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Generator loss flat at start</td>
+<td>Saturation (original minimax loss)</td>
+<td>D(G(z)) ≈ 0, loss barely moves</td>
+<td>Non-saturating loss −log D</td>
+</tr>
+<tr>
+<td>All samples look alike, loss fine</td>
+<td>Mode collapse</td>
+<td>Cluster samples vs cluster data</td>
+<td>Rebalance players; change divergence family</td>
+</tr>
+<tr>
+<td>VAE samples fine but KL ≈ 0</td>
+<td>Posterior collapse</td>
+<td>KL per dim glued to 0</td>
+<td>Weaker decoder; anneal KL weight 0→1</td>
+</tr>
+<tr>
+<td>DDPM noisy at low t</td>
+<td>Schedule too fast</td>
+<td>Signal fraction vs t curve</td>
+<td>Slow the schedule</td>
+</tr>
+<tr>
+<td>FID good but samples are copies</td>
+<td>Memorization</td>
+<td>Nearest-neighbor distance to train set</td>
+<td>It is not generating; fix the model, not the metric</td>
+</tr>
+<tr>
+<td>Guided samples are caricatures</td>
+<td>Guidance scale too high</td>
+<td>Lower s, compare</td>
+<td>Reduce s until steering bends without breaking</td>
+</tr>
+<tr>
+<td>Loss per t varies wildly</td>
+<td>Some noise levels starved</td>
+<td>Plot loss broken down by t</td>
+<td>Rebalance schedule or capacity per t</td>
+</tr>
+</tbody>
+</table>
+<h2 id="numbers-you-must-know-cold">Numbers you must know cold</h2>
+<p>0.511 (KL coin toy) · 0.102 (JS) · 0.4 (TV) · 0.693 (forward sharp toy. JS max = log 2) ·
+−1.918 vs −2.079 (MLE picks 0.7) · 0.001 vs 0.693 (saturation fix) · 0.216 (mode-collapse JS) ·
+4 (FID toy) · −1.031 vs −0.968, gap 0.063 (ELBO toy) · 0.443 (VAE KL rent) ·
+3.900 (forward toy) · 3.944 (posterior mean) · 0.0354 (L_simple toy) · 4.059 (one reverse step) ·
+−1.578 (score toy) · 2.844 (DDIM stride) · 48× (latent saving) · 0.036 (AR toy)</p>
       
       <nav class="pager"><a href="../math-genai/l10-score-ddim-ar.html"><span class="lbl">← Previous</span>Lecture 10: Scores, Shortcuts, and the Autoregressive Family</a><a href="../math-genai/crash-course.html"><span class="lbl">Next →</span>MATH-GENAI Crash Course</a></nav>
     </article>
