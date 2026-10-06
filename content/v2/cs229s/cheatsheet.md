@@ -261,13 +261,13 @@ Alpa automates the search.
 
 ### Interview one-liners
 
-"Below the ridge, move less data; above it, do more
+"Below the ridge, move less data. Above it, do more
 math." "FlashAttention never writes the N by N matrix:
 tile, rescale online, recompute backward." "Decoding is
 memory bound: one token costs a full model read."
 "LoRA merges into the weights, so inference pays
 nothing." "Sparsity only helps if the pattern matches the
-hardware." "Keep tensor parallelism inside NVLink; span
+hardware." "Keep tensor parallelism inside NVLink. Span
 nodes with data or pipeline." "KV caching wins when
 compute bound. Recompute wins when memory bound."
 "Recall needs input-dependent mixing: that is why
