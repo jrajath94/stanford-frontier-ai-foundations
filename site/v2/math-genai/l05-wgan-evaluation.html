@@ -219,7 +219,7 @@
       <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative AI</a> / Lecture 5: Wasserstein GANs and Judging a Generator</nav>
       <h1>Lecture 5: Wasserstein GANs and Judging a Generator</h1>
       <p class="meta-line">2026-10-05 · Instructor: Prof. Prathosh A P · 2025</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="_IBfVkrvqAI"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/_IBfVkrvqAI" title="Lecture 5: Wasserstein GANs and Judging a Generator" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=_IBfVkrvqAI" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=_IBfVkrvqAI" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original Stanford lecture. Timestamps in the text link to the exact moment.</p></div><h2 id="the-task-a-distance-that-never-goes-numb">The task: a distance that never goes numb</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="_IBfVkrvqAI"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/_IBfVkrvqAI" title="W4L11: Wasserstein GANs" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=_IBfVkrvqAI" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=_IBfVkrvqAI" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">The lecture video for this lesson: the earth mover's distance and the WGAN game. Timestamps in the text link to the exact moment.</p></div><h2 id="the-task-a-distance-that-never-goes-numb">The task: a distance that never goes numb</h2>
 <p>Lesson 4 left two open wounds. The JS-like divergence saturates:
 when the model is far from the data, the distance sits near its
 maximum and its gradient nearly vanishes, so the generator gets
@@ -232,10 +232,12 @@ everywhere, and every such pair looks equally &ldquo;maximally far&rdquo;.
 A model 10 units away scores the same as a model 100 units away.
 No gradient can point downhill if the whole landscape is flat.</p>
 <h2 id="first-attempt-watch-js-go-flat">First attempt: watch JS go flat</h2>
+<h3 id="the-point-mass-toy">The point-mass toy</h3>
 <p>Make the toy as stark as possible. The truth is a point mass at
 0: P_X = {0: 1.0}. The model is a point mass at θ: P_θ = {θ:
-1.0}. They never overlap (for θ ≠ 0). Compute the
-Jensen-Shannon divergence for θ = 10 and θ = 100.</p>
+1.0}. They never overlap (for θ ≠ 0).</p>
+<h3 id="0693-twice-the-number-that-says-nothing">0.693 twice: the number that says nothing</h3>
+<p>Compute the Jensen-Shannon divergence for θ = 10 and θ = 100.</p>
 <pre class="ascii">theta = 10:   P_X = {0: 1}, P_theta = {10: 1}, M = {0: 0.5, 10: 0.5}
   JS = 0.5*log(1/0.5) + 0.5*log(1/0.5) = log 2 = 0.693
 theta = 100:  M = {0: 0.5, 100: 0.5}
@@ -245,11 +247,13 @@ theta = 100:  M = {0: 0.5, 100: 0.5}
 gradient with respect to θ is exactly zero. The generator is
 lost: every direction looks the same. This is saturation made
 quantitative, and it is why Lesson 4&rsquo;s generator stalled.</p>
+<figure><img alt="JS is flat at 0.693. Wasserstein sees the distance" src="assets/l05-js-vs-w.webp"><figcaption>d(JS)/d(theta) = 0. dW/d(theta) = 1. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-key-question">The key question</h2>
 <p>Is there a distance between distributions that keeps working
 when they do not overlap: a distance that says 10 is closer
 than 100?</p>
 <h2 id="the-new-idea-the-earth-movers-distance">The new idea: the earth mover&rsquo;s distance</h2>
+<h3 id="moving-cost-not-ratios">Moving cost, not ratios</h3>
 <p>The <strong>Wasserstein distance</strong> (earth mover&rsquo;s distance) asks: how
 much mass must be moved, times how far, to reshape one
 distribution into the other? On the point-mass toy the answer
@@ -270,32 +274,47 @@ of the average distance mass travels. For point masses there
 is only one pairing, hence |θ|. For spread-out distributions
 the pairing problem is real, but the property survives: W
 varies smoothly as the distributions move.</p>
+<h3 id="the-dual-form-kantorovich-rubinstein">The dual form: Kantorovich-Rubinstein</h3>
 <p>To train with it, the lecture uses the dual form
 (Kantorovich-Rubinstein): the Wasserstein distance equals the
 best achievable value of E[f(x)] − E[f(x̂)] over all
 <strong>1-Lipschitz</strong> functions f. Lipschitz is a speed limit: the
-function&rsquo;s slope never exceeds 1 anywhere. Without the speed
-limit the max would be infinite (make f huge on real points,
-hugely negative on fakes). With it, the best f measures
-exactly the earth-moving cost.</p>
+function&rsquo;s slope never exceeds 1 anywhere.</p>
+<p>Why the speed limit is load-bearing: without it the max is
+infinite. Set f huge on real points and hugely negative on
+fakes, and the objective explodes. The &ldquo;distance&rdquo; becomes
+meaningless. With the slope cap, the best f measures exactly
+the earth-moving cost. The constraint is not a technicality.
+It is what makes the dual equal the distance.</p>
+<h3 id="the-wgan-the-same-game-new-rules">The WGAN: the same game, new rules</h3>
 <p>The WGAN is therefore the Lesson 3 game with two changes:</p>
 <pre class="ascii">J = E[ f(x) ] - E[ f(x_hat) ]      (no logs, no sigmoid)
 f must stay 1-Lipschitz            (the speed limit)
 </pre>
 <p>The critic outputs a raw score, not a probability. It
-maximizes J. The generator minimizes it. On the point-mass
-toy with f(x) = −x (slope −1, valid): J = E[−x] − E[−θ] =
-θ. Minimizing over θ drives θ to 0 with gradient 1 at every
-step. The generator walks downhill from 100 to 0 without
-ever stalling. Compare: the JS game gave gradient zero the
-whole way.</p>
+maximizes J. The generator minimizes it.</p>
+<h3 id="the-walk-from-100-to-0-worked">The walk from 100 to 0, worked</h3>
+<p>On the point-mass toy with f(x) = −x (slope −1, valid): J =
+E[−x] − E[−θ] = θ. Minimizing over θ drives θ to 0 with
+gradient 1 at every step. The generator walks downhill from
+100 to 0 without ever stalling. Compare: the JS game gave
+gradient zero the whole way. The number to remember: 100
+steps of size 1 land exactly at 0. Under JS, 100 steps of
+size anything land nowhere.</p>
+<figure><img alt="WGAN: the same game, raw scores, a speed limit" src="assets/l05-wgan-game.webp"><figcaption>J = E[f(x)] - E[f(xhat)] over 1-Lipschitz f. Shell 3. Source: WGAN paper. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="enforcing-the-speed-limit-two-options">Enforcing the speed limit: two options</h3>
 <p>Enforcing the speed limit is the engineering. The original
 WGAN clips the critic&rsquo;s weights to a small box after each
 step, which crudely bounds the slope. It works but cripples
-the critic&rsquo;s capacity. The later gradient-penalty variant
-penalizes the slope directly. Either way, the price is a
-slower, more constrained critic than the GAN&rsquo;s free one.</p>
+the critic&rsquo;s capacity: the critic can only use a corner of
+its expressiveness. The later gradient-penalty variant
+penalizes the slope directly: add (||∇f|| − 1)² to the
+critic&rsquo;s loss. Either way, the price is a slower, more
+constrained critic than the GAN&rsquo;s free one. The decision
+rule: clipping is simpler and weaker. The gradient penalty
+trains better and costs more tuning.</p>
 <h2 id="the-second-wound-judging-without-a-likelihood">The second wound: judging without a likelihood</h2>
+<h3 id="the-procedure-step-by-step">The procedure, step by step</h3>
 <p>A trained generator has no density, so MLE cannot score it.
 The lecture&rsquo;s answer is to judge samples against samples:
 take real data and generated data, and measure the distance
@@ -322,6 +341,7 @@ between the two <em>sets</em>. The industry standard is the
 different spreads and correlations. Lower FID means the
 generated distribution sits closer to the real one. FID = 0
 means the two Gaussians match exactly.</p>
+<h3 id="worked-fid-4-on-six-points">Worked: FID = 4 on six points</h3>
 <p>Work it by hand on a six-point toy. Real features (2-D):
 (0,0), (2,0), (1,1). Generated features: (0,2), (2,2),
 (1,3). Same cloud, shifted up by 2.</p>
@@ -340,7 +360,19 @@ should: the clouds have identical shape, one sits 2 units
 higher. If the generator also matched the center, FID would
 be 0. One number, computed from samples, no likelihood
 needed.</p>
+<h3 id="why-features-not-pixels">Why features, not pixels</h3>
+<p>The lecture&rsquo;s cited study found Inception&rsquo;s inner layers track
+human visual judgment. Pixel distance says a one-pixel shift
+is a big change. Feature distance says it is nothing. A
+generated face with perfect pixels but wrong structure scores
+well on pixel metrics and badly on FID. FID judges what humans
+would judge, approximately. The price: FID is an image metric.
+For text or audio you need a different feature extractor, and
+the &ldquo;which layer&rdquo; choice is a hyperparameter that moves the
+number.</p>
+<figure><img alt="FID: judge samples with samples" src="assets/l05-fid.webp"><figcaption>Real and generated images become Gaussians in Inception feature space. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-honest-price">The honest price</h2>
+<h3 id="wassersteins-remaining-costs">Wasserstein&rsquo;s remaining costs</h3>
 <p>Wasserstein fixes saturation but not everything. The
 Lipschitz constraint is awkward: weight clipping is crude
 and the gradient penalty adds cost and tuning. WGAN training
@@ -348,15 +380,18 @@ is steadier than GAN training but slower, and mode collapse
 can still happen (a collapsed model is still a valid low-W
 point if the critic is weak). The saddle point is tamer, not
 gone.</p>
+<h3 id="fids-blind-spots">FID&rsquo;s blind spots</h3>
 <p>FID has its own honest limits, and the lecture states the
 frame plainly: it judges in feature space, not pixel space.
 It needs the Inception network, so it is an image metric.
-for text or audio you need a different feature extractor.
+For text or audio you need a different feature extractor.
 It assumes Gaussian features, which is false but useful.
 It is biased by sample size (small n inflates it), and it
 cannot detect memorization: a generator that replays training
 images scores a perfect FID. Judging creation remains partly
-human.</p>
+human. The decision rule: never report FID alone. Pair it
+with a memorization check (nearest-neighbor distances to the
+training set) and a diversity check (cluster the samples).</p>
 <table>
 <thead>
 <tr>
@@ -387,12 +422,35 @@ human.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="where-this-runs-in-real-systems">Where this runs in real systems</h3>
+<p>The gradient-penalty WGAN (WGAN-GP) became the stable
+adversarial baseline for several years: it trains without the
+saturation stalls of Lesson 4 and without the capacity
+crippling of weight clipping. FID outlived the GAN era: it is
+still the standard number for comparing image generators,
+including diffusion models, because it needs only samples.
+When a paper reports &ldquo;FID 3.2 versus 9.1&rdquo;, it is running this
+lesson&rsquo;s six-point toy at scale: two feature Gaussians, one
+Fréchet distance. [uncertain] Exact FID values across papers
+are not comparable unless the feature layer, sample count,
+and dataset split match.</p>
+<h2 id="videos-for-this-lesson">Videos for this lesson</h2>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/5Mchnh2xedI" title="W4L16: Evaluation of Generative Models" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: evaluation of generative models, the FID procedure and formula on the board. If the embed is blocked: <a href="https://www.youtube.com/watch?v=5Mchnh2xedI" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
 <div class="qa"><div class="q">Why is the Wasserstein distance better behaved than JS?</div><div class="a"><p>JS only sees probability ratios, so non-overlapping distributions all score the max: 0.693 for θ = 10 and θ = 100 alike, gradient zero. Wasserstein measures moving cost: W = 10 versus W = 100, with a constant downhill gradient of 1. The generator always knows which way to go.
 It approximates the Kantorovich-Rubinstein dual: max over 1-Lipschitz f of E[f(x)] − E[f(x̂)]. No sigmoid, no logs. The Lipschitz speed limit keeps the max finite. Weight clipping enforces it crudely. The gradient penalty enforces it directly.</p><div class="followup"><strong>Follow-up:</strong> What does the critic actually compute in a WGAN?</div></div></div>
+<div class="qa"><div class="q">Walk me through a Wasserstein computation on a new toy.</div><div class="a"><p>Truth: half the mass at 0, half at 2. Model: all mass at 6. Pair the mass: the half at 0 travels 6, the half at 2 travels 4. Average distance: 0.5·6 + 0.5·4 = 5. So W = 5. The gradient with respect to the model&rsquo;s position is 1: move the mass left and W falls one-for-one. No flat region, no surprise.
+Pair: half travels |0−1| = 1, half travels |2−1| = 1. W = 1. Moving the model to 0.5 gives 0.5·0.5 + 0.5·1.5 = 1.0. Same. The gradient is zero here: any point between 0 and 2 is equally good, because the mass is already bracketed. Wasserstein is honest about that too.</p><div class="followup"><strong>Follow-up:</strong> What if the model is all mass at 1, between the two truth points?</div></div></div>
+<div class="qa"><div class="q">Why does the WGAN critic need the Lipschitz constraint?</div><div class="a"><p>Without the slope cap, the dual max is infinite: the critic makes f huge on real points and hugely negative on fakes, and the &ldquo;distance&rdquo; explodes. The 1-Lipschitz limit is what makes the max equal the earth-moving cost. It is load-bearing, not a technicality.
+Clipping bounds the slope crudely by boxing the weights. It works but cripples the critic&rsquo;s capacity. The gradient penalty adds (||∇f|| − 1)² to the critic loss, enforcing the slope directly where it matters. Better training, more tuning.</p><div class="followup"><strong>Follow-up:</strong> Weight clipping versus gradient penalty?</div></div></div>
 <div class="qa"><div class="q">What is FID, concretely?</div><div class="a"><p>Pass real and generated images through a pre-trained Inception net, take one deep layer&rsquo;s outputs as features, fit a Gaussian to each feature set, and compute the Fréchet (Wasserstein) distance between the Gaussians: ||μ − μ̂||² + Tr(Σ + Σ̂ − 2(ΣΣ̂)^{1/2}). In the hand toy the two clouds had identical shape with centers 2 apart, giving FID = 4. Lower is better. 0 is a perfect match.
 Because the lecture&rsquo;s cited study found Inception&rsquo;s inner layers track human visual judgment. Pixel distance says a one-pixel shift is a big change. Feature distance says it is nothing. FID judges what humans would judge, approximately.</p><div class="followup"><strong>Follow-up:</strong> Why Inception features instead of pixels?</div></div></div>
 <div class="qa"><div class="q">Can FID be gamed?</div><div class="a"><p>Yes. A generator that memorizes and replays training images gets FID near zero without creating anything. FID also assumes Gaussian features, is biased upward at small sample sizes, and only works where a good feature extractor exists (images). It is a judge, not a proof.
 Because the alternatives are worse. Likelihood does not exist for GAN generators, human rating does not scale, and pixel metrics disagree with perception. FID is the best cheap proxy, used with its limits stated.</p><div class="followup"><strong>Follow-up:</strong> Then why is it the standard?</div></div></div>
+<div class="qa"><div class="q">Your new generator reports FID 6.0. Your baseline reports FID 6.5. Did you win?</div><div class="a"><p>Not necessarily. FID is biased by sample size: fewer samples inflate it. If your run used 50,000 samples and the baseline used 10,000, the gap may be pure bias. Also the feature layer and dataset split must match. The decision rule: recompute both under identical settings (same n, same layer, same split) before claiming anything. A 0.5 gap under matched settings is a real but small win.
+Memorization and diversity. Nearest-neighbor distances from samples to training images (catches replay), and cluster counts over samples (catches mode collapse). FID alone certifies neither.</p><div class="followup"><strong>Follow-up:</strong> What else do you check before shipping?</div></div></div>
+<div class="qa"><div class="q">When do you pick WGAN over a VAE or diffusion model?</div><div class="a"><p>When you need the adversarial sample quality and can afford the saddle point. WGAN fixes GAN saturation but keeps the two-player dynamics. If your constraint is training stability above all, the latent-variable road (Lessons 6-10) has no adversary at all: plain minimization, monotone loss curves. The lecture&rsquo;s verdict is explicit: the field moved to latent-variable models because the saddle point, even tamed, is still a saddle point.
+Where sample sharpness per unit of compute matters most and you can babysit training. Historically that was high-resolution faces (the StyleGAN line). [uncertain] Whether any current frontier system still trains pure GANs is not public.</p><div class="followup"><strong>Follow-up:</strong> Is there any task where the adversary is still the right call?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
 <li><strong>The wound.</strong> JS saturates: θ = 10 and θ = 100 both score 0.693. Zero gradient, no signal.</li>
@@ -406,15 +464,16 @@ Because the alternatives are worse. Likelihood does not exist for GAN generators
 </ol>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
-- W4L11: Wasserstein GANs:
-  https://www.youtube.com/watch?v=_IBfVkrvqAI
+- W4L11: Wasserstein GANs: <a href="https://www.youtube.com/watch?v=_IBfVkrvqAI">paper</a>
 - W4L16: Evaluation of Generative Models:
-  https://www.youtube.com/watch?v=5Mchnh2xedI: FID procedure and formula confirmed in transcript.</p>
+  - <a href="https://www.youtube.com/watch?v=5Mchnh2xedI">FID procedure and formula confirmed in transcript.</a></p>
 <p><strong>Further reading:</strong>
 - Arjovsky, Chintala, Bottou, &ldquo;Wasserstein GAN&rdquo; (2017):
-  https://arxiv.org/abs/1701.07875: the dual form and weight clipping.
+  - <a href="https://arxiv.org/abs/1701.07875">the dual form and weight clipping.</a>
+- Gulrajani et al., &ldquo;Improved Training of Wasserstein GANs&rdquo; (2017):
+  - <a href="https://arxiv.org/abs/1704.00028">the gradient penalty.</a>
 - Heusel et al., &ldquo;GANs Trained by a Two Time-Scale Update Rule Converge to a Local Nash Equilibrium&rdquo; (2017):
-  https://arxiv.org/abs/1706.08500: the paper that introduced FID.</p>
+  - <a href="https://arxiv.org/abs/1706.08500">the paper that introduced FID.</a></p>
 <p><strong>Caveats.</strong> The FID procedure, its formula, and the Inception/ImageNet details are confirmed in the W4L16 transcript. The W4L11 transcript was bot-blocked, so the WGAN treatment (duality, Lipschitz, clipping) follows the standard Arjovsky et al. presentation. [uncertain] The point-mass W = |θ| toy and the six-point FID = 4 computation are the lesson&rsquo;s own.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
