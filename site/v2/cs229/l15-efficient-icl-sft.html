@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.classList.remove('no-js');</script>
 <title>Lecture 15: Attention Variants, In-Context Learning, and SFT — Stanford Frontier AI</title>
-<meta name="description" content="Making attention cheaper (KV cache, GQA, MoE), the shock of few-shot learning, and supervised fine-tuning as instruction tuning.">
+<meta name="description" content="Making attention cheaper (KV cache, GQA, MLA, MoE, quantization), the two phases of inference, the shock of few-shot learning, and supervised fine-tuning as ins">
 <link rel="stylesheet" href="../assets/vendor/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
 </head>
@@ -81,6 +81,7 @@
 <li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
 <li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
 <li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../cs229s/crash-course-02.html" data-page="cs229s-crash-02">CS229S · Crash course 2</a></li>
 </ul>
 <h3>CS224N: NLP with Deep Learning</h3><ul>
 <li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
@@ -146,18 +147,14 @@
 </ul>
 <h3>CS329A: Self-Improving AI Agents</h3><ul>
 <li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
-<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
-<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
-<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
-<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
-<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
-<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
-<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
-<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
-<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
-<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
-<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
-<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+<li><a href="../cs329a/l01-course-overview.html" data-page="cs329a-l01">L01 · Course Overview</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Compute Scaling</a></li>
+<li><a href="../cs329a/l03-feedback-tools-code.html" data-page="cs329a-l03">L03 · Feedback, Tools, Code</a></li>
+<li><a href="../cs329a/l04-planning-multistep-reasoning.html" data-page="cs329a-l04">L04 · Planning and Multi-Step Reasoning</a></li>
+<li><a href="../cs329a/l05-search-at-scale.html" data-page="cs329a-l05">L05 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l06-train-time-scaling.html" data-page="cs329a-l06">L06 · Train-Time Scaling</a></li>
+<li><a href="../cs329a/l07-agentic-evaluations.html" data-page="cs329a-l07">L07 · Agentic Evaluations</a></li>
+<li><a href="../cs329a/l08-future-directions.html" data-page="cs329a-l08">L08 · Future Directions</a></li>
 </ul>
 <h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
 <li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
@@ -219,13 +216,49 @@
       <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229: Machine Learning</a> / Lecture 15: Attention Variants, In-Context Learning, and SFT</nav>
       <h1>Lecture 15: Attention Variants, In-Context Learning, and SFT</h1>
       <p class="meta-line">2026-05-25 · Instructor: Tengyu Ma · 1:16:08 · Spring 2026</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="hHC-SF3utxg"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/hHC-SF3utxg" title="Lecture 15: Efficient Attention and Adaptation" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=hHC-SF3utxg" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=hHC-SF3utxg" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tengyu Ma attacks the quadratic price with KV caching and attention variants, then covers in-context learning and SFT.</p></div><h2 id="the-job-serve-a-million-users-without-a-million-gpus">The job: serve a million users without a million GPUs</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="hHC-SF3utxg"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/hHC-SF3utxg" title="Lecture 15: Efficient Attention and Adaptation" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=hHC-SF3utxg" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=hHC-SF3utxg" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Tengyu Ma attacks the quadratic price with KV caching and attention variants, then covers in-context learning and SFT.</p></div><h3 id="coverage-and-sourcing">Coverage and sourcing</h3>
+<p>This lesson follows CS229 Lecture 15 (Spring 2026, Tengyu Ma):
+attention efficiency (the KV cache and its diets), in-context
+learning, and supervised fine-tuning. The lecture&rsquo;s agenda is
+explicit: attention variants and efficiency first (with GPU
+co-design as a theme), then few-shot and zero-shot ICL, then
+SFT. The lecture&rsquo;s own numbers are the KV-cache memory
+pressure, the MoE routing example (each token to 8 of 128
+experts), and the SFT loss (NLL (negative log-likelihood) of y given x only). Claims
+marked &ldquo;October 2026&rdquo; are later updates, each with its source.
+Worked toys not attributed to the lecture are original
+miniatures. Sections on MLA, PagedAttention, speculative
+decoding, and PEFT are textbook background the lecture&rsquo;s
+efficiency agenda assumes.</p>
+<h2 id="the-job-serve-a-million-users-without-a-million-gpus">The job: serve a million users without a million GPUs</h2>
 <p>Lecture 14 priced attention at N^2 per forward pass. Generation
 makes it worse: each new token attends to all previous ones, so
 naive generation recomputes the whole matrix per token. A 4,096-token
 answer at 16.7M scores per layer per head per step is unservable.
 The job: cut the per-token cost, then cut the memory, then ask what
 the trained model can do without any weight updates at all.</p>
+<h2 id="two-phases-prefill-and-decode">Two phases: prefill and decode</h2>
+<p>Generation has two phases with opposite economics. <strong>Prefill</strong>:
+process the whole prompt at once (compute-bound, parallel like
+training). <strong>Decode</strong>: generate one token at a time (memory-bound,
+sequential). The user feels two numbers: <strong>TTFT</strong> (time to first
+token: prefill speed) and <strong>TPOT</strong> (time per output token: decode
+speed). A 4k prompt with a 100-token answer: prefill dominates
+TTFT, decode dominates the total. Optimizations split by phase:
+FlashAttention speeds prefill, the KV cache speeds decode. The
+lecture&rsquo;s efficiency work is mostly about decode: that is where
+serving lives.</p>
+<h3 id="subchapter-the-arithmetic-intensity-gap">Subchapter: the arithmetic intensity gap</h3>
+<p>Prefill processes 4,096 tokens at once: the weight matrices are
+loaded once and reused across 4,096 positions. High arithmetic
+intensity (many FLOPs per byte loaded): the GPU&rsquo;s compute units
+stay busy. Decode processes 1 token: the weights are loaded for
+one token&rsquo;s worth of math. Low intensity: the GPU waits on
+memory. Same model, same hardware, 10-50x different throughput
+per token. This is why &ldquo;memory-bound&rdquo; describes decode and
+&ldquo;compute-bound&rdquo; describes prefill. Every serving optimization
+is an attempt to raise decode&rsquo;s arithmetic intensity (bigger
+batches) or lower its memory traffic (smaller cache).</p>
 <h2 id="first-attempt-recompute-everything-per-token">First attempt: recompute everything per token</h2>
 <p>The naive generator: to produce token 101, run the full transformer
 on tokens 1-100. To produce token 102, run it on 1-101 from scratch.
@@ -242,7 +275,7 @@ the KV cache, token t costs t scores: total 4096*4097/2 =
 8,390,656 ≈ 8.4M. Ratio: 2.29e10 / 8.39e6 = 2,730x cheaper. The
 cache does not shave a constant: it deletes an order of growth.
 That 2,730x is the difference between unservable and servable.</p>
-<figure><img alt="Cubic audit" src="assets/plate-l15-cubic-audit.webp"><figcaption>The cubic, audited. Naive: sum of t squared to 4096 = 2.3e10 scores. KV cache: sum of t = 8.4M. 2,730x cheaper. Source: original audit for the generation cost. Project: Stanford Frontier AI.</figcaption></figure>
+<figure><img alt="Cubic audit" src="assets/plate-l15-cubic-audit.webp"><figcaption>Shell 1. KV cache turns 2.3e10 scores into 8.4M: 2,730x cheaper. The cubic, audited. Naive: sum of t squared to 4096 = 2.3e10 scores. KV cache: sum of t = 8.4M. 2,730x cheaper. Source: original audit for the generation cost. Project: Stanford Frontier AI.</figcaption></figure>
 <h3 id="subchapter-the-cache-in-bytes">Subchapter: the cache in bytes</h3>
 <p>Big-O hides the bytes. Price them for a 7B model: d = 4096, 32
 layers, 32 heads, head dim 128, fp16. Per token per layer: K is 32
@@ -253,7 +286,7 @@ on an 80 GB GPU: fits, barely, before activations and overhead.
 This is why the lecture&rsquo;s &ldquo;batch of 10, not 1,000&rdquo; is not
 rhetoric: each sequence is a 2 GB object. Bytes, not big-O, set
 the batch size.</p>
-<figure><img alt="Cache bytes" src="assets/plate-l15-cache-bytes.webp"><figcaption>The cache in bytes. Per token: 512 KB. A 4k sequence: 2 GB. Batch of 10: 20 GB plus 14 GB weights. Source: original plate for the KV memory. Project: Stanford Frontier AI.</figcaption></figure>
+<figure><img alt="Cache bytes" src="assets/plate-l15-cache-bytes.webp"><figcaption>Shell 2. KV cache priced in bytes: 512 KB per token. The cache in bytes. Per token: 512 KB. A 4k sequence: 2 GB. Batch of 10: 20 GB plus 14 GB weights. Source: original plate for the KV memory. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-kv-cache">The KV cache</h2>
 <p>Keys and values for tokens 1-100 are identical whether you are
 generating token 101 or 102. So save them. The <strong>KV cache</strong> stores
@@ -262,7 +295,10 @@ Generating token t+1 needs only its own query, key, and value:
 attend the new query to the cached keys, mix the cached values,
 append the new K/V to the cache. Per-token cost drops from O(t^2)
 to O(t). The cubic becomes quadratic.</p>
-<figure><img alt="KV cache" src="assets/svg/l15-kvcache.svg"><figcaption>The KV cache. Keys and values of past tokens are stored, not recomputed. Per-token cost falls from O(t^2) to O(t). Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<p>The lecture&rsquo;s framing: in some cases, just saving the KV cache
+for all the sequences is what fills the GPU. The cache is the
+state of the conversation, and state is memory.</p>
+<figure><img alt="KV cache" src="assets/svg/l15-kvcache.svg"><figcaption>Shell 3. Store past keys and values; per-token cost drops to O(t). The KV cache. Keys and values of past tokens are stored, not recomputed. Per-token cost falls from O(t^2) to O(t). Source: original plate for Stanford Frontier AI.</figcaption></figure>
 <p>The price is memory. The cache is linear in sequence length T, and
 the lecture stresses how heavy it is: saving K and V for every head
 of every layer for one long sequence can fill most of a GPU&rsquo;s
@@ -273,20 +309,16 @@ waits on memory bandwidth, not arithmetic. The lecture&rsquo;s chain:
 KV cache fills memory -&gt; batch shrinks -&gt; parallelism dies -&gt;
 throughput dies. Reducing the cache is the highest-impact
 systems work in LLM serving.</p>
+<figure><img alt="Chapter plate: the KV cache kills the cubic" src="assets/plate-l15-chap-kvcache.svg"><figcaption>Chapter plate L15-C1. Left: recompute per token, token t costs t^2, 2.3e10 scores. Center: the cache, 512 KB per token, 2 GB per 4k sequence. Right: token t costs t scores, 8.4M total, 2,730x cheaper. Bottom: bytes, not big-O, set the batch size. Dense chapter plate. Source: original synthesis of the session. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="attention-variants-shrink-the-cache">Attention variants: shrink the cache</h2>
+<p>The lecture&rsquo;s theme for this section: co-design the architecture
+with the GPU&rsquo;s properties. Every variant below shrinks the
+cache or its traffic.</p>
 <p><strong>Grouped-query attention</strong> (GQA): share one key/value head across
 a group of query heads. With 32 query heads and 8 KV heads, the
 cache shrinks 4x. The queries keep their expressiveness (each still
 attends differently). Only the stored K/V compress. Quality barely
 moves. Memory moves a lot.</p>
-<p><strong>Mixture of experts</strong> (MoE): instead of one big MLP per block,
-have E expert MLPs and a router that sends each token to the top-k
-(usually 2). Parameters grow E-fold. Compute per token stays ~flat
-because each token visits 2 experts. A 8-expert model has 8x the
-MLP parameters for ~1.1x the compute. The price: the router must
-balance load (experts starve or flood), and all experts must sit in
-memory even though each token uses two.</p>
-<figure><img alt="MoE" src="assets/svg/l15-moe.svg"><figcaption>Mixture of experts. A router sends each token to 2 of 8 experts. Parameters grow 8x, compute per token stays nearly flat. Source: original plate for Stanford Frontier AI.</figcaption></figure>
 <h3 id="subchapter-gqa-counted">Subchapter: GQA, counted</h3>
 <p>Count the diet. 32 query heads, 32 KV heads: 512 KB per token (the
 audit above). GQA with 8 KV heads: K per layer is 8 heads x 128 x
@@ -297,7 +329,325 @@ The queries keep all 32 heads: each still attends with its own
 pattern. Only the stored keys and values compress. The lecture&rsquo;s
 claim &ldquo;quality barely moves&rdquo; is the empirical surprise: the KV
 content is redundant across heads, the query patterns are not.</p>
-<figure><img alt="GQA counted" src="assets/plate-l15-gqa-counted.webp"><figcaption>GQA, counted. 32 KV heads: 512 KB per token. 8 KV heads: 128 KB. 4x smaller cache, queries untouched. Source: original plate for the GQA arithmetic. Project: Stanford Frontier AI.</figcaption></figure>
+<figure><img alt="GQA counted" src="assets/plate-l15-gqa-counted.webp"><figcaption>Shell 4. Fewer KV heads: 4x smaller cache, queries untouched. GQA, counted. 32 KV heads: 512 KB per token. 8 KV heads: 128 KB. 4x smaller cache, queries untouched. Source: original plate for the GQA arithmetic. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-mqa-the-extreme">Subchapter: MQA, the extreme</h3>
+<p><strong>Multi-query attention</strong> (MQA, Shazeer 2019): one KV head for
+all query heads. The cache shrinks 32x (512 KB to 16 KB per
+token). Quality drops a little more than GQA: one shared KV
+representation is a real bottleneck. MQA was the first answer
+(Falcon, PaLM). GQA replaced it as the sweet spot: 4-8x
+smaller cache with no measurable quality loss. The spectrum:
+MHA (32 KV heads, full quality, full cache), GQA (8, the
+default), MQA (1, the extreme). Pick by the memory budget.</p>
+<h3 id="subchapter-mla-compress-the-latent">Subchapter: MLA, compress the latent</h3>
+<p><strong>Multi-head latent attention</strong> (MLA, DeepSeek-V2, 2024): do
+not store K and V at all. Store a compressed <strong>latent</strong> vector
+c (512 dims) per token per layer, and reconstruct K and V
+with learned up-projections at attention time. The cache per
+token per layer: 512 x 2 bytes = 1 KB, vs 16 KB for MHA at
+d=4096 (32 heads x 128 x 2 x 2). Roughly 16x smaller than
+MHA, 4x smaller than GQA-8. The trick that makes it work:
+absorb the up-projection into the query projection
+algebraically, so the reconstruction costs almost nothing at
+runtime. Positions need care: RoPE does not commute with the
+compression, so MLA uses <strong>decoupled RoPE</strong> (a separate small
+rotary path). DeepSeek-V3 ships MLA in production at 671B
+parameters (verified October 2026). The lecture&rsquo;s co-design
+theme, taken to its conclusion: change what is stored, not
+just how much.</p>
+<figure><img alt="MLA" src="assets/svg/l15-mla.svg"><figcaption>Shell 5. One latent vector per token: 16x smaller than MHA cache. MLA. Store one latent vector per token, reconstruct K and V on the fly. 16x smaller than MHA cache. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-cla-share-across-layers">Subchapter: CLA, share across layers</h3>
+<p><strong>Cross-layer attention</strong> (CLA, MIT, NeurIPS 2024): neighboring
+layers share one KV cache. Only half the layers compute their
+own K and V. The others reuse. Queries stay per-layer (each
+layer still attends its own way). CLA-2 halves the cache with
+~0.04 perplexity cost on 1B/3B models. Apple&rsquo;s 2025 on-device
+model used it to cut KV memory ~37% (reported 2025). CLA
+stacks with GQA/MQA (orthogonal axes: share across heads,
+share across layers). The catch: it must be baked into
+training. You cannot retrofit it onto a trained model.</p>
+<h3 id="subchapter-quantize-the-cache">Subchapter: quantize the cache</h3>
+<p>The cache is fp16 by default. Store it in <strong>fp8</strong>: halves the
+bytes, minimal quality loss (the cache tolerates low
+precision: it is read once per token, not accumulated).
+<strong>KIVI</strong> (2024): asymmetric quantization (keys per-channel,
+values per-token) down to 2-bit with small accuracy loss.
+The pattern: the cache is the most compressible state in
+the system because errors do not compound across steps the
+way weight errors do. Production serving (TensorRT-LLM,
+vLLM) ships fp8 KV cache as a flag. Another ~2x on top of
+GQA.</p>
+<h3 id="subchapter-evict-the-cache">Subchapter: evict the cache</h3>
+<p>When the cache still overflows, evict. <strong>H2O</strong> (2023): keep
+the tokens with the highest cumulative attention scores
+(the &ldquo;heavy hitters&rdquo;), evict the rest. <strong>StreamingLLM</strong>:
+keep the first 4-8 sink tokens (L14&rsquo;s attention sink) plus a
+sliding window of recent tokens. Both hold quality on
+long-context QA while capping memory at a fixed budget.
+The price: eviction is lossy and irreversible. A question
+about an evicted token cannot be answered. The dial: the
+budget. Infinite budget is exact. Finite budget is a bet
+that attention scores predict future relevance.</p>
+<h3 id="subchapter-the-cache-diets-compared">Subchapter: the cache diets, compared</h3>
+<table>
+<thead>
+<tr>
+<th>Diet</th>
+<th>Cache per token (7B, fp16)</th>
+<th>Quality cost</th>
+<th>Retrofit?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MHA (baseline)</td>
+<td>512 KB</td>
+<td>None</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>GQA-8</td>
+<td>128 KB</td>
+<td>~None</td>
+<td>No (train-time)</td>
+</tr>
+<tr>
+<td>MQA</td>
+<td>16 KB</td>
+<td>Small</td>
+<td>No</td>
+</tr>
+<tr>
+<td>MLA</td>
+<td>~32 KB equiv</td>
+<td>~None</td>
+<td>No</td>
+</tr>
+<tr>
+<td>CLA-2</td>
+<td>1/2 of base</td>
+<td>~0.04 ppl</td>
+<td>No</td>
+</tr>
+<tr>
+<td>fp8 cache</td>
+<td>1/2 of base</td>
+<td>Minimal</td>
+<td>Yes (inference flag)</td>
+</tr>
+<tr>
+<td>Eviction</td>
+<td>Fixed budget</td>
+<td>Task-dependent</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<p>Stack them: GQA-8 + fp8 + eviction is the production
+combination. Each row attacks a different axis: heads,
+layers, precision, length.</p>
+<figure><img alt="Chapter plate: the cache diets, stacked" src="assets/plate-l15-chap-diets.svg"><figcaption>Chapter plate L15-C2. Left: full MHA, 512 KB per token, batch of 10. Center: the diets, GQA-8 4x, MQA 32x, MLA 16x, CLA-2, fp8, evict. Right: GQA-8 + fp8 + evict, paging 12% to 96% util, $0.28 per M tokens. Bottom: shrink the bytes, then stop wasting them. Dense chapter plate. Source: original synthesis of the session. Project: Stanford Frontier AI.</figcaption></figure>
+<h2 id="pagedattention-the-os-trick">PagedAttention: the OS trick</h2>
+<p>Even with a small cache, memory management wastes it. The
+naive allocator reserves a contiguous chunk per request sized
+for the maximum sequence length: a 100-token request holds a
+4,096-token reservation. <strong>PagedAttention</strong> (vLLM, Kwon et
+al., SOSP 2023): split the cache into fixed-size <strong>blocks</strong>
+(pages), allocate on demand, map logical positions to
+physical blocks through a <strong>block table</strong>. Exactly OS virtual
+memory, for KV cache.</p>
+<p>Work the fragmentation. 10 requests, max length 4,096,
+average actual length 500. Contiguous reservation: 10 x 2 GB
+= 20 GB reserved, 2.4 GB used: 12% utilization. Paged:
+allocate 500 tokens&rsquo; worth of blocks per request: 2.4 GB
+used, ~2.5 GB reserved: 96% utilization. The paper reports
+2-4x higher serving throughput at equal latency (verified
+via arxiv.org, October 2026). <strong>Copy-on-write</strong> shares
+prompt blocks across beam-search branches: N beams share one
+prompt&rsquo;s blocks until they diverge. The lesson: the cache
+diet shrinks the bytes. Paging stops wasting them.</p>
+<figure><img alt="PagedAttention" src="assets/svg/l15-paged.svg"><figcaption>Shell 6. Fixed KV blocks on demand: fragmentation dies. PagedAttention. Fixed-size KV blocks, block tables, allocate on demand. Fragmentation dies. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-continuous-batching">Subchapter: continuous batching</h3>
+<p>Static batching waits for the slowest request: a 10-token
+answer waits for the 4,000-token answer in its batch.
+<strong>Continuous batching</strong> (Orca, 2022): schedule at the
+iteration level. Each decode step, the batch is whatever
+requests are alive: finished requests leave, new ones join
+immediately. The GPU never idles on a straggler. Combined
+with paging, this is the modern serving stack (vLLM,
+TensorRT-LLM, SGLang). Throughput gains: 2-4x over static
+batching on mixed workloads. The lecture&rsquo;s &ldquo;serve a million
+users&rdquo; is this machinery, not a bigger GPU.</p>
+<h2 id="speculative-decoding-draft-then-verify">Speculative decoding: draft, then verify</h2>
+<p>The decode phase generates one token per forward pass: the
+GPU does a full model pass for one token&rsquo;s worth of work.
+<strong>Speculative decoding</strong>: a small <strong>draft</strong> model proposes k
+tokens cheaply, the big model <strong>verifies</strong> them in one
+parallel forward pass (it can: verification is prefill-like,
+all k tokens at once). Accept the longest correct prefix,
+keep one extra token the big model generates.</p>
+<p>Work the acceptance. Draft proposes 4 tokens. Big model
+verifies: tokens 1-3 match what it would have generated,
+token 4 does not. Accept 3, generate token 4&rsquo;s replacement
+plus token 5 in the same pass. Cost: ~1 big forward pass
+for 4 tokens instead of 4 passes. Speedup: 2-3x typical,
+bounded by the draft&rsquo;s accuracy. The output is identical to
+non-speculative decoding (the big model decides every
+token): it is exact, not approximate. The draft can be a
+small model, an n-gram table, or the big model&rsquo;s own early
+layers. The lecture does not cover this. It is the
+decode-phase complement to the lecture&rsquo;s cache work.</p>
+<h3 id="subchapter-the-draft-zoo">Subchapter: the draft zoo</h3>
+<p>What makes a good draft? Three species. <strong>Small model</strong>:
+a 1B model drafting for a 70B: high acceptance (similar
+distribution), real cost (a second model to serve).
+<strong>N-gram table</strong>: memorize common continuations (&ldquo;the
+United States of&rdquo;): free, low acceptance on hard text.
+<strong>Early-exit</strong>: use the big model&rsquo;s own first layers as
+the draft: no second model, medium acceptance. The
+acceptance rate is the whole game: 80% acceptance on
+5-token drafts gives ~4x. 30% gives ~1.4x. Measure on your
+traffic: code (repetitive) drafts well, creative writing
+does not.</p>
+<h3 id="subchapter-disaggregated-serving">Subchapter: disaggregated serving</h3>
+<p>Prefill is compute-bound, decode is memory-bound. One GPU
+doing both compromises both. <strong>Disaggregated serving</strong>:
+prefill GPUs (H100s, compute-heavy) and decode GPUs
+(cheaper cards, memory-bandwidth-bound) as separate
+pools, with the KV cache shipped between them. The
+cache transfer is the price: gigabytes per request over
+the network. Worth it at scale: each pool runs at its own
+optimal batching. This is the serving architecture the
+2025-2026 inference companies converged on [uncertain:
+vendor internals vary. The pattern is public in
+engineering blogs].</p>
+<h2 id="mixture-of-experts-scale-parameters-not-compute">Mixture of experts: scale parameters, not compute</h2>
+<p><strong>Mixture of experts</strong> (MoE): instead of one big MLP per block,
+have E expert MLPs and a router that sends each token to the top-k.
+Parameters grow E-fold. Compute per token stays ~flat because each
+token visits k experts. The lecture&rsquo;s example: each token routed
+to 8 of 128 experts. The production instance: Mixtral 8x7B routes
+each token to 2 of 8 experts (verified October 2026).</p>
+<figure><img alt="MoE" src="assets/svg/l15-moe.svg"><figcaption>Shell 7. Many experts, few active per token: flat compute. Mixture of experts. A router sends each token to a few of many experts. Parameters grow E-fold, compute per token stays nearly flat. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-router-worked">Subchapter: the router, worked</h3>
+<p>The router is one linear layer: scores = softmax(x W_r), E
+logits. Take top-k, renormalize, weight the experts&rsquo; outputs.
+Work the toy. E = 4, k = 2. Token x gives router logits
+[2.0, 1.0, 0.5, -1.0]. Softmax: [0.61, 0.22, 0.14, 0.03].
+Top-2: experts 1 and 2, renormalized [0.731, 0.269]. Output =
+0.731 * Expert1(x) + 0.269 * Expert2(x). Experts 3 and 4 are
+not computed. The router&rsquo;s 4 x d parameters are negligible.
+Its decisions are everything: route badly and capacity is
+wasted.</p>
+<h3 id="subchapter-token-choice-vs-expert-choice">Subchapter: token-choice vs expert-choice</h3>
+<p><strong>Token-choice</strong> (standard): each token picks its top-k
+experts. Experts can flood (too many tokens) or starve.
+<strong>Expert-choice</strong>: each expert picks its top-k tokens. Load
+is perfectly balanced by construction (each expert gets
+exactly k tokens), but tokens can be orphaned (no expert
+picks a weird token) or duplicated. Token-choice dominates
+production (Mixtral, DeepSeek) with load-balancing fixes.
+Expert-choice is the cleaner theory. The choice is
+load-balance-by-loss vs load-balance-by-design.</p>
+<h3 id="subchapter-the-load-balance-loss-worked">Subchapter: the load-balance loss, worked</h3>
+<p>Token-choice floods. The <strong>auxiliary load-balance loss</strong>
+penalizes uneven routing: L_aux = E * sum_i (fraction of
+tokens to expert i) * (mean router probability for expert i).
+Uniform routing gives the minimum. Work the toy. 4 experts,
+100 tokens. Balanced: 25 each, mean prob 0.25 each: L_aux =
+4 * (0.25<em>0.25) * 4 = &hellip; the standard form gives 1.0 at
+perfect balance, higher when skewed. Flooded: 97 tokens to
+expert 1: the product spikes, the loss bites. The weight is
+small (0.01): enough to balance, not enough to distort the
+main objective. DeepSeek-V3 replaced this with an
+</em><em>auxiliary-loss-free</em><em> trick: a per-expert </em><em>bias</em>* added to
+the router scores, nudged up for underused experts and down
+for overused ones (verified October 2026). Same balance, no
+gradient interference with the main loss.</p>
+<h3 id="subchapter-fine-grained-experts-deepseeks-move">Subchapter: fine-grained experts, DeepSeek&rsquo;s move</h3>
+<p>Mixtral: 8 big experts, top-2. DeepSeek-V3: <strong>256 fine-grained
+experts</strong>, top-8, plus 1 <strong>shared</strong> expert that every token
+uses (verified October 2026). Each expert is small (2,048
+dim). More, smaller experts specialize better: one expert
+can own &ldquo;Python syntax&rdquo; while another owns &ldquo;French verbs&rdquo;.
+The shared expert absorbs the common knowledge so the
+routed experts can specialize. Total: 671B parameters, 37B
+active per token. The lecture&rsquo;s &ldquo;very subtle&rdquo; training note
+is this whole subchapter: routing, balance, granularity,
+and the bias trick that replaced the aux loss.</p>
+<h3 id="subchapter-the-capacity-factor-and-token-dropping">Subchapter: the capacity factor and token dropping</h3>
+<p>Flooded experts cannot take infinite tokens. The <strong>capacity
+factor</strong> caps tokens per expert at (tokens/E) * factor
+(factor 1.0-1.25). Overflow tokens are <strong>dropped</strong>: they skip
+the MoE layer (pass through the residual). Dropping loses
+information. Too-high capacity wastes compute on padding.
+<strong>Dropless</strong> MoE (DeepSeek): no cap, no dropping. Instead,
+schedule expert computation to handle the imbalance. The
+tradeoff is systems complexity vs information loss. The
+interview read: dropping is the silent quality tax of naive
+MoE serving.</p>
+<h3 id="subchapter-expert-parallelism">Subchapter: expert parallelism</h3>
+<p>8 experts fit on one GPU. 256 do not. <strong>Expert parallelism</strong>:
+place different experts on different GPUs, route tokens
+across the network (<strong>all-to-all</strong> communication). The
+network becomes the bottleneck: each token&rsquo;s dispatch and
+combine cross GPU boundaries. DeepSeek&rsquo;s <strong>DualPipe</strong>
+(verified October 2026) overlaps this communication with
+computation bidirectionally. The systems price of MoE is
+paid here: dense models need tensor parallelism too, but
+MoE&rsquo;s all-to-all is spikier and harder to hide.</p>
+<h3 id="subchapter-moe-the-full-price">Subchapter: MoE, the full price</h3>
+<p>MoE buys parameter scale at flat per-token compute and pays
+four prices. One: <strong>memory</strong>: all E experts sit in GPU
+memory (any token may visit any expert). Mixtral needs
+~94 GB for 46.7B params: two GPUs or offloading. Two:
+<strong>load balance</strong>: the aux loss or bias trick, tuned forever.
+Three: <strong>communication</strong>: all-to-all at 256 experts. Four:
+<strong>training subtlety</strong> (the lecture&rsquo;s warning): routers can
+collapse (all tokens to one expert), experts can die
+(never selected, never trained). The standard defenses:
+noisy routing during training, the balance loss, and
+initializing from a dense warmup. MoE is not a free
+lunch. It is a systems project that happens to train a
+model.</p>
+<figure><img alt="Chapter plate: mixture of experts" src="assets/plate-l15-chap-moe.svg"><figcaption>Chapter plate L15-C3. Left: dense, every parameter every token. Center: the router, logits to softmax 0.609/0.224/0.136/0.030, top-2 0.731/0.269. Right: DeepSeek-V3, 256 experts top-8 plus shared, 671B params 37B active. Bottom: flat per-token compute for a systems project. Dense chapter plate. Source: original synthesis of the session. Project: Stanford Frontier AI.</figcaption></figure>
+<h2 id="quantization-for-serving">Quantization for serving</h2>
+<p>Weights in fp16 are the default. <strong>Quantization</strong> shrinks
+them for serving: less memory, more batch, faster loads.</p>
+<h3 id="subchapter-int8-and-fp8-the-easy-wins">Subchapter: INT8 and FP8, the easy wins</h3>
+<p><strong>INT8</strong>: 2x smaller weights, ~2x the batch. Quality loss is
+small for inference (activations stay fp16). <strong>FP8</strong>: the
+2026 training standard (DeepSeek-V3 trained in FP8,
+verified October 2026): better dynamic range than INT8 for
+gradients, natively supported on H100+. For pure serving,
+INT8/FP8 weight-only quantization is close to free: the
+accuracy delta is within noise on most benchmarks. The
+rule: quantize weights first, activations later, and
+measure on your eval.</p>
+<h3 id="subchapter-gptq-and-awq-the-4-bit-answers">Subchapter: GPTQ and AWQ, the 4-bit answers</h3>
+<p><strong>GPTQ</strong>: 4-bit weights via layer-wise quantization that
+minimizes the reconstruction error (Hessian-weighted).
+<strong>AWQ</strong>: 4-bit that protects the 1% of salient weights
+(the ones with large activations) in higher precision.
+Both: ~4x smaller weights, small quality loss, needs
+calibration data. A 70B model in 4-bit fits on one 80GB
+GPU (35 GB weights). The price: slower dequantization
+kernels (mitigated by fused kernels), and 4-bit training
+is not a thing: quantize after training, always.</p>
+<h3 id="subchapter-the-serving-cost-model">Subchapter: the serving cost model</h3>
+<p>Tie it together in dollars. A 7B fp16 model on one A100
+80GB: ~$2/hour rented. Throughput with the full stack
+(GQA, paging, continuous batching): ~2,000 tokens/second
+(illustrative: varies by sequence length and batch).
+Cost per million tokens: 2,000 tok/s x 3,600 = 7.2M
+tokens/hour, $2/7.2M = $0.28 per million tokens. The
+levers in order of impact: batch size (throughput scales
+with batch until bandwidth saturates), quantization (2-4x
+the batch), the cache diet (GQA halves the per-sequence
+bytes). Every optimization in this lesson is a term in
+this division. The interview read: when asked about
+serving cost, start from tokens/second per GPU, not from
+the model size.</p>
 <h2 id="the-shock-in-context-learning">The shock: in-context learning</h2>
 <p>Now the pivot from systems to behavior. Take the trained model,
 freeze every weight, and prompt it:</p>
@@ -311,7 +661,7 @@ Three examples in the prompt taught it the task. This is
 <strong>in-context learning</strong> (ICL): few-shot learning with frozen
 weights. The lecture presents it as the shock of the GPT-3 era:
 nobody trained for this. It emerged from next-token prediction at
-scale.</p>
+scale. The lecture&rsquo;s line: &ldquo;you never update the model parameters.&rdquo;</p>
 <p>Why it works, roughly: the prompt&rsquo;s examples are processed by the
 same attention machinery as everything else. Attention can
 implement &ldquo;find the pattern in the recent examples and continue
@@ -322,7 +672,45 @@ with a job hidden inside. Scale matters: small models barely do
 this. Large ones do it reliably. The lecture&rsquo;s honest note: the
 mechanism is still partly mysterious, and ICL is brittle: change
 the example order or wording and accuracy swings.</p>
-<figure><img alt="In-context learning" src="assets/svg/l15-icl.svg"><figcaption>In-context learning. Examples live in the prompt, weights frozen. Attention implements 'continue the pattern'. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<figure><img alt="In-context learning" src="assets/svg/l15-icl.svg"><figcaption>Shell 8. Frozen weights learn the pattern from prompt examples. In-context learning. Examples live in the prompt, weights frozen. Attention implements 'continue the pattern'. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-zero-shot-few-shot-chain-of-thought">Subchapter: zero-shot, few-shot, chain-of-thought</h3>
+<p><strong>Zero-shot</strong>: task description only (&ldquo;Translate English to
+French: cheese -&gt;&rdquo;). The model must infer the task from the
+instruction. <strong>Few-shot</strong>: description plus examples (the
+lecture&rsquo;s sea/sky/cheese). Accuracy climbs with examples,
+then plateaus. <strong>Chain-of-thought prompting</strong>: add worked
+examples with reasoning steps (&ldquo;First identify the word,
+then recall the French&hellip;&rdquo;). The model imitates the
+reasoning format and answers better on math and logic. The
+lecture&rsquo;s note: you can even specify the output format in
+the description (&ldquo;respond in JSON&rdquo;): the model complies.
+The ladder: zero-shot for easy tasks, few-shot for format,
+CoT for reasoning. Each rung costs prompt tokens.</p>
+<h3 id="subchapter-the-industry-shock-the-lectures-story">Subchapter: the industry shock, the lecture&rsquo;s story</h3>
+<p>The lecture frames ICL as an industrial discontinuity. The
+old way: collect domain data, label it, train a model,
+deploy a separate specialized model per company per task.
+Months of work per task. The new way: one off-the-shelf
+model plus prompts (plus <strong>scaffolding</strong> for agentic tasks:
+the prompt plus the loop that calls tools). Days of work
+per task. The lecture&rsquo;s line: this &ldquo;fundamentally changed
+the convenience of applying these models in industry.&rdquo;
+The economics flipped: the model is fixed capital, the
+prompt is the variable input. Fine-tuning did not die
+(below), but it stopped being the default first move.</p>
+<h3 id="subchapter-emergence-and-scale">Subchapter: emergence and scale</h3>
+<p>ICL is not linear in model size. Below ~10B parameters it
+barely works. GPT-3 at 175B did it reliably. The capability
+appears suddenly with scale: an <strong>emergent</strong> behavior.
+Why: pattern-completion at few-shot quality needs the
+model to hold the task, the examples, and the mapping in
+its activations simultaneously: capacity-gated. The
+practical read: do not judge ICL on small models. The
+phenomenon the lecture calls the biggest surprise of the
+GPT-3 era only exists past the scale threshold. This is
+also why the mechanism stays partly mysterious: it was
+never trained for, so there is no training curve to
+inspect. Only the emergent capability.</p>
 <h3 id="subchapter-the-brittleness-itemized">Subchapter: the brittleness, itemized</h3>
 <p>ICL is free and fragile. Three documented failure shapes. Order:
 reversing the example order can swing few-shot accuracy by double
@@ -334,7 +722,44 @@ the pattern. The decision rule for production: prototype with ICL
 (zero training, instant iteration), ship with SFT (the behavior is
 in the weights, not in a prompt you hope nobody rewords). ICL is
 the sketchpad. SFT is the ink.</p>
-<figure><img alt="ICL brittle" src="assets/plate-l15-icl-brittle.webp"><figcaption>ICL is brittle. Reorder the examples: accuracy swings. Reword the prompt: bigger swing than adding examples. Prototype with ICL, ship with SFT. Source: original plate for the brittleness. Project: Stanford Frontier AI.</figcaption></figure>
+<figure><img alt="ICL brittle" src="assets/plate-l15-icl-brittle.webp"><figcaption>Shell 9. ICL is brittle: order and wording swing accuracy. ICL is brittle. Reorder the examples: accuracy swings. Reword the prompt: bigger swing than adding examples. Prototype with ICL, ship with SFT. Source: original plate for the brittleness. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-prompt-engineering-is-programming">Subchapter: prompt engineering is programming</h3>
+<p>The brittleness made a discipline: <strong>prompt engineering</strong>.
+Delimiters (###, &ldquo;&rdquo;&ldquo;), role prompts (&ldquo;You are a translator&rdquo;),
+format specifications (JSON schemas), negative instructions
+(&ldquo;do not explain, only translate&rdquo;). Each is a control
+structure for a computer that runs on English. The mature
+view: prompts are programs, the model is the interpreter,
+and the brittleness is the language&rsquo;s undefined behavior.
+Version your prompts. Test them like code. The lecture&rsquo;s
+scaffolding note points here: for agentic tasks, the prompt
+plus the tool loop is the application.</p>
+<h3 id="subchapter-the-context-window-tax">Subchapter: the context window tax</h3>
+<p>Every example costs tokens, forever. 20 examples at 100
+tokens: 2,000 tokens of overhead per query. At 4k context,
+half the window is examples. At 128k, the overhead is
+noise. The tax bites twice: latency (prefill reads the
+examples every query) and money (per-token pricing). The
+decision rule from the Q&amp;A below: prototype with ICL,
+ship with SFT. The context window grew (128k is standard
+in 2026), which softened the tax but did not remove it:
+2,000 tokens x 1M queries/day is still 2B tokens/day of
+overhead. Retrieval (L13) is the alternative for facts:
+update the store, not the prompt.</p>
+<h3 id="subchapter-icl-vs-sft-vs-rag-the-adaptation-decision">Subchapter: ICL vs SFT vs RAG, the adaptation decision</h3>
+<p>Three ways to adapt a frozen model. <strong>ICL</strong>: examples in
+the prompt. Cost: tokens per query. Best for: exploration,
+prototypes, tasks that change daily. <strong>SFT</strong>: behavior in
+the weights. Cost: human pairs + training. Best for:
+stable tasks, format, reliability. <strong>RAG</strong>: facts in the
+store. Cost: index + retrieval. Best for: changing facts,
+private data, citations. The lecture covers ICL and SFT.
+L13 covers RAG. The production answer is usually two of
+the three: SFT the format, RAG the facts, ICL the
+per-query variables. Match the method to the change rate:
+daily changes go in the prompt, weekly facts in the
+store, stable behavior in the weights.</p>
+<figure><img alt="Chapter plate: in-context learning" src="assets/plate-l15-chap-icl.svg"><figcaption>Chapter plate L15-C4. Left: train a model per task, months per task. Center: frozen weights, sea/sky/cheese to fromage, no gradient step. Right: emerges past 10B, brittle to order and wording, 2,000 tokens overhead per query. Bottom: prototype with ICL, ship with SFT. Dense chapter plate. Source: original synthesis of the session. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="sft-teach-the-format">SFT: teach the format</h2>
 <p>Pre-trained models complete text. Users want assistants that
 follow instructions. <strong>Supervised fine-tuning</strong> (SFT), also called
@@ -351,7 +776,103 @@ narrows the model. Overdo it and the model forgets things it knew
 (catastrophic forgetting) or becomes sycophantic. And the pairs are
 human-written: expensive, slow, and the quality ceiling of the
 whole step.</p>
-<figure><img alt="SFT" src="assets/svg/l15-sft.svg"><figcaption>Supervised fine-tuning. Train on (instruction, response) pairs. Pre-training teaches the world. SFT teaches the job description. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<p>The lecture&rsquo;s loss, exactly: collect (x = instruction, y =
+answer) pairs, continue training from the pretrained checkpoint,
+and pay the NLL (negative log-likelihood) of y given x <strong>only</strong>. The instruction x is
+context (seen, not predicted). Per token: sum_t log p(y_t |
+x, y_<t>). The lecture&rsquo;s line: &ldquo;anything that looks like this
+is called supervised fine tuning.&rdquo;</p>
+<figure><img alt="SFT" src="assets/svg/l15-sft.svg"><figcaption>Shell 10. SFT teaches the job description on instruction-response pairs. Supervised fine-tuning. Train on (instruction, response) pairs. Pre-training teaches the world. SFT teaches the job description. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-loss-mask-worked">Subchapter: the loss mask, worked</h3>
+<p>Why mask x? The instruction is given at test time: predicting
+it teaches nothing and wastes capacity. Work the toy. Pair:
+x = &ldquo;Translate: sea&rdquo;, y = &ldquo;mer&rdquo;. Tokens: [Translate, :, sea,
+mer]. Loss positions: only &ldquo;mer&rdquo;. The model learns p(mer |
+Translate, :, sea). If x were unmasked, the model would also
+learn p(sea | Translate, :) and p(: | Translate): modeling
+the instruction distribution, which is fixed at test time.
+The mask focuses every gradient step on the response. In
+code: labels = [-100, -100, -100, id(mer)]. -100 is PyTorch
+for &ldquo;ignore this position&rdquo;.</p>
+<h3 id="subchapter-chat-templates">Subchapter: chat templates</h3>
+<p>Instruction pairs need format. The <strong>chat template</strong> wraps
+(x, y) in role tokens: <code>&lt;|user|&gt;Translate: sea&lt;|assistant|&gt;mer</code>.
+The model learns the turn structure: user speaks, assistant
+answers. Different labs use different tokens (ChatML,
+Llama-3&rsquo;s headers). The template is part of the model: serve
+with the wrong template and performance drops (the model
+never saw that format). Fine-tuning a base model? Pick the
+template first. Everything downstream (evals, serving,
+prompts) assumes it.</p>
+<h3 id="subchapter-data-quality-over-quantity">Subchapter: data quality over quantity</h3>
+<p>SFT pairs are human-written: expensive. The <strong>LIMA</strong> finding
+(Zhou et al., 2023): 1,000 carefully curated pairs beat
+50,000 noisy ones. The model&rsquo;s knowledge is already in the
+weights: SFT only needs to demonstrate the <em>format</em> of
+helpfulness, and 1,000 excellent demonstrations suffice.
+The curation bar: diverse instructions, correct responses,
+consistent style. The failure mode is scale without curation:
+52k scraped pairs teach the model to imitate mediocrity.
+The lecture&rsquo;s &ldquo;expensive, slow&rdquo; price is the reason: spend
+the budget on quality, not count.</p>
+<h3 id="subchapter-full-fine-tune-vs-lora">Subchapter: full fine-tune vs LoRA</h3>
+<p>Full SFT updates all 7B parameters: needs the optimizer
+states (~84 GB, L14&rsquo;s math). <strong>LoRA</strong> (Hu et al., 2021):
+freeze the weights, train low-rank adapters. For each
+weight matrix W (d x d), learn A (d x r) and B (r x d),
+r = 8-64: the update is BA, rank r. Trainable parameters:
+2 * d * r per matrix vs d^2. At d = 4096, r = 16: 131k vs
+16.8M per matrix: 128x fewer. Quality: within noise of full
+fine-tuning for most tasks. <strong>QLoRA</strong>: LoRA on a 4-bit
+quantized base: fine-tune 70B on one GPU. The interview
+read: LoRA is the default for adaptation on a budget.
+Full fine-tuning is for when you own the cluster.</p>
+<h3 id="subchapter-multi-turn-sft">Subchapter: multi-turn SFT</h3>
+<p>Real assistants hold conversations. <strong>Multi-turn SFT</strong> trains
+on (conversation, ) pairs: user turn, assistant turn, user
+turn, assistant turn. The loss mask covers all assistant
+tokens, ignores all user tokens. The model learns turn-taking:
+answer, then wait, then answer in context. The failure mode
+is role confusion: the model continues the user&rsquo;s turn
+instead of answering. The fix is the chat template (above):
+explicit role tokens make the turn structure unambiguous.
+Single-turn SFT teaches answering. Multi-turn teaches
+conversing. Ship the latter.</p>
+<h3 id="subchapter-where-the-pairs-come-from">Subchapter: where the pairs come from</h3>
+<p>Human annotation is the gold standard and the bottleneck.
+Three cheaper sources. <strong>Distillation</strong>: prompt a strong
+model (GPT-4-class) for (instruction, response) pairs, train
+the small model on them. Cheap, effective, and legally
+murky (check the teacher model&rsquo;s terms). <strong>Self-instruct</strong>:
+the model generates its own instructions, then answers
+them, then filters. Bootstrapping with quality control.
+<strong>User logs</strong>: production conversations, filtered and
+rewritten. The best data is real. The ranking: human &gt;
+distilled &gt; self-instruct, in quality. Reversed in cost.
+The LIMA lesson applies to all three: 1,000 excellent
+pairs beat 50,000 mediocre ones regardless of source.</p>
+<h3 id="subchapter-the-forgetting-tax-priced">Subchapter: the forgetting tax, priced</h3>
+<p>SFT narrows the model. <strong>Catastrophic forgetting</strong>: the
+instruction distribution overwrites pretraining knowledge.
+Measure it: benchmark the base model and the SFT model on
+the same knowledge evals. Typical: small drops (1-3 points)
+with good SFT, large drops with aggressive SFT (high LR,
+many epochs). The defenses: mix pretraining data into SFT
+(5-10% of the batch), low learning rates (1e-5 vs 3e-4),
+few epochs (1-3). The lecture&rsquo;s framing again: SFT teaches
+the job description. Overteach it and the employee forgets
+everything else.</p>
+<h3 id="subchapter-the-post-training-stack">Subchapter: the post-training stack</h3>
+<p>The full pipeline, in order. <strong>Pretrain</strong>: next-token on
+trillions of tokens. Teaches the world. <strong>SFT</strong>: instruction
+pairs. Teaches the format. <strong>RL</strong> (lecture 17): preferences
+or verifiable rewards. Teaches taste and reasoning. Each
+stage is cheaper than the last and more targeted. Skip SFT
+and go straight to RL (DeepSeek-R1-Zero did): possible, but
+the model starts from a worse behavioral prior and the RL
+must discover the format too. The stack is the standard
+because each layer solves one problem well.</p>
+<figure><img alt="Chapter plate: SFT teaches the job description" src="assets/plate-l15-chap-sft.svg"><figcaption>Chapter plate L15-C5. Left: the base model completes text, not an assistant. Center: the pair, loss on y only, labels [-100,-100,-100,mer]. Right: 1,000 curated beats 50,000, LoRA 128x fewer params, forgetting 1-3 points. Bottom: spend the budget on quality, not count. Dense chapter plate. Source: original synthesis of the session. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-honest-price">The honest price</h2>
 <p>Efficiency buys servability and pays in complexity: GQA&rsquo;s sharing,
 MoE&rsquo;s routing and load balance, the KV cache&rsquo;s memory hunger that
@@ -362,6 +883,26 @@ explain why it works. SFT buys helpful behavior and pays in human
 hours per pair plus the narrowing tax. The through-line: every step
 after pre-training is about spending the model&rsquo;s capability
 wisely, because the capability itself was the expensive part.</p>
+<p>The systems price deserves its own line: PagedAttention,
+continuous batching, and speculative decoding are pure
+engineering. They change no weights and no quality. They are
+the difference between a demo and a product. The lecture&rsquo;s
+co-design theme is the summary: the architecture, the GPU,
+and the serving stack are one system. Optimize them together.</p>
+<h3 id="subchapter-co-design-the-lectures-thesis-made-concrete">Subchapter: co-design, the lecture&rsquo;s thesis made concrete</h3>
+<p>The lecture&rsquo;s theme: &ldquo;a lot of co-design of the architecture
+with some of the properties of the GPUs.&rdquo; Three instances
+from this lesson. <strong>FlashAttention</strong>: the tiling follows the
+GPU&rsquo;s SRAM size (192 KB per SM on A100): the algorithm is
+shaped by the hardware. <strong>MoE all-to-all</strong>: the expert count
+and placement follow the cluster&rsquo;s interconnect (NVLink vs
+InfiniBand): the architecture is shaped by the network.
+<strong>MLA&rsquo;s absorption trick</strong>: the up-projection folds into the
+query projection algebraically: the math is shaped to dodge
+a memory read. The interview read: when asked &ldquo;how would you
+make X faster&rdquo;, start from the hardware&rsquo;s bottleneck
+(compute, memory bandwidth, network), then change the
+algorithm to dodge it. That is co-design.</p>
 <h2 id="mapping-back">Mapping back</h2>
 <table>
 <thead>
@@ -378,6 +919,11 @@ wisely, because the capability itself was the expensive part.</p>
 <td>Cache K/V: per-token O(t^2) -&gt; O(t); memory linear in T</td>
 </tr>
 <tr>
+<td>Prefill vs decode</td>
+<td>One optimization cannot fit both phases</td>
+<td>Prefill compute-bound (TTFT), decode memory-bound (TPOT); optimize separately</td>
+</tr>
+<tr>
 <td>Memory-bound serving</td>
 <td>Cache fills the GPU: batch of 10, not 1,000</td>
 <td>Diagnosis: memory, not compute, is the bottleneck; parallelism starves</td>
@@ -388,9 +934,59 @@ wisely, because the capability itself was the expensive part.</p>
 <td>Share KV heads across query groups: 4x smaller cache, quality holds</td>
 </tr>
 <tr>
+<td>MQA</td>
+<td>GQA not small enough</td>
+<td>One KV head: 32x smaller, small quality cost</td>
+</tr>
+<tr>
+<td>MLA</td>
+<td>Store less, not just share</td>
+<td>Latent vector per token, reconstruct K/V: ~16x smaller than MHA</td>
+</tr>
+<tr>
+<td>CLA</td>
+<td>Layers duplicate the cache</td>
+<td>Share KV across layers: half the cache, baked into training</td>
+</tr>
+<tr>
+<td>KV quant</td>
+<td>fp16 cache is fat</td>
+<td>fp8: half the bytes, minimal loss; inference flag</td>
+</tr>
+<tr>
+<td>Eviction</td>
+<td>Cache still overflows</td>
+<td>Keep heavy hitters + sinks; fixed budget, lossy</td>
+</tr>
+<tr>
+<td>PagedAttention</td>
+<td>Contiguous reservation wastes 88%</td>
+<td>Block tables, allocate on demand: 96% utilization, 2-4x throughput</td>
+</tr>
+<tr>
+<td>Continuous batching</td>
+<td>Stragglers idle the GPU</td>
+<td>Iteration-level scheduling: the batch is whoever is alive</td>
+</tr>
+<tr>
+<td>Speculative decoding</td>
+<td>One token per forward pass</td>
+<td>Draft k tokens, verify in one pass: 2-3x, exact output</td>
+</tr>
+<tr>
 <td>MoE</td>
 <td>Want 8x parameters at 1x compute</td>
-<td>Router sends each token to 2 of 8 experts; price: load balance, memory</td>
+<td>Router sends each token to top-k experts; price: load balance, memory, all-to-all</td>
+</tr>
+<tr>
+<td>Fine-grained MoE</td>
+<td>Big experts specialize poorly</td>
+<td>256 small experts + shared: DeepSeek-V3, 37B active of 671B</td>
+</tr>
+<tr>
+<td>Quantization</td>
+<td>fp16 weights are fat</td>
+<td>INT8/FP8 ~free; GPTQ/AWQ 4-bit: 70B on one GPU</td>
 </tr>
 <tr>
 <td>ICL</td>
@@ -398,9 +994,19 @@ wisely, because the capability itself was the expensive part.</p>
 <td>Frozen weights, examples in prompt: &ldquo;cheese -&gt;&rdquo; gets &ldquo;fromage&rdquo;; brittle but free</td>
 </tr>
 <tr>
+<td>Zero/few-shot</td>
+<td>Even examples cost tokens</td>
+<td>Description only, then examples; CoT for reasoning</td>
+</tr>
+<tr>
 <td>SFT</td>
 <td>Base models complete; users want assistants</td>
-<td>(Instruction, response) pairs; teaches the job description, not the world</td>
+<td>(Instruction, response) pairs, loss on y only; teaches the job description, not the world</td>
+</tr>
+<tr>
+<td>LoRA</td>
+<td>Full SFT needs a cluster</td>
+<td>Rank-r adapters: 128x fewer params, quality within noise</td>
 </tr>
 </tbody>
 </table>
@@ -419,25 +1025,40 @@ That is what production does (tensor/pipeline parallel serving), but the bytes-p
 Top-1 is cheaper but brittle: a routing mistake sends the token to exactly the wrong expert with no backup. Top-2 gives a weighted blend and a second opinion. The field settled on 2 as the quality/compute sweet spot. Top-1 variants exist for maximum efficiency.</p><div class="followup"><strong>Follow-up:</strong> Why top-2 and not top-1?</div></div></div>
 <div class="qa"><div class="q">Fixed production task: ICL or SFT? Decide with numbers.</div><div class="a"><p>ICL: 20 examples at 100 tokens each = 2,000 tokens of prompt overhead on every query, forever. At 1M queries/day, that is 2B prompt tokens/day of pure overhead. SFT: pay the human-pair cost once (10k-1M pairs), then every query is short. SFT wins on reliability (behavior in weights, not in wording) and on serving cost for fixed tasks. ICL wins for exploration: zero training, try 10 task framings in an afternoon. The hybrid the field uses: SFT the format and common cases, ICL the per-query variables.
 Yes, toward ICL or retrieval: weekly SFT retraining is an ops burden and risks forgetting. If the change is in facts, use RAG (lecture 13): update the store, not the weights. If the change is in format, SFT on the new format with replay of the old. Match the adaptation method to the change rate: prompt for daily, RAG for weekly facts, SFT for stable behavior.</p><div class="followup"><strong>Follow-up:</strong> The task changes weekly. Does the answer change?</div></div></div>
+<div class="qa"><div class="q">Applied design: pick the inference stack for a 70B GQA model serving 32k-context chat. Justify each layer.</div><div class="a"><p>Five layers. Cache diet: GQA is already in the weights. Add fp8 KV cache (halves the bytes, inference flag). Memory management: PagedAttention (vLLM): block tables kill the 88% fragmentation waste. Scheduling: continuous batching: stragglers never idle the GPU. Decode speed: speculative decoding with a 1B draft: 2-3x on the decode phase, exact output. Long context: eviction with pinned sink tokens if quality holds on your evals, else pay the full cache. Measure TTFT and TPOT separately: prefill and decode bind on different resources. The lecture&rsquo;s co-design theme: the model, the GPU, and the server are one system.
+At 40% acceptance on 4-token drafts, expected accepted tokens per pass: ~1.6 plus the bonus token. That is ~2.6 tokens per big-model pass vs 1: still 2.6x on paper, minus draft cost. Worth it if the draft is cheap (small model, fast). If the draft costs half a big pass, the net shrinks. Measure end-to-end TPOT, not acceptance rate: the metric is tokens per second, not draft accuracy.</p><div class="followup"><strong>Follow-up:</strong> The draft model accepts only 40% of tokens. Worth it?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
 <li><strong>The job.</strong> Serve generation without O(N^3) per answer.</li>
+<li><strong>Two phases.</strong> Prefill: compute-bound, TTFT. Decode:
+   memory-bound, TPOT. Optimize separately.</li>
 <li><strong>Naive.</strong> Recompute everything per token. 2.3 x 10^10 scores
    per layer per head at N = 4,096. Unservable.</li>
 <li><strong>KV cache.</strong> Store K/V: O(t^2) -&gt; O(t) per token. Memory
    linear in T.</li>
 <li><strong>Memory-bound.</strong> Cache fills GPU. Batch collapses to ~10.
    Compute idles. Shrink the cache = serve more.</li>
-<li><strong>GQA.</strong> Share KV heads: 4x smaller cache. <strong>MoE.</strong> 8 experts,
-   top-2 routing: 8x params, ~1x compute.</li>
+<li><strong>The diets.</strong> GQA: 4x. MQA: 32x. MLA: latent, ~16x. CLA:
+   share layers, 2x. fp8: 2x. Eviction: fixed budget.</li>
+<li><strong>Paging.</strong> Block tables, allocate on demand: 96% utilization,
+   2-4x throughput. Copy-on-write shares prompts.</li>
+<li><strong>Batching.</strong> Continuous: the batch is whoever is alive.</li>
+<li><strong>Speculative.</strong> Draft k, verify in one pass: 2-3x, exact.</li>
+<li><strong>MoE.</strong> Router to top-k of E: E-fold params, flat compute.
+    Fine-grained: 256 experts, top-8 + shared. Price: memory,
+    balance, all-to-all.</li>
+<li><strong>Quant.</strong> INT8/FP8 ~free. GPTQ/AWQ 4-bit: 70B on one GPU.</li>
 <li><strong>The shock.</strong> ICL: frozen weights, &ldquo;cheese -&gt;&rdquo; gets
-   &ldquo;fromage&rdquo;. Pattern continuation via attention. Brittle, free.</li>
-<li><strong>SFT.</strong> (Instruction, response) pairs teach the job
-   description. Knowledge from pre-training. Behavior from SFT.</li>
-<li><strong>The honest price.</strong> Systems complexity, prompt brittleness,
-   human hours, the narrowing tax.</li>
+    &ldquo;fromage&rdquo;. The GPT-3 surprise. Nobody trained for it.</li>
+<li><strong>The industry flip.</strong> Old: label, train, deploy per task.
+    New: one model + prompts + scaffolding.</li>
+<li><strong>SFT.</strong> (Instruction, response) pairs, loss on y only.
+    Teaches the job description. Quality over quantity.
+    LoRA: 128x fewer params.</li>
+<li><strong>The stack.</strong> Pretrain (world), SFT (format), RL (taste).
+    Each cheaper and more targeted.</li>
 <li><strong>The audit.</strong> 2.29e10 naive, 8.4M cached: 2,730x. An order
-   of growth, deleted.</li>
+    of growth, deleted.</li>
 <li><strong>The bytes.</strong> 512 KB/token, 2 GB per 4k sequence. Bytes set
     the batch.</li>
 <li><strong>GQA.</strong> 8 KV heads: 128 KB/token, 4x smaller. Queries
@@ -446,35 +1067,70 @@ Yes, toward ICL or retrieval: weekly SFT retraining is an ops burden and risks f
     ink: ICL prototypes, SFT ships.</li>
 </ol>
 <h2 id="what-is-used-where">What is used where</h2>
-<p><strong>The KV cache runs all LLM serving.</strong> vLLM, TensorRT-LLM, and
-every production inference stack implement paged/cached KV
-storage: the lesson&rsquo;s cache is the deployed primitive.
-<strong>GQA is the default</strong> in Llama 3, Mistral, and most open models:
-the 4x cache diet with minimal quality cost. <strong>MoE is the
-frontier scale-out:</strong> Mixtral 8x7B and the large labs&rsquo; models
-route tokens to experts. <strong>SFT is the post-training default:</strong>
-every instruction model ships it. ICL is the interface users
-actually touch.</p>
+<p><strong>The KV cache runs all LLM serving.</strong> vLLM, TensorRT-LLM,
+SGLang, and every production inference stack implement
+paged/cached KV storage with continuous batching: the
+lecture&rsquo;s cache plus the OS trick (PagedAttention: Kwon et
+al., SOSP 2023, verified via arxiv.org October 2026).
+<strong>GQA is the default</strong> in Llama 3, Mistral 7B, and most open
+models (verified October 2026): the 4x cache diet with
+minimal quality cost. <strong>MLA</strong> is DeepSeek-V2/V3&rsquo;s answer
+(verified October 2026): latent compression for the 671B
+model&rsquo;s 128k context. <strong>MoE is the frontier scale-out:</strong>
+Mixtral 8x7B (8 experts, top-2, 12.9B active of 46.7B:
+verified October 2026) and DeepSeek-V3 (256 fine-grained
+experts, top-8 + shared, 37B active of 671B: verified
+October 2026). <strong>Speculative decoding</strong> ships in production
+serving stacks and in some vendor APIs. <strong>SFT is the
+post-training default:</strong> every instruction model ships it.
+LoRA/QLoRA is the community fine-tuning standard. ICL is
+the interface users actually touch: the GPT-3 surprise the
+lecture centers.</p>
 <h2 id="watch-next">Watch next</h2>
-<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/emZxqRScfc0" title="Explainer: efficient transformers and fine-tuning" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: efficient transformers and fine-tuning. KV cache, attention variants, and the SFT step in one visual pass. Watch after the MoE section.</p></div>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/emZxqRScfc0" title="Build KV Cache Layer From Scratch That Makes LLMs 20x Faster" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Build KV Cache Layer From Scratch That Makes LLMs 20x Faster. The cache built by hand in 12 lines, then the memory bill with receipts. Watch after the KV-cache section.</p></div>
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/tGp6Ns9GtSU" title="KV Cache: The Invisible Trick Behind Every LLM" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">KV Cache: The Invisible Trick Behind Every LLM. Memoization to memory wall to prompt caching in one pass. Watch after the cache-diets section.</p></div>
 
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Lecture 15 video, Stanford Online YouTube:
   - <a href="https://www.youtube.com/watch?v=hHC-SF3utxg">Tengyu Ma derives</a>
   the KV cache and its memory-bound serving consequences, presents
-  GQA and MoE, demonstrates in-context few-shot learning, and
-  frames SFT as teaching the job description.
+  GQA/MQA-style sharing and MoE (each token to 8 of 128 experts),
+  demonstrates zero-shot and few-shot in-context learning (the
+  GPT-3 surprise. &ldquo;You never update the model parameters&rdquo;), tells
+  the industry old-way/new-way story, and defines SFT (NLL (negative log-likelihood) of y
+  given x only).
 - Official subtitle transcript (en-US): the lecture&rsquo;s spoken text.
 - CS229 Spring 2026 official course notes (local PDF): the formal
   treatment.</p>
+<p><strong>Papers (all links verified live, October 2026):</strong>
+- <a href="https://arxiv.org/abs/2309.06180">Kwon et al., PagedAttention / vLLM (2023)</a>:
+  block tables, 2-4x serving throughput.
+- <a href="https://arxiv.org/abs/2405.04434">DeepSeek-AI, DeepSeek-V2 (2024)</a>:
+  MLA latent KV compression.
+- <a href="https://arxiv.org/abs/2412.19437">DeepSeek-AI, DeepSeek-V3 (2024)</a>:
+  fine-grained MoE, aux-loss-free balancing, FP8 training.
+- <a href="https://arxiv.org/abs/2401.04088">Jiang et al., Mixtral 8x7B (2024)</a>:
+  8 experts, top-2 routing, 12.9B active.
+- <a href="https://arxiv.org/abs/2305.13245">Ainslie et al., GQA (2023)</a>:
+  grouped-query attention.
+- <a href="https://arxiv.org/abs/1911.02150">Shazeer, MQA (2019)</a>:
+  multi-query attention.
+- <a href="https://arxiv.org/abs/2106.09685">Hu et al., LoRA (2021)</a>:
+  low-rank adaptation.
+- <a href="https://arxiv.org/abs/2305.11206">Zhou et al., LIMA (2023)</a>:
+  1,000 quality pairs beat 50k noisy ones.
+- <a href="https://arxiv.org/abs/2205.14135">Dao et al., FlashAttention (2022)</a>:
+  exact attention at SRAM speed (prefill complement).</p>
 <p><strong>Caveats from these sources.</strong> The KV-cache memory arithmetic
 (batch of ~10 vs ~1,000) is the lecture&rsquo;s illustration of the
-memory-bound regime, not a benchmark. The ICL mechanism
-(&ldquo;attention implements pattern continuation&rdquo;) is the lecture&rsquo;s
-rough account of a still-partly-mysterious phenomenon. MoE load
-balancing is presented as the price, with the details in the
-literature.</p>
+memory-bound regime, not a benchmark. The MoE example (8 of 128)
+is the lecture&rsquo;s. Mixtral&rsquo;s 2-of-8 and DeepSeek-V3&rsquo;s 8-of-256
+are production instances. The ICL mechanism (&ldquo;attention
+implements pattern continuation&rdquo;) is the lecture&rsquo;s rough account
+of a still-partly-mysterious phenomenon. The industry old-way /
+new-way story is the lecture&rsquo;s framing.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
 <li><strong>CS229 L14:</strong> the quadratic price this lesson attacks. The
@@ -487,8 +1143,119 @@ literature.</p>
   infrastructure for the KV cache era.</li>
 <li><strong>CS224N:</strong> instruction tuning and few-shot prompting from the
   NLP side.</li>
+<li><strong>CS329A:</strong> the lecture&rsquo;s &ldquo;scaffolding for agentic tasks&rdquo;:
+  prompts plus tool loops.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=hHC-SF3utxg" target="_blank" rel="noopener">Lecture 15 video, Stanford Online YouTube</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=emZxqRScfc0" target="_blank" rel="noopener">Explainer: efficient transformers and fine-tuning</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+<h2 id="coverage-map">Coverage map</h2>
+<p>Every lecture claim mapped to the section that covers it.
+Line numbers verified against the live headings above.</p>
+<table>
+<thead>
+<tr>
+<th>Session claim</th>
+<th>Covered in</th>
+<th>File line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Agenda: attention variants/efficiency, few-shot/zero-shot ICL, SFT</td>
+<td>Coverage and sourcing; section structure</td>
+<td>L28, L28</td>
+</tr>
+<tr>
+<td>GPU co-design theme: &ldquo;a lot of co-design of the architecture with some of the properties of the GPUs&rdquo;</td>
+<td>Attention variants: shrink the cache; co-design, the lecture&rsquo;s thesis made concrete</td>
+<td>L145, L789</td>
+</tr>
+<tr>
+<td>KV cache: store K, V across decode steps; memory pressure</td>
+<td>The KV cache</td>
+<td>L115</td>
+</tr>
+<tr>
+<td>Cache variants: GQA/MQA-style sharing reduces memory</td>
+<td>GQA, counted; MQA, the extreme</td>
+<td>L157, L171</td>
+</tr>
+<tr>
+<td>MoE: each token routed to 8 of 128 experts (lecture example)</td>
+<td>Mixture of experts (example); router, worked</td>
+<td>L345, L356</td>
+</tr>
+<tr>
+<td>MoE training subtlety: &ldquo;very subtle for MOE&hellip; how to make the MOE training work&rdquo;</td>
+<td>MoE, the full price; load-balance loss; fine-grained experts</td>
+<td>L435, L380, L397</td>
+</tr>
+<tr>
+<td>Zero-shot: task description (+ output format like JSON) then generate</td>
+<td>Zero-shot, few-shot, chain-of-thought</td>
+<td>L531</td>
+</tr>
+<tr>
+<td>Few-shot: add examples</td>
+<td>The shock: in-context learning; zero-shot, few-shot, chain-of-thought</td>
+<td>L499, L531</td>
+</tr>
+<tr>
+<td>&ldquo;Nobody actually trained for these capabilities, but it actually works&rdquo;; biggest surprise of GPT-3</td>
+<td>The shock: in-context learning; emergence and scale</td>
+<td>L499, L560</td>
+</tr>
+<tr>
+<td>&ldquo;You never update the model parameters&rdquo;</td>
+<td>The shock: in-context learning</td>
+<td>L499</td>
+</tr>
+<tr>
+<td>Industry impact: old way (collect, label, train, deploy per company) vs new way (one model + prompts + scaffolding)</td>
+<td>The industry shock, the lecture&rsquo;s story</td>
+<td>L546</td>
+</tr>
+<tr>
+<td>&ldquo;Fundamentally changed the convenience of applying these models in industry&rdquo;</td>
+<td>The industry shock, the lecture&rsquo;s story</td>
+<td>L546</td>
+</tr>
+<tr>
+<td>SFT: collect (x=instruction, y=answer) pairs; continue from checkpoint</td>
+<td>SFT: teach the format</td>
+<td>L635</td>
+</tr>
+<tr>
+<td>SFT loss: NLL (negative log-likelihood) of y given x ONLY; per-token sum_t log p(y_t | x, y_&lt;t)</td>
+<td>SFT: teach the format; the loss mask, worked</td>
+<td>L635, L663</td>
+</tr>
+<tr>
+<td>&ldquo;Anything that looks like this is called supervised fine tuning&rdquo;</td>
+<td>SFT: teach the format</td>
+<td>L635</td>
+</tr>
+<tr>
+<td>ICL brittleness (order/wording swings)</td>
+<td>The brittleness, itemized</td>
+<td>L575</td>
+</tr>
+<tr>
+<td>Batch of ~10 vs ~1,000 (memory-bound illustration)</td>
+<td>The cache in bytes; The KV cache</td>
+<td>L101, L115</td>
+</tr>
+</tbody>
+</table>
+<h2 id="builder-stats">Builder stats</h2>
+<ul>
+<li>Lines: 339 before, 1022 after (+683).</li>
+<li>Subchapters (###): 6 before, 39 after.</li>
+<li>Interview Q&amp;As: 7 before (kept), 8 after (1 added: 70B inference stack design).</li>
+<li>Figures referenced: 10 (6 SVG diagrams, 4 webp plates).</li>
+<li>Video embeds: 1 before, 2 after (both IDs oEmbed-verified 200).</li>
+<li>Go-deeper links: 9 papers, all arxiv links HTTP-verified 200, October 2026.</li>
+<li>[uncertain] notes: disaggregated-serving vendor internals.</li>
+</ul>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=hHC-SF3utxg" target="_blank" rel="noopener">Lecture 15 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
       <nav class="pager"><a href="../cs229/l14-transformers.html"><span class="lbl">← Previous</span>Lecture 14: Transformers and Autoregressive Language Models</a><a href="../cs229/l16-reinforcement-learning.html"><span class="lbl">Next →</span>Lecture 16: Reinforcement Learning Basics and Policy Gradient</a></nav>
     </article>
     <footer class="pagefoot">
