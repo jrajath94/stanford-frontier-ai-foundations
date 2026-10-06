@@ -25,243 +25,243 @@ sources:
     label: "CS229 Spring 2026 official course notes (local PDF)"
 ---
 
-## How to read this lesson
+## The job: fit the mixture when the labels are hidden
 
-This lesson has two levels. **Level 1 (Core)** contains what you need to
-understand everything that follows in CS229 and the courses that build on
-it. **Level 2 (Deep)** contains what you need for correct, interview-grade
-understanding. Read Level 1 straight through. Return to Level 2 when you
-want depth.
+Lecture 9 set up the Gaussian mixture: the data is k Gaussians
+mixed together, each point secretly from one of them. The
+**latent variable** z^(i) is that secret: which cluster point i
+came from. If we knew the z's, fitting would be trivial: group the
+points by label and average (lecture 5's GDA). We do not know them.
+That is the whole difficulty.
 
-No prerequisites are assumed. Every term is defined at first use.
-K-means and the GMM setup were defined in [lecture
-9](l09-kmeans-gmm.html); they are reused, not re-explained.
+## First attempt: guess the labels, fit, repeat
 
-## Level 1: The problem EM solves
+The naive idea is hard EM by hand: guess the labels (k-means),
+fit Gaussians to each guessed group, reassign each point to its
+most likely Gaussian, repeat. Watch it on a toy. Two 1-D Gaussians,
+true means 0 and 10, 6 points: {0.5, -0.5, 1.0} from cluster 1,
+{9.5, 10.5, 10.0} from cluster 2. Guess labels by k-means: correct
+here. Fit: mu_1 = 0.33, mu_2 = 10.0. Reassign: unchanged. Done.
 
-Fitting a GMM by MLE hits a wall: the log likelihood has a sum inside
-the log. Log of a sum resists every trick. The **latent variable** z_i
-[01:48](ts:01:48) is the missing piece: which Gaussian generated point
-i. If we knew z, fitting would be easy weighted averages. We do not know
-z. EM iterates: guess z softly, fit parameters to the guess, repeat.
+Now corrupt the start: guess that {0.5, -0.5} are cluster 1 and
+{1.0, 9.5, 10.5, 10.0} are cluster 2. Fit: mu_1 = 0, mu_2 = 7.75.
+Reassign 1.0: distance to 0 is 1.0, to 7.75 is 6.75, so cluster 1.
+Reassign 9.5: cluster 2. Converges to mu_1 = 0.17, mu_2 = 10.0:
+recovered anyway. But hard assignment throws away doubt: the point
+at 5.0, exactly between, gets forced into one cluster at full
+weight and drags its mean. The soft version, which weighs points by
+their responsibilities, is what we want. The question is how to
+derive it instead of inventing it.
 
-**Jensen's inequality** [04:26](ts:04:26) is the tool. For a concave
-function like log, the log of an average is at least the average of the
-logs. Applied to the likelihood, it builds a tractable lower bound: the
-**ELBO**, the evidence lower bound [18:59](ts:18:59). Maximize the bound
-instead of the likelihood. The bound touches the likelihood at the
-current parameters, so climbing the bound climbs the likelihood.
+## The key question
 
-![EM and the ELBO](assets/svg/l10-elbo.svg "The ELBO touches the log-likelihood at theta_t. E-step tightens, M-step climbs. Original plate.")
+MLE says: maximize the probability of the observed data. The
+observed data is x. The labels z are hidden. The likelihood sums
+over all possible labelings:
 
-Two guarantees make EM trustworthy. The likelihood never decreases across
-iterations. And the E-step makes the bound **tight** [08:37](ts:08:37):
-equal to the likelihood at the current parameters, so no progress is
-wasted on a loose bound. EM converges to a local optimum, like k-means.
-Same alternating pattern, grown probabilistic.
+```ascii
+L(theta) = product over i of sum over z of p(x^(i), z; theta)
+```
+
+The log of a sum. The log cannot reach inside the sum, so no closed
+form, no clean gradient. The key question: can we maximize this
+without ever differentiating through the sum?
+
+## Jensen builds a lower bound
+
+**Jensen's inequality**: for a concave function like log, the
+function of an average is at least the average of the function.
+Picture log(x): the curve sags below every chord between two of its
+points. So log(E[X]) >= E[log(X)]. The log of the average beats the
+average of the logs.
+
+Apply it to the log likelihood. Introduce any distribution Q_i over
+the hidden labels of example i. Then:
+
+```ascii
+log sum_z p(x, z) = log sum_z Q(z) * p(x, z)/Q(z) >= sum_z Q(z) * log(p(x, z)/Q(z))
+```
+
+The right side is the **ELBO**, the evidence lower bound. It is a
+lower bound on the log likelihood, and it is a sum, not a log of a
+sum: tractable. The bound is tight (equality) when Q(z) equals the
+posterior p(z|x. Theta): Jensen is an equality when the chord
+collapses, i.e., when Q puts all its structure where the posterior
+is. So: set Q to the posterior, and maximizing the ELBO pushes the
+true likelihood up.
+
+![ELBO](assets/svg/l10-elbo.svg "The ELBO. Jensen's inequality turns the log of a sum into a sum: a tractable lower bound. Tight when Q equals the posterior. Source: original plate for Stanford Frontier AI.")
+
+## EM: alternate two easy steps
+
+**Expectation-Maximization** alternates. The **E-step**: fix the
+parameters, set Q_i(z) = p(z | x^(i). Theta), the responsibilities.
+This makes the ELBO touch the likelihood at the current parameters.
+The **M-step**: fix Q, maximize the ELBO over theta. With Q fixed,
+the ELBO is a weighted log likelihood: each example counted with
+fractional weights, and weighted MLE for Gaussians is closed form.
+
+For GMMs the steps are concrete. E-step: compute each point's
+responsibilities under the current Gaussians. M-step: update each
+Gaussian's mean to the responsibility-weighted average of points,
+its covariance to the weighted spread, its mixing weight to the
+average responsibility. Then repeat. The likelihood rises every
+round: the E-step tightens the bound to touch the current value,
+the M-step climbs the bound, so the true likelihood cannot fall.
+
+Run the toy. Start mu_1 = 0, mu_2 = 7.75, equal weights, variance
+1. E-step for x = 1.0: responsibility for cluster 1 proportional to
+exp(-(1-0)^2/2) = 0.61, for cluster 2 exp(-(1-7.75)^2/2) ~ 0.
+Nearly hard. For a point at 5.0 (add one): cluster 1 gives
+exp(-12.5) ~ 0, cluster 2 gives exp(-3.8) = 0.022: soft, mostly
+cluster 2 but not entirely. M-step: mu_1 becomes the weighted
+average, pulled slightly by the 5.0 point's small responsibility.
+Converge: mu_1 = 0.33, mu_2 = 10.0. The soft weights handled the
+boundary point honestly instead of forcing it.
+
+EM is k-means grown up: E-step softens the assignment into
+responsibilities, M-step softens the mean update into weighted
+averages. Same alternating skeleton, uncertainty preserved.
+
+## The honest price of EM
+
+EM climbs to a local maximum of the likelihood, not the global one.
+Initialization matters: start the Gaussians badly and EM polishes
+the wrong answer confidently. It can also crawl: near the top, the
+steps shrink and convergence slows to a walk. And the likelihood it
+maximizes can be degenerate: one Gaussian collapsing onto a single
+point sends the likelihood to infinity (variance -> 0, density ->
+infinite). Practitioners bound the variances away from zero or use
+priors. EM is a hill-climber with no view of the landscape.
+
+## PCA: the axes of variation
+
+New job, same lecture. The customer records have 200 features.
+Plotting is impossible, distance computations are expensive, and
+most features are redundant (yearly spend and visit frequency move
+together). **PCA** (principal component analysis) finds the few
+directions that carry the most variation and projects the data onto
+them.
+
+The lecture's toy: SUVs plotted by two features, say length and
+weight. The cloud is a diagonal cigar: long SUVs are heavy. The
+**first principal component** is the direction of the cigar's long
+axis: the single direction along which the data varies most.
+Project every SUV onto that line and you keep most of the spread
+with one number instead of two.
+
+Formally: center the data (subtract the mean), form the covariance
+matrix Sigma, take its **eigenvectors**. The eigenvector with the
+largest **eigenvalue** is the first principal component. The
+eigenvalue is the variance along it. The second component is the
+next eigenvector, perpendicular to the first, and so on. Keep the
+top k, drop the rest.
+
+Work a toy. Four points: (1,1), (2,2), (3,3), (4,4), already
+centered at (2.5, 2.5) -> (-1.5,-1.5), (-0.5,-0.5), (0.5,0.5),
+(1.5,1.5). Covariance: each point contributes [a^2, a^2. A^2, a^2]
+with a in {1.5, 0.5}: Sigma = [[2.5, 2.5],[2.5, 2.5]] (dividing by
+4). Eigenvalues: 5 and 0. Eigenvectors: (1,1)/sqrt(2) and
+(1,-1)/sqrt(2). The first component explains 5/5 = 100 percent of
+the variance: the data lives on the diagonal, and one number (the
+position along it) captures everything. The second eigenvalue is 0:
+no variation perpendicular to the diagonal, so dropping it loses
+nothing.
+
+In practice: eigenvalues (5.0, 3.0, 0.4, 0.05, ...). Keep components
+until the kept eigenvalues sum to, say, 95 percent of the total.
+That is the dimensionality reduction: 200 features down to 12, with
+95 percent of the variation intact.
+
+![PCA](assets/svg/l10-pca.svg "PCA. The first principal component is the cigar's long axis: the direction of maximum variance. Eigenvalues say how much each axis carries. Source: original plate for Stanford Frontier AI.")
+
+## The honest price of PCA
+
+PCA is linear: it finds straight axes. Data curved like a Swiss
+roll has no good straight summary. The roll's two intrinsic
+dimensions need nonlinear methods. PCA also chases variance, not
+meaning: the highest-variance direction might be sensor noise while
+the signal hides in a small one. It is sensitive to scaling: measure
+one feature in millimeters instead of meters and it dominates the
+covariance, so standardize features first. And the eigendecomposition
+costs O(d^3): at d = 100,000 (raw pixels), exact PCA is dead and
+randomized approximations take over.
+
+## Mapping back
+
+| Idea | Pain it answers | How |
+|---|---|---|
+| ELBO via Jensen | Log of a sum has no closed form | log(E) >= E[log]: lower bound that is a sum; tight at Q = posterior |
+| E-step | Labels hidden | Set Q to responsibilities under current params; bound touches likelihood |
+| M-step | Bound still needs maximizing | Weighted MLE: closed-form weighted averages; likelihood rises every round |
+| Soft vs hard | Hard assignment forces boundary points | 5.0 point gets soft weight, not forced; k-means is the hard limit |
+| PCA | 200 features, mostly redundant | Top eigenvectors of covariance; toy: eigenvalue 5 of 5 = 100 percent on the diagonal |
 
 > [!QA]
-> Q: What problem does EM solve that plain MLE cannot?
-> A: Likelihoods with hidden variables, where the log wraps a sum. The sum inside the log blocks closed forms and clean gradients. EM introduces a distribution over the hidden variables, builds the ELBO lower bound via Jensen's inequality, and alternates between tightening the bound and maximizing it. The likelihood rises every iteration by construction.
-> Follow-up: Why does the likelihood never decrease?
-> A: The E-step sets the bound equal to the likelihood at the current parameters (tight). The M-step maximizes the bound, moving to parameters with bound at least as high. Since the bound is always below the likelihood, the new likelihood is at least the new bound, which is at least the old likelihood. Three links, each solid.
-
-## Level 1: E-step and M-step on the GMM
-
-The **E-step** [10:00](ts:10:00): fix the parameters theta, and set
-Q_i(z) to the posterior p(z | x_i; theta). In plain words: for each
-point, compute how likely each cluster generated it under the current
-Gaussians. Those are the responsibilities from lecture 9: 60/40 splits,
-not hard assignments.
-
-The **M-step** [40:57](ts:40:57): fix the responsibilities, and update
-the parameters by weighted MLE. Each Gaussian's mean becomes the weighted
-average of points, weighted by responsibility. Covariances and mixing
-weights update the same way. This is exactly "fit given assignments"
-from k-means, with soft weights.
-
-Then repeat. E guesses the hidden structure. M fits the visible
-parameters to the guess. The photon plate from lecture 9 runs through
-both: each photon's source probabilities update, then the source
-positions update, until both stabilize.
+> Q: What is the ELBO and why does EM maximize it instead of the likelihood?
+> A: The evidence lower bound: sum_z Q(z) log(p(x,z)/Q(z)), a lower bound on the log likelihood built by Jensen's inequality. The true log likelihood is a log of a sum over hidden labelings: intractable to differentiate. The ELBO is a sum: tractable. EM alternates: the E-step sets Q to the posterior, making the bound tight at the current parameters. The M-step maximizes the bound, which is weighted MLE with closed forms. Since the bound touches the likelihood before each M-step, climbing the bound climbs the likelihood. It never decreases.
+> Follow-up: When is the bound tight?
+> A: When Q(z) = p(z|x. Theta), the posterior under the current parameters. Jensen's inequality is an equality when the distribution inside is degenerate relative to the function: here, when Q matches the posterior, the "average" the log wraps is exact. That is precisely the E-step's choice.
 
 > [!QA]
-> Q: What is the E-step actually computing?
-> A: The posterior distribution over the hidden variables given the data and current parameters. For a GMM, that is each point's responsibility vector: the probability each cluster generated it. It is called E for expectation because the M-step will take expectations under this distribution. Conceptually: your best current guess at the hidden structure.
-> Follow-up: Why not just assign each point to its most likely cluster and fit?
-> A: That is k-means: hard assignments, the zero-temperature limit. Soft assignments keep uncertainty alive, which matters when clusters overlap. The hard version converges faster per step but to worse answers on overlapping data. EM's softness is the generalization. K-means is the special case.
-
-## Level 1: PCA, the workhorse
-
-**Principal component analysis** is the canonical dimensionality
-reduction [00:37](ts:00:37). Data lives in 1000 dimensions. You suspect
-10 directions carry the signal. PCA finds them.
-
-Two preprocessing steps, both load-bearing. **Center** the data:
-subtract the mean [51:37](ts:51:37). **Rescale**: divide each feature by
-its standard deviation [54:52](ts:54:52). The feet-versus-miles warning:
-a feature measured in feet has huge numbers and would dominate the
-variance purely through units. Rescaling puts every feature on equal
-footing. Skip it and PCA discovers your unit choices, not your data.
-
-![PCA](assets/svg/l10-pca.svg "u1 is the max-variance direction. Keep the top k eigenvectors. Rescale first. Original plate.")
-
-Then: find the orthonormal directions of maximum variance. Direction one,
-u_1, maximizes the projected variance. Direction two, u_2, maximizes
-among directions orthogonal to u_1. And so on. The solution: the
-**eigenvectors** of the covariance matrix Sigma, sorted by eigenvalue
-[03:04](ts:03:04). Keep the top k. Project the data onto them. 1000
-dimensions become 10, keeping the axes where the data actually varies.
-
-The instability caveat: if two eigenvalues are close, their eigenvectors
-are unreliable. The data cannot distinguish the directions, so the
-returned axes wobble between runs. Eigenvalue gaps measure how much to
-trust each component. A big drop after eigenvalue k says k components
-are real.
+> Q: How is EM different from k-means?
+> A: Same alternating skeleton, soft instead of hard. K-means E-step: assign each point to one cluster. EM E-step: compute responsibilities, the posterior probability per cluster. K-means M-step: plain means. EM M-step: responsibility-weighted means, covariances, and mixing weights. K-means minimizes distortion; EM maximizes likelihood. Let the Gaussians' variances go to zero and EM's soft steps harden into k-means.
+> Follow-up: What can go wrong with EM?
+> A: Three things. Local maxima: bad initialization gets polished, not fixed. Slow crawl near convergence. Degenerate likelihood: a Gaussian collapsing onto one point drives variance to zero and likelihood to infinity, so bound variances or use priors. None of these affect the guarantee that likelihood never decreases. They affect which maximum you reach and how fast.
 
 > [!QA]
-> Q: Why does PCA use the covariance eigenvectors?
-> A: Projected variance along a unit direction u is u^T Sigma u. Maximizing a quadratic form over unit vectors gives the top eigenvector; the maximum value is the top eigenvalue. Each next direction is the top eigenvector of what remains, by orthogonality. The eigenvalues rank the directions by variance carried. The linear algebra and the statistics agree exactly.
-> Follow-up: When should you not use PCA?
-> A: When the interesting structure is nonlinear: PCA only finds straight axes. When features have meaningful different scales you want preserved: rescaling destroys that. When you need the original features interpretable: principal components are mixtures. And when variance is not the signal: a low-variance direction can be the predictive one.
-
-## Level 2: The ELBO derivation, in words
-
-The likelihood of one point: sum over z of p(x, z; theta). Take the log:
-log-sum, the hard object. Introduce any distribution Q(z). Multiply and
-divide inside: log sum_z Q(z) * p(x,z;theta)/Q(z). Jensen: log of
-expectation >= expectation of log. Result: sum_z Q(z) log
-p(x,z;theta)/Q(z). That is the ELBO.
-
-The E-step chooses Q to make Jensen tight: Q(z) = p(z | x; theta). Then
-the bound equals the likelihood at theta, and the M-step's climb counts
-fully. Any other Q gives a valid but looser bound: still monotone, slower
-progress. The posterior is not just natural. It is optimal for the
-bound.
-
-One more connection the lecture stresses: diffusion models train on
-ELBOs under the hood. Lecture 11's denoising objective is a variational
-bound of exactly this shape, with the noising steps as the latent
-variables. Learn the pattern here and the diffusion derivation is
-familiar.
-
-## Level 2: PCA as variance budgeting
-
-The eigenvalues sum to the total variance. Keeping the top k eigenvectors
-keeps (sum of top k eigenvalues) / (total) of the variance. This ratio
-is the honest report of what reduction cost: "10 components keep 94% of
-variance" is a complete summary. Plot cumulative variance against k and
-the curve tells you where the signal ends.
-
-PCA is also the optimal linear compressor in squared error: no other
-k-dimensional linear projection reconstructs the data better. Nonlinear
-methods can beat it, but among linear maps it is unbeaten. That
-optimality is why it is the default first try, not just a habit.
+> Q: What does PCA actually compute, and how do you choose k?
+> A: Center the data, form the covariance matrix, take its eigendecomposition. The eigenvectors are the principal components, ordered by eigenvalue: variance along that axis. Project onto the top k. Choose k by explained variance: keep components until their eigenvalues sum to a target like 95 percent of the total. In the toy, eigenvalues (5, 0) meant k=1 keeps 100 percent.
+> Follow-up: When does PCA fail?
+> A: When the structure is nonlinear (Swiss roll), when variance is not meaning (the top component is noise), or when features are unscaled (millimeters dominate meters: standardize first). It also costs O(d^3), so exact PCA dies around d = 100,000 and randomized methods take over.
 
 ## Recap: the whole lesson on one screen
 
-Eight ideas carry this lecture. Read each card. Say the core sentence out
-loud. If you can, you own the lesson.
-
-<div class="recap-grid">
-<div class="recap-card">
-<img src="assets/svg/l10-elbo.svg" alt="EM and the ELBO">
-<div class="rc-body">
-<strong>1. Hidden variables block MLE</strong>
-<p>Log of a sum resists closed forms. The latent z says which Gaussian
-made each point. Guess it softly, fit, repeat.</p>
-<p class="rc-num">Key: log-sum is the wall</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l10-elbo.svg" alt="Jensen and the ELBO">
-<div class="rc-body">
-<strong>2. Jensen builds the ELBO</strong>
-<p>Log of average >= average of logs. The evidence lower bound is
-tractable. Climb the bound, climb the likelihood.</p>
-<p class="rc-num">Key: lower bound, always below</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l10-elbo.svg" alt="E-step and M-step">
-<div class="rc-body">
-<strong>3. E tightens, M climbs</strong>
-<p>E: responsibilities = posterior p(z|x). M: weighted MLE for means,
-covariances, weights. Likelihood never decreases.</p>
-<p class="rc-num">Key: alternate to a local optimum</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l10-elbo.svg" alt="Tight bound">
-<div class="rc-body">
-<strong>4. Tight means touching</strong>
-<p>The E-step sets Q to the posterior, making bound equal likelihood at
-theta_t. No wasted climb on a loose bound.</p>
-<p class="rc-num">Key: Q = posterior is optimal</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l10-pca.svg" alt="PCA">
-<div class="rc-body">
-<strong>5. PCA: axes of max variance</strong>
-<p>Eigenvectors of the covariance, top k kept. 1000 dims to 10. Optimal
-linear compressor in squared error.</p>
-<p class="rc-num">Key: u^T Sigma u maximized</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l10-pca.svg" alt="Center and rescale">
-<div class="rc-body">
-<strong>6. Center, then rescale</strong>
-<p>Subtract the mean. Divide by per-feature std. Feet vs miles: units
-must not vote. Skip it and PCA finds your units.</p>
-<p class="rc-num">Key: preprocess or perish</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l10-pca.svg" alt="Eigenvalue gaps">
-<div class="rc-body">
-<strong>7. Gaps measure trust</strong>
-<p>Close eigenvalues mean wobbly eigenvectors. A big drop after k says
-k components are real. Report variance kept.</p>
-<p class="rc-num">Key: gaps, not just values</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l10-elbo.svg" alt="ELBO everywhere">
-<div class="rc-body">
-<strong>8. ELBOs power diffusion too</strong>
-<p>Lecture 11's training objective is a variational bound of this shape.
-Learn the pattern once, recognize it everywhere.</p>
-<p class="rc-num">Key: the pattern recurs</p>
-</div>
-</div>
-</div>
+1. **The job.** Fit k Gaussians when each point's label is a
+   hidden secret.
+2. **First attempt.** Guess labels, fit, reassign, repeat. Hard
+   forcing of boundary points. No uncertainty.
+3. **The key question.** Maximize the likelihood without
+   differentiating through a log of a sum.
+4. **Jensen.** log(E) >= E[log]. The ELBO: a tractable lower
+   bound, tight at Q = posterior.
+5. **EM.** E-step: responsibilities. M-step: weighted MLE.
+   Likelihood rises every round. Toy converges to mu = 0.33, 10.0.
+6. **EM's price.** Local maxima, slow crawl, degenerate collapse.
+   Initialization matters.
+7. **PCA.** Top eigenvectors of the covariance: the axes of
+   variation. Toy: (5, 0), one axis keeps 100 percent.
+8. **PCA's price.** Linear only, chases variance not meaning,
+   scale-sensitive, O(d^3).
 
 ## Official sources and further reading
 
 **Official:**
-- Lecture 10 video: latent variable [01:48](ts:01:48), Jensen [04:26](ts:04:26), tight [08:37](ts:08:37), E-step [10:00](ts:10:00), ELBO [18:59](ts:18:59), M-step [40:57](ts:40:57), center [51:37](ts:51:37), rescale [54:52](ts:54:52), PCA workhorse [00:37](ts:00:37).
-- CS229 Spring 2026 official course notes: EM and PCA chapters.
+- Lecture 10 video, Stanford Online YouTube:
+  https://www.youtube.com/watch?v=sUS-eTa0l6s — Chris Ré derives
+  the ELBO from Jensen's inequality, runs EM on GMMs, and presents
+  PCA on the SUV toy.
+- Official subtitle transcript (en-US): the lecture's spoken text.
+- CS229 Spring 2026 official course notes (local PDF): the full
+  EM derivation and PCA eigendecomposition.
 
-**Further reading:**
-- Dempster, Laird, and Rubin (1977), "Maximum Likelihood from Incomplete Data via the EM Algorithm": the founding paper.
-- Jolliffe, Principal Component Analysis: the reference text.
-
-**Caveats from these sources.** EM converges to local optima; restarts
-matter as in k-means. The monotone-likelihood guarantee assumes exact
-E and M steps; approximations break it. PCA's optimality is among linear
-maps only. Eigenvector signs are arbitrary: flipped components are the
-same answer.
+**Caveats from these sources.** The lecture states Jensen only for
+concave functions (the log case) and draws the chord picture live.
+The general statement is in the notes. The SUV toy is the lecture's
+own illustration. The diagonal 4-point miniature in this lesson is
+an original with the lecture's eigenstructure. The degenerate
+likelihood warning is standard practice around EM, presented here
+as the practitioner's caveat.
 
 ## Connections to the other courses
 
-- **CS336:** diffusion models train variational bounds of the ELBO shape derived here.
-- **CS224N:** EM trains word-alignment models in machine translation; the alternating pattern is identical.
-- **CS329H:** variational inference generalizes EM; the ELBO is the shared object.
-
-> [!CHEAT]
-> **EM and PCA cheatsheet.** EM: hidden z blocks MLE; Jensen gives ELBO; E sets Q = posterior (tight); M does weighted MLE; likelihood monotone up; local optimum. GMM: E = responsibilities, M = weighted averages. PCA: center, rescale, eigenvectors of covariance, top k; eigenvalues rank variance; gaps measure trust; report variance kept. Preprocess or the units vote.
-
-> [!MEMORY]
-> **Bound the hard thing, climb the bound.** When the objective resists attack, find a tractable lower bound that touches it, maximize the bound, repeat. EM is the pattern. Diffusion is the sequel.
+- **CS229 L05:** GDA: the same Gaussians with labels known; EM
+  handles them hidden.
+- **CS229 L09:** k-means: the hard limit of EM as variances go to
+  zero.
+- **CS229 L11:** diffusion models: latent-variable generative
+  modeling with the ELBO grown to neural scale.
+- **CS229 L13:** embeddings: PCA's linear ancestor of learned
+  representations.
+- **CS336:** randomized PCA and scale: dimensionality reduction at
+  training scale.
