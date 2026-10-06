@@ -353,10 +353,9 @@ Yes, through memory: the cache grows linearly in B, so each step moves more byte
 </tr>
 </tbody>
 </table>
-<p>Read it as two different machines sharing one model. Prefill wants
-FLOPs: faster chips, bigger batches of prompt tokens. Decode wants
+<p>Prefill wants FLOPs: faster chips, bigger batches of prompt tokens. Decode wants
 bytes: faster HBM, smaller caches, fewer bits. Optimizing one does
-not help the other. TTFT is a prefill number; tokens per second is
+not help the other. TTFT is a prefill number. Tokens per second is
 a decode number. Name the metric first, then pick the machine.</p>
 <figure><img alt="Prefill vs decode" src="assets/media-generation-cs336-l10-prefill-decode-0-99b7ccdc-6ffa-4e24-9fbb-3dab82879738.webp"><figcaption>Same model, different workload shape, different bound. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="latency-vs-throughput-the-bus">Latency vs throughput: the bus</h2>
@@ -459,7 +458,7 @@ r. Speedup: (K x r) / (1 + K x c).</p>
 <p>Work the lecture&rsquo;s numbers. K=4, c=1/20: cost 1.2 passes. Accept
 all 4: 4/1.2 = 3.3x. Accept 2: 2/1.2 = 1.7x. Accept 0: the round
 still yields 1 token (the correction): 1/1.2 = 0.83x, slower than
-baseline. The plate shows the three outcomes.</p>
+baseline: accept 4, accept 2, accept 0.</p>
 <p>Two levers, one tradeoff. Cheaper draft (smaller c) raises every
 outcome. Closer draft (higher r) raises the numerator: distillation
 is the lever. Bigger K raises the ceiling but lowers r: long drafts
@@ -468,7 +467,7 @@ holds regardless: rejection sampling makes the output exactly the
 target&rsquo;s distribution, so speed is the only variable.</p>
 <figure><img alt="Speculative decoding math" src="assets/media-generation-cs336-l10-spec-math-0-6e408dda-aac1-4dae-a578-65fe56364a95.webp"><figcaption>Accept all: 3.3x. Accept half: 1.7x. Accept none: slower. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
 <div class="qa"><div class="q">Work the speculative decoding math. K=4, draft cost 1/20, acceptance 50%.</div><div class="a"><p>Cost per round: 1 target pass + 4 x 1/20 = 1.2 passes. Expected tokens: 4 x 0.5 = 2, plus the correction token on reject keeps it near 2. Speedup: 2/1.2 = 1.7x. Now distill the draft so acceptance hits 90%: 3.6/1.2 = 3x. The draft quality is the whole game: at 50% you get 1.7x, at 90% you get 3x, at 10% you lose. K=4 is the sweet spot because longer drafts drift and shorter ones waste the parallel check.
-Rejection sampling. Accept each draft token with probability min(1, q/p): where the draft overproposes, the target downweights; on reject, sample from the residual (q - p normalized). The math guarantees the accepted stream matches q exactly. Speed changes, quality does not. That guarantee is what makes it safe to deploy: it is an optimization, not an approximation.</p><div class="followup"><strong>Follow-up:</strong> Why is the output exactly the target&#x27;s distribution?</div></div></div>
+Rejection sampling. Accept each draft token with probability min(1, q/p): where the draft overproposes, the target downweights. On reject, sample from the residual (q - p normalized). The math guarantees the accepted stream matches q exactly. Speed changes, quality does not. That guarantee is what makes it safe to deploy: it is an optimization, not an approximation.</p><div class="followup"><strong>Follow-up:</strong> Why is the output exactly the target&#x27;s distribution?</div></div></div>
 <h2 id="serving-the-chaos">Serving the chaos</h2>
 <p>Live traffic is jagged: requests arrive at different times with
 different lengths. <strong>Continuous batching</strong> (Orca): decode one token per
@@ -507,10 +506,9 @@ When the draft is cheap and close to the target. If p rarely matches q, you pay 
 </ul>
 <p>The stack is the same ideas with harder edges: the cache is paged,
 the batch is continuous, the draft is distilled, the kernels are
-autotuned. Nothing here contradicts the lecture. It is the lecture
-at 3am under load.</p>
+autotuned.</p>
 <figure><img alt="Serving stack" src="assets/media-generation-cs336-l10-serving-stack-0-8058c828-1dd9-473f-8c99-31db93879615.webp"><figcaption>vLLM, SGLang, TensorRT-LLM, DeepSeek: the same ideas, production-hardened. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
-<div class="qa"><div class="q">Size the GPUs for serving Llama-3-70B at 1000 tok/s. H100s, bf16, 4K context.</div><div class="a"><p>Per GPU, one decode step reads 140GB of parameters. At 3.35 TB/s that is 42ms per step. Per step, batch B produces B tokens, so throughput is B / 0.042s, minus the cache traffic. Cache per sequence at 4K: 80 layers x 8 KV heads x 128 x 2 x 2B x 4096 = 1.3GB. At batch 64: per step read = 140 + 64 x 1.3 = 223GB, 67ms per step, 64 tokens per 67ms = 955 tok/s per GPU. So one H100 nearly does it at batch 64; take two for headroom, TTFT, and the chatbot&rsquo;s latency needs. The cache at batch 64 is 85GB: it fits in the remaining HBM after the 140GB of weights. That is the sizing loop: batch for throughput, cache for memory, GPUs for headroom.
+<div class="qa"><div class="q">Size the GPUs for serving Llama-3-70B at 1000 tok/s. H100s, bf16, 4K context.</div><div class="a"><p>Per GPU, one decode step reads 140GB of parameters. At 3.35 TB/s that is 42ms per step. Per step, batch B produces B tokens, so throughput is B / 0.042s, minus the cache traffic. Cache per sequence at 4K: 80 layers x 8 KV heads x 128 x 2 x 2B x 4096 = 1.3GB. At batch 64: per step read = 140 + 64 x 1.3 = 223GB, 67ms per step, 64 tokens per 67ms = 955 tok/s per GPU. So one H100 nearly does it at batch 64. Take two for headroom, TTFT, and the chatbot&rsquo;s latency needs. The cache at batch 64 is 85GB: it fits in the remaining HBM after the 140GB of weights. That is the sizing loop: batch for throughput, cache for memory, GPUs for headroom.
 Everything. The cache per sequence grows 32x to 42GB: batch 64 no longer fits. You drop to batch ~8 per GPU, throughput collapses, and the cache dominates the parameter read. The fixes: MLA-style compression, context parallel across GPUs, or sliding-window attention to bound the cache. Long context is a cache problem wearing a serving problem&rsquo;s clothes.</p><div class="followup"><strong>Follow-up:</strong> What changes at 128K context?</div></div></div>
 <h2 id="mapping-back-what-each-technique-fixes">Mapping back: what each technique fixes</h2>
 <table>
@@ -598,6 +596,16 @@ scaling lectures&rsquo; job.</p>
 <li><strong>Batch the chaos.</strong> Continuous batching fills gaps. PagedAttention
    defrags the cache and shares prefixes. OS ideas, reused.</li>
 </ol>
+<h2 id="go-deeper">Go deeper</h2>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/emZxqRScfc0" title="Build KV Cache Layer From Scratch" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+<ul>
+<li>Build KV Cache Layer From Scratch (the embed above): https://www.youtube.com/watch?v=emZxqRScfc0</li>
+<li>Kwon et al., PagedAttention: https://arxiv.org/abs/2305.13245</li>
+<li>Leviathan et al., Speculative Decoding: https://arxiv.org/abs/2211.05102</li>
+<li>vLLM project: https://github.com/vllm-project/vllm</li>
+</ul>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Lecture 10 video.
