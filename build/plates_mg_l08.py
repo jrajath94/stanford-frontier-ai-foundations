@@ -55,7 +55,8 @@ p = Plate("The schedule decides how fast the signal dies",
           source="original computation", inner_h=440)
 x0, y0, x1, y1 = 80, 400, 880, 120
 p.axes(x0, y0, x1, y1)
-p.text(24, y1 - 8, "signal frac", size=13, color=MUTED)
+# x=8: the t=0 dot (x 74-86) covered the tail of the label at x=24.
+p.text(8, y1 - 8, "signal frac", size=13, color=MUTED)
 p.text(x1 - 40, y0 + 24, "t", size=13, color=MUTED)
 def X(t): return x0 + t / 110 * (x1 - x0)
 pts = [(X(t), y0 - (0.9 ** t) * (y0 - y1)) for t in range(0, 111)]
@@ -63,7 +64,12 @@ p.curve(pts, color=TEAL, width=3)
 for t, lab in [(0, "t=0: 1.00"), (25, "t=25: 0.072"), (50, "t=50: 0.005"), (100, "t=100: 0.00003")]:
     xx, yy2 = X(t), y0 - (0.9 ** t) * (y0 - y1)
     p.circle(xx, yy2, 6, FOCUS)
-    p.text(xx - 40, yy2 - 30, lab, size=12, color=INK)
+    if t == 0:
+        # Below-right of the dot: the old above-left spot collided with the
+        # y-axis label "signal frac" and the claim line.
+        p.text(xx + 16, yy2 + 16, lab, size=12, color=INK)
+    else:
+        p.text(xx - 40, yy2 - 30, lab, size=12, color=INK)
 p.text(80, y0 + 60, "too fast: signal dies in a few steps, most reverse steps learn nothing", size=14)
 p.text(80, y0 + 88, "too slow: T must be huge to reach noise", size=14)
 p.text(80, y0 + 116, "the schedule is tuned by experiment, not derived", size=14, bold=True, color=ORANGE)
