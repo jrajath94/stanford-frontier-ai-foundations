@@ -144,7 +144,8 @@ step 3: input [START, the, cat]  target: sat
 ```
 
 The loss is the negative log probability of each true target,
-summed. Suppose the model outputs:
+summed. Log means the natural log (base e) everywhere in this
+course. Suppose the model outputs:
 
 ```ascii
 P(the | START)       = 0.70
@@ -155,6 +156,9 @@ loss = -(log 0.70 + log 0.90 + log 0.50)
      = -(-0.357 - 0.105 - 0.693)
      = 1.155 nats
 ```
+
+A **nat** is the unit of information for natural logs, the way a
+bit is the unit for base-2 logs.
 
 **Perplexity** turns this into plain language: exp(average loss
 per token) = exp(1.155/3) = exp(0.385) = 1.47. The model is as
@@ -228,7 +232,12 @@ much as the model does.
 token. Fast, deterministic, and dull. It also amplifies bias:
 once "the" beats "a" by a hair, every sentence starts with "the."
 
-**Sampling** draws from the distribution. With logits [2.0, 1.0,
+**Sampling** draws from the distribution. **Softmax** turns a vector
+of raw scores into a probability vector: exponentiate each score,
+then divide each exponential by the sum of all the exponentials,
+so the results are positive and add to 1. **Logits** are the raw
+scores a network outputs before softmax turns them into
+probabilities. With logits [2.0, 1.0,
 0.1], plain sampling picks "cat" 65.9% of the time, "dog" 24.2%,
 "sat" 9.9%. **Temperature** reshapes before sampling: divide
 logits by T, then softmax.
@@ -280,7 +289,7 @@ helped = [0,1], frame = [1,1]. Scores are dot products, as before.
 ```ascii
 full score matrix:        masked (keep left + self):
 counselor: [1, ., .]      counselor: [1]
-helped:    [1, 1, .]      helped:    [1, 1]
+helped:    [0, 1, .]      helped:    [0, 1]
 frame:     [1, 1, 2]      frame:     [1, 1, 2]
 ```
 
@@ -288,13 +297,13 @@ Row by row, softmax over the kept scores:
 
 ```ascii
 counselor: softmax([1])    = [1.00]            -> 1.00 x [1,0] = [1.00, 0]
-helped:    softmax([1,1])  = [0.50, 0.50]      -> [0.50, 0.50]
+helped:    softmax([0,1])   = [0.27, 0.73]      -> [0.27, 0.73]
 frame:     softmax([1,1,2]) = [0.21, 0.21, 0.58] -> [0.79, 0.79]
 ```
 
 "frame" is unchanged: its past is the whole toy. But "helped"
 changed: with full attention it would mix all three tokens. Masked,
-it mixes only counselor and itself into [0.50, 0.50]. The mask is
+it mixes only counselor and itself into [0.27, 0.73]. The mask is
 the chain rule wearing attention's clothes: position t predicts
 from positions 1..t only. For more on the attention mechanism
 itself, CS229S L02 is the full treatment. Here it serves the
@@ -368,7 +377,7 @@ absent (a photo has no first pixel), the restorer usually wins.
 
 > [!QA]
 > Q: What does the causal mask do to the CS229S attention toy?
-> A: It restricts each token to its past. In the worked toy, "frame" keeps its full-context output [0.79, 0.79] because its past is the whole sequence, but "helped" drops from a three-way mix to [0.50, 0.50] over counselor and itself. The mask turns attention into the chain rule: position t may only use positions 1 through t.
+> A: It restricts each token to its past. In the worked toy, "frame" keeps its full-context output [0.79, 0.79] because its past is the whole sequence, but "helped" drops from a three-way mix to [0.27, 0.73] over counselor and itself. The mask turns attention into the chain rule: position t may only use positions 1 through t.
 > Follow-up: Why not just train left-to-right serially like an RNN?
 > A: Because teacher forcing makes all true histories available upfront, so one masked forward pass computes every position's prediction simultaneously. The RNN's serial bottleneck was in training. The masked transformer trains in parallel and pays the serial price only at sampling time.
 
@@ -405,7 +414,7 @@ absent (a photo has no first pixel), the restorer usually wins.
 3. **The conditional table explodes.** 50,000^10 histories for length 10. Unseen histories have empty counters.
 4. **The key question.** What if one smooth predictor learned all conditionals at once, trained on true histories?
 5. **Teacher forcing.** Feed true pasts at every step. Toy loss 1.155 nats, perplexity 1.47. All positions train in parallel. The loss is negative log-likelihood.
-6. **The mask, worked.** Causal masking on the CS229S toy: "helped" becomes [0.50, 0.50], "frame" stays [0.79, 0.79]. The chain rule in attention's clothes.
+6. **The mask, worked.** Causal masking on the CS229S toy: "helped" becomes [0.27, 0.73], "frame" stays [0.79, 0.79]. The chain rule in attention's clothes.
 7. **Decoding.** Temperature reshapes: T = 0.5 sharpens "cat" to 0.864, T = 2.0 flattens it to 0.502. Top-p guards the tail.
 8. **Bill 1: exposure bias.** 0.9^20 = 0.12 of 20-token samples stay clean. One wrong token cuts the next confidence 0.75 to 0.10. Fixes exist (scheduled sampling) but scale usually wins.
 9. **Bill 2: serial sampling.** 1,000 tokens x 20 ms = 20 seconds per sample. Training parallelizes. Sampling does not. The KV cache cuts per-step work, not the serial wait.
