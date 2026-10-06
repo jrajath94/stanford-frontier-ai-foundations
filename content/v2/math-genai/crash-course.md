@@ -98,7 +98,7 @@ Each one proves exactly one claim.
 | 0.693 | Forward KL, sharp toy; also JS max = log 2 | Asymmetry: reverse KL on the same toy is ∞ |
 | 0.102 | JS on the coin toy | JS is calmer than KL; saturates when far apart |
 | 0.4 | TV on the coin toy | Simplest divergence; kinked gradient |
-| −1.918 vs −2.079 | MLE on H,H,T | min KL = max likelihood; data picks the 0.7 coin |
+| −1.917 vs −2.079 | MLE on H,H,T | min KL = max likelihood; data picks the 0.7 coin |
 | 0.001 vs 0.693 | Saturation fix | Non-saturating loss gives 700× the signal at d ≈ 0 |
 | 0.216 | Mode collapse JS | The objective shrugs at a missing half |
 | 4 | FID toy | Mean shift of 2 → FID 4; lower is better |
