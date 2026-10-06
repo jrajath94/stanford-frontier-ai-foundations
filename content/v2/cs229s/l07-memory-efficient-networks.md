@@ -50,7 +50,7 @@ small model what the big one knows.
 Start from the weights. **Pruning** discards a subset of parameters after training.
 The result is a sparse network. Formally: given original
 weights W, find pruned weights Wp minimizing the loss
-L(x; Wp) subject to ||Wp||_0 < T, where ||.||_0 counts
+L(x. Wp) subject to ||Wp||_0 < T, where ||.||_0 counts
 nonzeros and T is the target parameter count. An ideal
 pruning process accelerates training or inference on real
 hardware, retains accuracy, and generalizes across models.
@@ -85,7 +85,7 @@ the surviving weights re-learn their roles. The schedule is
 the method: gentle cuts compound to the same 90 percent
 that one brutal cut destroys.
 
-![Iterative pruning](assets/plate-l07-iterative-prune.webp "Five rounds of 37 percent reach 90 percent sparsity; one 90 percent cut does not recover. Shell 3. Source: original toy for the pruning schedule. Project: Stanford Frontier AI.")
+![Iterative pruning](assets/plate-l07-iterative-prune.webp "Five rounds of 37 percent reach 90 percent sparsity. One 90 percent cut does not recover. Shell 3. Source: original toy for the pruning schedule. Project: Stanford Frontier AI.")
 
 ## Where naive pruning breaks: the pattern
 
@@ -114,7 +114,7 @@ weights disappear while accuracy holds.
 
 Four contiguous weights: [a, 0, b, 0]. Store a and b plus 2
 bits of metadata saying which two survived. Half the
-weights are gone; the metadata is 2 bits per group of 4
+weights are gone. The metadata is 2 bits per group of 4
 values, or 0.5 bits per weight: negligible. Ampere's sparse
 tensor cores skip the zeros in hardware and run the sparse
 GEMM at up to 2x the dense throughput.
@@ -126,7 +126,7 @@ lecture names: unstructured sparsity is accurate but
 unusable, structured blocks are usable but coarse, and 2:4
 is the point the hardware chose to accelerate.
 
-![The 2:4 pattern](assets/plate-l07-2to4.webp "Two of every four values are zero; 2 bits of metadata per group; sparse tensor cores skip the zeros. Shell 4. Source: original toy for N:M sparsity. Project: Stanford Frontier AI.")
+![The 2:4 pattern](assets/plate-l07-2to4.webp "Two of every four values are zero. 2 bits of metadata per group. Sparse tensor cores skip the zeros. Shell 4. Source: original toy for N:M sparsity. Project: Stanford Frontier AI.")
 
 The interview point: sparsity only speeds up inference if
 the pattern matches what the hardware accelerates. One
@@ -261,9 +261,9 @@ LLM.int8() (Dettmers et al., 2022) splits the problem:
 compute the 0.1 percent of outlier dimensions in FP16 and
 quantize the rest to INT8. At dmodel 4096, that is about 4
 dimensions in FP16 and 4092 in INT8. The memory savings
-survive; the accuracy survives.
+survive. The accuracy survives.
 
-![The outlier problem](assets/plate-l07-outliers.webp "0.1 percent of dimensions are outliers; LLM.int8() keeps them in FP16 and quantizes the rest. Shell 5. Source: original toy for the outlier split. Project: Stanford Frontier AI.")
+![The outlier problem](assets/plate-l07-outliers.webp "0.1 percent of dimensions are outliers. LLM.int8() keeps them in FP16 and quantizes the rest. Shell 5. Source: original toy for the outlier split. Project: Stanford Frontier AI.")
 
 ### Subchapter: the LLM quantization family
 
@@ -331,7 +331,7 @@ percent. Train the student against the softened targets at
 high T, then run it at T = 1. The temperature is the
 bandwidth of the knowledge transfer.
 
-![The temperature knob](assets/plate-l07-temperature.webp "T 1 gives 0.98 and 0.02; T 5 gives 0.69 and 0.31: the dark knowledge appears. Shell 6. Source: original toy for temperature. Project: Stanford Frontier AI.")
+![The temperature knob](assets/plate-l07-temperature.webp "T 1 gives 0.98 and 0.02. T 5 gives 0.69 and 0.31: the dark knowledge appears. Shell 6. Source: original toy for temperature. Project: Stanford Frontier AI.")
 
 ## What is used where: real deployments
 
@@ -351,7 +351,7 @@ Two honest notes. Pruning at LLM scale is mostly research:
 SparseGPT and Wanda are public papers, but production
 serving shrinks with quantization, not pruning. And which
 quant a frontier vendor uses internally (GPT, Gemini) is
-not public; the table lists what is.
+not public. The table lists what is.
 
 ## Mapping back: three cuts, one smaller model
 
@@ -387,7 +387,7 @@ lessons.
 
 > [!QA]
 > Q: Why does unstructured pruning often fail to speed up inference?
-> A: Because the surviving weights scatter randomly across memory. The hardware still reads and writes every block to find the nonzeros, so the memory traffic barely drops. Structured patterns like 2:4 N:M keep accesses regular, which is what sparse tensor cores need. Accuracy favors fine-grained; speed favors structured.
+> A: Because the surviving weights scatter randomly across memory. The hardware still reads and writes every block to find the nonzeros, so the memory traffic barely drops. Structured patterns like 2:4 N:M keep accesses regular, which is what sparse tensor cores need. Accuracy favors fine-grained. Speed favors structured.
 > Follow-up: How do you pick the sparsity ratio per layer?
 > A: Sensitivity analysis: prune each layer at increasing ratios in magnitude order and measure accuracy. Layers have different sensitivity, with early layers usually more fragile. Assign aggressive ratios only where accuracy survives.
 
@@ -395,11 +395,11 @@ lessons.
 > Q: Work out the k-means storage saving for a 4x4 FP32 matrix with 4 clusters.
 > A: Original: 32 bits x 16 weights = 64 bytes. After: each weight stores a 2-bit cluster index (log2 4), so 16 x 2 bits = 4 bytes, plus 4 FP32 centroids = 16 bytes. Total 20 bytes. Saving: 64 - 20 = 44 bytes, 3.2x compression. Compute is unchanged because weights reconstruct to FP32 before the matmul.
 > Follow-up: When would you prefer linear quantization instead?
-> A: When you also want faster math. K-means only shrinks storage; the compute stays floating point. Linear quantization maps values to integers with a scale and zero-point, so the matmul itself runs in integer arithmetic.
+> A: When you also want faster math. K-means only shrinks storage. The compute stays floating point. Linear quantization maps values to integers with a scale and zero-point, so the matmul itself runs in integer arithmetic.
 
 > [!QA]
 > Q: Decode the FP32 bit pattern in the slides' worked example.
-> A: Sign bit 0, exponent bits summing to 120, fraction 2^-2 = 0.25. Value = (-1)^0 x (1 + 0.25) x 2^(120-127) = 1.25 x 2^-7 = 0.0097656. The 8 exponent bits with bias 127 buy the dynamic range; the 23 fraction bits buy the precision.
+> A: Sign bit 0, exponent bits summing to 120, fraction 2^-2 = 0.25. Value = (-1)^0 x (1 + 0.25) x 2^(120-127) = 1.25 x 2^-7 = 0.0097656. The 8 exponent bits with bias 127 buy the dynamic range. The 23 fraction bits buy the precision.
 > Follow-up: Why is BF16 the default training format instead of FP16?
 > A: BF16 keeps 8 exponent bits like FP32 and cuts the fraction to 7, trading precision for dynamic range. Gradients span many orders of magnitude during training, so range matters more than fine resolution. FP16's 5 exponent bits overflow and underflow more easily.
 
@@ -411,9 +411,9 @@ lessons.
 
 > [!QA]
 > Q: Walk me through magnitude pruning versus regression pruning on the toy.
-> A: Toy: X = [x1, x2, x3], W = [5, 0.3, -0.4], Y = ReLU(5 x1 + 0.3 x2 - 0.4 x3). Magnitude pruning looks only at |W|: 5 stays, 0.3 and -0.4 go. It never asks what the weights do. Regression pruning (He et al., 2017) asks what the layer output does: pick rows to minimize ||Z - Zhat||_F^2, the reconstruction error of the layer output, subject to the nonzero budget. A small weight that the output depends on survives; a large weight the output ignores does not. Then relearn the remaining weights. Magnitude is a weight statistic; regression is an output statistic. The output statistic wins.
+> A: Toy: X = [x1, x2, x3], W = [5, 0.3, -0.4], Y = ReLU(5 x1 + 0.3 x2 - 0.4 x3). Magnitude pruning looks only at |W|: 5 stays, 0.3 and -0.4 go. It never asks what the weights do. Regression pruning (He et al., 2017) asks what the layer output does: pick rows to minimize ||Z - Zhat||_F^2, the reconstruction error of the layer output, subject to the nonzero budget. A small weight that the output depends on survives. A large weight the output ignores does not. Then relearn the remaining weights. Magnitude is a weight statistic. Regression is an output statistic. The output statistic wins.
 > Follow-up: Why iterate instead of pruning once to the target?
-> A: Because each cut destroys co-adapted structure. Pruning 37 percent and fine-tuning lets the survivors re-learn their roles; repeating five times reaches 90 percent sparsity with accuracy intact. One 90 percent cut removes too much structure at once and fine-tuning cannot recover. The schedule is the method.
+> A: Because each cut destroys co-adapted structure. Pruning 37 percent and fine-tuning lets the survivors re-learn their roles. Repeating five times reaches 90 percent sparsity with accuracy intact. One 90 percent cut removes too much structure at once and fine-tuning cannot recover. The schedule is the method.
 
 > [!QA]
 > Q: What does the temperature do in distillation?
@@ -432,13 +432,13 @@ lessons.
 The story in eight steps. Each step answers the one before it.
 
 1. **The model does not fit.** Microcontrollers have 3x
-   less memory than phones; ResNet-50 exceeds their limit
+   less memory than phones. ResNet-50 exceeds their limit
    by up to 100x. Shrink the memory required, not just the
    accesses.
 2. **Pruning removes weights.** Minimize loss subject to a
    nonzero budget. Magnitude keeps large weights
-   (W = [5, 0.3, -0.4] keeps 5); regression picks rows by
-   reconstruction error; iterative beats one-shot.
+   (W = [5, 0.3, -0.4] keeps 5). Regression picks rows by
+   reconstruction error. Iterative beats one-shot.
 3. **Patterns decide sparsity value.** Unstructured
    pruning is accurate but scatters memory access. 2:4
    structured sparsity matches Ampere tensor cores: 50%
@@ -457,7 +457,7 @@ The story in eight steps. Each step answers the one before it.
 7. **Distillation teaches uncertainty.** The student
    matches the teacher's probability distribution, not
    just labels. Align on logits, features, or gradients.
-8. **Cuts compose; accuracy pays.** Pruning plus
+8. **Cuts compose. Accuracy pays.** Pruning plus
    quantization beats either alone. Every method trades a
    little accuracy for a lot of memory.
 
@@ -481,10 +481,10 @@ The story in eight steps. Each step answers the one before it.
   LLM quantization figure.
 
 **Caveats from these sources.** The deck's quantization
-examples are small-matrix illustrations; LLM-scale
+examples are small-matrix illustrations. LLM-scale
 behavior adds outlier features that break naive schemes
 (see LLM.int8()). The 2:4 sparsity speedup needs
-Ampere-or-newer sparse tensor cores and matching kernels;
+Ampere-or-newer sparse tensor cores and matching kernels.
 unstructured sparsity rarely speeds up dense GEMM.
 Butterfly and Monarch matrices are calendar-listed but not
 in the shipped deck: [uncertain].
