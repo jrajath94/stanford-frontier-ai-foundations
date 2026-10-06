@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.classList.remove('no-js');</script>
 <title>Lecture 1: The Language Modeling Pipeline and Tokenization — Stanford Frontier AI</title>
-<meta name="description" content="Definition of language modeling, the full pipeline from data to evaluation, and tokenization derived from first principles with interactive demonstrations.">
+<meta name="description" content="Definition of language modeling, the full pipeline from data to evaluation, and tokenization derived from first principles: character and word attempts, their f">
 <link rel="stylesheet" href="../assets/vendor/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
 </head>
@@ -81,6 +81,7 @@
 <li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
 <li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
 <li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../cs229s/crash-course-02.html" data-page="cs229s-crash-02">CS229S · Crash course 2</a></li>
 </ul>
 <h3>CS224N: NLP with Deep Learning</h3><ul>
 <li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
@@ -146,18 +147,14 @@
 </ul>
 <h3>CS329A: Self-Improving AI Agents</h3><ul>
 <li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
-<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
-<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
-<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
-<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
-<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
-<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
-<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
-<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
-<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
-<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
-<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
-<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+<li><a href="../cs329a/l01-course-overview.html" data-page="cs329a-l01">L01 · Course Overview</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Compute Scaling</a></li>
+<li><a href="../cs329a/l03-feedback-tools-code.html" data-page="cs329a-l03">L03 · Feedback, Tools, Code</a></li>
+<li><a href="../cs329a/l04-planning-multistep-reasoning.html" data-page="cs329a-l04">L04 · Planning and Multi-Step Reasoning</a></li>
+<li><a href="../cs329a/l05-search-at-scale.html" data-page="cs329a-l05">L05 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l06-train-time-scaling.html" data-page="cs329a-l06">L06 · Train-Time Scaling</a></li>
+<li><a href="../cs329a/l07-agentic-evaluations.html" data-page="cs329a-l07">L07 · Agentic Evaluations</a></li>
+<li><a href="../cs329a/l08-future-directions.html" data-page="cs329a-l08">L08 · Future Directions</a></li>
 </ul>
 <h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
 <li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
@@ -220,52 +217,84 @@
       <h1>Lecture 1: The Language Modeling Pipeline and Tokenization</h1>
       <p class="meta-line">2026-03-30 · Instructor: Percy Liang · 1:19:22 · Spring 2026</p>
       <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="JuoVZkPBiKk"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/JuoVZkPBiKk" title="Stanford CS336 Spring 2026 Lecture 1: Overview, Tokenization" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=JuoVZkPBiKk" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=JuoVZkPBiKk" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original lecture. Percy Liang introduces the course, presents the language modeling pipeline, and derives tokenization.</p></div><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
-<p>This lesson has two levels. <strong>Level 1 (Core)</strong> contains what you need to
-understand everything that follows in all 12 courses. <strong>Level 2 (Deep)</strong>
-contains what you need for correct, interview-grade understanding. Read
-Level 1 straight through. Return to Level 2 when you want depth.</p>
-<p>No prerequisites are assumed. Every term is defined at first use.</p>
-<h2 id="level-1-definition-of-language-modeling">Level 1: Definition of language modeling</h2>
+<p>No prerequisites are assumed. Every term is defined at first use.
+Read straight through. The chapter builds one question at a time, and
+each answer becomes the tool the next section needs.</p>
+<h2 id="the-problem-score-every-sentence">The problem: score every sentence</h2>
 <p>The model must score sentences. &ldquo;The cat sat&rdquo; should get a high
 number. &ldquo;Cat the sat the&rdquo; should get a low one. A <strong>language model</strong>
 is the machine that assigns these numbers: a probability distribution
 over sequences of tokens.</p>
 <p>Given a sequence, it assigns a probability to each possible next
-token.</p>
-<p>Formally, for tokens x_1 through x_n, the model defines P(x_1, &hellip;, x_n).
-By the chain rule, this equals the product of P(x_t | x_1, &hellip;, x_{t-1})
-over all positions t. Training means learning these conditional
+token. Formally, for tokens x_1 through x_n, the model defines
+P(x_1, &hellip;, x_n). By the <strong>chain rule</strong>, this equals the product of
+P(x_t | x_1, &hellip;, x_{t-1}) over all positions t. The chain rule is the
+rule from probability that breaks a joint probability into a product
+of conditionals: the probability of the whole sequence is the
+probability of the first token, times the probability of the second
+given the first, times the probability of the third given the first
+two, and so on. Training means learning these conditional
 distributions from data.</p>
-<p>The definition raises the first question of the course. What is a token?
-The answer is tokenization, derived below.</p>
-<h2 id="level-1-the-language-modeling-pipeline">Level 1: The language modeling pipeline</h2>
+<p>The definition raises the first question of the course. What is a
+token? The chip computes on numbers. Text is not numbers. The answer
+is tokenization, and the chapter derives it below.</p>
+<h2 id="the-pipeline-five-stages-two-cross-cutters">The pipeline: five stages, two cross-cutters</h2>
 <p>Building a language model requires five stages in order.</p>
-<figure><img alt="Language modeling pipeline" src="assets/media-generation-lm-pipeline-stages-0-06a4e821-a7ef-46b6-8cac-dc5c193b1d58.webp"><figcaption>The five stages. Data feeds tokenization, which feeds architecture, then training, then evaluation. Systems and scaling laws span all five.</figcaption></figure>
-<p><strong>Data.</strong> The training corpus determines model behavior. Data reflects
-the desired capabilities. Large datasets require active curation.</p>
-<p><strong>Tokenization.</strong> Raw text becomes integer sequences. Derived in full
-below.</p>
-<p><strong>Architecture.</strong> The transformer maps token sequences to predictions.</p>
-<p><strong>Training.</strong> Optimization over billions of parameters. Learning rate
-schedules and batch sizes determine stability.</p>
-<p><strong>Evaluation.</strong> Perplexity measures prediction quality on held-out text.
-Benchmarks test specific capabilities.</p>
-<p>Two concerns span all stages. <strong>Systems:</strong> data movement dominates GPU
-cost. <strong>Scaling laws:</strong> hyperparameters must adapt as compute grows.</p>
+<figure><img alt="Language modeling pipeline" src="assets/l01-pipeline.svg"><figcaption>Shell 1. Name the five stages: data, tokenization, architecture, training, evaluation. Source: lecture 1 pipeline slide.</figcaption></figure>
+<h3 id="subchapter-data-sets-the-ceiling">Subchapter: data sets the ceiling</h3>
+<p>The training corpus determines model behavior. Data reflects the
+desired capabilities. Large datasets require active curation. A model
+trained on code writes code. A model trained on one language speaks
+that language. The stage that decides what the model can learn is the
+first one.</p>
+<h3 id="subchapter-tokenization-converts-text-to-integers">Subchapter: tokenization converts text to integers</h3>
+<p>Raw text becomes integer sequences. This is the stage the chapter
+derives in full. Every later stage depends on the choices made here.</p>
+<h3 id="subchapter-architecture-maps-sequences-to-predictions">Subchapter: architecture maps sequences to predictions</h3>
+<p>The transformer maps token sequences to next-token predictions. It is
+the subject of the next two lectures.</p>
+<h3 id="subchapter-training-optimizes-billions-of-parameters">Subchapter: training optimizes billions of parameters</h3>
+<p>Optimization over billions of parameters. Learning rate schedules and
+batch sizes determine stability. This is where the compute budget
+burns.</p>
+<h3 id="subchapter-evaluation-measures-what-survived">Subchapter: evaluation measures what survived</h3>
+<p><strong>Perplexity</strong> measures prediction quality on held-out text: how
+surprised the model is by text it has not seen. Low perplexity means
+the model assigned high probability to the actual next tokens.
+Benchmarks test specific capabilities beyond raw prediction.</p>
+<h3 id="subchapter-two-concerns-span-all-stages">Subchapter: two concerns span all stages</h3>
+<p><strong>Systems:</strong> data movement dominates GPU cost. The pipeline is also a
+hardware problem. <strong>Scaling laws:</strong> hyperparameters must adapt as
+compute grows. Both concerns cut across all five stages and return in
+every later lecture.</p>
 <div class="qa"><div class="q">What are the five stages of building a language model?</div><div class="a"><p>Data collection, tokenization, architecture, training, and evaluation. Data determines the ceiling of model quality. Tokenization converts text to integers. Architecture is the transformer. Training optimizes billions of parameters. Evaluation uses perplexity and benchmarks. Systems engineering and scaling laws cut across all five stages.
 Data. The corpus sets the upper bound on what the model can learn. Architecture and training determine how close the model comes to that bound. A common interview trap is to overemphasize architecture. In practice, data quality moves results more than architectural tweaks. Frontier labs invest heavily in data pipelines for this reason.</p><div class="followup"><strong>Follow-up:</strong> Which stage matters most for final quality?</div></div></div>
-<h2 id="level-1-tokenization-the-problem">Level 1: Tokenization, the problem</h2>
+<h2 id="first-attempt-character-level-tokenization">First attempt: character-level tokenization</h2>
 <p>The model computes on integers. Text is not integers. Something must
 convert between the two, and the conversion must be exact: decode what
 you encoded and you get the input back, character for character. That
-something is <strong>tokenization</strong>.</p>
-<p>It performs encoding (text to integers) and decoding (integers to
-text). The mapping must be invertible: decoding an encoding returns
-the input exactly.</p>
-<figure><img alt="Text to tokens to IDs" src="assets/media-generation-tokenizer-pipeline-0-ed513c16-c002-405d-b42a-d5968da4a611.webp"><figcaption>Three stages. Raw text becomes token chunks, which become integer IDs. The model receives only the IDs.</figcaption></figure>
-<p>The design question: what should one integer represent? Try it yourself.</p>
+something is <strong>tokenization</strong>. It performs encoding (text to integers)
+and decoding (integers to text). The mapping must be invertible.</p>
+<p>The simplest idea: give each character its own integer. &ldquo;a&rdquo; becomes
+97, &ldquo;b&rdquo; becomes 98, in the familiar ASCII table. The mapping is
+trivial. The vocabulary holds about 100 entries.</p>
+<p>It fails on sequence length. &ldquo;the cat sat on the mat&rdquo; is 22
+characters, hence 22 integers. A 4,096-integer window holds about 186
+such sentences. The model must also learn spelling before meaning,
+which wastes capacity on a solved problem.</p>
+<p><strong>Fertility</strong> is tokens per word. Watch it in the figure: 22 integers
+for 6 words gives 22/6 = 3.7.</p>
+<pre class="ascii">text :  t h e   c a t   s a t   o n   t h e   m a t
+ints :  20 8 5 0 3 1 20 0 19 1 20 0 15 14 0 20 8 5 0 13 1 20
+count:  22 integers for 6 words. Fertility 3.7.
+</pre>
+<p>The window
+is fixed. Every character token is a slot that cannot hold meaning.</p>
+<div class="qa"><div class="q">Why not tokenize by character?</div><div class="a"><p>Sequences grow 4 to 5 times longer than subwords, which shrinks the effective context window proportionally. The model must learn orthography before semantics, wasting capacity on a solved problem. No frontier model uses character tokenization in production.
+When spelling is the signal: typo correction, rare scripts, or character-level adversarial robustness. Some research models use bytes for these tasks. In production, the context cost dominates, so subwords win.</p><div class="followup"><strong>Follow-up:</strong> When would characters be preferable?</div></div></div>
+<h3 id="subchapter-try-it-yourself">Subchapter: try it yourself</h3>
 <div class="tok-lab">
-  <div class="tok-lab-head">Tokenization Lab: type text, click a scheme, click any token to inspect it</div>
+  <div class="tok-lab-head">Tokenization Lab: type text, click a scheme (BPE = byte pair encoding, defined below), click any token to inspect it</div>
   <input class="tok-input" id="tokInput" type="text" value="the cat sat on the mat" maxlength="120" spellcheck="false">
   <div class="tok-tabs">
     <button class="tok-tab active" data-scheme="bpe">Subword (BPE)</button>
@@ -331,91 +360,66 @@ the input exactly.</p>
 })();
 </script>
 
-<h2 id="level-1-character-level-tokenization">Level 1: Character-level tokenization</h2>
-<p>Each character maps to one integer. Vocabulary: approximately 100 entries.
-The mapping is trivial.</p>
-<p>It fails on sequence length. &ldquo;the cat sat on the mat&rdquo; is 22 characters,
-hence 22 integers. A 4,096 integer window holds about 186 such sentences.
-Subword schemes fit four times more text in the same window.</p>
-<pre class="ascii">text :  t h e   c a t   s a t   o n   t h e   m a t
-ints :  20 8 5 0 3 1 20 0 19 1 20 0 15 14 0 20 8 5 0 13 1 20
-count:  22 integers for 6 words. Fertility 3.7.
-</pre>
-<p>The model must also learn spelling before meaning, which wastes capacity.</p>
-<div class="qa"><div class="q">Why not tokenize by character?</div><div class="a"><p>Sequences grow 4 to 5 times longer than subwords, which shrinks the effective context window proportionally. The model must learn orthography before semantics, wasting capacity on a solved problem. No frontier model uses character tokenization in production.
-When spelling is the signal: typo correction, rare scripts, or character-level adversarial robustness. Some research models use bytes for these tasks. In production, the context cost dominates, so subwords win.</p><div class="followup"><strong>Follow-up:</strong> When would characters be preferable?</div></div></div>
-<h2 id="level-1-word-level-tokenization">Level 1: Word-level tokenization</h2>
-<p>Each word maps to one integer. Sequences are short. Each integer carries
-meaning.</p>
-<p>It fails on vocabulary size. English plus names, typos, and code exceeds
-one million words. Each entry needs a learned representation. Rare words
-get no training signal.</p>
-<p>Related forms share nothing: &ldquo;run&rdquo; and &ldquo;running&rdquo; are unrelated integers.
-New words have no integer at all.</p>
-<figure><img alt="Word tokenization" src="assets/web/example_tokens.png"><figcaption>Word splitting on real text. Short sequences, unbounded vocabulary. Source: FloydHub.</figcaption></figure>
+<p>Type a sentence and switch schemes. Watch the fertility number move.
+That number is the whole chapter in one demo.</p>
+<h2 id="second-attempt-word-level-tokenization">Second attempt: word-level tokenization</h2>
+<p>The other extreme: give each word its own integer. Sequences are
+short. Each integer carries meaning. &ldquo;the cat sat&rdquo; is 3 integers.</p>
+<p>It fails on vocabulary size. English plus names, typos, and code
+exceeds one million words. Each entry needs a learned representation.
+Rare words get no training signal. Work the memory: one million
+entries at 4,096 dims in bf16 is 8.2 GB just for the embedding table
+(one learned vector per vocabulary entry),
+against 0.4 GB for a 50,000-entry table. And most of those million
+entries appear a handful of times in training, so their vectors stay
+near random.</p>
+<p>Related forms share nothing: &ldquo;run&rdquo; and &ldquo;running&rdquo; are unrelated
+integers. New words have no integer at all: they collapse to one
+unknown token, and all information about them is destroyed. That
+failure has a name: the <strong>out-of-vocabulary</strong> problem.</p>
+<figure><img alt="Word tokenization" src="assets/web/example_tokens.png"><figcaption>Shell 2. Word splitting on real text. Short sequences, unbounded vocabulary. Source: FloydHub.</figcaption></figure>
 <div class="qa"><div class="q">Why did the field abandon word tokenization?</div><div class="a"><p>Three failures. Vocabulary exceeds one million, which costs memory and starves rare words. Morphological variants share no representation, so learning does not transfer. Out-of-vocabulary words collapse to an unknown token, destroying information.
 A BPE vocabulary holds about 50,000 entries. A word vocabulary for English plus code exceeds 1,000,000, a 20 to 1 ratio. Most word entries would appear a handful of times in training, so their representations stay near random. The embedding matrix alone would dominate model memory.</p><div class="followup"><strong>Follow-up:</strong> How bad is the vocabulary problem in numbers?</div></div></div>
-<h2 id="level-1-subword-tokenization">Level 1: Subword tokenization</h2>
+<h2 id="the-key-question">The key question</h2>
+<p>Characters are too fine: the vocabulary is tiny but the sequences are
+too long. Words are too coarse: the sequences are short but the
+vocabulary is unbounded and new words destroy information. What if the
+unit could be something between the two: frequent words stay whole,
+rare words split into reusable pieces, and nothing is ever unknown?</p>
+<h2 id="the-idea-subword-tokenization">The idea: subword tokenization</h2>
 <p>Split words into frequent chunks. &ldquo;running&rdquo; becomes [&ldquo;run&rdquo;, &ldquo;ning&rdquo;].
 Common words stay whole. Rare words split into known pieces.</p>
-<pre class="ascii">running  -&gt;  [run][ning]        rare word, two chunks
-the      -&gt;  [the]              frequent word, one chunk
-runningly -&gt; [run][ning][ly]    unknown word, still representable
+<pre class="ascii">running   -&gt;  [run][ning]        rare word, two chunks
+the       -&gt;  [the]              frequent word, one chunk
+runningly -&gt;  [run][ning][ly]    unknown word, still representable
 </pre>
-<p>Vocabulary stays near 50,000. Sequences stay short. Related forms share
-chunks, so learning transfers.</p>
-<p>The algorithm is byte pair encoding (BPE). It learns chunks by merging
-frequent pairs.</p>
+<p>Vocabulary stays near 50,000. Sequences stay short. Related forms
+share chunks, so learning transfers. The algorithm that learns the
+chunks is <strong>byte pair encoding</strong> (BPE): it merges frequent pairs,
+step by step, until the vocabulary reaches its target size.</p>
 <div class="qa"><div class="q">What is a subword?</div><div class="a"><p>A character sequence between a character and a word, learned from corpus statistics. Frequent words remain whole. Rare words decompose into reusable pieces. Vocabulary lands near 50,000 entries.
 BPE training counts adjacent pairs across the corpus and merges the most frequent ones. Split points fall where pairs are rare. The procedure is deterministic given the corpus and merge count.</p><div class="followup"><strong>Follow-up:</strong> What decides the split points?</div></div></div>
-<h3 id="subchapter-the-subword-family-bpe-wordpiece-unigram">Subchapter: the subword family (BPE, WordPiece, Unigram)</h3>
-<p>BPE is one of three subword recipes. All three split rare words into
-reusable pieces. They differ in how they learn the piece set.</p>
-<p><strong>BPE</strong> grows the vocabulary. Start from bytes. Merge the most frequent
-adjacent pair. Repeat until the target size. The rule is frequency: the
-pair that appears most wins. &ldquo;th&rdquo; and &ldquo;he&rdquo; merge early in English. Rare
-pairs never merge.</p>
-<p><strong>WordPiece</strong> also grows the vocabulary. It starts from characters, but
-the merge rule is different: merge the pair that most increases the
-training data&rsquo;s likelihood, not the pair with the highest count. A pair
-that appears often but is predictable scores lower than its raw count
-suggests. BERT ships WordPiece with a 30,522 vocabulary. Its &ldquo;##&rdquo; prefix
-marks pieces that continue a word: &ldquo;unhappiness&rdquo; becomes &ldquo;un&rdquo;,
-&ldquo;##happi&rdquo;, &ldquo;##ness&rdquo;.</p>
-<p><strong>Unigram</strong> goes the other way. It starts with a huge vocabulary (all
-frequent substrings) and prunes: fit a unigram language model, drop the
-pieces whose removal hurts the total likelihood least, repeat until the
-target size. The segmentation is probabilistic: the same word can split
-in several ways, and the tokenizer picks the most likely one. T5 uses
-SentencePiece Unigram with a 32,000 vocabulary.</p>
-<p>Why did BPE win the LLM era? Three reasons. It is byte-level, so no
-unknown token exists. It is deterministic, so train and inference always
-agree. And it is simple to implement at scale, which matters when you
-retrain tokenizers on terabytes of new data. WordPiece stays strong in
-encoder models (the BERT family). Unigram stays strong where
-probabilistic segmentation helps, like multilingual T5.</p>
-<p>Worked toy. Corpus: &ldquo;low lower lowest&rdquo;. BPE counts pairs: &ldquo;lo&rdquo; appears 3
-times, &ldquo;ow&rdquo; appears 3 times. Say &ldquo;lo&rdquo; merges first, then &ldquo;low&rdquo;. The
-vocabulary gains &ldquo;lo&rdquo;, then &ldquo;low&rdquo;. WordPiece scores pairs by likelihood
-lift, not count: merging &ldquo;lo&rdquo; + &ldquo;w&rdquo; into &ldquo;low&rdquo; explains &ldquo;low&rdquo;, &ldquo;lower&rdquo;,
-&ldquo;lowest&rdquo; in one piece, so its likelihood jump is large and it merges
-early. Unigram starts with every substring, then prunes pieces like
-&ldquo;lowes&rdquo; whose removal barely changes the likelihood. Same corpus, three
-different vocabularies. Three different splits of &ldquo;lowest&rdquo;.</p>
-<figure><img alt="The subword family" src="assets/media-generation-cs336-l01-subword-family-0-9c3e008f-9398-4507-abb2-3e92fe5e9b13.webp"><figcaption>BPE merges by frequency, WordPiece by likelihood lift, Unigram prunes from a big start. Same word, different cuts. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
-<div class="qa"><div class="q">Walk me through how BPE encodes a word it has never seen.</div><div class="a"><p>Take &ldquo;unfamiliarity&rdquo; with a trained BPE vocabulary. The encoder walks left to right and applies greedy longest match against the fixed merge list. Suppose the vocabulary contains &ldquo;un&rdquo;, &ldquo;fam&rdquo;, &ldquo;ili&rdquo;, &ldquo;ar&rdquo;, &ldquo;ity&rdquo;. Position 0: &ldquo;un&rdquo; matches, the longest match, since &ldquo;unf&rdquo; is not in the vocabulary. Position 2: &ldquo;fam&rdquo; matches. Position 5: &ldquo;ili&rdquo;. Position 8: &ldquo;ar&rdquo;. Position 10: &ldquo;ity&rdquo;. Output: [&ldquo;un&rdquo;, &ldquo;fam&rdquo;, &ldquo;ili&rdquo;, &ldquo;ar&rdquo;, &ldquo;ity&rdquo;]. The word never appeared in training, yet every piece did, so the model receives five known IDs instead of one unknown token. That is the whole point of subwords: represent anything with pieces.
-Speed. Greedy matching is linear in text length. Searching all splits is exponential, and the gain is small: BPE merges were learned greedily too, so the vocabulary is shaped to make greedy splits good. The interview signal is the tradeoff: near-optimal correctness at linear cost.</p><div class="followup"><strong>Follow-up:</strong> Why greedy longest match instead of trying all splits and picking the best?</div></div></div>
-<h2 id="level-1-bpe-training">Level 1: BPE training</h2>
-<p>Start with 256 byte tokens. Repeat: find the most frequent adjacent pair,
-merge it into a new token. Stop at the target vocabulary size.</p>
-<p>Worked example on &ldquo;lower&rdquo;:</p>
-<p>Start: l, o, w, e, r. Merge (l,o) to &ldquo;lo&rdquo;. Merge (lo,w) to &ldquo;low&rdquo;. Merge
-(e,r) to &ldquo;er&rdquo;. Result: [low, er].</p>
-<div class="anim-wrap"><video controls preload="metadata" playsinline src="assets/anim/bpe-merges.mp4"></video><figcaption>The merge sequence. The highlighted pair merges at each step.</figcaption></div>
+<h3 id="subchapter-bpe-training-by-hand">Subchapter: BPE training, by hand</h3>
+<p>Training runs once, offline. The input is a corpus. The output is a
+vocabulary. The rule: start from 256 byte tokens, find the most
+frequent adjacent pair, merge it into a new token, repeat until the
+vocabulary reaches the target size.</p>
+<p>Work it on the word &ldquo;lower&rdquo;, target 2 merges.</p>
+<pre class="ascii">start:   [l][o][w][e][r]            count pairs: (l,o)=1 (o,w)=1 (w,e)=1 (e,r)=1
+merge 1: pick (l,o), the winner -&gt;  [lo][w][e][r]
+merge 2: pick (lo,w)        -&gt;      [low][e][r]
+merge 3: pick (e,r)         -&gt;      [low][er]
+</pre>
+<p>In a real corpus, the pair counts come from millions of words, and
+&ldquo;th&rdquo; might merge before &ldquo;lo&rdquo;. The mechanism is identical: count,
+merge the winner, repeat. GPT-2&rsquo;s vocabulary ran 50,257 entries: 256
+bytes plus 50,001 merges. Each merge is one learned fact about which
+letters like to sit together.</p>
+<div class="anim-wrap"><video controls preload="metadata" playsinline src="assets/anim/bpe-merges.mp4"></video><figcaption>Shell 3. The merge sequence. The highlighted pair merges at each step. Source: lesson BPE toy.</figcaption></div>
 
-<figure><img alt="BPE training corpus" src="assets/media-generation-bpe-training-corpus-0-17dca458-28c4-4e91-9d91-ce048d890047.webp"><figcaption>Training starts from the corpus. Frequent pairs are highlighted, then merged into the growing vocabulary.</figcaption></figure>
-<figure><img alt="BPE merges" src="assets/media-generation-bpe-merges-0-ddd1dc1d-fd76-46c8-8490-81be363d2dab.webp"><figcaption>The merge hierarchy. Each level adds one vocabulary entry.</figcaption></figure>
-<figure><img alt="BPE from Hugging Face" src="assets/web/hf-bpe-dark.svg"><figcaption>BPE subword segmentation from the Hugging Face LLM course. Source: huggingface.co/learn/llm-course.</figcaption></figure>
+<figure><img alt="BPE training corpus" src="assets/media-generation-bpe-training-corpus-0-17dca458-28c4-4e91-9d91-ce048d890047.webp"><figcaption>Shell 3. Count the pairs, merge the winner. Source: original toy for the BPE rule.</figcaption></figure>
+<figure><img alt="BPE merges" src="assets/media-generation-bpe-merges-0-ddd1dc1d-fd76-46c8-8490-81be363d2dab.webp"><figcaption>Shell 3. Each level adds one vocabulary entry. Source: original toy for the BPE rule.</figcaption></figure>
+<figure><img alt="BPE from Hugging Face" src="assets/web/hf-bpe-dark.svg"><figcaption>Shell 3. BPE subword segmentation. Source: huggingface.co/learn/llm-course.</figcaption></figure>
 <div class="mermaid">flowchart TD
     A["Vocabulary = 256 bytes"] --> B["Count adjacent pairs in corpus"]
     B --> C["Merge most frequent pair"]
@@ -431,62 +435,548 @@ merge it into a new token. Stop at the target vocabulary size.</p>
     E -- No --&gt; B
     E -- Yes --&gt; F[&quot;Done&quot;]
 </code></pre>
-<h2 id="level-1-bpe-inference">Level 1: BPE inference</h2>
-<p>Training runs once. Inference applies the vocabulary to new text with
-greedy longest match: at each position, take the longest matching token.</p>
-<p>&ldquo;lowest&rdquo; with vocabulary containing &ldquo;low&rdquo; and &ldquo;er&rdquo; becomes [low, e, s, t].
-Deterministic: same input always gives same output.</p>
-<pre class="ascii">lowest :  [low][e][s][t]
-pos 0 : longest match at &quot;low...&quot; is &quot;low&quot; (3 chars), not &quot;lo&quot; (2)
-pos 3 : &quot;er&quot; is in vocab but &quot;est&quot; is not; greedy takes &quot;e&quot;
+<h3 id="subchapter-bpe-inference-by-hand">Subchapter: BPE inference, by hand</h3>
+<p>Training runs once. Inference applies the vocabulary to new text, on
+every input, online. The rule is <strong>greedy longest match</strong>: at each
+position, take the longest vocabulary entry that matches.</p>
+<p>&ldquo;lowest&rdquo; with a vocabulary containing &ldquo;low&rdquo;, &ldquo;lo&rdquo;, &ldquo;o&rdquo;, &ldquo;w&rdquo;, &ldquo;e&rdquo;,
+&ldquo;s&rdquo;, &ldquo;t&rdquo;:</p>
+<pre class="ascii">lowest
+pos 0: candidates &quot;lo&quot;, &quot;low&quot;. Longest match: &quot;low&quot; (3 chars).
+pos 3: candidates &quot;e&quot;, &quot;es&quot;. Only &quot;e&quot; matches alone.
+pos 4: &quot;s&quot; matches. pos 5: &quot;t&quot; matches.
+result: [low][e][s][t]
 </pre>
+<p>Note what happened at position 3. The vocabulary also contains &ldquo;er&rdquo;,
+but &ldquo;est&rdquo; is not an entry and greedy takes one character at a time
+when no multi-character entry matches. Deterministic: the same input
+always gives the same output. That determinism matters: the model was
+trained on specific segmentations, and inference must produce the
+same splits.</p>
 <div class="qa"><div class="q">Distinguish BPE training from inference.</div><div class="a"><p>Training learns the vocabulary by merging frequent pairs over a corpus, once, offline. Inference segments new text with greedy longest match against the fixed vocabulary, on every input, online. Training is expensive. Inference is fast.
 The model was trained on specific segmentations. If inference produced different splits, the model would see token sequences it never trained on, and predictions would degrade. Determinism guarantees train-inference consistency.</p><div class="followup"><strong>Follow-up:</strong> Why must inference be deterministic?</div></div></div>
-<h2 id="level-2-byte-level-initialization">Level 2: Byte-level initialization</h2>
-<p>BPE starts from 256 bytes, not characters. Every Unicode string is a byte
-sequence, so any text is representable. No unknown token exists. The worst
-case falls back to single bytes.</p>
-<pre class="ascii">&quot;caf\u00e9&quot; as UTF-8 bytes: [99][97][102][195][169]
+<figure><img alt="Text to tokens to IDs" src="assets/l01-text-to-ids.svg"><figcaption>Shell 3. Apply the greedy rule: text to tokens to IDs. Source: tiktoken cl100k example in the lesson, original plate.</figcaption></figure>
+<h3 id="subchapter-the-pretokenizer-splits-before-bpe-sees-the-text">Subchapter: the pretokenizer splits before BPE sees the text</h3>
+<p>BPE never sees raw text. First, a <strong>pretokenizer</strong> splits the text
+with a regex, and BPE merges only inside each piece, never across
+piece boundaries. This is the detail that decides how numbers, code,
+and punctuation tokenize.</p>
+<p>GPT-2&rsquo;s regex is the famous one. It splits on: contractions (&ldquo;&lsquo;s&rdquo;,
+&ldquo;&lsquo;t&rdquo;), letters, digits, and punctuation runs. The practical effect:
+&ldquo;Hello, world!&rdquo; becomes [&ldquo;Hello&rdquo;, &ldquo;,&rdquo;, &rdquo; world&rdquo;, &ldquo;!&rdquo;] before BPE
+starts. Merges can turn &rdquo; world&rdquo; into one token, but no merge will
+ever join the comma to &ldquo;Hello&rdquo;. Spaces attach to the start of words,
+not the end: the token is &rdquo; world&rdquo; with a leading space, not &ldquo;world&rdquo;.</p>
+<p>Why this matters in interviews: the pretokenizer is why &ldquo;123456&rdquo; does
+not become one token even when digits are frequent. The regex splits
+digit runs into groups (GPT-2: up to 3 digits), so the model sees
+[&ldquo;123&rdquo;][&ldquo;456&rdquo;], never [&ldquo;123456&rdquo;]. Ask an interviewer why the model
+fails at arithmetic on long numbers, and the answer starts here.</p>
+<h3 id="subchapter-special-tokens-are-not-bpe-tokens">Subchapter: special tokens are not BPE tokens</h3>
+<p>The vocabulary carries reserved entries that never come from text.
+They are structural markers the training pipeline needs.</p>
+<pre class="ascii">&lt;|endoftext|&gt;   marks a document boundary in pretraining data
+&lt;|im_start|&gt;    opens a chat message block in instruction tuning
+&lt;|im_end|&gt;      closes it
+&lt;bos&gt; &lt;eos&gt;     begin and end of sequence (older convention)
+&lt;pad&gt;           fills batches to equal length
 </pre>
-<p>Cost: multi-byte characters split into 2 to 4 tokens. Non-English text
-has higher fertility: more tokens per word, higher cost, shorter effective
-context.</p>
-<figure><img alt="Fertility across languages" src="assets/media-generation-fertility-languages-0-a3e89ce1-79c2-45c3-9a21-5ae0cf780fde.webp"><figcaption>Tokens per word by language. English is cheapest. Languages with multi-byte scripts cost more per word.</figcaption></figure>
+<p>These tokens are added to the vocabulary after training, and the
+embedding matrix grows to hold them. A 50,257-entry GPT-2 vocabulary
+is 50,000 merges plus 256 bytes plus 1 special token. The tokenizer
+never splits them, never merges across them. They are atomic.</p>
+<p>The chat template is the consumer: it wraps user and assistant
+messages in these markers before encoding. The model learns that
+text after &lt;|im_start|&gt;assistant is its own output. Change the
+template and you change what the model generates, without touching a
+single weight.</p>
+<h2 id="the-subword-family-bpe-wordpiece-unigram">The subword family: BPE, WordPiece, Unigram</h2>
+<p>BPE is one of three subword recipes. All three split rare words into
+reusable pieces. They differ in how they learn the piece set.</p>
+<h3 id="subchapter-bpe-grows-by-frequency">Subchapter: BPE grows by frequency</h3>
+<p>Start from bytes. Merge the most frequent adjacent pair. Repeat until
+the target size. The rule is frequency: the pair that appears most
+wins. &ldquo;th&rdquo; and &ldquo;he&rdquo; merge early in English. Rare pairs never merge.</p>
+<h3 id="subchapter-wordpiece-grows-by-likelihood-lift">Subchapter: WordPiece grows by likelihood lift</h3>
+<p>Also starts from characters, but the merge rule differs: merge the
+pair that most increases the training data&rsquo;s likelihood, not the pair
+with the highest count. A pair that appears often but is predictable
+scores lower than its raw count suggests. BERT ships WordPiece with a
+30,522 vocabulary. Its &ldquo;##&rdquo; prefix marks pieces that continue a word:
+&ldquo;unhappiness&rdquo; becomes &ldquo;un&rdquo;, &ldquo;##happi&rdquo;, &ldquo;##ness&rdquo;.</p>
+<p>Work the scoring on the toy corpus &ldquo;low lower lowest&rdquo;. WordPiece
+scores a pair by count(pair) divided by count(first) times
+count(second): how much more often the pair occurs than chance
+predicts. Pair counts: (l,o) 3, (o,w) 3, (w,e) 2, (e,r) 1, (e,s) 1,
+(s,t) 1. Letter counts: l 3, o 3, w 3, e 2, r 1, s 1, t 1. Scores:
+(l,o) = 3/(3x3) = 0.33, (o,w) = 0.33, (w,e) = 2/(3x2) = 0.33,
+(e,r) = 1/(2x1) = 0.50, (e,s) = 0.50, (s,t) = 1/(1x1) = 1.00. The
+winner is (s,t) with count 1: s and t never appear apart, so their
+pairing is certain. (l,o) appears 3 times, but its letters are
+common alone, so its lift is only 0.33. BPE would merge (l,o)
+first. WordPiece merges (s,t) first. Same corpus, different first
+merge, different vocabulary.</p>
+<h3 id="subchapter-unigram-prunes-from-a-large-start">Subchapter: Unigram prunes from a large start</h3>
+<p>Goes the other way. Starts with a huge vocabulary (all frequent
+substrings) and prunes: fit a unigram language model, drop the pieces
+whose removal hurts the total likelihood least, repeat until the
+target size. The segmentation is probabilistic: the same word can
+split in several ways, and the tokenizer picks the most likely one.
+T5 uses SentencePiece Unigram with a 32,000 vocabulary.</p>
+<p>Work one pruning round on &ldquo;low lower lowest&rdquo;. Suppose the current
+best split is [low][low][er][low][est]. Piece counts: low 3, er 1,
+est 1, total 5. Log-likelihood: 3 x ln(3/5) + 2 x ln(1/5) = -4.75.
+Candidate one: drop &ldquo;er&rdquo;. &ldquo;lower&rdquo; resplits as [low][e][r]. New
+counts: low 3, est 1, e 1, r 1, total 6. New log-likelihood:
+3 x ln(3/6) + 3 x ln(1/6) = -7.45. Cost of dropping &ldquo;er&rdquo;: 2.70.
+Candidate two: drop &ldquo;est&rdquo;. &ldquo;lowest&rdquo; resplits as [low][e][s][t].
+New counts: low 3, er 1, e 1, s 1, t 1, total 7. New
+log-likelihood: 3 x ln(3/7) + 4 x ln(1/7) = -10.33. Cost of
+dropping &ldquo;est&rdquo;: 5.57. Dropping &ldquo;er&rdquo; hurts less, so &ldquo;er&rdquo; goes first.
+The rule is exact: prune the piece with the smallest likelihood
+cost, repeat until the target size.</p>
+<h3 id="subchapter-same-corpus-three-different-vocabularies">Subchapter: same corpus, three different vocabularies</h3>
+<p>Worked toy. Corpus: &ldquo;low lower lowest&rdquo;. BPE counts pairs: &ldquo;lo&rdquo;
+appears 3 times, &ldquo;ow&rdquo; appears 3 times. Say &ldquo;lo&rdquo; merges first, then
+&ldquo;low&rdquo;. The vocabulary gains &ldquo;lo&rdquo;, then &ldquo;low&rdquo;. WordPiece scores pairs
+by likelihood lift, not count: merging &ldquo;lo&rdquo; + &ldquo;w&rdquo; into &ldquo;low&rdquo; explains
+&ldquo;low&rdquo;, &ldquo;lower&rdquo;, &ldquo;lowest&rdquo; in one piece, so its likelihood jump is
+large and it merges early. Unigram starts with every substring, then
+prunes pieces like &ldquo;lowes&rdquo; whose removal barely changes the
+likelihood. Same corpus, three different vocabularies. Three
+different splits of &ldquo;lowest&rdquo;.</p>
+<h3 id="subchapter-why-bpe-won-the-llm-era">Subchapter: why BPE won the LLM era</h3>
+<p>Three reasons. It is byte-level, so no unknown token exists. It is
+deterministic, so train and inference always agree. And it is simple
+to implement at scale, which matters when you retrain tokenizers on
+terabytes of new data. WordPiece stays strong in encoder models (the
+BERT family). Unigram stays strong where probabilistic segmentation
+helps, like multilingual T5.</p>
+<figure><img alt="The subword family" src="assets/l01-subword-family.svg"><figcaption>Shell 3. Three merge rules, three different cuts. Source: lesson worked toys.</figcaption></figure>
+<div class="qa"><div class="q">Walk me through how BPE encodes a word it has never seen.</div><div class="a"><p>Take &ldquo;unfamiliarity&rdquo; with a trained BPE vocabulary. The encoder walks left to right and applies greedy longest match against the fixed merge list. Suppose the vocabulary contains &ldquo;un&rdquo;, &ldquo;fam&rdquo;, &ldquo;ili&rdquo;, &ldquo;ar&rdquo;, &ldquo;ity&rdquo;. Position 0: &ldquo;un&rdquo; matches, the longest match, since &ldquo;unf&rdquo; is not in the vocabulary. Position 2: &ldquo;fam&rdquo; matches. Position 5: &ldquo;ili&rdquo;. Position 8: &ldquo;ar&rdquo;. Position 10: &ldquo;ity&rdquo;. Output: [&ldquo;un&rdquo;, &ldquo;fam&rdquo;, &ldquo;ili&rdquo;, &ldquo;ar&rdquo;, &ldquo;ity&rdquo;]. The word never appeared in training, yet every piece did, so the model receives five known IDs instead of one unknown token. That is the whole point of subwords: represent anything with pieces.
+Speed. Greedy matching is linear in text length. Searching all splits is exponential, and the gain is small: BPE merges were learned greedily too, so the vocabulary is shaped to make greedy splits good. The interview signal is the tradeoff: near-optimal correctness at linear cost.</p><div class="followup"><strong>Follow-up:</strong> Why greedy longest match instead of trying all splits and picking the best?</div></div></div>
+<h3 id="subchapter-sentencepiece-is-a-wrapper-not-an-algorithm">Subchapter: SentencePiece is a wrapper, not an algorithm</h3>
+<p><strong>SentencePiece</strong> treats the input as a raw stream of Unicode
+characters, including whitespace. No pre-tokenization step. No
+language-specific rules about word boundaries. This makes it
+genuinely language-agnostic: it works on Chinese, Japanese, Thai,
+and other languages where spaces do not separate words. It supports
+two algorithms: BPE mode (same merge logic, applied to raw character
+sequences) and Unigram mode. Llama 1 and 2 used SentencePiece BPE.
+Gemma uses SentencePiece. The space becomes a regular character in
+the stream, often rendered as &ldquo;▁&rdquo;.</p>
+<p>The field later moved back to explicit pretokenizers
+(tiktoken-style) for the biggest models, because byte-level BPE with
+a good regex beat the no-pretokenization design on compression. The
+pendulum: no rules, then rules again, each time with numbers to
+justify the swing.</p>
+<h2 id="byte-level-initialization-the-unknown-token-dies">Byte-level initialization: the unknown token dies</h2>
+<p>BPE starts from 256 bytes, not characters. Every Unicode string is a
+byte sequence, so any text is representable. No unknown token exists.
+The worst case falls back to single bytes.</p>
+<pre class="ascii">&quot;café&quot; as UTF-8 bytes: [99][97][102][195][169]
+</pre>
+<p>Cost: multi-byte characters split into 2 to 4 tokens. Non-English
+text has higher fertility: more tokens per word, higher cost, shorter
+effective context.</p>
+<p>Fertility by language class, from the numbers the lesson computed:</p>
+<table>
+<thead>
+<tr>
+<th>Language class</th>
+<th>Fertility</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>English</td>
+<td>~1.3</td>
+<td>single-byte heavy, the lecture&rsquo;s figure</td>
+</tr>
+<tr>
+<td>Multi-byte scripts</td>
+<td>2 to 3x English (2.6 to 3.9)</td>
+<td>each character splits into 2 to 4 tokens</td>
+</tr>
+</tbody>
+</table>
+<p>The six-tokenizer measured table below confirms the spread on real configs.</p>
 <div class="qa"><div class="q">Why bytes instead of characters?</div><div class="a"><p>Bytes guarantee universal coverage with zero unknown tokens. Characters would need an unknown token for unseen scripts. The tradeoff is fertility: rare characters split into multiple byte tokens.
 Languages with multi-byte scripts consume 2 to 3 times more tokens per word than English. This triples inference cost and shrinks effective context for those languages. Fertility measurement is standard when selecting tokenizers. Some labs train language-specific tokenizers to reduce this gap.</p><div class="followup"><strong>Follow-up:</strong> How does this affect multilingual deployment?</div></div></div>
 <h3 id="subchapter-fertility-measured-and-priced">Subchapter: fertility, measured and priced</h3>
 <p>Fertility is tokens per word. It is the number that turns a tokenizer
 into a bill.</p>
-<p>The lesson states English near 1.3. Work out what that buys. A 4,096
-token context window holds about 3,150 English words (4,096 / 1.3). The
-same window in a language with fertility 3 holds about 1,365 words. The
-model reads less than half the document. Nothing about the model
-changed. Only the tokenizer&rsquo;s fertility changed.</p>
+<p>The lecture states English near 1.3. Work out what that buys. A 4,096
+token context window holds about 3,150 English words (4,096 / 1.3).
+The same window in a language with fertility 3 holds about 1,365
+words. The model reads less than half the document. Nothing about the
+model changed. Only the tokenizer&rsquo;s fertility changed.</p>
 <p>Price follows the same math. At $2.50 per million tokens, a 1 million
-word English corpus costs about 1.3M tokens, so $3.25. The same corpus
-at fertility 3 costs 3M tokens, so $7.50. The non-English user pays 2.3
-times more for the same meaning.</p>
-<p>Two levers reduce fertility. A bigger vocabulary covers more multi-byte
-sequences directly: Llama 3&rsquo;s jump from 32K to 128K raised English
-compression from 3.17 to 3.94 characters per token (per the Llama 3
-report). And tokenizer training data that includes the language:
-DeepSeek-V3 modified its pretokenizer and training data explicitly for
-multilingual compression efficiency. Both levers cost embedding memory:
-128K entries times 4,096 dims is 524M parameters in the embedding table
-alone, against 131M at 32K. That is a 400M parameter price for better
-compression.</p>
-<figure><img alt="Fertility sets cost and context" src="assets/media-generation-cs336-l01-fertility-cost-0-33eeb420-d8ec-487b-8b65-750e7ae17764.webp"><figcaption>Same meaning, 3x tokens: 3x price, 1/3 context. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
-<h2 id="level-2-the-embedding-interface">Level 2: The embedding interface</h2>
-<p>Each integer indexes a row of the embedding matrix. Token 1169 becomes a
-vector, for example 12,288 numbers. That vector enters the network.</p>
-<figure><img alt="Embedding lookup" src="assets/media-generation-embedding-lookup-0-fdaaaa89-95d1-4e7f-bec6-3696673243e8.webp"><figcaption>Integer IDs index rows of the embedding matrix. Each row is a learned vector.</figcaption></figure>
-<p>Two invariants. The mapping is lossless. The tokenizer is fixed before
-training. Replacing it invalidates the model.</p>
-<div class="qa"><div class="q">Why does tokenization matter in frontier-lab interviews?</div><div class="a"><p>It controls cost and context. Pricing is per token, so fertility sets inference expense. Context windows count tokens, so the tokenizer decides how much text fits. Multilingual quality, code handling, and prompt injection surfaces all run through tokenization.
-Three directions are active. Lower fertility for non-English languages. Better handling of code and math, where current tokenizers split numbers awkwardly. And tokenizer-aware training, where the model learns with knowledge of merge structure. Each is a research area with interview relevance.</p><div class="followup"><strong>Follow-up:</strong> What would you change about current tokenizers?</div></div></div>
-<h3 id="subchapter-what-is-used-where-production-tokenizers">Subchapter: what is used where (production tokenizers)</h3>
+word English corpus costs about 1.3M tokens, so $3.25. The same
+corpus at fertility 3 costs 3M tokens, so $7.50. The non-English user
+pays 2.3 times more for the same meaning.</p>
+<p>Two levers reduce fertility. A bigger vocabulary covers more
+multi-byte sequences directly: Llama 3&rsquo;s jump from 32K to 128K raised
+English compression from 3.17 to 3.94 characters per token (per the
+Llama 3 report). And tokenizer training data that includes the
+language: DeepSeek-V3 modified its pretokenizer and training data
+explicitly for multilingual compression efficiency. Both levers cost
+embedding memory: 128,256 entries times 4,096 dims is 525M parameters in
+the embedding table alone, against 131M at 32K. That is a 394M
+parameter price for better compression.</p>
+<figure><img alt="Fertility sets cost and context" src="assets/media-generation-cs336-l01-fertility-cost-0-33eeb420-d8ec-487b-8b65-750e7ae17764.webp"><figcaption>Shell 2. Same meaning, 3x tokens: 3x price, 1/3 context. Source: original toy.</figcaption></figure>
+<h3 id="subchapter-numbers-are-tokenized-badly-on-purpose">Subchapter: numbers are tokenized badly on purpose</h3>
+<p>Ask a model for 12345 + 67890 and watch it struggle. Part of the
+reason is the tokenizer. The pretokenizer splits digit runs into
+small groups, so &ldquo;12345&rdquo; is never one token. Worse, the grouping is
+not aligned to place value: &ldquo;123&rdquo; may tokenize as [&ldquo;1&rdquo;,&rdquo;23&rdquo;] while
+&ldquo;124&rdquo; becomes [&ldquo;12&rdquo;,&rdquo;4&rdquo;]. The model must do arithmetic on chunks that
+do not respect the number system.</p>
+<p>Work the failure. &ldquo;100&rdquo; and &ldquo;101&rdquo; differ in one digit but share no
+token boundary. The embedding vectors for the chunks carry no
+arithmetic structure. The model learns addition the hard way: by
+memorizing patterns across misaligned chunks. This is a known
+limitation of BPE on numbers, not a bug anyone plans to fix soon,
+because the pretokenizer&rsquo;s digit splitting also keeps the vocabulary
+small.</p>
+<h3 id="subchapter-the-gpt-2-regex-piece-by-piece">Subchapter: the GPT-2 regex, piece by piece</h3>
+<p>The pretokenizer is a regex with named pieces. Walk each piece.</p>
+<pre class="ascii">'(?:[sdmt]|ll|ve|re)      contractions: 's 't 'm 'd 'll 've 're
+| ?\p{L}+                 letters, optional leading space
+| ?\p{N}+                 digits, optional leading space
+| ?[^\s\p{L}\p{N}]+       punctuation runs, optional leading space
+| \s+(?!\S)               trailing whitespace
+| \s+                     other whitespace
+</pre>
+<p>The <code>?</code> before each piece is the space-attaching rule: a leading
+space joins the following characters. &rdquo; world&rdquo; is one piece. &ldquo;world &rdquo;
+is two pieces (&ldquo;world&rdquo; plus a space piece). This is why decoded text
+restores spaces exactly: the space lives inside the token, never
+between tokens.</p>
+<p>The contraction piece exists because &ldquo;&lsquo;t&rdquo; in &ldquo;don&rsquo;t&rdquo; should stay
+together: without it, BPE might merge &ldquo;don&rdquo; + &ldquo;&lsquo;t&rdquo; weirdly or split
+&ldquo;n&rsquo;t&rdquo; into pieces the model sees rarely. The regex author decided
+contractions are frequent enough to deserve their own split rule.
+That decision is baked into every GPT-2-family tokenizer forever.</p>
+<h3 id="subchapter-worked-on-a-real-sentence">Subchapter: worked on a real sentence</h3>
+<p>Run &ldquo;Don&rsquo;t stop believin&rsquo;! 123 go.&rdquo; through the pieces.</p>
+<pre class="ascii">input:   Don't stop believin'! 123 go.
+pieces:  [&quot;Don&quot;, &quot;'t&quot;, &quot; stop&quot;, &quot; believin&quot;, &quot;'&quot;, &quot;!&quot;, &quot; 123&quot;, &quot; go&quot;, &quot;.&quot;]
+</pre>
+<p>&ldquo;Don&rsquo;t&rdquo; splits into &ldquo;Don&rdquo; and &ldquo;&lsquo;t&rdquo; by the contraction rule. &ldquo;believin&rsquo;&rdquo;
+splits into &rdquo; believin&rdquo; and &ldquo;&rsquo;&rdquo; because the trailing apostrophe is not
+a contraction piece. &ldquo;! 123&rdquo; splits into &ldquo;!&rdquo; and &rdquo; 123&rdquo;: punctuation
+runs and digit runs are separate pieces, and the digit piece keeps its
+leading space. No BPE merge can ever cross these boundaries. If the
+vocabulary contains &rdquo; stop&rdquo;, encoding emits one token for it. If not,
+greedy longest match falls back to smaller pieces.</p>
+<h3 id="subchapter-why-spaces-attach-to-the-front">Subchapter: why spaces attach to the front</h3>
+<p>Two designs existed. SentencePiece attaches spaces to the front of
+pieces as &ldquo;▁&rdquo; (a visible marker): &ldquo;▁world&rdquo;. Tiktoken attaches a real
+space: &rdquo; world&rdquo;. Both agree on the direction: spaces lead, never
+trail.</p>
+<p>The reason is decoding. Concatenating leading-space tokens
+reproduces the original spacing exactly: &rdquo; the&rdquo; + &rdquo; cat&rdquo; = &rdquo; the
+cat&rdquo;. Trailing-space tokens would force the decoder to guess whether
+the last space belongs to the word: &ldquo;the &rdquo; + &ldquo;cat &rdquo; decodes to
+&ldquo;the cat &rdquo; with a dangling space. Leading spaces make the round
+trip exact with zero bookkeeping. One small decision, made once in
+the regex, removes a whole class of bugs.</p>
+<h3 id="subchapter-tiktoken-the-production-implementation">Subchapter: tiktoken, the production implementation</h3>
+<p><strong>tiktoken</strong> is OpenAI&rsquo;s tokenizer library: a Rust core with Python
+bindings. The core data structure is the <strong>mergeable ranks</strong> table:
+every token maps to a rank, and lower rank means earlier merge, which
+means the token wins greedy matching.</p>
+<p>Encoding in tiktoken is byte-pair encoding by rank, not by the
+textbook merge loop. The algorithm: split the text into pieces with
+the regex, convert each piece to bytes, then repeatedly merge the
+adjacent pair whose merged token has the lowest rank. This is the
+same result as applying merges in training order, but it runs in one
+pass over the rank table instead of replaying 50,000 merge steps.</p>
+<p>The Python is tiny because the Rust does the work:</p>
+<pre><code class="language-python">import tiktoken
+enc = tiktoken.get_encoding(&quot;cl100k_base&quot;)
+ids = enc.encode(&quot;the cat sat&quot;)   # [1820, 6466, 9576] style output
+text = enc.decode(ids)            # &quot;the cat sat&quot;, exact round trip
+</code></pre>
+<p>Two facts matter for interviews. The encoding is cached per regex
+piece, so repeated text encodes fast. And <code>encode</code> has a
+<code>disallowed_special</code> guard: special tokens in user input raise an
+error by default, because a user who can inject &lt;|endoftext|&gt; can
+break document boundaries. That guard is a security feature, not a
+convenience.</p>
+<h3 id="subchapter-batching-turns-tokens-into-training-tensors">Subchapter: batching turns tokens into training tensors</h3>
+<p>Training does not see sentences. It sees a batch: a rectangle of
+integers, all rows the same length. Three mechanics make the
+rectangle.</p>
+<p><strong>Padding.</strong> Short rows get pad tokens appended until they match the
+longest row. The pad token is a special token with its own ID. The
+model must learn to ignore it.</p>
+<p><strong>Truncation.</strong> Long rows get cut to the maximum length. The cut side
+matters: for generation you truncate the left (keep the recent
+tokens), for classification you truncate the right (keep the start).</p>
+<p><strong>Attention masks.</strong> A second rectangle of 0s and 1s marks which
+positions are real. The loss function multiplies by the mask, so pad
+positions contribute zero gradient. Without the mask, the model
+would learn to predict padding, which is the most common token in
+every batch.</p>
+<h3 id="subchapter-worked-three-sentences-into-one-batch">Subchapter: worked, three sentences into one batch</h3>
+<pre class="ascii">s1: &quot;the cat sat&quot;          -&gt; [1820, 6466, 9576]
+s2: &quot;dogs bark loudly&quot;     -&gt; [ 921,  402, 8812]
+s3: &quot;hi&quot;                   -&gt; [  55]
+pad id: 0. max len: 3.
+
+input_ids:
+  [1820, 6466, 9576]
+  [ 921,  402, 8812]
+  [  55,    0,    0]
+attention_mask:
+  [1, 1, 1]
+  [1, 1, 1]
+  [1, 0, 0]
+</pre>
+<p>Row 3 is one real token and two pads. The mask zeroes the pads in
+the loss. The model computes over the full rectangle (GPUs like
+rectangles), but learns only from the masked positions. This is the
+input format every training loop in the course will use.</p>
+<h3 id="subchapter-fertility-measured-across-six-tokenizers">Subchapter: fertility measured across six tokenizers</h3>
+<p>Claims about fertility need measurement. One public experiment (August
+2026) encoded one fixed corpus with six public tokenizer artifacts:
+English prose, Python source, Chinese, and Arabic texts, about 100k
+characters each. Tokens per 1,000 characters; lower means more text
+per token.</p>
+<table>
+<thead>
+<tr>
+<th>Tokenizer (vocab)</th>
+<th>English</th>
+<th>Python</th>
+<th>Chinese</th>
+<th>Arabic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mistral v0.1 (32k)</td>
+<td>289.2</td>
+<td>260.3</td>
+<td>1,233.5</td>
+<td>864.5</td>
+</tr>
+<tr>
+<td>Gemma 2 (256k)</td>
+<td>262.8</td>
+<td>239.7</td>
+<td>808.3</td>
+<td>339.8</td>
+</tr>
+<tr>
+<td>DeepSeek-V3 (129k)</td>
+<td>262.2</td>
+<td>213.7</td>
+<td>722.1</td>
+<td>351.3</td>
+</tr>
+<tr>
+<td>Mistral Tekken (131k)</td>
+<td>261.2</td>
+<td>208.0</td>
+<td>1,018.2</td>
+<td>286.7</td>
+</tr>
+<tr>
+<td>Qwen2.5 (152k)</td>
+<td>255.5</td>
+<td>197.5</td>
+<td>795.2</td>
+<td>375.5</td>
+</tr>
+<tr>
+<td>GLM-4 (151k)</td>
+<td>255.3</td>
+<td>197.4</td>
+<td>814.0</td>
+<td>401.8</td>
+</tr>
+</tbody>
+</table>
+<p>Source: public experiment, August 2026, six HF tokenizer artifacts,
+identical byte sequences.</p>
+<h3 id="subchapter-read-the-fertility-table">Subchapter: read the fertility table</h3>
+<p>Three readings. First, the 32k Mistral v0.1 is the worst on every
+column: small vocabularies lose everywhere, and Chinese at 1,233
+tokens per 1k characters is the fertility disaster the byte-level
+section warned about. Second, Tekken (131k) beats DeepSeek-V3 (129k)
+on English and Python but loses badly on Chinese (1,018 vs 722):
+vocabulary size is not the whole story, the training data behind the
+merges matters as much. Third, Qwen2.5 and GLM-4 lead overall
+because their tokenizers were trained on multilingual corpora with
+large vocabs: the 151k entries went to the languages that needed
+them.</p>
+<p>The interview reading: when someone says &ldquo;tokenizer X is better&rdquo;,
+ask for this table. Fertility is measurable, per language, per
+domain. Opinions about tokenizers are cheap. Token counts are not.</p>
+<h3 id="subchapter-the-vocabulary-tax-curve">Subchapter: the vocabulary tax curve</h3>
+<p>Bigger vocabularies compress better but cost embedding memory. Work
+the curve at d_model = 4,096, bf16.</p>
+<pre class="ascii">vocab    embed params    embed memory    English chars/token
+32K      131M            262 MB          ~3.2 (Llama 2 era)
+100K     410M            819 MB          ~3.6 (GPT-4 era)
+128,256  525M            1.05 GB         ~3.9 (Llama 3)
+256K     1.05B           2.10 GB         ~4.2 (Gemma 2)
+</pre>
+<p>Each doubling of the vocabulary buys roughly 10 to 15 percent more
+compression and costs a doubling of the embedding table. The curve
+bends: past 128K, the compression gains flatten while the memory
+keeps doubling. The 50K to 128K range is where most labs landed,
+because the embedding table stays under 10 percent of a mid-size
+model&rsquo;s parameters there.</p>
+<p>At the small-model end the tax dominates. A 1B-parameter model with
+a 256K vocabulary carries 1.05B embedding parameters: the tokenizer
+is bigger than the network. Small models use small vocabularies for
+this reason, not because small vocabs tokenize better.</p>
+<h3 id="subchapter-tokenizer-choice-at-serving-scale">Subchapter: tokenizer choice at serving scale</h3>
+<p>Serving bills per token. The tokenizer decides how many tokens each
+request costs. Run the serving math for a chat product at $2.50 per
+million tokens, 10M requests per day, 500 words per request.</p>
+<pre class="ascii">fertility 1.3:  10M x 500 x 1.3 = 6.5B tokens/day = $16,250/day
+fertility 1.6:  10M x 500 x 1.6 = 8.0B tokens/day = $20,000/day
+difference: $3,750/day = $1.37M/year
+</pre>
+<p>A 0.3 fertility gap between two candidate tokenizers is worth over
+a million dollars a year at this scale. This is why labs retrain
+tokenizers when they change their data mix: the vocabulary is a
+cost lever, not just a modeling choice. The retraining cost (days of
+data work) pays back in weeks of serving.</p>
+<p>The same math runs in reverse for context windows. A 128K-token
+window at fertility 1.3 holds 98K words. At fertility 3 it holds
+43K words. The product&rsquo;s headline number (128K context) is fixed.
+The usable document size is not. Fertility is the quiet multiplier
+behind every context claim.</p>
+<h2 id="perplexity-the-score-the-pipeline-optimizes">Perplexity: the score the pipeline optimizes</h2>
+<p>Evaluation is the last pipeline stage, and it has one number. The
+lecture names it: perplexity. Build it from zero.</p>
+<h3 id="subchapter-from-probability-to-surprise">Subchapter: from probability to surprise</h3>
+<p>The model assigns a probability to each token it reads. Take the
+sentence &ldquo;the cat sat&rdquo;. Suppose the model assigns:</p>
+<pre class="ascii">P(the | &lt;start&gt;)      = 0.10
+P(cat | the)          = 0.40
+P(sat | the cat)      = 0.30
+</pre>
+<p>The sentence probability is the product: 0.10 x 0.40 x 0.30 =
+0.012. <strong>Perplexity</strong> turns this product into a per-token number:
+take the negative average log probability, then exponentiate.</p>
+<pre class="ascii">avg log prob = (ln 0.10 + ln 0.40 + ln 0.30) / 3
+             = (-2.30 - 0.92 - 1.20) / 3 = -1.47
+perplexity   = e^1.47 = 4.36
+</pre>
+<p>Read 4.36 as: on average, the model was as surprised as if it had
+been choosing uniformly among 4.36 tokens. Lower is better. A
+perplexity of 1 means perfect prediction. A perplexity equal to the
+vocabulary size means the model learned nothing.</p>
+<h3 id="subchapter-why-perplexity-and-not-accuracy">Subchapter: why perplexity and not accuracy</h3>
+<p>Next-token accuracy asks: did the model pick the single most likely
+token? Perplexity asks: how much probability did it give the true
+token? Accuracy is binary and coarse. A model that gives the true
+token probability 0.49 and a wrong token 0.51 scores zero accuracy
+but excellent perplexity. During training, the loss is the negative
+log probability, which is exactly log perplexity. The training
+objective and the evaluation metric are the same number in two
+clothes.</p>
+<h3 id="subchapter-bits-per-byte-the-fair-comparison">Subchapter: bits per byte, the fair comparison</h3>
+<p>Perplexity depends on the tokenizer: a model with a 256K vocabulary
+faces a harder prediction problem per token than one with a 32K
+vocabulary, so raw perplexities do not compare across tokenizers.
+<strong>Bits per byte</strong> fixes the normalizer. Convert the total log loss
+to bits, divide by the number of bytes in the text. Bytes are fixed
+no matter which tokenizer you use, and modern tokenizers are
+complete (nothing is dropped), so the comparison is fair. The
+lecture&rsquo;s side note makes this the always-valid metric for comparing
+models with different tokenizers.</p>
+<p>Work it. A 1,000-byte document, total negative log likelihood 2,000
+nats. In bits: 2,000 / ln 2 = 2,885 bits. Bits per byte: 2.885.
+A model at 1.0 bits per byte compresses text to one bit per byte:
+that is the compression view of language modeling. Better models are
+better compressors, measured in the same units no matter the
+tokenizer.</p>
+<h2 id="when-tokenizers-break-models">When tokenizers break models</h2>
+<p>The tokenizer is fixed before training. Its mistakes are permanent.
+Three failure modes are worth knowing by name.</p>
+<h3 id="subchapter-glitch-tokens">Subchapter: glitch tokens</h3>
+<p>Some tokens appear in the vocabulary but almost never in training
+data. The classic example: &rdquo; SolidGoldMagikarp&rdquo; in GPT-2 and GPT-3
+tokenizers, a token that came from a Reddit username in the training
+corpus. Its embedding vector barely moved during training: it sits
+near its random initialization while every other vector learned
+something.</p>
+<p>Prompt the model to repeat the token and it behaves erratically:
+hallucinations, loops, refusals. The mechanism is simple. The model
+has no meaningful representation for the token, so its activations
+land in a region of vector space the model never learned to handle.
+The fix is boring: filter tokens by training frequency when building
+the vocabulary, or delete them after. The interview point: rare
+tokens are not just wasteful, they are attack surface.</p>
+<h3 id="subchapter-token-healing-at-boundaries">Subchapter: token healing at boundaries</h3>
+<p>Prompts rarely start at token boundaries. A prompt ending in &ldquo;hel&rdquo;
+plus a completion starting with &ldquo;lo&rdquo; is one token &ldquo;hello&rdquo; in the
+vocabulary, but the model sees [&hellip;, &ldquo;hel&rdquo;] and must continue.
+Naive generation picks the next token from &ldquo;hel&rdquo;, and the true
+continuation &ldquo;lo&rdquo; never gets its fair probability: the model is
+forced down the wrong segmentation.</p>
+<p><strong>Token healing</strong> fixes it: back up one token before generating, so
+the model re-segments &ldquo;hel&rdquo; + &ldquo;lo&rdquo; correctly. Without healing, every
+prompt boundary is a small distribution shift. With healing, the
+model always generates from a clean segmentation. Serving systems
+implement this silently. Know it exists.</p>
+<h3 id="subchapter-the-training-serving-skew">Subchapter: the training-serving skew</h3>
+<p>The model trains on document chunks cut at fixed token positions.
+Those cuts land mid-word: a chunk can start with &ldquo;ning]&rdquo; and the
+model learns to continue from broken segmentations. At serving time,
+prompts also start mid-word. The skew is mild because both sides see
+broken boundaries, but it is real: the first token of every chunk is
+predicted from a context that starts mid-word, which never happens
+in natural text.</p>
+<p>Labs handle this by starting chunks at document boundaries when
+possible and accepting the small skew otherwise. The lesson: the
+tokenizer does not just encode text, it defines what &ldquo;a training
+example&rdquo; is. Every choice in this chapter echoes through the whole
+pipeline.</p>
+<h2 id="training-a-tokenizer-at-scale">Training a tokenizer at scale</h2>
+<p>The chapter&rsquo;s BPE toy used one word. Production trains on terabytes.
+Four decisions carry the process.</p>
+<h3 id="subchapter-sample-the-corpus-do-not-use-all-of-it">Subchapter: sample the corpus, do not use all of it</h3>
+<p>Counting pairs over 15 trillion tokens is wasteful: the frequent
+pairs stabilize early. Sample a few hundred gigabytes, stratified by
+language and domain, and train on the sample. The merge order from
+the sample matches the full corpus for the pairs that matter (the
+first 50,000 merges). Rare pairs differ, but rare pairs barely
+affect fertility.</p>
+<h3 id="subchapter-deduplicate-before-counting">Subchapter: deduplicate before counting</h3>
+<p>The pair counts are frequencies, and duplicated text inflates them.
+A corpus with the same boilerplate on every page teaches the
+tokenizer that the boilerplate&rsquo;s pairs are the most frequent in the
+language. Deduplicate at the document level before training. The
+tokenizer inherits every bias of its input: garbage in, garbage
+merges.</p>
+<h3 id="subchapter-the-memory-of-the-merge-table">Subchapter: the memory of the merge table</h3>
+<p>Naive BPE is O(n^2): after each merge, rescan the corpus for the
+new most frequent pair. Production implementations use a priority
+queue over pair counts with lazy updates: each merge touches only
+the pairs adjacent to the merged positions. The 50,257 merges of
+GPT-2&rsquo;s vocabulary train in minutes on one machine, not days. The
+algorithm is the same. The data structure is the whole difference.</p>
+<h3 id="subchapter-freeze-it-then-never-touch-it">Subchapter: freeze it, then never touch it</h3>
+<p>Once training starts, the tokenizer is frozen. Changing one merge
+changes every downstream token ID, which invalidates the embedding
+matrix and every checkpoint. Labs version tokenizers like APIs:
+v1, v2, v3, each tied to the model generation that trained on it.
+A model card that does not name its tokenizer version is hiding a
+reproducibility gap.</p>
+<h2 id="what-is-used-where-the-production-tokenizer-census">What is used where: the production tokenizer census</h2>
 <p>Every frontier lab ships a subword tokenizer. Only the recipe and the
-size differ.</p>
+size differ. Facts verified against public model cards and reports
+as of October 2026.</p>
 <table>
 <thead>
 <tr>
@@ -498,52 +988,88 @@ size differ.</p>
 </thead>
 <tbody>
 <tr>
-<td>GPT-4 / GPT-3.5</td>
+<td>GPT-2</td>
+<td>tiktoken gpt2, byte-level BPE</td>
+<td>50,257</td>
+<td>OpenAI tiktoken</td>
+</tr>
+<tr>
+<td>GPT-3</td>
+<td>tiktoken p50k_base, byte-level BPE</td>
+<td>50,257</td>
+<td>OpenAI tiktoken</td>
+</tr>
+<tr>
+<td>GPT-4</td>
 <td>tiktoken cl100k_base, byte-level BPE</td>
-<td>100K</td>
+<td>100,256</td>
 <td>OpenAI tiktoken</td>
 </tr>
 <tr>
 <td>GPT-4o</td>
 <td>tiktoken o200k_base, byte-level BPE</td>
-<td>200K</td>
+<td>200,019</td>
 <td>OpenAI tiktoken</td>
 </tr>
 <tr>
+<td>GPT-5</td>
+<td>o200k_harmony variant [uncertain]</td>
+<td>unknown</td>
+<td>not public</td>
+</tr>
+<tr>
+<td>Llama 1/2</td>
+<td>SentencePiece BPE + byte fallback</td>
+<td>32,000</td>
+<td>Llama 1/2 papers</td>
+</tr>
+<tr>
 <td>Llama 3</td>
-<td>tiktoken-derived byte-level BPE, 28K added tokens</td>
-<td>128K</td>
-<td>Llama 3 paper</td>
+<td>tiktoken-style byte-level BPE, 28K multilingual tokens added</td>
+<td>128,256</td>
+<td>Llama 3 paper, model card</td>
 </tr>
 <tr>
-<td>Llama 2</td>
+<td>Mistral 7B v0.1/v0.2, Mixtral 8x7B</td>
 <td>SentencePiece BPE</td>
-<td>32K</td>
-<td>Llama 2 paper</td>
-</tr>
-<tr>
-<td>Mistral 7B</td>
-<td>SentencePiece BPE</td>
-<td>32K</td>
+<td>32,000</td>
 <td>Mistral release docs</td>
 </tr>
 <tr>
-<td>DeepSeek-V3</td>
-<td>byte-level BPE, custom pretokenizer</td>
-<td>128K</td>
+<td>Mistral v0.3+, Nemo, Tekken</td>
+<td>byte-level BPE, tiktoken-derived</td>
+<td>131,072</td>
+<td>Mistral docs (2^17)</td>
+</tr>
+<tr>
+<td>DeepSeek-V3/R1</td>
+<td>byte-level BPE, custom multilingual pretokenizer</td>
+<td>128,000</td>
 <td>DeepSeek-V3 tech report</td>
 </tr>
 <tr>
 <td>Qwen 2.5</td>
-<td>byte-level BPE</td>
-<td>151,646</td>
+<td>byte-level BPE, tiktoken-style</td>
+<td>151,936</td>
 <td>Qwen 2.5 release</td>
 </tr>
 <tr>
 <td>Gemma 2</td>
-<td>SentencePiece</td>
-<td>256K</td>
+<td>SentencePiece BPE</td>
+<td>256,000</td>
 <td>Gemma 2 model card</td>
+</tr>
+<tr>
+<td>Phi-4</td>
+<td>tiktoken-style</td>
+<td>100,000</td>
+<td>Microsoft release</td>
+</tr>
+<tr>
+<td>Cohere Command R</td>
+<td>Cohere custom</td>
+<td>256,000</td>
+<td>Cohere docs</td>
 </tr>
 <tr>
 <td>BERT</td>
@@ -554,8 +1080,14 @@ size differ.</p>
 <tr>
 <td>T5</td>
 <td>SentencePiece Unigram</td>
-<td>32K</td>
+<td>32,000</td>
 <td>T5 paper</td>
+</tr>
+<tr>
+<td>mT5</td>
+<td>SentencePiece Unigram</td>
+<td>250,100</td>
+<td>mT5 paper</td>
 </tr>
 <tr>
 <td>Claude</td>
@@ -566,20 +1098,108 @@ size differ.</p>
 </tbody>
 </table>
 <p>Read the trend. Vocabularies grew: 32K in 2022, 100K to 256K in
-2024-2025. The growth buys compression: Llama 3&rsquo;s 128K improved English
-compression from 3.17 to 3.94 characters per token over Llama 2&rsquo;s 32K.
-The cost is embedding memory: 524M parameters for a 128K by 4096 table.
-The field moved from SentencePiece blobs to tiktoken-style byte-level
-BPE with merges baked into tokenizer.json. Byte-level won because
-multilingual coverage with zero unknown tokens beats everything else at
-scale.</p>
-<figure><img alt="Production tokenizers" src="assets/media-generation-cs336-l01-production-tokenizer-0-f63e2f31-7525-418d-93e2-f8fa14f9ebf2.webp"><figcaption>GPT-4, GPT-4o, Llama 3, DeepSeek V3, Mistral 7B: five recipes, one family. Source: public model cards. Project: Stanford Frontier AI.</figcaption></figure>
+2024-2025. The growth buys compression: Llama 3&rsquo;s 128K improved
+English compression from 3.17 to 3.94 characters per token over
+Llama 2&rsquo;s 32K. The cost is embedding memory: 525M parameters for a
+128,256 by 4,096 table. The field moved from SentencePiece blobs to
+tiktoken-style byte-level BPE with merges baked into tokenizer.json.
+Byte-level won because multilingual coverage with zero unknown tokens
+beats everything else at scale.</p>
+<p>The census table above is the current figure.</p>
+<div class="qa"><div class="q">Why does tokenization matter in frontier-lab interviews?</div><div class="a"><p>It controls cost and context. Pricing is per token, so fertility sets inference expense. Context windows count tokens, so the tokenizer decides how much text fits. Multilingual quality, code handling, and prompt injection surfaces all run through tokenization.
+Three directions are active. Lower fertility for non-English languages. Better handling of code and math, where current tokenizers split numbers awkwardly. And tokenizer-aware training, where the model learns with knowledge of merge structure. Each is a research area with interview relevance.</p><div class="followup"><strong>Follow-up:</strong> What would you change about current tokenizers?</div></div></div>
+<h2 id="the-embedding-interface-integers-become-vectors">The embedding interface: integers become vectors</h2>
+<p>Each integer indexes a row of the embedding matrix. Token 1169 becomes
+a vector, for example 12,288 numbers. That vector enters the network.</p>
+<figure><img alt="Embedding lookup" src="assets/l01-embedding-lookup.svg"><figcaption>Shell 4. The embedding row symbol: one ID picks one learned vector. Source: lesson embedding math.</figcaption></figure>
+<p>Two invariants. The mapping is lossless: decode(encode(text)) equals
+text, always. The tokenizer is fixed before training: replacing it
+invalidates every learned row of the embedding matrix. A model
+trained with tokenizer A cannot read tokens from tokenizer B. This is
+why labs treat the tokenizer as a frozen API once training starts.</p>
+<p>Work the matrix cost. Vocab 50,257 at dim 12,288 (GPT-3): 50,257 x
+12,288 x 2 bytes (bf16) = 1.24 GB. Vocab 128,256 at dim 4,096
+(Llama 3 8B): 1.05 GB. The embedding table is a real fraction of a
+small model&rsquo;s memory, and it scales with vocabulary, not with depth.</p>
+<div class="qa"><div class="q">Your chat template wraps each message in special tokens. How many tokens does a short conversation cost before the model says a word?</div><div class="a"><p>Count it. A typical template adds &lt;|im_start|&gt;user, the message, &lt;|im_end|&gt;, then &lt;|im_start|&gt;assistant, &lt;|im_end|&gt; per turn: about 8 special tokens per message plus the content. Three turns of short messages at fertility 1.3: roughly 60 content tokens plus 24 template tokens. The template is 30 percent of the bill on short chats. At scale this is why serving teams strip templates to the minimum: every fixed token is pure overhead on every request.
+You could, and some systems do. The price is ambiguity: the model can generate &ldquo;User:&rdquo; itself, and then the parser cannot tell where the message ends. Special tokens are atomic and unambiguous: they never appear in normal text, so the parser is exact. The template tokens are the cost of a clean protocol.</p><div class="followup"><strong>Follow-up:</strong> Could you drop the special tokens and use plain text markers like &quot;User:&quot; instead?</div></div></div>
+<div class="qa"><div class="q">Your training batch pads every row to the longest. Why not just use the mask and skip padding?</div><div class="a"><p>Because GPUs compute rectangles. A ragged batch of different-length rows cannot run as one matmul. Padding makes the rectangle. The mask makes the padding harmless: loss times mask means pad positions contribute zero gradient. The compute on pads is wasted FLOPs, which is why data loaders sort by length into buckets: rows in one batch are similar length, so the padding waste stays small.
+The model learns to predict padding. Pad is the most frequent token in every batch, so the model assigns it high probability everywhere. Generation degrades: the model emits pads mid-sentence. This is a real failure mode in custom training loops, and the symptom (pads in output) points straight at the mask.</p><div class="followup"><strong>Follow-up:</strong> What goes wrong if the mask has a bug and pads leak into the loss?</div></div></div>
+<h2 id="mapping-back-what-each-idea-fixes">Mapping back: what each idea fixes</h2>
+<table>
+<thead>
+<tr>
+<th>Pain</th>
+<th>Fix</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Text is not numbers</td>
+<td>Tokenization</td>
+<td>Invertible map from text to integers.</td>
+</tr>
+<tr>
+<td>Characters too fine</td>
+<td>Subwords</td>
+<td>Frequent chunks merge: short sequences, small vocab.</td>
+</tr>
+<tr>
+<td>Words too coarse</td>
+<td>Subwords</td>
+<td>Rare words split into pieces: nothing is unknown.</td>
+</tr>
+<tr>
+<td>New scripts, new words</td>
+<td>Byte-level init</td>
+<td>256 bytes cover everything. Worst case is byte fallback.</td>
+</tr>
+<tr>
+<td>Training vs inference drift</td>
+<td>Deterministic inference</td>
+<td>Greedy longest match: same input, same splits.</td>
+</tr>
+<tr>
+<td>Structure needs markers</td>
+<td>Special tokens</td>
+<td>Atomic reserved entries for chat and documents.</td>
+</tr>
+<tr>
+<td>Numbers split badly</td>
+<td>Known limitation</td>
+<td>Pretokenizer digit groups trade vocab size for arithmetic pain.</td>
+</tr>
+<tr>
+<td>Fertility sets cost</td>
+<td>Bigger vocab + multilingual data</td>
+<td>128K Llama 3: 3.17 to 3.94 chars per token. Price: 525M embed params.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-honest-price">The honest price</h2>
+<p>The tokenizer is a compression scheme designed for English text on
+the internet. Everything else pays a tax. Non-English languages pay
+2 to 3 times the tokens per word. Numbers pay in arithmetic
+capability. Code pays in split identifiers. The tokenizer is fixed
+before training, so every one of these taxes compounds for the
+model&rsquo;s whole life.</p>
+<p>The deeper price: the tokenizer decides what the model can see.
+Merges are learned from a corpus, and the corpus reflects its
+dominant language. A mostly-English corpus gives English-friendly
+tokens. The bias is silent: no error is raised, the model just sees
+fewer words of Swahili per context window. Fertility measurement is
+the standard defense. Run it before you pick a tokenizer.</p>
+<figure><img alt="Chapter plate: granularity" src="assets/l01-chap-granularity.svg"><figcaption>Chapter plate. Left: the two failures. Center: the unit the model trains on. Right: the fix. Source: lesson char/word/subword units.</figcaption></figure>
+<figure><img alt="Chapter plate: BPE" src="assets/l01-chap-bpe.svg"><figcaption>Chapter plate. Left: raw bytes. Center: the ranked table the lesson computed. Right: GPT-2 vocab. Source: lesson BPE toy and fertility math.</figcaption></figure>
+<figure><img alt="Chapter plate: fertility" src="assets/l01-chap-fertility.svg"><figcaption>Chapter plate. Left: high fertility. Center: the measured number. Right: English at 1.3. Source: lesson fertility math.</figcaption></figure>
+<figure><img alt="Chapter plate: perplexity" src="assets/l01-chap-perplexity.svg"><figcaption>Chapter plate. Left: accuracy is binary. Center: the averaged surprise. Right: the scores. Source: lesson scoring math.</figcaption></figure>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
-<p>Eight ideas carry this lecture. Read each card. Say the core sentence out
-loud. If you can, you own the lesson.</p>
+<p>Eight ideas carry this lecture. Read each card. Say the core sentence
+out loud. If you can, you own the lesson.</p>
 <div class="recap-grid">
 <div class="recap-card">
-<img src="assets/media-generation-lm-pipeline-stages-0-06a4e821-a7ef-46b6-8cac-dc5c193b1d58.webp" alt="Language modeling pipeline stages">
+<img src="assets/l01-pipeline.svg" alt="Language modeling pipeline stages">
 <div class="rc-body">
 <strong>1. Language modeling predicts the next token</strong>
 <p>A language model assigns a probability to every possible next token.
@@ -589,12 +1209,10 @@ predictions.</p>
 </div>
 </div>
 <div class="recap-card">
-<img src="assets/media-generation-tokenizer-pipeline-0-ed513c16-c002-405d-b42a-d5968da4a611.webp" alt="Tokenizer pipeline">
+<img src="assets/l01-text-to-ids.svg" alt="Text to tokens to IDs">
 <div class="rc-body">
-<strong>2. The pipeline has four stages</strong>
-<p>Raw text becomes integer IDs. IDs become vectors. The model scores the
-next token. The winner decodes back to text. Tokenization is the first
-stage, and every later stage depends on it.</p>
+<strong>2. Text becomes integers, then vectors</strong>
+<p>Raw text is cut into token pieces by greedy longest match. Each piece looks up an integer ID. Each ID indexes a learned vector. The same text always gives the same IDs.</p>
 <p class="rc-num">Key: text to IDs to vectors to scores to text</p>
 </div>
 </div>
@@ -603,19 +1221,19 @@ stage, and every later stage depends on it.</p>
 <div class="rc-body">
 <strong>3. Characters are too fine, words are too coarse</strong>
 <p>Character tokens make sequences very long. Word tokens make the
-vocabulary huge and break on new words. Both extremes cost you something
-real: speed or coverage.</p>
-<p class="rc-num">Key: 26 letters vs 170,000+ English words</p>
+vocabulary huge and break on new words. Both extremes cost you
+something real: speed or coverage.</p>
+<p class="rc-num">Key: ~100 byte-level entries vs 1,000,000+ word forms</p>
 </div>
 </div>
 <div class="recap-card">
 <img src="assets/media-generation-bpe-merges-0-ddd1dc1d-fd76-46c8-8490-81be363d2dab.webp" alt="BPE merge operations">
 <div class="rc-body">
 <strong>4. BPE merges frequent pairs</strong>
-<p>Byte-pair encoding starts from single characters. It counts which pairs
-sit together most often and merges the winner into one token. Repeat.
-Common words become single tokens. Rare words stay split.</p>
-<p class="rc-num">Key: GPT models use about 50,000 merges</p>
+<p>Byte-pair encoding starts from 256 bytes. It counts which pairs sit
+together most often and merges the winner into one token. Repeat to the
+target size. Common words become single tokens.</p>
+<p class="rc-num">Key: 256 bytes + merges = vocab</p>
 </div>
 </div>
 <div class="recap-card">
@@ -633,34 +1251,40 @@ corpus gives English-friendly tokens and punishes other languages.</p>
 <div class="rc-body">
 <strong>6. Inference is greedy longest-match</strong>
 <p>At inference time the tokenizer walks the text and takes the longest
-vocabulary entry that matches. It is fast and simple. It is not optimal:
-a global optimizer would sometimes split words differently.</p>
+vocabulary entry that matches. It is fast and simple. It is not
+optimal: a global optimizer would sometimes split words differently.</p>
 <p class="rc-num">Key: greedy, not optimal</p>
 </div>
 </div>
 <div class="recap-card">
-<img src="assets/media-generation-fertility-languages-0-a3e89ce1-79c2-45c3-9a21-5ae0cf780fde.webp" alt="Fertility across languages">
+<img src="assets/media-generation-cs336-l01-fertility-cost-0-33eeb420-d8ec-487b-8b65-750e7ae17764.webp" alt="Fertility across languages">
 <div class="rc-body">
 <strong>7. Fertility sets cost and context</strong>
 <p>Fertility is tokens per word. English sits near 1.3. Some languages
-need 3 or more. You pay per token and your context window counts tokens,
-so fertility decides both your bill and how much text fits.</p>
+need 3 or more. You pay per token and your context window counts
+tokens, so fertility decides both your bill and how much text fits.</p>
 <p class="rc-num">Key: tokens per word. English ~1.3</p>
 </div>
 </div>
 <div class="recap-card">
-<img src="assets/media-generation-embedding-lookup-0-fdaaaa89-95d1-4e7f-bec6-3696673243e8.webp" alt="Embedding lookup">
+<img src="assets/l01-embedding-lookup.svg" alt="Embedding lookup">
 <div class="rc-body">
 <strong>8. Token IDs index the embedding matrix</strong>
-<p>Each integer ID picks one row of a learned matrix. That row is a vector,
-thousands of numbers wide. The mapping is lossless: the same text always
-gives the same IDs.</p>
-<p class="rc-num">Key: 50k vocab x 12k dims is a huge matrix</p>
+<p>Each integer ID picks one row of a learned matrix. That row is a
+vector, thousands of numbers wide. The mapping is lossless: the same
+text always gives the same IDs.</p>
+<p class="rc-num">Key: 128,256 vocab x 4k dims = 525M params</p>
 </div>
 </div>
 </div>
 
 <h2 id="go-deeper">Go deeper</h2>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/JuoVZkPBiKk" title="Stanford CS336 Spring 2026 Lecture 1: Overview, Tokenization" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+<ul>
+<li>Lecture 1, the session this chapter follows (the embed above): https://www.youtube.com/watch?v=JuoVZkPBiKk</li>
+</ul>
 <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
 <iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/zduSFxRajkE" title="Karpathy: Let's build the GPT Tokenizer" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
@@ -668,7 +1292,9 @@ gives the same IDs.</p>
 <li>Karpathy, Let&rsquo;s build the GPT Tokenizer (the embed above): https://www.youtube.com/watch?v=zduSFxRajkE</li>
 <li>Sennrich et al., Neural Machine Translation of Rare Words with Subword Units: https://arxiv.org/abs/1508.07909</li>
 <li>tiktoken, OpenAI&rsquo;s production tokenizer: https://github.com/openai/tiktoken</li>
-<li>Hugging Face tokenizers documentation: https://huggingface.co/docs/tokenizers/index</li>
+<li>Hugging Face tokenizers documentation: https://github.com/huggingface/tokenizers</li>
+<li>Karpathy, minBPE: minimal BPE from scratch: https://github.com/karpathy/minbpe</li>
+<li>Hugging Face LLM Course, Chapter 2: tokenization: https://huggingface.co/learn/llm-course/en/chapter2/4</li>
 </ul>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
@@ -678,12 +1304,13 @@ gives the same IDs.</p>
 - tiktoken repository: OpenAI&rsquo;s production tokenizer.</p>
 <p><strong>Further reading:</strong>
 - Hugging Face tokenizers documentation: implementation details and speed benchmarks.
-- &ldquo;Tokenizers: How machines read&rdquo; (FloydHub): the word-level visual used above.</p>
-<p><strong>Caveats from these sources.</strong> BPE is greedy, not optimal: longest match
-can split words in ways a global optimizer would avoid. Tokenizer training
-data biases the vocabulary toward the dominant language of the corpus.
-Numbers tokenize inconsistently: &ldquo;123&rdquo; may split differently from &ldquo;124&rdquo;,
-which hurts arithmetic. These are known limitations, not bugs.</p>
+- Kudo and Richardson, SentencePiece: https://arxiv.org/abs/1808.06226</p>
+<p><strong>Caveats from these sources.</strong> BPE is greedy, not optimal: longest
+match can split words in ways a global optimizer would avoid.
+Tokenizer training data biases the vocabulary toward the dominant
+language of the corpus. Numbers tokenize inconsistently: &ldquo;123&rdquo; may
+split differently from &ldquo;124&rdquo;, which hurts arithmetic. These are known
+limitations, not bugs. GPT-5 tokenizer details are not public.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
 <li><strong>CS224N:</strong> word vectors assumed word tokens. Subwords changed the input representation.</li>
@@ -691,8 +1318,207 @@ which hurts arithmetic. These are known limitations, not bugs.</p>
 <li><strong>CS329A:</strong> test-time compute counts tokens. Verification granularity interacts with token splits.</li>
 <li><strong>Math foundations (new):</strong> probability distributions in the definition require measure theory. The chain rule is proved there.</li>
 </ul>
-<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Tokenization cheatsheet.</strong> Definition: probability distribution over token sequences, chain rule factorization. Pipeline: data, tokenization, architecture, training, evaluation. Granularities: characters (vocab 100, 5x too long), words (vocab 1M+, no sharing), subwords (vocab 50K, best of both). BPE: 256 bytes, merge frequent pairs, 50K target. Inference: greedy longest match, deterministic. Bytes: universal coverage, fertility cost for non-English. Invariants: lossless, fixed before training.</p></div>
+<div class="cheatsheet"><span class="co-label">Cheatsheet</span><p><strong>Tokenization cheatsheet.</strong> Definition: probability distribution over token sequences, chain rule factorization. Pipeline: data, tokenization, architecture, training, evaluation. Granularities: characters (vocab 100, 5x too long), words (vocab 1M+, no sharing), subwords (vocab 50K, best of both). BPE: 256 bytes, merge frequent pairs, 50K target. Pretokenizer: regex splits first, merges never cross boundaries. Inference: greedy longest match, deterministic. Special tokens: atomic reserved entries for chat and documents. Bytes: universal coverage, fertility cost for non-English. Invariants: lossless, fixed before training.</p></div>
 <div class="memory-aid"><span class="ma-label">Memory aid</span><p><strong>BPE as compression.</strong> Frequent patterns earn short codes. Merge order is a frequency ranking. Count pairs, merge the winner, repeat 50,000 times.</p></div>
+<h2 id="coverage-map-every-lecture-claim-mapped">Coverage map: every lecture claim, mapped</h2>
+<p>Each row ties a claim from Lecture 1 (transcript <code>sources/cs336/text/lec01.txt</code>,
+video JuoVZkPBiKk) to the section that covers it.</p>
+<table>
+<thead>
+<tr>
+<th>Session claim</th>
+<th>Covered in</th>
+<th>File line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Language model = probability distribution over token sequences</td>
+<td>The problem: score every sentence</td>
+<td>44</td>
+</tr>
+<tr>
+<td>Chain rule factorization of the joint probability</td>
+<td>The problem: score every sentence</td>
+<td>44</td>
+</tr>
+<tr>
+<td>Five-stage pipeline: data, tokenization, architecture, training, evaluation</td>
+<td>The pipeline: five stages, two cross-cutters</td>
+<td>66</td>
+</tr>
+<tr>
+<td>Systems and scaling laws span all five stages</td>
+<td>two concerns span all stages</td>
+<td>66</td>
+</tr>
+<tr>
+<td>Tokenization must be invertible (lossless)</td>
+<td>First attempt</td>
+<td>116</td>
+</tr>
+<tr>
+<td>Character-level: tiny vocab, sequences too long</td>
+<td>First attempt: character-level tokenization</td>
+<td>116</td>
+</tr>
+<tr>
+<td>Fertility as tokens per word</td>
+<td>First attempt (worked ascii)</td>
+<td>116</td>
+</tr>
+<tr>
+<td>Word-level: short sequences, unbounded vocab, OOV</td>
+<td>Second attempt: word-level tokenization</td>
+<td>223</td>
+</tr>
+<tr>
+<td>Morphological variants share nothing</td>
+<td>Second attempt</td>
+<td>223</td>
+</tr>
+<tr>
+<td>Subwords: frequent chunks, rare words split</td>
+<td>The idea: subword tokenization</td>
+<td>258</td>
+</tr>
+<tr>
+<td>BPE training: 256 bytes, merge most frequent pair, repeat</td>
+<td>BPE training, by hand</td>
+<td>280</td>
+</tr>
+<tr>
+<td>BPE inference: greedy longest match, deterministic</td>
+<td>BPE inference, by hand</td>
+<td>320</td>
+</tr>
+<tr>
+<td>Pretokenizer regex splits before BPE; merges never cross</td>
+<td>the pretokenizer splits before BPE sees the text</td>
+<td>350</td>
+</tr>
+<tr>
+<td>GPT-2 regex pieces and space-attaching rule</td>
+<td>the GPT-2 regex, piece by piece</td>
+<td>563</td>
+</tr>
+<tr>
+<td>Special tokens are atomic, added after training</td>
+<td>special tokens are not BPE tokens</td>
+<td>370</td>
+</tr>
+<tr>
+<td>Chat templates consume special tokens</td>
+<td>special tokens are not BPE tokens</td>
+<td>370</td>
+</tr>
+<tr>
+<td>WordPiece: merge by likelihood lift, ## continuation</td>
+<td>WordPiece grows by likelihood lift</td>
+<td>405</td>
+</tr>
+<tr>
+<td>Unigram: prune from a large start, probabilistic splits</td>
+<td>Unigram prunes from a large start</td>
+<td>427</td>
+</tr>
+<tr>
+<td>Same corpus gives three different vocabularies</td>
+<td>same corpus, three different vocabularies</td>
+<td>449</td>
+</tr>
+<tr>
+<td>SentencePiece is a wrapper over BPE/Unigram</td>
+<td>SentencePiece is a wrapper, not an algorithm</td>
+<td>478</td>
+</tr>
+<tr>
+<td>Byte-level init kills the unknown token</td>
+<td>Byte-level initialization</td>
+<td>496</td>
+</tr>
+<tr>
+<td>Fertility priced: window size and dollars per million tokens</td>
+<td>fertility, measured and priced</td>
+<td>518</td>
+</tr>
+<tr>
+<td>Six-tokenizer fertility measurements (En/Zh/Python/Arabic)</td>
+<td>fertility measured across six tokenizers</td>
+<td>693</td>
+</tr>
+<tr>
+<td>Numbers tokenize badly; digit groups break arithmetic</td>
+<td>numbers are tokenized badly on purpose</td>
+<td>546</td>
+</tr>
+<tr>
+<td>Vocabulary tax curve: compression vs embedding memory</td>
+<td>the vocabulary tax curve</td>
+<td>730</td>
+</tr>
+<tr>
+<td>Serving-scale cost of a 0.3 fertility gap</td>
+<td>tokenizer choice at serving scale</td>
+<td>755</td>
+</tr>
+<tr>
+<td>Perplexity defined and worked on a toy sentence</td>
+<td>Perplexity: the score the pipeline optimizes</td>
+<td>779</td>
+</tr>
+<tr>
+<td>Bits per byte as the fair cross-tokenizer metric</td>
+<td>bits per byte, the fair comparison</td>
+<td>821</td>
+</tr>
+<tr>
+<td>Glitch tokens: rare tokens, erratic behavior</td>
+<td>glitch tokens</td>
+<td>845</td>
+</tr>
+<tr>
+<td>Token healing at prompt boundaries</td>
+<td>token healing at boundaries</td>
+<td>862</td>
+</tr>
+<tr>
+<td>Training-serving skew from fixed chunk cuts</td>
+<td>the training-serving skew</td>
+<td>877</td>
+</tr>
+<tr>
+<td>Tokenizer training at scale: sampling, dedup, priority queue</td>
+<td>Training a tokenizer at scale</td>
+<td>893</td>
+</tr>
+<tr>
+<td>Tokenizer frozen before training; versioned like an API</td>
+<td>freeze it, then never touch it</td>
+<td>925</td>
+</tr>
+<tr>
+<td>Production census: GPT-2/3/4/4o, Llama, Mistral, DeepSeek, Qwen, Gemma</td>
+<td>What is used where</td>
+<td>934</td>
+</tr>
+<tr>
+<td>Embedding matrix: IDs index learned rows; size math</td>
+<td>The embedding interface</td>
+<td>978</td>
+</tr>
+<tr>
+<td>Batching: padding, truncation, attention masks</td>
+<td>Batching turns tokens into training tensors</td>
+<td>650</td>
+</tr>
+<tr>
+<td>tiktoken: mergeable ranks, disallowed_special guard</td>
+<td>tiktoken, the production implementation</td>
+<td>620</td>
+</tr>
+</tbody>
+</table>
       <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=JuoVZkPBiKk" target="_blank" rel="noopener">Lecture 1 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">CODE</span><a href="https://cs336.stanford.edu/lectures/?trace=lecture_01" target="_blank" rel="noopener">lecture_01.py, executable lecture code</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://huggingface.co/learn/llm-course/en/chapter2/4" target="_blank" rel="noopener">Hugging Face LLM Course, Chapter 2: Tokenization</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://www.youtube.com/watch?v=zduSFxRajkE" target="_blank" rel="noopener">Karpathy: Let&#x27;s build the GPT Tokenizer (video)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1508.07909" target="_blank" rel="noopener">Sennrich et al., Neural Machine Translation of Rare Words with Subword Units (2016)</a></li></ul></section>
       <nav class="pager"><a href="../cs336/index.html"><span class="lbl">← Previous</span>CS336: Language Modeling from Scratch</a><a href="../cs336/l02-resource-accounting.html"><span class="lbl">Next →</span>Lecture 2: Resource Accounting</a></nav>
     </article>
