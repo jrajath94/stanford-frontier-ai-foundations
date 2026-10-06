@@ -32,6 +32,71 @@ Inference: greedy longest match, left to right.
 
 <div class="cheat-block" markdown="1">
 
+### Memory aids: mnemonics, never-confuse pairs, if-this-then-that
+
+**Mnemonics**
+
+- **6ND**: "six end" = six times N (params) times D (tokens). Training FLOPs.
+- **BREAD**: the serving stack order = **B**atch (continuous), **R**adix (prefix sharing), **E**vict (LRU tiers), **A**mplify (speculative), **D**isaggregate (fleets).
+- **FROZEN BRIDGE**: LLaVA = freeze both ends, train the bridge (the projector).
+- **MEDIUM**: Kimi's curriculum = train on the MEDIUM difficulty middle.
+- **The reward is the ceiling**: RLVR. Everything else is how fast you reach it.
+
+**Never-confuse pairs**
+
+- **MFU vs throughput**: MFU = fraction of the GPU's promise you reach. Throughput = tokens per second. High MFU with a small model can still mean low throughput per dollar.
+- **FLOPs vs FLOP/s**: FLOPs = work done. FLOP/s = speed. Time = FLOPs / FLOP/s.
+- **Prefill vs decode**: prefill = compute-bound, once. Decode = memory-bound, per token. Different fleets, different chips.
+- **PPO vs GRPO**: PPO = value network + clipping, general hammer. GRPO = group baseline, no critic, one page, bandit-shaped tasks only.
+- **SFT vs RL**: SFT imitates demonstrations (teaches format). RL optimizes a reward (teaches behavior). Style comes from SFT, capability from RL.
+- **CLIP vs SigLIP**: CLIP = softmax over the batch (batch is the objective). SigLIP = per-pair sigmoid (batch-size independent).
+- **Dedup vs decontaminate**: dedup = remove repeats within training data. Decontaminate = remove test data from training data. Different jobs, different tools.
+- **Data parallel vs tensor parallel**: DP = split the batch (needs big batches). TP = split the matrices (needs fast interconnect). DP caps at the critical batch size. TP caps at node boundaries.
+
+**If-this-then-that rules**
+
+- If decode is slow, buy bandwidth (not flops). If prefill is slow, buy compute.
+- If the batch is the objective (CLIP), the batch size is not a hyperparameter.
+- If all 8 rollouts agree, the advantage is 0: no update. (Dr. GRPO.)
+- If the workload is bimodal (book-pastes + chats), disaggregate. If uniform, do not.
+- If the context is long, compress the KV cache (MLA/GQA) before adding GPUs.
+- If the reward is learnable, expect over-optimization. If it is verifiable, spend compute.
+- If the problem mix is trivial or impossible, watch the per-group stds (the std-0 trap).
+- If resolution matters, budget tokens first: 9,792 per document page at 1344px.
+- If the mix is small and high-quality, cap repetition (UniMax): the 50-epoch trap.
+- If the optimizer claim is new, check the compute-times-Chinchilla ratio and the baseline tuning.
+
+</div>
+
+<div class="cheat-block" markdown="1">
+
+### Rapid self-tests (answers inline, say them first)
+
+1. Training FLOPs for 7B params, 1T tokens? 6 x 7e9 x 1e12 = 4.2e22.
+2. 70B bf16 decode: GB per token and ms at 3.3 TB/s? 140 GB, 42 ms.
+3. KV cache bytes for B=8, S=4096, 32 layers, 8 KV heads, d=128, bf16? 8x4096x32x8x128x2x2 = 4.3 GB.
+4. Chinchilla tokens for a 70B model? 20 x 70B = 1.4T tokens.
+5. N=4 CLIP toy: how many softmax problems? 2N = 8.
+6. GRPO group rewards [1,1,1,1,1,1,1,1]: advantage of rollout 1? 0. Std is 0: no signal.
+7. Dr. GRPO drops which two normalizations? Std and length.
+8. AnyRes 1344px document: image tokens? 17 x 576 = 9,792.
+9. B=1 decode, intensity ~1: bound? Memory-bound. H100 knee is 295.
+10. ZeRO-1 vs ZeRO-3: what is sharded? ZeRO-1: optimizer states. ZeRO-3: everything (params too).
+11. 50-epoch trap in one line? Small quality sources get over-repeated in the mix.
+12. MinHash LSH: P(collision)? Equals Jaccard similarity.
+13. R1-Zero recipe? Base model + GRPO, accuracy + format rewards, outcome only, no SFT warm start.
+14. Why did DeepSeek drop process supervision? Outcome was enough and scaled better.
+15. Cache-aware routing win? 40% faster: fresh and warm never share GPUs.
+16. Megakernel bandwidth? 72% of peak H100. Price: batch 17 means starting over.
+17. Parcae stability condition? Spectral radius under 1 (negative diagonal A).
+18. M-RoPE axes? Height, width, time concatenated.
+19. muP promise? Optimal LR transfers across widths.
+20. WSD schedule? Warmup, stable, decay in the last 10-20%. Rewind and re-decay.
+
+</div>
+
+<div class="cheat-block" markdown="1">
+
 ### Core formulas
 
 **Language model:** p(x1..xn) = product over i of p(xi | x1..xi-1).
@@ -276,7 +341,7 @@ GPT-3 to ChatGPT = SFT + RL. SFT data: FLAN (unnatural), self-instruct, Alpaca/V
 
 ### RLVR (L16)
 
-RLHF over-optimizes learned rewards. RLVR: verifiable rewards (math, code), compute keeps helping. PPO: REINFORCE + clipping, 37 details, value net memory, gamma=lambda=1 bandit trap. GRPO: group z-score advantage, no value net, one page. Deviations: std norm (upweights trivial/impossible), length norm (wrong-but-long). Dr. GRPO fixes. Aha moment was in base. R1-Zero: base + GRPO, accuracy + format, outcome only, near o1. Production: long-CoT SFT, language consistency, RLHF finish. Distill R1 CoTs into Qwen/Llama. Kimi: best-of-8 curriculum, medium difficulty, length compression, RL beats expert iteration. Qwen 3: thinking fusion, early exit, RL on 4k. Coder-Next: mid-train agents, 4 experts distilled, 70.6% SWE-bench at 3B active. Hacking: git history, Lean strings, answer equivalence rabbit hole. Infra: rollouts stall, off-policy destabilizes. Moral: it is all about the reward.
+RLHF over-optimizes learned rewards. RLVR: verifiable rewards (math, code), compute keeps helping. PPO: REINFORCE + clipping, 37 details, value net memory, gamma=lambda=1 bandit trap. GRPO: group z-score advantage, no value net, one page. Std-0 trap: trivial/impossible groups explode under std normalization. Dr. GRPO: drop std and length normalization, advantages go to 0 on no-signal groups. Aha moment was in base. R1-Zero: base + GRPO, accuracy + format, outcome only, near o1. Production: long-CoT SFT, language consistency, RLHF finish. Distill R1 CoTs into Qwen/Llama. Kimi: best-of-8 curriculum, medium difficulty, length compression, RL beats expert iteration. Qwen 3: thinking fusion, early exit, RL on 4k. Coder-Next: mid-train agents, 4 experts distilled, 70.6% SWE-bench at 3B active. Hacking: git history, Lean strings, answer equivalence rabbit hole. Infra: rollouts stall, off-policy destabilizes. Moral: it is all about the reward.
 
 <ul class="crash-links">
 <li><a href="l16-rlvr.html">L16: full lesson</a></li>
@@ -288,7 +353,7 @@ RLHF over-optimizes learned rewards. RLVR: verifiable rewards (math, code), comp
 
 ### Multimodality (L17)
 
-Omni: any in, any out. Tokenize everything. CLIP: 2N contrastive, 400M pairs, ViT-L/14, zero-shot beats ResNet. Text gives semantics. SigLIP: binary loss, batch decoupled, chunked rotation, 5 vs 10 days. LLaVA: CLIP + W + Vicuna, align then fine-tune, 158k synthetic. Projector = space alignment. AnyRes: crops not downsampling, overview + details, modality transfer. Qwen-VL: cross-attention, 1.4B stage 1. Qwen2: dynamic res, 2x2 compression, M-RoPE. Qwen3: SigLIP-2, interleaved frequencies, timestamps, sqrt loss, DeepStack, 256K context. Chameleon: VQ-VAE discrete, 1024 tokens per image, unstable (entropy), loses detail. State: continuous encode, diffusion generate, weight modalities.
+Omni: any in, any out. Tokenize everything. CLIP: 2N contrastive, 400M pairs, ViT-L/14, zero-shot beats ResNet. Text gives semantics. SigLIP: binary loss, batch decoupled, chunked rotation, 5 vs 10 days. LLaVA: CLIP + W + Vicuna, align then fine-tune, 158k synthetic. Projector = space alignment. Freeze both ends, train the bridge. AnyRes: crops not downsampling, overview + details. Token budget: 1344px doc = 16 crops + 1 overview = 9,792 image tokens. Resolution is a token purchase, the context window is the bottleneck. Qwen-VL: cross-attention, 1.4B stage 1. Qwen2: dynamic res, 2x2 compression, M-RoPE. Qwen3: SigLIP-2, interleaved frequencies, timestamps, sqrt loss, DeepStack, 256K context. Chameleon: VQ-VAE discrete, 1024 tokens per image, unstable (entropy), loses detail. State: continuous encode, diffusion generate, weight modalities.
 
 <ul class="crash-links">
 <li><a href="l17-multimodality.html">L17: full lesson</a></li>
@@ -300,7 +365,7 @@ Omni: any in, any out. Tokenize everything. CLIP: 2N contrastive, 400M pairs, Vi
 
 ### Serving Inference (L18)
 
-Token lifetime: schedule, KV lookup, execute, sample, repeat. Workloads: coding (long in), chat (fast first token), agents (turns), batch (throughput). Prefill: compute bound, 10k in 1 out, once. Decode: memory bound, 1 token per full model load, per step. Disaggregate fleets. LPU/Cerebras for decode. Continuous batching: per-step joins, KV memory is the limit. KV cache: radix prefix sharing, GPU/CPU/SSD tiers, LRU, prefetch. Cache-aware routing: fresh vs warm pools, 40% faster. Megakernels: fuse ops, overlap loads, 30-70% speedup, 72% bandwidth, huge engineering cost. Parcae: loop blocks, spectral radius under 1, scale recurrence with data. Co-design: size to chip memory, match quantization, compress KV for agents.
+Token lifetime: schedule, KV lookup, execute, sample, repeat. Workloads: coding (long in), chat (fast first token), agents (turns), batch (throughput). Prefill: compute bound, 10k in 1 out, once. Decode: memory bound, 1 token per full model load, per step. Decode tax: 70B bf16 = 140 GB per token, 42 ms at 3.3 TB/s. Decode scales with bandwidth, not flops. Disaggregate fleets. LPU/Cerebras for decode. Disaggregate when the mix is bimodal. Continuous batching: per-step joins, KV memory is the limit. KV cache: radix prefix sharing, GPU/CPU/SSD tiers, LRU, prefetch. Cache-aware routing: fresh vs warm pools, 40% faster. Megakernels: fuse ops, overlap loads, 30-70% speedup, 72% bandwidth, batch 17 means starting over. Parcae: loop blocks, spectral radius under 1, scale recurrence with data. Co-design: size to chip memory, match quantization, compress KV for agents.
 
 <ul class="crash-links">
 <li><a href="l18-inference.html">L18: full lesson</a></li>
