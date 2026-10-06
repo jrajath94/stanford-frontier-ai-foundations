@@ -13,7 +13,7 @@ offering: "NPTEL (IIT Roorkee)"
 video_id: vsb_Y4rNBCc
 video_title: "Lecture 09: Eigenvalues and Eigenvectors (NPTEL)"
 video_caption: "The NPTEL lecture this chapter follows: eigenvalues, eigenvectors, and the characteristic equation."
-concepts: [eigenvalue, eigenvector, eigendecomposition, spectral-decomposition, covariance, pca, characteristic-equation]
+concepts: [eigenvalue, eigenvector, eigendecomposition, spectral-decomposition, characteristic-equation, trace, determinant, power-iteration, rayleigh-quotient, covariance, pca, variance-curve]
 sources:
   - tag: video
     label: "Essential Mathematics for Machine Learning: Lecture 09 (Eigenvalues and Eigenvectors)"
@@ -135,6 +135,49 @@ V holds the eigenvectors as columns, Lambda is diagonal with the
 eigenvalues. The matrix equals: change into the eigenvector basis,
 stretch each axis by its eigenvalue, change back.
 
+### Subchapter: a non-triangular matrix, start to finish
+
+The toy above was triangular, which made the eigenvalues easy.
+Real covariance matrices are full. Work one that is not
+triangular:
+
+```ascii
+C = [ 4  2 ]
+    [ 1  3 ]
+
+step 1, characteristic equation:
+  det([ 4-lambda,  2        ]) = (4-lambda)(3-lambda) - 2 = 0
+     ([ 1,         3-lambda ])
+  lambda^2 - 7 lambda + 10 = 0
+  eigenvalues: lambda1 = 5, lambda2 = 2
+
+step 2, eigenvector for lambda1 = 5:
+  [ -1  2 ] [ x ] = [ 0 ]   -->  -x + 2y = 0, so v1 = [ 2, 1 ]
+  [  1 -2 ] [ y ]   [ 0 ]
+  check: C v1 = [ 8+2, 2+3 ] = [ 10, 5 ] = 5 * v1
+
+step 3, eigenvector for lambda2 = 2:
+  [ 2  2 ] [ x ] = [ 0 ]   -->  x + y = 0, so v2 = [ 1, -1 ]
+  [ 1  1 ] [ y ]   [ 0 ]
+  check: C v2 = [ 4-2, 1-3 ] = [ 2, -2 ] = 2 * v2
+```
+
+Two free facts fall out of the arithmetic. The **trace** of a
+matrix, the sum of its diagonal entries, equals the sum of its
+eigenvalues: 4 + 3 = 7 = 5 + 2. The **determinant** equals their
+product: 4*3 - 2*1 = 10 = 5 * 2. These are the two invariants that
+survive any change of basis: rotate the matrix however you like,
+these two numbers never move. Interviewers ask for the trace and
+determinant from eigenvalues because of this.
+
+Note this matrix is not symmetric (2 vs 1 off the diagonal), so
+its eigenvectors [2, 1] and [1, -1] are not perpendicular. The
+spectral theorem's guarantee needs symmetry. Without it, life is
+harder. One more reason covariance matrices, which are always
+symmetric, are the friendly case.
+
+![Eigenvalues of a full matrix, verified](assets/plate-l03-fullmatrix.svg "C = [4 2. 1 3]: eigenvalues 5 and 2, trace 7, determinant 10. Each eigenvector verified by multiplication. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
+
 ### Subchapter: why symmetric matrices are safe
 
 Two honest limits. First, only square matrices have eigenvalues in
@@ -149,7 +192,49 @@ complete. That is the **spectral theorem**, and it is why PCA
 always works. When you see a symmetric matrix in ML, read it as
 "safe to decompose."
 
-![Symmetric matrices always cooperate](assets/plate-l03-symmetric.svg "Covariance matrices are symmetric: perpendicular, complete eigenvectors. PCA is safe. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
+| Property | General square matrix | Symmetric matrix |
+|---|---|---|
+| Eigenvectors | may not fill the basis (defective); not perpendicular | perpendicular and complete (spectral theorem) |
+| Diagonalization | not guaranteed | always: A = V Λ Vᵀ |
+| ML reading | harder; non-square needs L04's SVD | "safe to decompose"; covariance is the friendly case |
+
+### Subchapter: power iteration, how giant matrices vote for their top direction
+
+Eigen-decomposing a 12,288 x 12,288 covariance matrix costs on the
+order of n^3: about two trillion operations. Nobody pays that when
+only the top few directions are needed. The cheap answer is
+**power iteration**: multiply a vector by the matrix repeatedly,
+renormalizing each time. The top eigenvector wins because its
+eigenvalue is the largest: every multiplication stretches it more
+than the rest.
+
+Watch it on C = [4 2. 1 3] from the previous subchapter. Its top
+eigenvector is [2, 1], eigenvalue 5. Start from x0 = [1, 0]:
+
+```ascii
+x1 = C x0 = [4, 1]
+     normalize: ||[4,1]|| = sqrt(17) = 4.12   -->  [0.970, 0.243]
+
+x2 = C x1 = [4.37, 1.70]
+     normalize: ||[4.37,1.70]|| = 4.68        -->  [0.932, 0.362]
+
+x3 = C x2 = [4.45, 2.02]
+     normalize: ||[4.45,2.02]|| = 4.89        -->  [0.911, 0.413]
+```
+
+Three steps moved [1, 0] to [0.911, 0.413]. The target is
+[2, 1] / sqrt(5) = [0.894, 0.447]. It is visibly converging. The
+eigenvalue estimate comes free: the **Rayleigh quotient** x^T C x
+at x3 is 4.96, already near the true 5.
+
+The ratio of the top two eigenvalues sets the speed: 5/2 = 2.5
+here, so each step shrinks the error by roughly that factor. When
+the top two eigenvalues are close, convergence crawls. This
+algorithm is the engine inside PageRank (the web's top
+eigenvector) and inside randomized PCA for matrices too big to
+decompose exactly.
+
+![Power iteration converges to the top eigenvector](assets/plate-l03-power.svg "Three steps: [1,0] to [0.911,0.413], near [0.894,0.447]. Rayleigh quotient 4.96 vs true 5. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
 
 ## PCA by hand: four points, real variance numbers
 
@@ -198,6 +283,43 @@ no guessing, a number per direction.
 
 ![PCA by hand: four points, real variance numbers](assets/plate-l03-pca.svg "Top component (x-axis) holds 80% of the variance. Keep it, drop the rest. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
 
+### Subchapter: choosing k, the variance curve
+
+The eigenvalues double as a decision tool. List them as fractions
+of the total and accumulate:
+
+```ascii
+eigenvalues:  2.0 (80%),  0.5 (20%)
+keep 1: 80% of variance preserved, data halves in size
+keep 2: 100% preserved, no compression
+```
+
+The decision rule: keep adding components until the cumulative
+fraction crosses your budget, typically 90 to 95%. The eigenvalues
+hand you this number before you compress anything. If reaching 90%
+needs most of the components, the data has no low-dimensional
+linear structure and PCA is the wrong tool: admit it and reach for
+a nonlinear method instead.
+
+### Subchapter: the honest price of eigen-decomposition
+
+Three limits, stated plainly. First, cost: a full
+eigen-decomposition runs in about n^3 operations. A 12,288 x
+12,288 matrix costs roughly two trillion multiply-adds. That is
+why PCA at scale uses the SVD plus randomized methods, never the
+covariance eigen-decomposition directly.
+
+Second, defective matrices: some square matrices lack a full set
+of eigenvectors, so V has no inverse and A = V Lambda V^-1 does
+not exist. Symmetry protects you. Without it, check before you
+decompose.
+
+Third, sensitivity: eigenvalues of non-symmetric matrices can
+swing wildly under tiny perturbations of the entries. Symmetric
+matrices are stable: a small change in the covariance moves the
+components by a small amount. One more reason the symmetric case
+is the friendly one.
+
 | Concept | Definition | In the toy |
 |---|---|---|
 | Eigenvector | v with Av = lambda v, direction unchanged | [1, 1] and [1, 0] |
@@ -216,7 +338,7 @@ no guessing, a number per direction.
 | Hessian eigenvalues | Optimization (L08) | eigenvalues of second derivatives = curvature |
 | Power iteration | Large-scale eigen solvers | multiply repeatedly; the top direction emerges |
 
-![Eigen-decomposition: what is used where](assets/plate-l03-used-where.svg "Stretch directions run compression, ranking, and curvature. Shell 5. Source: public docs and papers. Project: Stanford Frontier AI.")
+![Chapter plate: keep the stretch that matters](assets/plate-l03-chap-pca.svg "Chapter plate L03-C1. Left: all directions: variance 2.5 in 2 dims, 12,288 dims cost n^3 = ~2T ops. Center: eigenpairs: lambda = 2.0 (80%), 0.5 (20%), perpendicular when symmetric. Right: top-k: the x-axis keeps 2/2.5 = 80% in 1 dim. Bottom: the dropped 20% is gone; non-square or defective matrices break the recipe. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 > [!QA]
 > Q: What is an eigenvector, in one concrete picture?
@@ -226,7 +348,7 @@ no guessing, a number per direction.
 
 > [!QA]
 > Q: Walk me through finding eigenvalues and eigenvectors of [2 1. 0 3].
-> A: Step 1: form A - lambda I = [2-lambda, 1, 0, 3-lambda]. Step 2: determinant = (2-lambda)(3-lambda) - 0 = 0, so lambda = 3 or 2. Step 3: for lambda = 3, solve [-1 1. 0 0][x;y] = 0: -x + y = 0, so v = [1,1]. Verify: A[1,1] = [3,3] = 3[1,1]. Step 4: for lambda = 2, [0 1. 0 1][x;y] = 0 gives y = 0, v = [1,0]. Verify: A[1,0] = [2,0] = 2[1,0].
+> A: Step 1: form A - lambda I = [2-lambda, 1, 0, 3-lambda]. Step 2: determinant = (2-lambda)(3-lambda) - 0 = 0, so lambda = 3 or 2. Step 3: for lambda = 3, solve [-1 1. 0 0][x;y] = 0. Then -x + y = 0, so v = [1,1]. Verify: A[1,1] = [3,3] = 3[1,1]. Step 4: for lambda = 2, [0 1. 0 1][x;y] = 0 gives y = 0. Then v = [1,0]. Verify: A[1,0] = [2,0] = 2[1,0].
 > Follow-up: Why verify by multiplying?
 > A: Because the algebra has many sign-error traps, and Av = lambda v is the definition: the check is one multiplication against the thing you claim. In interviews, the verification step is what separates a memorized procedure from understanding.
 
@@ -260,6 +382,12 @@ no guessing, a number per direction.
 > Follow-up: Why does squaring the condition number matter?
 > A: Small singular values get squared into oblivion: 1e-8 becomes 1e-16, below float precision. The SVD works on X directly and never squares anything, so it resolves small directions accurately. Same answer, better arithmetic.
 
+> [!QA]
+> Q: A covariance matrix is 12,288 x 12,288. You only need the top component. What do you do?
+> A: Power iteration: start from any vector, multiply by the matrix, renormalize, repeat. On the toy C = [4 2. 1 3], three steps took [1, 0] to [0.911, 0.413], already near the true top eigenvector [0.894, 0.447]. Each multiplication stretches the top direction by the largest eigenvalue, so it outgrows the rest. The Rayleigh quotient x^T C x gives the eigenvalue estimate: 4.96 against the true 5.
+> Follow-up: When does power iteration crawl?
+> A: When the top two eigenvalues are close. The error shrinks by roughly the ratio lambda1/lambda2 per step: 5/2 = 2.5 here, so convergence is fast. If the ratio is 1.01, expect hundreds of steps. That is the same reason flat spectra resist low-rank compression in L04.
+
 ## Recap: the whole lesson on one screen
 
 1. **The task.** Find the directions a matrix only stretches: they reveal its character.
@@ -267,9 +395,10 @@ no guessing, a number per direction.
 3. **The key question.** How to find them for any square matrix?
 4. **The new idea.** Solve Av = lambda v via det(A - lambda I) = 0. Toy: eigenvalues 3 and 2, eigenvectors [1, 1] and [1, 0], each verified by multiplication.
 5. **The capture.** A = V Lambda V^-1: change basis, stretch, change back.
-6. **Symmetric safety.** Perpendicular, complete eigenvectors. Covariance matrices always cooperate: PCA is safe.
-7. **PCA by hand.** Four points, covariance [2 0. 0 0.5], top component holds 80% of variance. Drop the rest.
-8. **The price and the bridge.** Eigen-decomposition needs square matrices. Real data matrices are rectangular. L04 generalizes the idea to every matrix: the SVD.
+6. **Symmetric safety.** Perpendicular, complete eigenvectors. Covariance matrices always cooperate: PCA is safe. A full (non-triangular) 2x2 worked: eigenvalues 5 and 2, trace 7, determinant 10, each eigenvector verified.
+7. **Power iteration.** Multiply and renormalize: the top direction wins. Three steps on the toy converged to [0.911, 0.413] with eigenvalue estimate 4.96. The workhorse behind PageRank and large-scale PCA.
+8. **PCA by hand.** Four points, covariance [2 0. 0 0.5], top component holds 80% of variance. Drop the rest. Choose k from the cumulative variance curve. Full eigen-decomposition costs n^3 and can fail on defective matrices: know the price.
+9. **The price and the bridge.** Eigen-decomposition needs square matrices. Real data matrices are rectangular. L04 generalizes the idea to every matrix: the SVD.
 
 ## Go deeper
 
@@ -277,7 +406,7 @@ no guessing, a number per direction.
 <iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/PFDu9oVAE-g" title="3Blue1Brown: Eigenvectors and eigenvalues (Essence of linear algebra, chapter 14)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
 
-- 3Blue1Brown, "Eigenvectors and eigenvalues" (Essence of linear algebra, ch. 14; the embed above): https://www.youtube.com/watch?v=PFDu9oVAE-g
+- 3Blue1Brown, "Eigenvectors and eigenvalues" (Essence of linear algebra, ch. 14, the embed above): https://www.youtube.com/watch?v=PFDu9oVAE-g
 - The NPTEL lecture for this lesson (frontmatter video): https://www.youtube.com/watch?v=vsb_Y4rNBCc
 - Deisenroth, Faisal, Ong, "Mathematics for Machine Learning", ch. 4 (free): https://mml-book.github.io: eigendecomposition, PCA derivation.
 - Strang, "Introduction to Linear Algebra", ch. 6: eigenvalues, symmetric matrices, PCA.
@@ -300,3 +429,25 @@ no guessing, a number per direction.
 - **CS229 L10:** PCA and factor analysis, the full ML treatment. This lesson is its math prerequisite.
 - **CS229S L06:** low-rank approximation via SVD generalizes this lesson's truncation idea to non-square matrices.
 - **CS336:** embedding matrices are often compressed with the same eigen/SVD tools.
+
+## Coverage map
+
+Every lecture concept, and where this lesson covers it:
+
+| Lecture concept | Covered in | Lines |
+|---|---|---|
+| eigenvectors as directions a matrix only stretches | The task: find the directions a matrix leaves alone | l03:28-42 |
+| diagonal case: axes are eigenvectors | Subchapter: the diagonal case | l03:43-60 |
+| Av = lambda v, the defining equation | Subchapter: the defining equation | l03:66-83 |
+| characteristic equation, determinant zero | Subchapter: the characteristic equation, step by step | l03:84-106 |
+| eigenvectors by hand, verified by multiplication | Subchapter: eigenvectors by hand, verified | l03:107-137 |
+| non-triangular 2x2, trace = sum, determinant = product | Subchapter: a non-triangular matrix, start to finish | l03:138-180 |
+| symmetric matrices: spectral theorem, PCA is safe | Subchapter: why symmetric matrices are safe | l03:181-196 |
+| power iteration, Rayleigh quotient, convergence rate | Subchapter: power iteration | l03:197-234 |
+| covariance matrix from four points | Subchapter: the covariance matrix | l03:244-263 |
+| eigen-decomposition read as the PCA answer | Subchapter: read the eigen-decomposition as the answer | l03:264-281 |
+| choosing k from the cumulative variance curve | Subchapter: choosing k, the variance curve | l03:282-299 |
+| honest price: n^3 cost, defective matrices, sensitivity | Subchapter: the honest price of eigen-decomposition | l03:300-326 |
+| what is used where: PCA, PageRank, Hessians, power iteration | What is used where | l03:327-338 |
+| 8 interview Q&As with follow-ups | QA blocks | l03:339-386 |
+| full-lesson recap | Recap | l03:387-397 |
