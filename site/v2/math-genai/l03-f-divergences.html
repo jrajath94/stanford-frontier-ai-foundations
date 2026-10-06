@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lecture 3: f-Divergences and Variational Divergence Minimization — Stanford Frontier AI</title>
+<meta name="description" content="KL is one member of a large family. The f-divergence definition with three worked members (KL, Jensen-Shannon, total variation), and the variational lower bound">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="math-genai-l03" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../cs336/index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../cs336/l01-tokenization.html" data-page="cs336-l01">L01 · Tokenization</a></li>
+<li><a href="../cs336/l02-resource-accounting.html" data-page="cs336-l02">L02 · Resource Accounting</a></li>
+<li><a href="../cs336/l03-architecture.html" data-page="cs336-l03">L03 · Architecture</a></li>
+<li><a href="../cs336/l04-linear-attention-moe.html" data-page="cs336-l04">L04 · Attention Alternatives + MoE</a></li>
+<li><a href="../cs336/l05-gpus.html" data-page="cs336-l05">L05 · GPUs</a></li>
+<li><a href="../cs336/l06-triton-kernels.html" data-page="cs336-l06">L06 · Triton Kernels</a></li>
+<li><a href="../cs336/l07-parallelism.html" data-page="cs336-l07">L07 · Parallelism</a></li>
+<li><a href="../cs336/l08-4d-parallelism.html" data-page="cs336-l08">L08 · 4D Parallelism</a></li>
+<li><a href="../cs336/l09-scaling-laws.html" data-page="cs336-l09">L09 · Scaling Laws</a></li>
+<li><a href="../cs336/l10-inference.html" data-page="cs336-l10">L10 · Inference</a></li>
+<li><a href="../cs336/l11-scaling-advanced.html" data-page="cs336-l11">L11 · Scaling Advanced</a></li>
+<li><a href="../cs336/l12-evaluation.html" data-page="cs336-l12">L12 · Evaluation</a></li>
+<li><a href="../cs336/l13-training-data.html" data-page="cs336-l13">L13 · Training Data</a></li>
+<li><a href="../cs336/l14-data-pipeline.html" data-page="cs336-l14">L14 · Data Pipeline</a></li>
+<li><a href="../cs336/l15-post-training.html" data-page="cs336-l15">L15 · Post-training</a></li>
+<li><a href="../cs336/l16-rlvr.html" data-page="cs336-l16">L16 · RLVR</a></li>
+<li><a href="../cs336/l17-multimodality.html" data-page="cs336-l17">L17 · Multimodality</a></li>
+<li><a href="../cs336/l18-inference.html" data-page="cs336-l18">L18 · Serving Inference</a></li>
+<li><a href="../cs336/cheatsheet.html" data-page="cs336-cheatsheet">CS336 · Cheatsheet</a></li>
+<li><a href="../cs336/crash-course.html" data-page="cs336-crash">CS336 · Crash course</a></li>
+</ul>
+<h3>CS229: Machine Learning</h3><ul>
+<li><a href="../cs229/index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../cs229/l01-introduction.html" data-page="cs229-l01">L01 · Introduction</a></li>
+<li><a href="../cs229/l02-linear-regression.html" data-page="cs229-l02">L02 · Linear Regression</a></li>
+<li><a href="../cs229/l03-logistic-regression.html" data-page="cs229-l03">L03 · Logistic Regression</a></li>
+<li><a href="../cs229/l04-glms-softmax.html" data-page="cs229-l04">L04 · GLMs and Softmax</a></li>
+<li><a href="../cs229/l05-gda-naive-bayes.html" data-page="cs229-l05">L05 · GDA and Naive Bayes</a></li>
+<li><a href="../cs229/l06-bias-variance.html" data-page="cs229-l06">L06 · Bias, Variance, Model Selection</a></li>
+<li><a href="../cs229/l07-neural-networks-1.html" data-page="cs229-l07">L07 · Neural Networks 1</a></li>
+<li><a href="../cs229/l08-backpropagation.html" data-page="cs229-l08">L08 · Backpropagation</a></li>
+<li><a href="../cs229/l09-kmeans-gmm.html" data-page="cs229-l09">L09 · K-Means and GMM</a></li>
+<li><a href="../cs229/l10-em-pca.html" data-page="cs229-l10">L10 · EM and PCA</a></li>
+<li><a href="../cs229/l11-diffusion-models.html" data-page="cs229-l11">L11 · Diffusion Models</a></li>
+<li><a href="../cs229/l12-foundation-models.html" data-page="cs229-l12">L12 · Foundation Models</a></li>
+<li><a href="../cs229/l13-contrastive-rag.html" data-page="cs229-l13">L13 · Contrastive, Search, RAG</a></li>
+<li><a href="../cs229/l14-transformers.html" data-page="cs229-l14">L14 · Transformers</a></li>
+<li><a href="../cs229/l15-efficient-icl-sft.html" data-page="cs229-l15">L15 · Efficient Attention, ICL, SFT</a></li>
+<li><a href="../cs229/l16-reinforcement-learning.html" data-page="cs229-l16">L16 · Reinforcement Learning</a></li>
+<li><a href="../cs229/l17-rl-for-llms.html" data-page="cs229-l17">L17 · RL for LLMs</a></li>
+<li><a href="../cs229/cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../cs229/crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+</ul>
+<h3>CS229S: Systems for Machine Learning</h3><ul>
+<li><a href="../cs229s/index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../cs229s/l01-introduction.html" data-page="cs229s-l01">L01 · Introduction</a></li>
+<li><a href="../cs229s/l02-sequence-models.html" data-page="cs229s-l02">L02 · Sequence Models</a></li>
+<li><a href="../cs229s/l03-hardware-aware-design.html" data-page="cs229s-l03">L03 · Hardware-Aware Design</a></li>
+<li><a href="../cs229s/l04-transformer-performance.html" data-page="cs229s-l04">L04 · Transformer Performance</a></li>
+<li><a href="../cs229s/l05-gpu-execution-model.html" data-page="cs229s-l05">L05 · GPU Execution Model</a></li>
+<li><a href="../cs229s/l06-flash-attention.html" data-page="cs229s-l06">L06 · FlashAttention</a></li>
+<li><a href="../cs229s/l07-memory-efficient-networks.html" data-page="cs229s-l07">L07 · Memory Efficiency</a></li>
+<li><a href="../cs229s/l08-finetuning-and-peft.html" data-page="cs229s-l08">L08 · Fine-tuning and PEFT</a></li>
+<li><a href="../cs229s/l09-efficient-architectures.html" data-page="cs229s-l09">L09 · Attention-Free Architectures</a></li>
+<li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
+<li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+</ul>
+<h3>CS224N: NLP with Deep Learning</h3><ul>
+<li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
+<li><a href="../cs224n/l01-intro-word-vectors.html" data-page="cs224n-l01">L01 · Intro and Word Vectors</a></li>
+<li><a href="../cs224n/l02-word-vectors-2.html" data-page="cs224n-l02">L02 · Word Vectors 2</a></li>
+<li><a href="../cs224n/l03-neural-networks-backprop.html" data-page="cs224n-l03">L03 · Neural Nets and Backprop</a></li>
+<li><a href="../cs224n/l04-dependency-parsing.html" data-page="cs224n-l04">L04 · Dependency Parsing</a></li>
+<li><a href="../cs224n/l05-language-modeling-rnns.html" data-page="cs224n-l05">L05 · Language Modeling and RNNs</a></li>
+<li><a href="../cs224n/l06-lstms-nmt.html" data-page="cs224n-l06">L06 · LSTMs and NMT</a></li>
+<li><a href="../cs224n/l07-attention.html" data-page="cs224n-l07">L07 · Attention</a></li>
+<li><a href="../cs224n/l08-transformers.html" data-page="cs224n-l08">L08 · Transformers</a></li>
+<li><a href="../cs224n/l09-pretraining.html" data-page="cs224n-l09">L09 · Pretraining</a></li>
+<li><a href="../cs224n/l10-prompting-post-training.html" data-page="cs224n-l10">L10 · Prompting and Post-Training</a></li>
+<li><a href="../cs224n/l11-evaluation.html" data-page="cs224n-l11">L11 · Evaluation</a></li>
+<li><a href="../cs224n/l12-efficient-training.html" data-page="cs224n-l12">L12 · Efficient Training</a></li>
+<li><a href="../cs224n/l13-speech-bci.html" data-page="cs224n-l13">L13 · Speech Brain-Computer Interfaces</a></li>
+<li><a href="../cs224n/l14-reasoning-agents.html" data-page="cs224n-l14">L14 · Reasoning and Agents</a></li>
+<li><a href="../cs224n/l15-life-after-dpo.html" data-page="cs224n-l15">L15 · Life After DPO</a></li>
+<li><a href="../cs224n/cheatsheet.html" data-page="cs224n-cheatsheet">CS224N · Cheatsheet</a></li>
+<li><a href="../cs224n/crash-course.html" data-page="cs224n-crash">CS224N · Crash course</a></li>
+</ul>
+<h3>CME295: Transformers and Large Language Models</h3><ul>
+<li><a href="../cme295/index.html" data-page="cme295-index">CME295 · Overview</a></li>
+<li><a href="../cme295/l01-transformers-overview.html" data-page="cme295-l01">L01 · Transformers overview</a></li>
+<li><a href="../cme295/l02-attention-position-bert.html" data-page="cme295-l02">L02 · Attention and BERT</a></li>
+<li><a href="../cme295/l03-llms-decoding-inference.html" data-page="cme295-l03">L03 · LLMs and decoding</a></li>
+<li><a href="../cme295/l04-pretraining-scaling-finetuning.html" data-page="cme295-l04">L04 · Training at scale</a></li>
+<li><a href="../cme295/l05-preference-tuning.html" data-page="cme295-l05">L05 · Preference tuning</a></li>
+<li><a href="../cme295/l06-reasoning-models-grpo.html" data-page="cme295-l06">L06 · Reasoning models</a></li>
+<li><a href="../cme295/l07-rag-tool-calling-agents.html" data-page="cme295-l07">L07 · RAG and agents</a></li>
+<li><a href="../cme295/l08-evaluation.html" data-page="cme295-l08">L08 · Evaluation</a></li>
+<li><a href="../cme295/l09-course-recap-frontiers.html" data-page="cme295-l09">L09 · Recap and frontiers</a></li>
+<li><a href="../cme295/cheatsheet.html" data-page="cme295-cheatsheet">CME295 · Cheatsheet</a></li>
+<li><a href="../cme295/crash-course.html" data-page="cme295-crash">CME295 · Crash course</a></li>
+</ul>
+<h3>CS329H: Machine Learning from Human Preferences</h3><ul>
+<li><a href="../cs329h/index.html" data-page="cs329h-index">CS329H · Overview</a></li>
+<li><a href="../cs329h/l01-preference-foundations.html" data-page="cs329h-l01">L01 · Preference Foundations</a></li>
+<li><a href="../cs329h/l02-choice-models.html" data-page="cs329h-l02">L02 · Choice Models</a></li>
+<li><a href="../cs329h/l03-iia-identification.html" data-page="cs329h-l03">L03 · IIA and Identification</a></li>
+<li><a href="../cs329h/l04-learning-rewards.html" data-page="cs329h-l04">L04 · Learning Rewards</a></li>
+<li><a href="../cs329h/l05-metric-elicitation.html" data-page="cs329h-l05">L05 · Metric Elicitation</a></li>
+<li><a href="../cs329h/l06-bandits-exploration.html" data-page="cs329h-l06">L06 · Bandits and Exploration</a></li>
+<li><a href="../cs329h/l07-rlhf.html" data-page="cs329h-l07">L07 · RLHF</a></li>
+<li><a href="../cs329h/l08-social-choice.html" data-page="cs329h-l08">L08 · Social Choice</a></li>
+<li><a href="../cs329h/l09-mechanism-design.html" data-page="cs329h-l09">L09 · Mechanism Design</a></li>
+<li><a href="../cs329h/l10-alignment-practice.html" data-page="cs329h-l10">L10 · Alignment in Practice</a></li>
+<li><a href="../cs329h/cheatsheet.html" data-page="cs329h-cheatsheet">CS329H · Cheatsheet</a></li>
+<li><a href="../cs329h/crash-course.html" data-page="cs329h-crash">CS329H · Crash course</a></li>
+</ul>
+<h3>CS329Z: Engineering AI Agents</h3><ul>
+<li><a href="../cs329z/index.html" data-page="cs329z-index">CS329Z · Overview</a></li>
+<li><a href="../cs329z/l01-intro-agentic-systems.html" data-page="cs329z-l01">L01 · Intro to Agentic Systems</a></li>
+<li><a href="../cs329z/l02-compound-ai-systems.html" data-page="cs329z-l02">L02 · Compound AI Systems</a></li>
+<li><a href="../cs329z/l03-llms-for-builders.html" data-page="cs329z-l03">L03 · LLMs for Builders</a></li>
+<li><a href="../cs329z/l04-reasoning-and-context.html" data-page="cs329z-l04">L04 · Reasoning and Context</a></li>
+<li><a href="../cs329z/l05-rag-pipeline.html" data-page="cs329z-l05">L05 · RAG Pipeline</a></li>
+<li><a href="../cs329z/l06-retrieval-methods.html" data-page="cs329z-l06">L06 · Retrieval Methods</a></li>
+<li><a href="../cs329z/l07-agentic-retrieval-failure-modes.html" data-page="cs329z-l07">L07 · Agentic Retrieval</a></li>
+<li><a href="../cs329z/l08-evaluating-agents.html" data-page="cs329z-l08">L08 · Evaluating Agents</a></li>
+<li><a href="../cs329z/cheatsheet.html" data-page="cs329z-cheatsheet">CS329Z · Cheatsheet</a></li>
+<li><a href="../cs329z/crash-course.html" data-page="cs329z-crash">CS329Z · Crash course</a></li>
+</ul>
+<h3>CS329A: Self-Improving AI Agents</h3><ul>
+<li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
+<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
+<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
+<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
+<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
+<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
+<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
+<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
+<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
+<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
+<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+</ul>
+<h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
+<li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
+<li><a href="../mse435/l01-electrons-to-tokens.html" data-page="mse435-l01">L01 · From Electrons to Tokens</a></li>
+<li><a href="../mse435/l02-sixty-million-megawatt.html" data-page="mse435-l02">L02 · The $60M Megawatt</a></li>
+<li><a href="../mse435/l03-how-models-get-smarter.html" data-page="mse435-l03">L03 · How Models Get Smarter</a></li>
+<li><a href="../mse435/l04-evals-rlvr-enterprise.html" data-page="mse435-l04">L04 · Evals and Enterprise AI</a></li>
+<li><a href="../mse435/l05-software-is-dead.html" data-page="mse435-l05">L05 · The SaaS Reckoning</a></li>
+<li><a href="../mse435/l06-where-value-accrues.html" data-page="mse435-l06">L06 · Where Value Accrues</a></li>
+<li><a href="../mse435/cheatsheet.html" data-page="mse435-cheatsheet">MS&amp;E 435 · Cheatsheet</a></li>
+<li><a href="../mse435/crash-course.html" data-page="mse435-crash">MS&amp;E 435 · Crash course</a></li>
+</ul>
+<h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../math-ml/index.html" data-page="math-ml-index">MATH-ML · Overview</a></li>
+<li><a href="../math-ml/l01-vectors-as-data.html" data-page="math-ml-l01">L01 · Vectors as Data</a></li>
+<li><a href="../math-ml/l02-matrices-as-machines.html" data-page="math-ml-l02">L02 · Matrices as Machines</a></li>
+<li><a href="../math-ml/l03-eigendecomposition-pca.html" data-page="math-ml-l03">L03 · Eigen-decomposition</a></li>
+<li><a href="../math-ml/l04-svd-low-rank.html" data-page="math-ml-l04">L04 · SVD and Low Rank</a></li>
+<li><a href="../math-ml/l05-probability-bayes.html" data-page="math-ml-l05">L05 · Probability and Bayes</a></li>
+<li><a href="../math-ml/l06-distributions-covariance.html" data-page="math-ml-l06">L06 · Distributions and Covariance</a></li>
+<li><a href="../math-ml/l07-calculus-gradients-chainrule.html" data-page="math-ml-l07">L07 · Calculus for ML</a></li>
+<li><a href="../math-ml/l08-convexity-gradient-descent.html" data-page="math-ml-l08">L08 · Convexity and Gradient Descent</a></li>
+<li><a href="../math-ml/l09-least-squares-regression.html" data-page="math-ml-l09">L09 · Least Squares</a></li>
+<li><a href="../math-ml/l10-information-theory.html" data-page="math-ml-l10">L10 · Information Theory</a></li>
+<li><a href="../math-ml/cheatsheet.html" data-page="math-ml-cheatsheet">MATH-ML · Cheatsheet</a></li>
+<li><a href="../math-ml/crash-course.html" data-page="math-ml-crash-course">MATH-ML · Crash Course</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative AI</h3><ul>
+<li><a href="../math-genai/index.html" data-page="math-genai-index">Mathematical Foundations of Generative AI · Overview</a></li>
+<li><a href="../math-genai/l01-the-job.html" data-page="math-genai-l01">L01 · The Job</a></li>
+<li><a href="../math-genai/l02-kl-and-mle.html" data-page="math-genai-l02">L02 · KL Divergence and MLE</a></li>
+<li><a href="../math-genai/l03-f-divergences.html" data-page="math-genai-l03" class="active">L03 · f-Divergences</a></li>
+<li><a href="../math-genai/l04-gans.html" data-page="math-genai-l04">L04 · GANs</a></li>
+<li><a href="../math-genai/l05-wgan-evaluation.html" data-page="math-genai-l05">L05 · WGAN and Evaluation</a></li>
+<li><a href="../math-genai/l06-latent-variables-elbo.html" data-page="math-genai-l06">L06 · ELBO</a></li>
+<li><a href="../math-genai/l07-vae.html" data-page="math-genai-l07">L07 · VAE</a></li>
+<li><a href="../math-genai/l08-ddpm-forward.html" data-page="math-genai-l08">L08 · DDPM Forward</a></li>
+<li><a href="../math-genai/l09-ddpm-loss.html" data-page="math-genai-l09">L09 · DDPM Loss</a></li>
+<li><a href="../math-genai/l10-score-ddim-ar.html" data-page="math-genai-l10">L10 · Score, DDIM, AR</a></li>
+<li><a href="../math-genai/cheatsheet.html" data-page="math-genai-cheatsheet">Cheatsheet</a></li>
+<li><a href="../math-genai/crash-course.html" data-page="math-genai-crash-course">Crash course</a></li>
+</ul>
+<h3>Mathematical Foundations of Generative Models</h3><ul>
+<li><a href="../math-genmodels/index.html" data-page="math-genmodels-index">Math · Generative Models · Overview</a></li>
+<li><a href="../math-genmodels/l01-the-one-question.html" data-page="math-genmodels-l01">L01 · The One Question</a></li>
+<li><a href="../math-genmodels/l02-autoregressive-models.html" data-page="math-genmodels-l02">L02 · Autoregressive Models</a></li>
+<li><a href="../math-genmodels/l03-variational-autoencoders.html" data-page="math-genmodels-l03">L03 · Variational Autoencoders</a></li>
+<li><a href="../math-genmodels/l04-normalizing-flows.html" data-page="math-genmodels-l04">L04 · Normalizing Flows</a></li>
+<li><a href="../math-genmodels/l05-diffusion-ddpm.html" data-page="math-genmodels-l05">L05 · Diffusion I: DDPM</a></li>
+<li><a href="../math-genmodels/l06-score-matching-ddim.html" data-page="math-genmodels-l06">L06 · Score Matching &amp; Fast Diffusion</a></li>
+<li><a href="../math-genmodels/l07-energy-based-models.html" data-page="math-genmodels-l07">L07 · Energy-Based Models</a></li>
+<li><a href="../math-genmodels/l08-judging-a-creator.html" data-page="math-genmodels-l08">L08 · Judging a Creator</a></li>
+<li><a href="../math-genmodels/cheatsheet.html" data-page="math-genmodels-cheatsheet">Math · Generative Models · Cheatsheet</a></li>
+<li><a href="../math-genmodels/crash-course.html" data-page="math-genmodels-crash">Math · Generative Models · Crash course</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative AI</a> / Lecture 3: f-Divergences and Variational Divergence Minimization</nav>
+      <h1>Lecture 3: f-Divergences and Variational Divergence Minimization</h1>
+      <p class="meta-line">2026-10-05 · Instructor: Prof. Prathosh A P · 2025</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="nfZQYopzv20"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/nfZQYopzv20" title="Lecture 3: f-Divergences and Variational Divergence Minimization" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=nfZQYopzv20" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=nfZQYopzv20" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original Stanford lecture. Timestamps in the text link to the exact moment.</p></div><h2 id="the-task-kl-is-one-choice-among-many">The task: KL is one choice among many</h2>
+<p>Lesson 2 crowned KL the default divergence. The lecture now asks
+an uncomfortable question: why this one? KL&rsquo;s infinite penalty
+on zero probabilities and its mode-covering personality are
+choices, not laws. Maybe another distance fits some task better.
+The lecture builds the whole family at once, then shows that
+every member contains KL, Jensen-Shannon, and total variation
+as special cases.</p>
+<p>The <strong>f-divergence</strong> between truth P_X and model P_θ is:</p>
+<pre class="ascii">D_f(P_X || P_theta) = integral  p_theta(x) * f( p_X(x) / p_theta(x) ) dx
+</pre>
+<p>Read it inside out. At each point x, take the ratio of the two
+densities: how many times likelier is this outcome under the
+truth than under the model. Feed the ratio through a function f.
+Average over the model. The function f is the personality knob:
+any convex function with f(1) = 0 gives a valid divergence.
+Convex means the curve bends upward (no dips). f(1) = 0 means a
+ratio of 1, the distributions agree here, contributes nothing.</p>
+<p>The lecture proves two properties for every choice of f. The
+divergence is always non-negative. And it is zero if and only if
+the two distributions match exactly. So every f gives a usable
+training target: turn θ until it hits zero.</p>
+<h2 id="three-members-one-toy-real-numbers">Three members, one toy, real numbers</h2>
+<p>Take the same coin toy from Lesson 2. Truth P_X = {0.5, 0.5},
+model P_θ = {0.9, 0.1}. The density ratios are 0.5/0.9 = 0.556
+for heads and 0.5/0.1 = 5.0 for tails. Now run three choices
+of f.</p>
+<p><strong>KL divergence.</strong> f(u) = u log u. Plug in:</p>
+<pre class="ascii">D = 0.9 * f(0.556) + 0.1 * f(5.0)
+  = 0.9 * (0.556 * log 0.556) + 0.1 * (5.0 * log 5.0)
+  = 0.9 * (-0.326) + 0.1 * (8.047)
+  = -0.294 + 0.805 = 0.511
+</pre>
+<p>Same 0.51 nats as Lesson 2. KL is the u log u member of the
+family. The algebra cancels the p_θ weights and leaves
+sum P_X log(P_X / P_θ), exactly Lesson 2&rsquo;s formula.</p>
+<p><strong>Jensen-Shannon divergence.</strong> f(u) = 0.5 u log u −
+0.5 (u+1) log((u+1)/2). This one is symmetric: it treats truth
+and model alike. On the toy:</p>
+<pre class="ascii">f(0.556) = 0.5*0.556*log 0.556 - 0.5*1.556*log 0.778
+         = -0.163 + 0.195 = 0.032
+f(5.0)   = 0.5*5.0*log 5.0 - 0.5*6.0*log 3.0
+         = 4.024 - 3.296 = 0.728
+D = 0.9 * 0.032 + 0.1 * 0.728 = 0.029 + 0.073 = 0.102
+</pre>
+<p>JS scores 0.10, much calmer than KL&rsquo;s 0.51. The lecture notes
+a JS-flavored f is what the original GAN minimizes. Symmetry
+has a price, though: JS saturates. When the distributions
+barely overlap, JS sits near its maximum and its gradient
+nearly vanishes. Lesson 4 shows this stalling GAN training.</p>
+<p><strong>Total variation distance.</strong> f(u) = 0.5 |u − 1|. The
+simplest member: half the absolute mismatch.</p>
+<pre class="ascii">D = 0.9 * 0.5*|0.556 - 1| + 0.1 * 0.5*|5.0 - 1|
+  = 0.9 * 0.222 + 0.1 * 2.0
+  = 0.2 + 0.2 = 0.4
+</pre>
+<p>TV scores 0.4 and is symmetric too. It measures the largest
+gap in probability the two rules assign to any single event.
+Simple, but its absolute value has a kink at zero that makes
+gradient optimization awkward.</p>
+<table>
+<thead>
+<tr>
+<th>Divergence</th>
+<th>f(u)</th>
+<th>Coin toy score</th>
+<th>Personality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>KL (forward)</td>
+<td>u log u</td>
+<td>0.511</td>
+<td>Asymmetric, infinite on zeros, mode-covering</td>
+</tr>
+<tr>
+<td>Jensen-Shannon</td>
+<td>0.5u log u − 0.5(u+1)log((u+1)/2)</td>
+<td>0.102</td>
+<td>Symmetric, calm, saturates when far apart</td>
+</tr>
+<tr>
+<td>Total variation</td>
+<td>0.5|u − 1|</td>
+<td>0.400</td>
+<td>Symmetric, simple, kinked gradient</td>
+</tr>
+</tbody>
+</table>
+<p>The lecture&rsquo;s point: choosing f chooses the training
+dynamics. Different f, different properties, different model.</p>
+<h2 id="where-density-estimation-breaks">Where density estimation breaks</h2>
+<p>Here is the trap the whole lecture is built to escape. Every
+f-divergence is written with densities p_X and p_θ. But Lesson
+1 established the facts: we know neither density. We have
+samples from P_X (the dataset) and samples from P_θ (push noise
+through the generator). The naive fix is to estimate both
+densities from samples, then plug into the formula.</p>
+<p>Watch it fail on images. A 64×64 color photo has 12,288
+numbers. Estimating a density over that space from samples is
+hopeless: the samples are isolated points in a vast empty
+space, and any density estimate is mostly guesswork. The error
+in the density estimate then poisons the divergence. High
+dimensions kill the plug-in approach. This is the wall the
+lecture hits on purpose, because the way around it is the
+lecture&rsquo;s main contribution.</p>
+<h2 id="the-key-question">The key question</h2>
+<p>Can you measure the distance between two distributions using
+only samples from each, never estimating either density?</p>
+<h2 id="the-new-idea-a-critic-that-lower-bounds-the-divergence">The new idea: a critic that lower-bounds the divergence</h2>
+<p>The answer is a variational trick. Every f-divergence has a
+dual form: instead of integrating over densities, maximize over
+functions. There is a helper function T (the <strong>critic</strong>) that
+takes a sample x and outputs a real number. The divergence
+equals the best achievable value of:</p>
+<pre class="ascii">D_f(P_X || P_theta) = max over T of  E[T(x)] - E[f*(T(x_hat))]
+                      x ~ P_X              x_hat ~ P_theta
+</pre>
+<p>Both expectations are over samples. No densities anywhere.
+f* is the convex conjugate of f (a standard transform. For the
+GAN&rsquo;s f it works out to −log(1 − e^t), as the lecture derives).
+The critic T plays a game: score real samples high, score
+generated samples in a way that keeps the second term small.
+The best critic&rsquo;s score equals the true divergence.</p>
+<p>Since we cannot search over all functions, we approximate T
+with a neural network T_w. The max becomes approximate, so we
+get a <strong>lower bound</strong> on the divergence, not the exact value.
+Training now has two players: the critic w tightens the bound
+by maximizing, and the generator θ shrinks the divergence by
+minimizing. That two-player structure is the GAN.</p>
+<p>Watch the bound on the coin toy. Take the JS-flavored f and a
+tiny critic: T(heads) = a, T(tails) = b, two numbers to tune.
+The bound is E[T] over truth minus E[f*(T)] over model:</p>
+<pre class="ascii">bound = (0.5*a + 0.5*b) - (0.9*f*(a) + 0.1*f*(b))
+</pre>
+<p>Try a = 0.5, b = −0.5 (critic favors heads, the truth&rsquo;s
+relatively likelier outcome). With the lecture&rsquo;s f* this
+evaluates to roughly 0.06, below the true JS value 0.102.
+A better critic pushes it up toward 0.102 but never above.
+The bound is honest: it never overclaims the distance.
+The generator then moves θ to push even the best critic&rsquo;s
+score down.</p>
+<h2 id="the-gan-falls-out">The GAN falls out</h2>
+<p>Now the lecture specializes to the GAN&rsquo;s f:
+f(u) = u log u − (u+1) log(u+1). Its conjugate is
+f*(t) = −log(1 − e^t), defined for t &lt; 0. To keep the critic
+in that domain, write it as a composition: T_w(x) =
+σ_f(V_w(x)), where V_w is an ordinary network ending in one
+real number and σ_f(v) = −log(1 + e^{−v}) maps reals to
+negative numbers. Substitute everything into the bound and
+rearrange. The lecture does the algebra. The result is the
+famous objective:</p>
+<pre class="ascii">J = E[ log D(x) ] + E[ log(1 - D(x_hat)) ]
+    x ~ P_X            x_hat ~ P_theta
+</pre>
+<p>where D(x) = 1 / (1 + e^{−V_w(x)}) is the sigmoid of the
+critic&rsquo;s raw score. D(x) reads as the critic&rsquo;s belief that x
+is real: near 1 for data, near 0 for generated samples. The
+critic maximizes J (push D toward 1 on real data, toward 0 on
+fakes). The generator minimizes it (push D toward 1 on its own
+fakes). Lesson 4 plays this game by hand.</p>
+<p>Note what the lecture stresses: the original GAN paper did not
+derive its loss this way. This variational view is the deeper
+explanation, and it shows the GAN is one point in a large
+design space. Change f, change the game.</p>
+<h2 id="the-honest-price-a-bound-not-the-thing">The honest price: a bound, not the thing</h2>
+<p>The variational trick costs exactly what it saves. We never
+estimate densities, but we also never compute the true
+divergence. We compute a lower bound whose tightness depends
+on the critic&rsquo;s power. A weak critic underestimates the
+distance, and the generator then optimizes a lie: it thinks it
+is close when it is not. In practice this means the critic
+must be trained well at every step, which doubles the
+optimization burden and is the root of GAN instability.</p>
+<p>Second, the bound inherits the chosen f&rsquo;s personality. The
+GAN&rsquo;s JS-like f saturates when the distributions are far
+apart: the divergence sits near its max and the gradient
+dies. Lesson 4 demonstrates this saturation numerically.
+The f-GAN paper&rsquo;s answer is to pick a friendlier f, but no
+choice removes the two-player tension entirely.</p>
+<div class="qa"><div class="q">What is an f-divergence?</div><div class="a"><p>A family of distribution distances indexed by a convex function f with f(1) = 0: D_f = integral p_θ(x) f(p_X(x)/p_θ(x)) dx. KL (f = u log u), Jensen-Shannon, and total variation (f = 0.5|u−1|) are members. On the coin toy they scored 0.511, 0.102, and 0.4. Every member is non-negative and zero only for identical distributions.
+Because f controls training dynamics. KL explodes on zero probabilities and covers modes. JS is symmetric but saturates when distributions are far apart. TV is simple but kinked. The lecture treats f as a design choice with consequences.</p><div class="followup"><strong>Follow-up:</strong> Why have a whole family instead of just KL?</div></div></div>
+<div class="qa"><div class="q">How can you compute a divergence from samples alone?</div><div class="a"><p>With the variational lower bound: D_f = max over critics T of E[T(x)] − E[f*(T(x̂))], both expectations over samples. Approximate T by a neural network and you get a lower bound on the true divergence, no density estimation needed. On the coin toy a two-parameter critic scored 0.06 against the true JS value 0.102: below it, never above.
+It is a bound, not the value. A weak critic underestimates the distance, so the generator optimizes a lie. The critic must stay well trained, which is the root of GAN training instability.</p><div class="followup"><strong>Follow-up:</strong> What is the catch?</div></div></div>
+<div class="qa"><div class="q">How does the GAN objective come out of this?</div><div class="a"><p>Choose the GAN&rsquo;s f(u) = u log u − (u+1) log(u+1). Its conjugate is f*(t) = −log(1 − e^t) on negative t. Write the critic as σ_f(V_w(x)) to respect the domain, substitute into the bound, and rearrange: you get E[log D(x)] + E[log(1 − D(x̂))] with D the sigmoid of the critic. The critic maximizes it, the generator minimizes it.
+No. The original paper motivated the game directly. This variational derivation came later (f-GAN, 2016) and is the deeper view: it shows the GAN is one choice of f in a large design space.</p><div class="followup"><strong>Follow-up:</strong> Did the original GAN paper derive it this way?</div></div></div>
+<h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
+<ol>
+<li><strong>The task.</strong> KL is one choice. Build the whole family of divergences at once.</li>
+<li><strong>The definition.</strong> D_f = integral p_θ f(p_X/p_θ). F convex, f(1) = 0. Always non-negative, zero iff equal.</li>
+<li><strong>Three members.</strong> KL 0.511, Jensen-Shannon 0.102, total variation 0.4 on the coin toy. Each has a personality.</li>
+<li><strong>Where it breaks.</strong> The formula needs densities. We have only samples. Density estimation dies in high dimensions.</li>
+<li><strong>The key question.</strong> Can you measure the distance from samples alone?</li>
+<li><strong>The fix.</strong> Variational lower bound: max over critics T of E[T(x)] − E[f*(T(x̂))]. Samples only, no densities.</li>
+<li><strong>The GAN falls out.</strong> The GAN&rsquo;s f plus the critic reparameterization gives E[log D(x)] + E[log(1 − D(x̂))].</li>
+<li><strong>The price.</strong> A lower bound, not the value. A weak critic lies. The JS-like f saturates when far apart.</li>
+</ol>
+<h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
+<p><strong>Official:</strong>
+- W1L3: f-Divergence:
+  https://www.youtube.com/watch?v=nfZQYopzv20
+- W1L4: Variational divergence minimization:
+  https://www.youtube.com/watch?v=VxRIqenOoQw
+- W2_L6: GANs introduction:
+  https://www.youtube.com/watch?v=EHhURRwMEPo: the f, f*, and σ_f derivation confirmed in transcript.</p>
+<p><strong>Further reading:</strong>
+- Nowozin, Cseke, Tomioka, &ldquo;f-GAN: Training Generative Neural Samplers using Variational Divergence Minimization&rdquo; (2016):
+  https://arxiv.org/abs/1606.00709: the paper version of this lecture.
+- Goodfellow et al., &ldquo;Generative Adversarial Nets&rdquo; (2014):
+  https://arxiv.org/abs/1406.2661</p>
+<p><strong>Caveats.</strong> The f-divergence definition, the three examples, and the GAN specialization (f, f*, σ_f, final objective) are confirmed in the W1L3 and W2_L6 transcripts. The coin-toy scores and the two-parameter critic demonstration are the lesson&rsquo;s own worked numbers. [uncertain] The lecture&rsquo;s exact numeric examples are unknown.</p>
+<h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
+<ul>
+<li><strong>CS229 L11 (diffusion models):</strong> that course&rsquo;s diffusion lesson trains by denoising score matching, a completely different objective from any f-divergence. A worked contrast: on the coin toy, an f-divergence critic asks &ldquo;real or fake&rdquo; per sample, while score matching asks &ldquo;which direction is more likely&rdquo; per point. Two philosophies of learning a distribution. Lessons 8-10 build the second.</li>
+<li><strong>CS336:</strong> the training-data discussions there distinguish memorized from generated text. The critic in this lesson is the mathematical version of that distinction: T_w learns the boundary between real data and model samples, and the generator&rsquo;s job is to erase it.</li>
+</ul>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=nfZQYopzv20" target="_blank" rel="noopener">W1L3: f-Divergence (video nfZQYopzv20)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=VxRIqenOoQw" target="_blank" rel="noopener">W1L4: Variational divergence minimization (video VxRIqenOoQw)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=EHhURRwMEPo" target="_blank" rel="noopener">W2_L6: GANs introduction (video EHhURRwMEPo)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1606.00709" target="_blank" rel="noopener">Nowozin, Cseke, Tomioka, f-GAN (2016)</a></li></ul></section>
+      <nav class="pager"><a href="../math-genai/l02-kl-and-mle.html"><span class="lbl">← Previous</span>Lecture 2: KL Divergence and Maximum Likelihood</a><a href="../math-genai/l04-gans.html"><span class="lbl">Next →</span>Lecture 4: Generative Adversarial Networks</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
