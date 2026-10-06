@@ -13,7 +13,7 @@ offering: "NPTEL (IIT Roorkee)"
 video_id: Y1Gndz4sNeE
 video_title: "Lecture 01: Vectors in Machine Learning (NPTEL)"
 video_caption: "The NPTEL lecture this chapter follows: vectors, dot products, and linear independence."
-concepts: [vector, dot-product, norm, cosine-similarity, linear-combination, linear-independence, embedding]
+concepts: [vector, dot-product, norm, normalization, unit-vector, cauchy-schwarz, cosine-similarity, euclidean-distance, linear-combination, linear-independence, embedding]
 sources:
   - tag: video
     label: "Essential Mathematics for Machine Learning: Lecture 01 (Vectors)"
@@ -164,12 +164,59 @@ regularization selects features. The L2 norm encourages small
 weights everywhere, which is why L2 regularization (weight decay)
 is the default.
 
-Norms also police training. **Gradient clipping** rescales a
-gradient when its norm exceeds a threshold: if ||g|| > 5, replace
+Norms also police training. **Gradient clipping** rescales a gradient (the direction of steepest increase of the loss)
+when its norm exceeds a threshold: if ||g|| > 5, replace
 g with 5 * g / ||g||. Without this, one bad batch can detonate
 the weights. The norm is the fuse box.
 
 ![The norm measures size alone](assets/plate-l01-norm.svg "Square, sum, square-root. A3 is 3x longer than A. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
+### Subchapter: unit vectors and normalization
+
+**Normalization** divides a vector by its own norm, producing a
+**unit vector**: length exactly 1, same direction as the original.
+The hat marks it: v-hat = v / ||v||.
+
+```ascii
+v = [3, -4],  ||v|| = 5
+v-hat = [3/5, -4/5] = [0.6, -0.8]
+check: sqrt(0.36 + 0.64) = sqrt(1) = 1
+```
+
+Normalization is the standard first step before cosine
+comparison: for unit vectors the dot product IS the cosine,
+since both norms are 1. It also stabilizes training: optimizers
+behave better when inputs live on the same scale. Decision rule:
+normalize when only direction matters and when feature scales
+differ wildly.
+
+### Subchapter: Cauchy-Schwarz, why cosine stays between -1 and 1
+
+The lesson asserted that cosine similarity lands between -1 and 1.
+That is not a convention. It is a theorem. The
+**Cauchy-Schwarz inequality** says the dot product can never
+outrun the product of the norms:
+
+```ascii
+|x . y| <= ||x|| * ||y||
+```
+
+Check it on the toy: |3| <= 2.24 * 1.73 = 3.87. True, with room to
+spare. Divide both sides by the norms (valid only when both norms
+are nonzero) and the cosine is trapped:
+
+```ascii
+|(x . y) / (||x|| * ||y||)| <= 1
+```
+
+Equality holds exactly when one vector is a scaled copy of the
+other: cos(A, A3) = (A . A3) / (||A|| ||A3||) = 15 / (2.24 * 6.71)
+= 15 / 15 = 1. That also explains why cosine(A, B) equaled
+cosine(A3, B) at 0.77: a positive scale factor cancels out of the
+ratio. Interviewers use this inequality to bound inner products
+in proofs about attention and kernels. Know it by name.
+
+![Cauchy-Schwarz bounds the dot product](assets/plate-l01-cauchyschwarz.svg "cos(A,B) = 0.77 is trapped in [-1,1] by |x.y| <= ||x|| ||y||. Equality only for scaled copies. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
 
 ## The key question
 
@@ -185,7 +232,7 @@ that measures direction only:
 ```ascii
 cosine(x, y) = (x . y) / (||x|| * ||y||)
 
-cosine(A, B)  = 3 / (2.24 * 1.73) = 3 / 3.88 = 0.77
+cosine(A, B)  = 3 / (2.24 * 1.73) = 3 / 3.87 = 0.77
 cosine(A3, B) = 9 / (6.71 * 1.73) = 9 / 11.6 = 0.77
 ```
 
@@ -205,6 +252,56 @@ than a two-word one. A common compromise: use cosine for ranking,
 but keep the norm as a separate feature. Know what you discarded.
 
 ![Cosine similarity divides the size out](assets/plate-l01-cosine.svg "A and its tripled copy score identically: 0.77. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
+
+### Subchapter: the zero vector, where cosine breaks
+
+The cosine formula has a precondition: both vectors must be
+nonzero. Dividing by zero is undefined, and the norm of the
+**zero vector** [0, 0, 0] (every component zero) is 0.
+
+Work it: cosine([0,0,0], [1,0,0]) = 0 / (0 * 1) = 0/0.
+Undefined. The zero vector has no direction, so there is
+nothing to compare. A document with no tokens embeds as the
+zero vector: scoring it against anything is meaningless.
+
+Production rule: guard the pipeline before scoring. Skip
+empty documents, or special-case them (assign score 0 or drop
+them), before computing cosine. The "Rank documents by topic:
+cosine" rule below only applies to real, nonzero vectors. An
+unguarded division by a zero norm is a silent NaN (not a
+number): the code runs and the ranking breaks.
+
+### Subchapter: Euclidean distance vs cosine, a worked choice
+
+The **Euclidean distance** ||x - y|| measures separation in the
+space, size included:
+
+```ascii
+A = [2, 1, 0],  B = [1, 1, 1]
+A - B = [1, 0, -1]
+||A - B|| = sqrt(1 + 0 + 1) = sqrt(2) = 1.41
+```
+
+Now compare A with its tripled copy A3. Cosine says they are
+identical: 1.00. Distance says they are far apart:
+||A - A3|| = ||[-4, -2, 0]|| = sqrt(16 + 4) = sqrt(20) = 4.47.
+Same direction, large separation. The two measures disagree on
+purpose: they ask different questions.
+
+Decision rule, one line each:
+
+- Rank documents by topic: cosine. Length is noise.
+- Cluster points where magnitude matters (spending behavior,
+  pixel intensity): Euclidean distance. Length is signal.
+- Compare inside a model (attention scores, neuron sums): dot
+  product. Both direction and magnitude carry weight, and no
+  division is needed.
+
+Three measures, three questions. Picking the wrong one is a
+silent bug: the code runs, the numbers look sane, and the
+rankings are wrong.
+
+![Distance cares about size, cosine does not](assets/plate-l01-distance.svg "A vs A3: cosine 1.00, distance 4.47. Same direction, different measures. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
 
 ## Building blocks: linear combination and independence
 
@@ -289,7 +386,7 @@ count vectors.
 | Norm | Gradient clipping | rescale when \|\|g\|\| exceeds the threshold |
 | Independence | Feature design | duplicate features break L09's normal equation |
 
-![Vectors: what is used where](assets/plate-l01-used-where.svg "The same three tools run embeddings, search, and training. Shell 5. Source: public model docs and standard practice. Project: Stanford Frontier AI.")
+![Chapter plate: what cosine buys](assets/plate-l01-chap-vectors.svg "Chapter plate L01-C1. Left: the raw dot product: A scores 3, A3 scores 9, same words. Center: the norm: ||A|| = 2.24, ||A3|| = 6.71, size measured alone. Right: cosine: 0.77 vs 0.77, tweet matches article. Bottom: cosine throws size away; when size carries signal, trust distance. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 > [!QA]
 > Q: What is a vector, and why does ML use them for everything?
@@ -301,13 +398,19 @@ count vectors.
 > Q: Walk me through the dot product on a concrete pair. What does each part do?
 > A: Take x = [3, -1, 2], y = [2, 4, 1]. Multiply matching components: 3*2 = 6 (strong agreement), -1*4 = -4 (clash: opposite signs subtract), 2*1 = 2 (mild agreement). Sum: 6 - 4 + 2 = 4. The total says "mostly agreement, partly canceled." Each product is one feature's vote. The sum is the election.
 > Follow-up: What does a dot product of zero mean geometrically?
-> A: The vectors are perpendicular: they share no direction. In ML this reads as "no shared signal." Attention exploits it: a near-zero score becomes a near-zero weight after softmax, so the token is ignored.
+> A: The vectors are perpendicular: they share no direction. In ML this reads as "no shared signal." Attention exploits it. Softmax turns scores into weights that sum to 1, so a near-zero score becomes a near-zero weight and the token is ignored.
 
 > [!QA]
 > Q: When do you use the dot product and when do you use cosine similarity?
 > A: Use the dot product inside the model: attention scores, neuron sums, classifier margins. Use cosine similarity when comparing finished vectors, like ranking search results or measuring how close two embeddings are. In the worked toy, A and its tripled copy A3 scored 3 and 9 by dot product but both scored 0.77 by cosine. Cosine ignores the length. The dot product does not.
 > Follow-up: Can the dot product be negative?
 > A: Yes. A negative dot product means the vectors point in opposing directions: mostly disagreement. Cosine similarity maps this to -1. In attention this matters: a strongly negative score becomes a near-zero weight after softmax, so the model ignores that token.
+
+> [!QA]
+> Q: Distance says A and A3 are far apart (4.47). Cosine says they are identical (1.00). Which is right?
+> A: Both, about different questions. Cosine asks "do they point the same way": yes, so the topic matches. Distance asks "are they at the same place": no, one review is three times longer. For ranking documents by topic, trust cosine. For clustering where size matters, like spending behavior, trust distance. The Cauchy-Schwarz inequality guarantees cosine stays in [-1, 1]: the dot product can never outrun the product of the norms.
+> Follow-up: Why normalize vectors before comparing them?
+> A: Normalization divides each vector by its norm, making every vector length 1: v-hat = v / ||v||. For [3, -4] that is [0.6, -0.8]. Unit vectors turn the dot product directly into the cosine, since both norms are 1. It also stops one giant feature from dominating the comparison.
 
 > [!QA]
 > Q: What does the norm measure, and why are there several of them?
@@ -343,7 +446,8 @@ count vectors.
 6. **The fix.** Cosine similarity divides out both sizes: 0.77 for A and A3 alike. Geometry agrees: it is the cosine of the angle. It discards size, so keep the norm as a separate signal when size matters.
 7. **The building blocks.** Linear combinations mix vectors (span). Independence means no vector is a copy of the rest.
 8. **Embeddings.** Learned vectors: the machine chooses the axes. Compared with dot products and cosines, regularized by norms.
-9. **The price and the bridge.** Cosine throws away size, which sometimes matters. Keep both tools. L02 turns vectors into matrices: machines that transform whole datasets at once.
+9. **Unit vectors and distance.** Normalize to compare directions (v-hat = [0.6, -0.8]). Cauchy-Schwarz traps cosine in [-1, 1]. Euclidean distance keeps size: ||A - A3|| = 4.47 while cosine is 1.00. Pick the measure that matches the question.
+10. **The price and the bridge.** Cosine throws away size, which sometimes matters. Keep both tools. L02 turns vectors into matrices: machines that transform whole datasets at once.
 
 ## Go deeper
 
@@ -351,7 +455,7 @@ count vectors.
 <iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/fNk_zzaMoSs" title="3Blue1Brown: Vectors, what even are they? (Essence of linear algebra, chapter 1)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
 
-- 3Blue1Brown, "Vectors, what even are they?" (Essence of linear algebra, ch. 1; the embed above): https://www.youtube.com/watch?v=fNk_zzaMoSs
+- 3Blue1Brown, "Vectors, what even are they?" (Essence of linear algebra, ch. 1, the embed above): https://www.youtube.com/watch?v=fNk_zzaMoSs
 - The NPTEL lecture for this lesson (frontmatter video): https://www.youtube.com/watch?v=Y1Gndz4sNeE
 - Deisenroth, Faisal, Ong, "Mathematics for Machine Learning", ch. 2 (free): https://mml-book.github.io: vectors, norms, dot products, independence.
 - Strang, "Introduction to Linear Algebra", ch. 1: the geometric view.
@@ -374,3 +478,24 @@ count vectors.
 - **CS229S L02:** attention scores are dot products of query and key embeddings. This lesson is the arithmetic underneath.
 - **CS336:** token embeddings are vectors in R^d. Cosine similarity ranks nearest neighbors in embedding space.
 - **CS229 L10:** PCA starts by centering data vectors. Norms measure reconstruction error.
+
+## Coverage map
+
+Every lecture concept, and where this lesson covers it:
+
+| Lecture concept | Covered in | Lines |
+|---|---|---|
+| vectors as ordered lists of numbers | The task: turn the world into numbers | l01:28-52 |
+| dot product, definition and first computation | First attempt: count shared words | l01:53-84 |
+| dot product by hand: symmetric, linear, zero = perpendicular | Subchapter: the dot product, by hand | l01:121-146 |
+| norm as size, L2/L1/max norms, gradient clipping | Where counts break; Subchapter: the norm, by hand | l01:85-119, l01:148-172 |
+| normalization, unit vectors, v-hat | Subchapter: unit vectors and normalization | l01:174-192 |
+| Cauchy-Schwarz inequality, why cosine is in [-1, 1] | Subchapter: Cauchy-Schwarz | l01:193-219 |
+| cosine similarity, the 0.77 toy, the size trap | The key question; cosine similarity, by hand | l01:220-254 |
+| Euclidean distance vs cosine, the decision rule | Subchapter: Euclidean distance vs cosine | l01:255-286 |
+| linear combination, span, standard vectors | Subchapter: linear combination | l01:292-311 |
+| linear independence, dependence test, row-reduction | Subchapter: linear independence | l01:312-333 |
+| embeddings: learned vs counted components | Subchapter: embeddings | l01:334-357 |
+| what is used where: attention, search, norms, independence | What is used where | l01:358-371 |
+| 8 interview Q&As with follow-ups | QA blocks | l01:372-419 |
+| full-lesson recap | Recap | l01:420-431 |
