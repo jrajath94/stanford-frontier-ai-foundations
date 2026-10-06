@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.classList.remove('no-js');</script>
 <title>Lecture 6: Efficient Attention and FlashAttention — Stanford Frontier AI</title>
-<meta name="description" content="Why standard attention is memory bound, the three approximation families, and the exact fix: FlashAttention&#x27;s tiling, rescaling, and recompute.">
+<meta name="description" content="Why standard attention is memory bound, the three approximation families, and the exact fix: FlashAttention&#x27;s tiling, rescaling, and recompute, from FA1 through">
 <link rel="stylesheet" href="../assets/vendor/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
 </head>
@@ -81,6 +81,7 @@
 <li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
 <li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
 <li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../cs229s/crash-course-02.html" data-page="cs229s-crash-02">CS229S · Crash course 2</a></li>
 </ul>
 <h3>CS224N: NLP with Deep Learning</h3><ul>
 <li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
@@ -146,18 +147,14 @@
 </ul>
 <h3>CS329A: Self-Improving AI Agents</h3><ul>
 <li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
-<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
-<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
-<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
-<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
-<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
-<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
-<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
-<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
-<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
-<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
-<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
-<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+<li><a href="../cs329a/l01-course-overview.html" data-page="cs329a-l01">L01 · Course Overview</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Compute Scaling</a></li>
+<li><a href="../cs329a/l03-feedback-tools-code.html" data-page="cs329a-l03">L03 · Feedback, Tools, Code</a></li>
+<li><a href="../cs329a/l04-planning-multistep-reasoning.html" data-page="cs329a-l04">L04 · Planning and Multi-Step Reasoning</a></li>
+<li><a href="../cs329a/l05-search-at-scale.html" data-page="cs329a-l05">L05 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l06-train-time-scaling.html" data-page="cs329a-l06">L06 · Train-Time Scaling</a></li>
+<li><a href="../cs329a/l07-agentic-evaluations.html" data-page="cs329a-l07">L07 · Agentic Evaluations</a></li>
+<li><a href="../cs329a/l08-future-directions.html" data-page="cs329a-l08">L08 · Future Directions</a></li>
 </ul>
 <h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
 <li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
@@ -219,51 +216,116 @@
       <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229S: Systems for Machine Learning</a> / Lecture 6: Efficient Attention and FlashAttention</nav>
       <h1>Lecture 6: Efficient Attention and FlashAttention</h1>
       <p class="meta-line">2024-10-11 · Instructor: Azalia Mirhoseini · Fall 2024</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h2 id="the-problem-attention-does-not-scale">The problem: attention does not scale</h2>
-<p>Q, K, V are N by D. The score matrix S = QK^T is N by N.
-Attention memory and compute scale as O(N squared) in
-sequence length in standard implementations. The lecture&rsquo;s
-motivation is concrete: hundreds of thousands of words in a
-math textbook, thousands of timesteps per second of raw
-audio, 3.2 billion nucleotide pairs in the human genome with
-interactions spanning 100k+ positions. Long sequences are
-not a luxury. They are the data.</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h3 id="coverage-and-sourcing">Coverage and sourcing</h3>
+<p>This lesson follows the attention sections of the CS229S
+&ldquo;Hardware Aware Algorithm Design&rdquo; slide deck (Fall 2024
+offering, Fall 2023 headers), taught by Azalia Mirhoseini.
+The deck&rsquo;s attention arc runs: the quadratic problem,
+three approximation families, the memory-bound profile,
+FlashAttention&rsquo;s tiling and online softmax, the recompute
+backward pass, benchmark results, and FlashAttention-2.
+The lesson adds the post-deck history, each fact dated and
+sourced: Flash-Decoding (2023), FlashAttention-3 (July
+2024), and FlashAttention-4 (MLSys 2026, October 2026
+updates throughout). Benchmark numbers are the papers&rsquo;
+own, measured on the GPUs of their year. Where a fact is
+not public, it is marked [uncertain], never asserted.</p>
+<h2 id="the-problem-attention-does-not-scale">The problem: attention does not scale</h2>
+<p>Q, K, V are N by D. N is the sequence length: how many
+tokens the model looks at. D is the head dimension: the
+size of each token&rsquo;s vector. The score matrix S = QK^T is
+N by N: one score for every pair of tokens. Attention
+memory and compute scale as O(N squared) in sequence
+length in standard implementations. Double the sequence,
+quadruple the cost.</p>
+<p>The lecture&rsquo;s motivation is concrete, not asymptotic.
+Hundreds of thousands of words in a math textbook, with
+dependencies across chapters. Thousands of timesteps per
+second of raw audio: one minute of 16 kHz audio is nearly
+a million timesteps. 3.2 billion nucleotide pairs in the
+human genome, with interactions spanning 100k+ positions.
+Long sequences are not a luxury. They are the data.</p>
+<p>Work the genome case. N = 100,000. The score matrix is
+10^10 entries. In FP16 at 2 bytes each, that is 20 GB for
+one head, one layer, one sequence. A 96-layer model needs
+it 96 times over. The matrix does not fit. The quadratic
+is a wall, and the data lives on the other side.</p>
 <h2 id="first-attempt-change-the-algorithm">First attempt: change the algorithm</h2>
-<p>Before FlashAttention, the field modified the algorithm to
-dodge the quadratic. The survey (Tay et al., 2022) groups the
-attempts into three families, each with a mechanism and a
-price.</p>
+<p>Before FlashAttention, the field modified the algorithm
+to dodge the quadratic. The survey (Tay et al., 2022)
+groups the attempts into three families. Each family gets
+its mechanism, its worked number, and its price below.</p>
+<h3 id="subchapter-sparse-attention-worked">Subchapter: sparse attention, worked</h3>
 <p><strong>Sparse attention</strong> computes attention over a subset of
-token pairs. Sparse Transformers (Child et al., 2019) use
-local windows: O(n sqrt(n)) memory and compute empirically.
-BigBird (Zaheer et al., 2021) gets O(n) inner products by
-combining windowed local attention (language has locality of
-reference) with global tokens that attend to everything and
-random attention that shrinks the average distance between
-nodes. The fixed patterns are sliding window, dilated,
-global, blocked, and random.</p>
+token pairs. The full N by N grid is mostly skipped.</p>
+<p>Sparse Transformers (Child et al., 2019) use local
+windows: each token attends to its neighbors. Work the
+scaling. N = 4096, window 256. Each token attends to 256
+neighbors instead of 4096. Attention pairs fall from 16.8M
+to 1.0M: a 16x cut. The mechanism is a sliding window:
+position i looks at positions i-128 through i+128.</p>
+<p>The price is visible in the same numbers. Anything beyond
+256 positions is invisible in one layer, unless
+information hops window to window through stacked layers.
+Long-range dependency now costs depth: the model needs
+enough layers for the hops to cross the distance.</p>
+<p>BigBird (Zaheer et al., 2021) recovers long range with
+two more ingredients. <strong>Global tokens</strong> attend to
+everything: a handful of positions (say 64) get full
+N-length attention, costing O(N) each. <strong>Random attention</strong>
+adds random pairs, which shrinks the average graph
+distance between any two tokens: any token reaches any
+other in a few hops. The inner products stay O(N).</p>
+<p>The fixed patterns the slides name: sliding window,
+dilated (windows with gaps, so the reach grows without
+more pairs), global, blocked, and random. Sparse
+Transformer with a strided pattern reaches O(n sqrt(n)):
+at n = 4096, that is 4096 x 64 = 262,144 pairs, a 64x cut
+from 16.8M.</p>
+<figure><img alt="Sparse attention" src="assets/plate-l06-sparse-window.webp"><figcaption>N = 4096, window 256: 16.8M pairs fall to 1.0M, a 16x cut. Shell 3. Source: original toy for sliding-window attention. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-low-rank-attention-and-the-causality-price">Subchapter: low-rank attention and the causality price</h3>
 <p><strong>Low-rank attention</strong> projects the matrices to smaller
-dimensions. Linformer reduces the N by N score matrix toward
-k by k. The price is causality: the projection mixes future
-into past, which is hard to maintain for autoregressive
-modeling.</p>
-<p><strong>Kernel attention</strong> replaces the similarity without the
-full N^2 d cost and without the softmax. The linear
-transformer (Katharopoulos et al., 2020) writes sim(qi, kj)
-as f(qi) f(kj) with an elementwise feature map like 1 +
-ELU. Without the exp, the associative property of matrix
-multiplication regroups the computation into linear time.</p>
-<h3 id="subchapter-the-linear-transformer-regroup">Subchapter: the linear transformer regroup</h3>
-<p>Standard attention computes (QK^T)V: the N by N score matrix
-first, then the mix. With sim(qi, kj) = f(qi) f(kj), the
-scores factor, and associativity regroups: Q(K^T V). Now K^T
-V is d by d, computed once, and Q multiplies it: O(N d^2),
+dimensions. Linformer projects the N by N score matrix
+toward k by k, with k much smaller than N. The attention
+cost falls from O(N^2) to O(Nk).</p>
+<p>The price is causality. An <strong>autoregressive</strong> model
+predicts each token from the tokens before it: position i
+may not see position i+1. The Linformer projection mixes
+the whole sequence into the low-rank factors, including
+the future into the past. For bidirectional encoders that
+is fine. For autoregressive generation it breaks the
+causal mask, and repairing it is hard: the projection
+would need to be recomputed per position. The lecture&rsquo;s
+one-line verdict: the price is causality, hard to maintain
+for autoregressive modeling.</p>
+<h3 id="subchapter-kernel-attention-and-the-linear-transformer-regroup">Subchapter: kernel attention and the linear transformer regroup</h3>
+<p><strong>Kernel attention</strong> replaces the similarity function
+without the full N^2 d cost and without the softmax. The
+linear transformer (Katharopoulos et al., 2020) writes
+the similarity as sim(qi, kj) = f(qi) f(kj), with an
+elementwise feature map like 1 + ELU. <strong>ELU</strong> is the
+exponential linear unit: an activation function that is
+the identity for positive inputs and a smooth curve for
+negatives. The map f keeps the values positive so the
+similarity stays a valid weight.</p>
+<p>Without the exp, the associative property of matrix
+multiplication regroups the computation. Standard
+attention computes (QK^T)V: the N by N score matrix first,
+then the mix. With sim(qi, kj) = f(qi) f(kj), the scores
+factor, and associativity regroups: Q(K^T V). Now K^T V
+is d by d, computed once, and Q multiplies it: O(N d^2),
 linear in N.</p>
-<p>The toy: N = 4096, d = 64. Standard: 4096^2 = 16.8M score
-entries. Regrouped: 64^2 = 4,096 entries for K^T V. But the
-slides&rsquo; warning bites here: without the exp, quality drops,
-and without a custom kernel the wall-clock can lose to
-FlashAttention anyway. Asymptotics are not runtime.</p>
+<p>The toy: N = 4096, d = 64. Standard: 4096^2 = 16.8M
+score entries. Regrouped: 64^2 = 4,096 entries for K^T V.
+The matrix that cost 16.8M entries now costs 4,096.</p>
+<p>But the slides&rsquo; warning bites here. Without the exp,
+quality drops: the softmax&rsquo;s sharp selection is part of
+what makes attention work. And without a custom kernel,
+the wall-clock can lose to FlashAttention anyway.
+Asymptotics are not runtime. A linear algorithm with bad
+memory access loses to a quadratic algorithm with good
+memory access. That sentence is the whole lecture in
+advance.</p>
 <p>Each family, built and priced:</p>
 <table>
 <thead>
@@ -277,50 +339,43 @@ FlashAttention anyway. Asymptotics are not runtime.</p>
 <tr>
 <td>Sparse</td>
 <td>Attend to a token subset (windows, global, random)</td>
-<td>Quality loss on long range</td>
+<td>Quality loss on long range; depth pays for hops</td>
 </tr>
 <tr>
 <td>Low rank</td>
 <td>Project N by N toward k by k</td>
-<td>Causality hard to keep</td>
+<td>Causality hard to keep for autoregressive models</td>
 </tr>
 <tr>
 <td>Kernel</td>
 <td>Replace similarity, drop the softmax</td>
-<td>Needs a custom CUDA kernel to win in wall-clock</td>
+<td>Quality drop without exp; needs a custom CUDA kernel to win in wall-clock</td>
 </tr>
 </tbody>
 </table>
-<h3 id="subchapter-sparse-attention-worked">Subchapter: sparse attention, worked</h3>
-<p>Sliding-window attention with N = 4096 and window 256: each
-token attends to 256 neighbors instead of 4096. Attention
-pairs fall from 16.8M to 1.0M: a 16x cut. The price is
-visible: anything beyond 256 positions is invisible unless
-information hops window to window through layers.</p>
-<p>BigBird adds two ingredients to recover long range. Global
-tokens attend to everything (cost O(N) each), and random
-attention pairs shrink the average graph distance between
-any two tokens. The inner products stay O(N). The slides&rsquo;
-observation stands: Mistral 7B pairs FlashAttention with
-sparsity ideas, and the combination beats either alone.</p>
-<figure><img alt="Sparse attention" src="assets/plate-l06-sparse-window.webp"><figcaption>N = 4096, window 256: 16.8M pairs fall to 1.0M, a 16x cut. Shell 3. Source: original toy for sliding-window attention. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="where-the-first-attempt-breaks">Where the first attempt breaks</h2>
-<p>All three trade quality for efficiency. The Pile perplexity
-plots in the slides show the gap: approximate models sit
-above exact ones. And the Lecture 1 meme returns: the
-linear-attention family wins on asymptotics, but without a
+<p>All three trade quality for efficiency. The Pile
+perplexity plots in the slides show the gap: approximate
+models sit above exact ones. <strong>Perplexity</strong> measures how
+surprised a model is by held-out text: lower is better.
+The approximations are more surprised. The gap is the
+price, plotted.</p>
+<p>And the Lecture 1 meme returns. As you learned in CS229S
+L01, paper speed is not wall-clock speed: the linear
+attention family wins on asymptotics, but without a
 custom CUDA kernel it loses in wall-clock to a
-hardware-aware exact implementation. The field had accepted
-the tradeoff as law: faster attention means approximate
-attention.</p>
+hardware-aware exact implementation. The field had
+accepted the tradeoff as law: faster attention means
+approximate attention.</p>
 <h2 id="the-key-question">The key question</h2>
 <p>Is there a fast <em>exact</em> attention algorithm? What if the
-quality-efficiency tradeoff was never a law of nature, but a
-systems problem? The lecture profiles standard attention
-before answering, because the profile decides the fix.</p>
+quality-efficiency tradeoff was never a law of nature, but
+a systems problem? The lecture profiles standard
+attention before answering, because the profile decides
+the fix.</p>
 <h2 id="profiling-the-cost-is-traffic-not-flops">Profiling: the cost is traffic, not FLOPs</h2>
-<p>A kernel is compute plus reads and writes. torch.profiler on
-standard attention shows the steps: read Q and K, write
+<p>A kernel is compute plus reads and writes. torch.profiler
+on standard attention shows the steps: read Q and K, write
 QK^T, read and write for masking, read and write for
 dropout, read and write for softmax, read V, write the
 multiply by V. The sizes (2 bytes per value): 2 x N x
@@ -330,43 +385,50 @@ softmax 2 x B x N x N, multiply by V 2 x B x N x N x D.</p>
 <p>The pattern: a series of very low-compute operations like
 masking, dropout, and softmax, each with reads and writes
 before and after. Fix d = 768 and grow N: the ops-per-byte
-ratio falls below the A100 ridge of 161. Standard attention
-is memory bound, and longer sequences make it worse. Note
+ratio falls below the A100 ridge of 161. <strong>Arithmetic
+intensity</strong> is FLOPs per byte moved. The <strong>ridge</strong> is the
+ratio where a chip switches from memory bound to compute
+bound, defined in L03. Below 161 ops per byte, the A100
+spends its time waiting on memory. Standard attention is
+memory bound, and longer sequences make it worse. Note
 the scope: this analysis covers attention, not the
 feed-forward matmuls, which are compute bound at large
 batch.</p>
 <h3 id="subchapter-the-matmuls-are-innocent">Subchapter: the matmuls are innocent</h3>
-<p>Notice what the profile accuses. QK^T and the multiply by V
-are dense matmuls: high arithmetic intensity, tensor-core
-friendly. They are not the problem. The problem is the five
-elementwise passes around the N by N matrix: masking,
-dropout, softmax, each reading and writing the full matrix
-for a handful of FLOPs per byte. Fusion deletes the passes.
-tiling deletes the matrix. FlashAttention keeps the matmuls
-and deletes everything around them. The fix targets the
-traffic, not the math.</p>
+<p>Notice what the profile accuses. QK^T and the multiply by
+V are dense matmuls: high arithmetic intensity,
+tensor-core friendly. They are not the problem. The
+problem is the five elementwise passes around the N by N
+matrix: masking, dropout, softmax, each reading and
+writing the full matrix for a handful of FLOPs per byte.
+Fusion deletes the passes. Tiling deletes the matrix.
+FlashAttention keeps the matmuls and deletes everything
+around them. The fix targets the traffic, not the math.</p>
 <h2 id="the-plan-never-materialize-the-n-by-n-matrix">The plan: never materialize the N by N matrix</h2>
-<p>SRAM is about 20 to 40 MB. The score matrix S needs 2N^2
-bytes in FP16. At long sequences it does not fit, so the
-standard implementation constantly reads and writes chunks
-to and from HBM. The plan: load Q and K in tiles, compute
-block outputs in SRAM, aggregate. Avoid reading and writing
-the attention matrix to and from HBM entirely.</p>
-<figure><img alt="Tiling attention" src="assets/slide-l06-tiling-attention.png"><figcaption>Shell 1. Approach: never materialize the N by N matrix. Tile Q and K, compute block outputs, aggregate. Source: Stanford slides.</figcaption></figure>
+<p><strong>SRAM</strong> is the fast on-chip memory: about 20 to 40 MB
+per GPU, shared across the streaming multiprocessors. The
+score matrix S needs 2N^2 bytes in FP16. At long
+sequences it does not fit, so the standard implementation
+constantly reads and writes chunks to and from HBM, the
+big slow off-chip memory. The plan: load Q and K in
+tiles, compute block outputs in SRAM, aggregate. Avoid
+reading and writing the attention matrix to and from HBM
+entirely.</p>
+<figure><img alt="Tiling attention" src="assets/slide-l06-tiling-attention.png"><figcaption>Shell 1. Approach: never materialize the N by N matrix. Tile Q and K, compute block outputs, aggregate. Source: Stanford slides. Project: Stanford Frontier AI.</figcaption></figure>
 <h3 id="subchapter-the-matrix-versus-the-sram">Subchapter: the matrix versus the SRAM</h3>
 <p>At N = 8192, the score matrix in FP16 needs 2 x 8192^2 =
-134 MB. SRAM per SM is 20 to 40 MB. The matrix does not fit:
-four copies over. At N = 16,384 it needs 536 MB. The tiles
-do fit: a 64 by 64 tile of scores is 8 KB. FlashAttention&rsquo;s
-plan is a size argument. Nothing about the algorithm
-changed. The matrix simply cannot live where the math
-happens, so it never gets built.</p>
+134 MB. SRAM is 20 to 40 MB. The matrix does not fit:
+four copies over. At N = 16,384 it needs 537 MB. The
+tiles do fit: a 64 by 64 tile of scores is 8 KB. That is
+the whole plan as a size argument. Nothing about the
+algorithm changed. The matrix simply cannot live where
+the math happens, so it never gets built.</p>
 <figure><img alt="The matrix versus the SRAM" src="assets/plate-l06-sram-fit.webp"><figcaption>134 MB of scores against 20 to 40 MB of SRAM: the matrix cannot live where the math happens. Shell 2. Source: original toy for the SRAM fit. Project: Stanford Frontier AI.</figcaption></figure>
 <p>Tiling the matmuls is easy. The obstacle is the softmax,
-which normalizes over the full row. With only tiles in hand,
-the row sum is unknown. So the naive tiled output has the
-wrong denominator: each tile normalized by its own partial
-sum instead of the true total.</p>
+which normalizes over the full row. With only tiles in
+hand, the row sum is unknown. So the naive tiled output
+has the wrong denominator: each tile normalized by its
+own partial sum instead of the true total.</p>
 <h2 id="the-fix-online-rescaling">The fix: online rescaling</h2>
 <p>Split the row into two tiles with partial sums L(1) and
 L(2). The true output is</p>
@@ -374,44 +436,59 @@ L(2). The true output is</p>
 </code></pre>
 <p>Compute per-tile outputs O(1) = A(1)V(1)/L(1) and
 O(2) = A(2)V(2)/L(2), then rescale: multiply O(1) by
-L(1)/(L(1)+L(2)) so its denominator becomes the true total,
-and likewise for O(2). Add them. The result is exactly
-standard attention. No approximation.</p>
-<figure><img alt="Softmax rescaling" src="assets/slide-l06-softmax-rescaling.png"><figcaption>Shell 2. Rescale each tile's output by its share of the true denominator. Exact, not approximate. Source: Stanford slides.</figcaption></figure>
+L(1)/(L(1)+L(2)) so its denominator becomes the true
+total, and likewise for O(2). Add them. The result is
+exactly standard attention. No approximation.</p>
+<figure><img alt="Softmax rescaling" src="assets/slide-l06-softmax-rescaling.png"><figcaption>Shell 2. Rescale each tile's output by its share of the true denominator. Exact, not approximate. Source: Stanford slides. Project: Stanford Frontier AI.</figcaption></figure>
 <h3 id="subchapter-the-rescaling-worked-with-numbers">Subchapter: the rescaling, worked with numbers</h3>
 <p>One row, two tiles. Tile 1 scores [1, 2], tile 2 scores
 [3, 4]. True softmax: max 4, L = e^-3 + e^-2 + e^-1 + 1 =
 0.0498 + 0.1353 + 0.3679 + 1 = 1.553.</p>
-<p>Tiled: tile 1 computes max 2, L(1) = e^-1 + 1 = 1.368. Tile
-2 computes max 4, L(2) = e^-1 + 1 = 1.368. Running max
-becomes 4. Rescale tile 1&rsquo;s sum by e^(2-4) = 0.1353:
+<p>Tiled: tile 1 computes max 2, L(1) = e^-1 + 1 = 1.368.
+Tile 2 computes max 4, L(2) = e^-1 + 1 = 1.368. Running
+max becomes 4. Rescale tile 1&rsquo;s sum by e^(2-4) = 0.1353:
 1.368 x 0.1353 = 0.185. Add tile 2&rsquo;s 1.368: total 1.553.
 The running statistics converge to the true max and the
-true sum, tile by tile. Each tile&rsquo;s partial output gets the
-same rescale, so the final output equals the full-row
-softmax exactly.</p>
+true sum, tile by tile. Each tile&rsquo;s partial output gets
+the same rescale, so the final output equals the
+full-row softmax exactly.</p>
 <figure><img alt="The rescaling, worked" src="assets/plate-l06-rescale-toy.webp"><figcaption>Tile sums 1.368 and 1.368 rescale to the true total 1.553. Shell 3. Source: original toy for the online softmax. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-running-max-and-why-it-cannot-be-skipped">Subchapter: the running max, and why it cannot be skipped</h3>
 <p>Numerical stability needs the same trick for the max.
-Stable softmax subtracts the row max, but the max is also a
-whole-row quantity. Maintain a running max m(x) across
-tiles: tile 1 computes e^(x1 - max(x1)), then rescale by
-e^(max(x1) - m(x)) to get e^(x1 - m(x)). The algebra cancels
-to the exact stable softmax. Two running statistics per row,
-L and m, are all the whole-row state the tiles need.</p>
+Stable softmax subtracts the row max, but the max is also
+a whole-row quantity. Without subtracting it, e^x
+overflows for large scores: e^100 is not representable.
+Maintain a running max m(x) across tiles: tile 1 computes
+e^(x1 - max(x1)), then rescale by e^(max(x1) - m(x)) to
+get e^(x1 - m(x)). The algebra cancels to the exact stable
+softmax. Two running statistics per row, L and m, are all
+the whole-row state the tiles need. Each costs O(1) per
+row. The N by N matrix cost O(N^2). That is the trade in
+one line.</p>
 <h2 id="the-backward-pass-recompute-do-not-store">The backward pass: recompute, do not store</h2>
 <p>Training needs the attention matrix again in the backward
 pass, but the forward pass never wrote it. The lecture&rsquo;s
-answer is Lecture 3&rsquo;s rule: the workload is memory bound, so
-recompute. Cache the L and M rescaling vectors (size N each)
+answer is Lecture 3&rsquo;s rule: the workload is memory bound,
+so recompute. As you learned in CS229S L03, when memory
+traffic is the bottleneck, extra arithmetic is nearly
+free. Cache the L and M rescaling vectors (size N each)
 and recompute the attention tiles from the inputs in SRAM
 during the backward pass. Storing two vectors of size N
 beats storing an N by N matrix.</p>
-<figure><img alt="Backward recompute" src="assets/slide-l06-backward-recompute.png"><figcaption>Shell 3. Cache L and M (size N), recompute the N by N tiles backward. Source: Stanford slides.</figcaption></figure>
+<p>The recompute is exact for the same reason the forward
+pass is exact: the tiles, the running statistics, and the
+rescaling reproduce the full-row computation. The
+backward pass re-derives the scores from Q, K, and the
+cached statistics, applies the chain rule per tile, and
+accumulates the gradients. Nothing is approximated. The
+price is paid in FLOPs, and FLOPs are the cheap currency
+here.</p>
+<figure><img alt="Backward recompute" src="assets/slide-l06-backward-recompute.png"><figcaption>Shell 3. Cache L and M (size N), recompute the N by N tiles backward. Source: Stanford slides. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-results">The results</h2>
 <p>Asymptotic HBM accesses: FlashAttention O(N^2 d^2 M^-1)
 for SRAM size M, versus O(Nd + N^2) standard. In practice
 about 9x fewer HBM reads and writes.</p>
-<figure><img alt="FlashAttention results" src="assets/slide-l06-flashattn-results.png"><figcaption>Shell 4. 13% more FLOPs, 9x less HBM traffic, 6x faster runtime. Source: Stanford slides, Dao et al. 2022.</figcaption></figure>
+<figure><img alt="FlashAttention results" src="assets/slide-l06-flashattn-results.png"><figcaption>Shell 4. 13% more FLOPs, 9x less HBM traffic, 6x faster runtime. Source: Stanford slides, Dao et al. 2022. Project: Stanford Frontier AI.</figcaption></figure>
 <table>
 <thead>
 <tr>
@@ -438,47 +515,132 @@ about 9x fewer HBM reads and writes.</p>
 </tr>
 </tbody>
 </table>
-<p>More FLOPs, far less time. The lecture&rsquo;s takeaway, stated as
-a rule: lower FLOPs do not imply wall-clock speedup.
+<p>More FLOPs, far less time. The lecture&rsquo;s takeaway, stated
+as a rule: lower FLOPs do not imply wall-clock speedup.
 Downstream: 15% faster than the MLPerf 1.1 BERT training
 record, 3x faster than HuggingFace at 1k sequence length,
 2.4 to 2.8x faster training on Long-Range Arena with no
-quality drop, and the first transformer above random chance
-on Path-X and Path-256.</p>
-<figure><img alt="FlashAttention chapter plate" src="assets/media-generation-plate-chapter-l06-flashattn-0-fef314f8-620b-419e-bef8-42397039204e.webp"><figcaption>Shell 5. Fusion, tiling, and recompute trade 13% more FLOPs for 9x less traffic. Source: original chapter plate.</figcaption></figure>
-<p>FlashAttention-2 fixes the remaining limitation: suboptimal
-work partitioning between blocks and warps caused excess
-reads and writes. It uses CUTLASS 3 primitives for memory
-management and parallelizes over more dimensions: sequence
-length, batch size, and attention heads.</p>
-<h3 id="subchapter-flashattention-3-the-hopper-version">Subchapter: FlashAttention-3, the Hopper version</h3>
-<p>FlashAttention-2 reached only about 35 percent of H100 peak:
-it could not use Hopper&rsquo;s new hardware. FlashAttention-3
-(July 2024, arXiv 2407.08608) is written for Hopper, with
-three new ideas.</p>
+quality drop, and the first transformer above random
+chance on Path-X and Path-256.</p>
+<figure><img alt="FlashAttention chapter plate" src="assets/media-generation-plate-chapter-l06-flashattn-0-fef314f8-620b-419e-bef8-42397039204e.webp"><figcaption>Shell 5. Fusion, tiling, and recompute trade 13% more FLOPs for 9x less traffic. Source: original chapter plate. Project: Stanford Frontier AI.</figcaption></figure>
+<h2 id="flashattention-2-better-parallelism">FlashAttention-2: better parallelism</h2>
+<p>FlashAttention-2 fixes the remaining limitation:
+suboptimal work partitioning between blocks and warps
+caused excess reads and writes. <strong>Warps</strong> are groups of 32
+threads that execute together, defined in L05. FA1
+parallelized over batch and heads but scheduled
+sequence-length work suboptimally. FA2 parallelizes over
+the sequence length too, uses CUTLASS 3 primitives for
+memory management, and trims the non-matmul overhead like
+rescaling.</p>
+<p>The measured effect on A100: 50 to 73 percent of peak
+throughput versus 25 to 40 percent for FA1. Roughly double
+the training throughput from scheduling alone. Same
+algorithm. Better mapping to the hardware.</p>
+<h3 id="subchapter-flash-decoding-the-inference-twin">Subchapter: Flash-Decoding, the inference twin</h3>
+<p>FlashAttention targeted training: long sequences, big
+batches, the forward and backward passes. <strong>Decoding</strong>,
+generating one token at a time, has a different shape.
+As you learned in CS229S L04, decoding is memory bound:
+each step reads the whole KV cache to produce one token.</p>
+<p>Flash-Decoding (2023) ports the tiling idea to decode.
+The query is one token, but the keys and values are the
+whole cache. Split the KV cache across streaming
+multiprocessors, compute partial attention per split with
+the same online-softmax rescaling, then combine. The
+parallelism that FA2 added over the sequence length
+becomes parallelism over the cache. Reported: up to 8x
+faster long-context decoding. Training and inference got
+their own FlashAttention, because their bottlenecks
+differ.</p>
+<h2 id="flashattention-3-the-hopper-version">FlashAttention-3: the Hopper version</h2>
+<p>FlashAttention-2 reached only about 35 percent of H100
+peak: it could not use Hopper&rsquo;s new hardware.
+FlashAttention-3 (July 2024, arXiv 2407.08608) is written
+for Hopper, with three new ideas.</p>
 <p><strong>Warp specialization.</strong> Some warps only load data. Others
-only compute. Loads and math overlap instead of alternating.</p>
-<p><strong>Ping-pong scheduling.</strong> Softmax uses the slow exponential
-unit while matmuls use tensor cores. FA3 interleaves two
-warpgroups so one runs softmax while the other runs its
-GEMM.</p>
+only compute. Loads and math overlap instead of
+alternating. Hopper&rsquo;s asynchronous copy engines make this
+possible: the hardware can move the next tile while the
+tensor cores chew the current one.</p>
+<p><strong>Ping-pong scheduling.</strong> Softmax uses the slow
+exponential unit while matmuls use tensor cores. FA3
+interleaves two warpgroups so one runs softmax while the
+other runs its GEMM (general matrix multiply: one dense
+matrix-matrix product). Neither unit idles.</p>
 <p><strong>FP8 with incoherent processing.</strong> Q and K are multiplied
 by a random Hadamard matrix before quantizing, spreading
-outliers across dimensions. Error is 2.6x lower than baseline
-FP8 attention.</p>
+outliers across dimensions. A <strong>Hadamard matrix</strong> is an
+orthogonal matrix of +1 and -1 entries: multiplying by it
+rotates the vector so no single coordinate carries an
+outlier. Error is 2.6x lower than baseline FP8 attention.</p>
 <p>Results: up to 740 TFLOPs/s in FP16 (75 percent of H100
 peak), about 1.5 to 2x faster than FA2, and close to 1.2
 PFLOPs/s in FP8. Each FlashAttention generation is a new
-answer to the same question: what does this GPU&rsquo;s fast path
-look like?</p>
+answer to the same question: what does this GPU&rsquo;s fast
+path look like?</p>
 <figure><img alt="The FlashAttention generations" src="assets/plate-l06-fa-generations.webp"><figcaption>FA1: the exact algorithm. FA2: better parallelism. FA3: Hopper asynchrony and FP8. Shell 5. Source: original for the generations. Project: Stanford Frontier AI.</figcaption></figure>
+<h2 id="flashattention-4-the-blackwell-version">FlashAttention-4: the Blackwell version</h2>
+<p>By 2026 the bottleneck had moved again. The B200 roughly
+doubled tensor-core throughput over Hopper, but the
+exponential unit and the shared-memory bandwidth did not
+keep pace. Matmuls were no longer the slow part. Softmax
+was. FlashAttention-4 (MLSys 2026, arXiv 2603.05451)
+is built around that imbalance.</p>
+<p><strong>Software exponentials.</strong> Part of the exp work moves off
+the dedicated special-function unit onto the regular FMA
+(fused multiply-add) units, computed as a polynomial.
+Both units run at once.
+The special-function unit stops being the single choke
+point.</p>
+<p><strong>Conditional rescaling.</strong> Online softmax normally
+rescales the accumulator every time the running max goes
+up. FA4 skips the rescale unless the max moved enough to
+threaten numerical stability. Rescaling falls about 10x.
+Most tiles never trigger it.</p>
+<p><strong>Tensor memory and 2-CTA MMA.</strong> Blackwell added tensor
+memory (TMEM), a new fast storage between registers and
+shared memory. FA4 stages operands through it and uses
+two cooperative thread arrays per matrix multiply,
+taking pressure off shared memory, especially in the
+backward pass.</p>
+<p><strong>Written in CuTe-DSL (Python).</strong> FA1 through FA3 were
+C++ template metaprogramming: powerful, unreadable, slow
+to compile. FA4 is written in NVIDIA&rsquo;s CuTe domain
+specific language embedded in Python. It compiles 20 to
+30x faster. The algorithm did not change. The cost of
+iterating on it collapsed.</p>
+<p>Results on B200 in BF16 (brain floating point 16:
+a 16-bit format that keeps FP32&rsquo;s dynamic range with
+less precision): up to 1,613 TFLOPs/s, 71 percent
+utilization, 1.3x faster than cuDNN 9.13 and 2.7x faster
+than Triton. Meta then extended FA4 with end-to-end MXFP8
+block-scaled precision for forward and backward,
+reporting 2.85 PFLOPs/s forward and about 2.0 PFLOPs/s
+backward on LLM shapes (PyTorch engineering blog,
+September 16, 2026), already running in production to
+train Meta&rsquo;s ads models. Four papers, one habit: find
+which unit is actually saturated before optimizing
+anything.</p>
+<figure><img alt="FlashAttention-4" src="assets/plate-l06-fa4-blackwell.webp"><figcaption>Softmax was the bottleneck on Blackwell. Software exp, conditional rescaling, TMEM: 1,613 TFLOPs/s on B200. Shell 5. Source: original for FA4. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-pattern-across-four-generations">Subchapter: the pattern across four generations</h3>
+<p>Each generation answered a new hardware imbalance with
+the same algorithm. FA1 (2022, A100): the N by N matrix
+never leaves SRAM. FA2 (2023, A100): schedule the work
+better, 25-40 percent of peak becomes 50-73 percent. FA3
+(2024, H100): overlap loads and math, interleave softmax
+with GEMMs, quantize to FP8. FA4 (2026, B200): the
+matmuls outran everything else, so move softmax off the
+choke point. The lesson for interviews: name the
+bottleneck first, then the mechanism. The mechanism is
+always a response to a measurement.</p>
 <p>And the approximations are not dead. Mistral 7B combined
 FlashAttention with sparsity ideas, and the slides report
 two observations: FlashAttention alone is more memory
-efficient than the approximate Linformer, and FlashAttention
-plus sparsity gives the fastest runtimes. Exactness and
-approximation stack: try the exact hardware-aware version
-first, combine after.</p>
+efficient than the approximate Linformer, and
+FlashAttention plus sparsity gives the fastest runtimes.
+Exactness and approximation stack: try the exact
+hardware-aware version first, combine after.</p>
 <h2 id="what-is-used-where-real-stacks-and-real-models">What is used where: real stacks and real models</h2>
 <p>FlashAttention is infrastructure now. Facts as of October
 2026.</p>
@@ -493,7 +655,7 @@ first, combine after.</p>
 <tbody>
 <tr>
 <td>PyTorch (SDPA)</td>
-<td>FlashAttention-2 as a backend for scaled_dot_product_attention</td>
+<td>FlashAttention-2/3 as a backend for scaled_dot_product_attention</td>
 <td>public</td>
 </tr>
 <tr>
@@ -503,7 +665,7 @@ first, combine after.</p>
 </tr>
 <tr>
 <td>vLLM, SGLang</td>
-<td>FA2/FA3 kernels for prefill and decode</td>
+<td>FA2/FA3/FA4 kernels for prefill and decode; SGLang exposes <code>--attention-backend fa4</code></td>
 <td>public</td>
 </tr>
 <tr>
@@ -516,15 +678,29 @@ first, combine after.</p>
 <td>memory-efficient attention</td>
 <td>public</td>
 </tr>
+<tr>
+<td>FlashInfer</td>
+<td>FA4 MoE FP4 kernels on Blackwell (<code>VLLM_USE_FLASHINFER_MOE_FP4=1</code>)</td>
+<td>public</td>
+</tr>
+<tr>
+<td>DeepSeek FlashMLA</td>
+<td>custom MLA kernel for DeepSeek-V2/V3 inference</td>
+<td>public (open source)</td>
+</tr>
 </tbody>
 </table>
 <p>On the model side: the slides report Mistral 7B combined
-FlashAttention with sparsity ideas. Which exact attention
-kernel GPT-5 or Gemini 3 uses internally is not public;
-vendors do not disclose kernel choices. [uncertain] whether
-any frontier lab trains without some FlashAttention
-generation: the 6x gap is too large to leave on the table,
-but the internals are proprietary.</p>
+FlashAttention with sparsity ideas. Llama 4 (April 2025)
+trains with modern fused attention throughout
+[uncertain: Meta has not disclosed the exact attention
+kernel]. Which
+exact attention kernel GPT-5, GPT-6, or Gemini 3 uses
+internally is not public. Vendors do not disclose kernel
+choices. [uncertain] whether any frontier lab trains
+without some FlashAttention generation: the 6x gap is too
+large to leave on the table, but the internals are
+proprietary.</p>
 <h2 id="mapping-back-three-principles-one-system">Mapping back: three principles, one system</h2>
 <table>
 <thead>
@@ -549,19 +725,169 @@ but the internals are proprietary.</p>
 </tbody>
 </table>
 <h2 id="the-honest-price">The honest price</h2>
-<p>FlashAttention does 13% more FLOPs than standard attention.
-It is still O(N squared) in compute: the quadratic is
-dodged in memory traffic, not in arithmetic. It is tuned
-for the SRAM sizes and tensor cores of its GPU generation.
-The benchmark numbers (9x, 6x, 41.7 ms) are 2022 A100
-measurements, and newer GPUs and FlashAttention-3 change
-the constants. Exactness costs nothing in quality, which is
-the point, but it does not repeal the quadratic.</p>
+<p>FlashAttention does 13% more FLOPs than standard
+attention. It is still O(N squared) in compute: the
+quadratic is dodged in memory traffic, not in arithmetic.
+It is tuned for the SRAM sizes and tensor cores of its
+GPU generation, which is why each generation needs a
+rewrite. The benchmark numbers (9x, 6x, 41.7 ms) are 2022
+A100 measurements, and newer GPUs and FA3/FA4 change the
+constants. Exactness costs nothing in quality, which is
+the point, but it does not repeal the quadratic. At
+extreme N the FLOPs themselves become the wall, and that
+is when sparse attention, linear attention, or
+DeepSeek-V3.2-style learned sparse attention returns to
+the table.</p>
+<h2 id="coverage-map-every-lecture-claim-and-where-it-lives">Coverage map: every lecture claim and where it lives</h2>
+<table>
+<thead>
+<tr>
+<th>Lecture claim</th>
+<th>Covered in</th>
+<th>File line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Attention memory and compute scale as O(N^2) in N</td>
+<td>The problem: attention does not scale</td>
+<td>L53</td>
+</tr>
+<tr>
+<td>Long-sequence motivation: textbooks, audio, 3.2B genome pairs, 100k+ interactions</td>
+<td>The problem: attention does not scale</td>
+<td>L53</td>
+</tr>
+<tr>
+<td>Three approximation families: sparse, low-rank, kernel (Tay et al. survey)</td>
+<td>First attempt: change the algorithm</td>
+<td>L77</td>
+</tr>
+<tr>
+<td>Sparse attention: local windows, O(n sqrt(n)); BigBird windows plus global plus random, O(n)</td>
+<td>sparse attention, worked</td>
+<td>L84</td>
+</tr>
+<tr>
+<td>Low-rank attention: Linformer projects toward k by k; causality price</td>
+<td>low-rank attention and the causality price</td>
+<td>L119</td>
+</tr>
+<tr>
+<td>Kernel attention: linear transformer, sim as f(qi)f(kj), Q(K^T V) regroup, O(N d^2)</td>
+<td>kernel attention and the linear transformer regroup</td>
+<td>L137</td>
+</tr>
+<tr>
+<td>Approximations trade quality: Pile perplexity gap; wall-clock needs custom kernels</td>
+<td>Where the first attempt breaks</td>
+<td>L178</td>
+</tr>
+<tr>
+<td>Key question: fast exact attention; profile before fixing</td>
+<td>The key question</td>
+<td>L195</td>
+</tr>
+<tr>
+<td>torch.profiler cost breakdown; memory bound below the 161 ridge at d=768</td>
+<td>Profiling: the cost is traffic, not FLOPs</td>
+<td>L203</td>
+</tr>
+<tr>
+<td>Matmuls innocent; elementwise passes guilty; fusion and tiling delete them</td>
+<td>the matmuls are innocent</td>
+<td>L227</td>
+</tr>
+<tr>
+<td>Plan: tile Q and K through SRAM, never materialize N by N</td>
+<td>The plan: never materialize the N by N matrix</td>
+<td>L239</td>
+</tr>
+<tr>
+<td>SRAM fit: 134 MB at N=8192 vs 20-40 MB SRAM; 8 KB tiles</td>
+<td>the matrix versus the SRAM</td>
+<td>L253</td>
+</tr>
+<tr>
+<td>Online rescaling: per-tile outputs rescaled by L(i)/(L(1)+L(2)); exact</td>
+<td>The fix: online rescaling</td>
+<td>L271</td>
+</tr>
+<tr>
+<td>Rescaling worked: 1.368 and 1.368 rescale to 1.553</td>
+<td>the rescaling, worked with numbers</td>
+<td>L288</td>
+</tr>
+<tr>
+<td>Running max m for numerical stability; two O(1) statistics per row</td>
+<td>the running max, and why it cannot be skipped</td>
+<td>L305</td>
+</tr>
+<tr>
+<td>Backward pass: cache L and M (size N), recompute tiles; memory-bound rule</td>
+<td>The backward pass: recompute, do not store</td>
+<td>L319</td>
+</tr>
+<tr>
+<td>Results: 75.2 vs 66.6 GFLOPs, 4.4 vs 40.3 GB, 7.3 vs 41.7 ms; downstream wins</td>
+<td>The results</td>
+<td>L342</td>
+</tr>
+<tr>
+<td>FA2: sequence-length parallelism, CUTLASS 3, 50-73% of A100 peak</td>
+<td>FlashAttention-2: better parallelism</td>
+<td>L366</td>
+</tr>
+<tr>
+<td>Flash-Decoding (2023): split KV cache, up to 8x long-context decode (Oct 2026 update)</td>
+<td>Flash-Decoding, the inference twin</td>
+<td>L383</td>
+</tr>
+<tr>
+<td>FA3 (2024): warp specialization, ping-pong, FP8 incoherent processing, 740 TFLOPs/s</td>
+<td>FlashAttention-3: the Hopper version</td>
+<td>L402</td>
+</tr>
+<tr>
+<td>FA4 (2026): software exp, conditional rescaling, TMEM, CuTe-DSL, 1,613 TFLOPs/s (Oct 2026 update)</td>
+<td>FlashAttention-4: the Blackwell version</td>
+<td>L436</td>
+</tr>
+<tr>
+<td>One algorithm, four hardware ports; name the bottleneck first</td>
+<td>the pattern across four generations</td>
+<td>L487</td>
+</tr>
+<tr>
+<td>Mistral 7B: FA plus sparsity fastest; exact plus approximate stack</td>
+<td>the pattern across four generations</td>
+<td>L487</td>
+</tr>
+<tr>
+<td>Real stacks: PyTorch SDPA, HF, vLLM/SGLang, TRT-LLM, xFormers, FlashInfer, FlashMLA (Oct 2026)</td>
+<td>What is used where</td>
+<td>L508</td>
+</tr>
+<tr>
+<td>Fusion, tiling, recompute mapped to L03/L05 principles</td>
+<td>Mapping back</td>
+<td>L535</td>
+</tr>
+<tr>
+<td>Honest price: 13% more FLOPs, still O(N^2) compute, per-generation tuning</td>
+<td>The honest price</td>
+<td>L543</td>
+</tr>
+</tbody>
+</table>
 <div class="qa"><div class="q">How does FlashAttention compute an exact softmax without the full row in memory?</div><div class="a"><p>It processes the row in tiles and keeps two running statistics: the sum of exponentials L and the running max m. Each tile&rsquo;s partial output is rescaled by its share of the running totals, so after the last tile the denominator and the max equal the whole-row values. The output is bit-for-bit standard attention. Tiling changes the order of operations, not the result.
-It recomputes the attention tiles from the stored inputs plus the cached L and M vectors, which are only size N. Recomputation adds about 13% more FLOPs but removes the giant read-write of the score matrix. Since the workload is memory bound, trading FLOPs for bandwidth wins: 6x faster runtime in the slides&rsquo; benchmark.</p><div class="followup"><strong>Follow-up:</strong> Why does the backward pass not need the N by N matrix either?</div></div></div>
+It recomputes the attention tiles from the stored inputs plus the cached L and M vectors, which are only size N. Recomputation adds about 13% more FLOPs but removes the giant read-write of the score matrix. Since the workload is memory bound, trading FLOPs for bandwidth wins: 6x faster runtime in the paper&rsquo;s benchmark.</p><div class="followup"><strong>Follow-up:</strong> Why does the backward pass not need the N by N matrix either?</div></div></div>
 <div class="qa"><div class="q">Why was standard attention memory bound in the first place?</div><div class="a"><p>The profile shows the cost is reads and writes around the N by N score matrix, not the FLOPs: read Q and K, write QK^T, read/write passes for masking, dropout, and softmax, read V, write the output. With d = 768 fixed and N growing, the ops-per-byte ratio falls below the A100 ridge of 161. The math is cheap. The traffic is the bill.
-No. The slides scope it to attention explicitly. The feed-forward matmuls are compute bound at large batch: their arithmetic intensity is high. That is why the course optimizes attention and the MLP with different tools.</p><div class="followup"><strong>Follow-up:</strong> Does this analysis apply to the feed-forward blocks too?</div></div></div>
-<div class="qa"><div class="q">When would you choose an approximate attention over FlashAttention?</div><div class="a"><p>When the approximation&rsquo;s inductive bias helps or when even tiled exact attention is too slow at your sequence length. But the lecture&rsquo;s ordering matters: try the exact hardware-aware implementation first, because approximations trade quality for speed while FlashAttention keeps full quality. Combine them only after the exact baseline is in place.
+No. The lecture scopes it to attention explicitly. The feed-forward matmuls are compute bound at large batch: their arithmetic intensity is high. That is why the course optimizes attention and the MLP with different tools.</p><div class="followup"><strong>Follow-up:</strong> Does this analysis apply to the feed-forward blocks too?</div></div></div>
+<div class="qa"><div class="q">When would you choose an approximate attention over FlashAttention?</div><div class="a"><p>When the approximation&rsquo;s inductive bias (its
+built-in assumption about the data&rsquo;s structure) helps
+or when even tiled exact attention is too slow at your
+sequence length. But the lecture&rsquo;s ordering matters: try the exact hardware-aware implementation first, because approximations trade quality for speed while FlashAttention keeps full quality. Combine them only after the exact baseline is in place.
 It never materializes the N by N attention matrix: it tiles Q, K, V through SRAM, tracks running softmax statistics per tile, and recomputes tiles in the backward pass. Exact output, 9x less HBM traffic, 6x faster.</p><div class="followup"><strong>Follow-up:</strong> What is the interview one-liner for FlashAttention?</div></div></div>
 <div class="qa"><div class="q">Walk me through the online softmax rescaling with numbers.</div><div class="a"><p>One row, two tiles: scores [1, 2] and [3, 4]. Tile 1 computes its local max 2 and sum e^(1-2) + e^(2-2) = 1.368. Tile 2 computes max 4 and sum 1.368. The running max becomes 4, so tile 1&rsquo;s sum is rescaled by e^(2-4) = 0.1353: 1.368 x 0.1353 = 0.185. Add tile 2&rsquo;s 1.368: 1.553. The true full-row values are max 4 and sum 1.553: the running statistics converge exactly. Each tile&rsquo;s partial output O(i) gets multiplied by L(i) / L(total), so every tile&rsquo;s denominator becomes the true total. Tiling changes the order of operations, never the result.
 Numerical stability. Without subtracting the max, e^x overflows for large scores. The max is a whole-row quantity like the sum, so it gets the same online treatment: keep the running max, rescale earlier tiles&rsquo; exponentials by e^(old max - new max) when it moves. Both statistics cost O(1) per row.</p><div class="followup"><strong>Follow-up:</strong> Why track the running max at all, instead of only the running sum?</div></div></div>
@@ -569,10 +895,21 @@ Numerical stability. Without subtracting the max, e^x overflows for large scores
 Because the binding constraint at 8K to 128K was memory traffic, not FLOPs. Deleting 9x of the traffic moved the wall from memory to compute. Long context became a compute problem, which is the cheaper kind: you can buy more FLOPs with more GPUs, but you cannot buy your way out of traffic per GPU.</p><div class="followup"><strong>Follow-up:</strong> If it is still quadratic, why did it make long context practical?</div></div></div>
 <div class="qa"><div class="q">What did FlashAttention-2 fix over FlashAttention-1?</div><div class="a"><p>Work partitioning. FA1 left parallelism on the table: it parallelized over batch and heads but scheduled sequence-length work suboptimally, causing excess reads and writes. FA2 parallelizes over sequence length too, uses CUTLASS 3 primitives for memory management, and trims the non-matmul overhead like rescaling. Result on A100: 50 to 73 percent of peak versus 25 to 40 percent for FA1, roughly doubling training throughput. FA3 then did the same for Hopper: warp specialization, ping-pong scheduling, FP8, reaching 75 percent of H100 peak.
 Because each generation&rsquo;s fast path is different: new async copy engines, new matrix instructions, new precisions. The algorithm (tile, rescale, recompute) is stable. The implementation must be rewritten for the new hardware&rsquo;s strengths. FlashAttention is a hardware port as much as an algorithm.</p><div class="followup"><strong>Follow-up:</strong> Why does each GPU generation need a new FlashAttention?</div></div></div>
-<div class="qa"><div class="q">Applied design: training uses FA2 but attention is still the bottleneck at 64K context. What do you try?</div><div class="a"><p>First confirm the profile: at 64K with FA2, is attention traffic-bound or compute-bound? If traffic-bound, upgrade to FA3 on Hopper: 1.5 to 2x from asynchrony and FP8. If compute-bound, the quadratic itself is the wall: reduce it with grouped-query attention (fewer KV heads), context parallelism across GPUs (split the sequence), or sparsity on top of FlashAttention, which the slides show gives the fastest runtimes. The interview signal: name the regime first, then pick the tool for that regime.
-Because it communicates: splitting the sequence across GPUs means every attention layer exchanges KV tiles over the interconnect. It converts a local compute problem into a network problem. Cheaper fixes (FA3, GQA, sparsity) stay inside the GPU.</p><div class="followup"><strong>Follow-up:</strong> Why is context parallelism the last resort?</div></div></div>
+<div class="qa"><div class="q">What did FlashAttention-4 change for Blackwell, and why was softmax the target?</div><div class="a"><p>On the B200, tensor-core throughput roughly doubled over Hopper while the exponential unit and shared-memory bandwidth did not keep pace, so softmax became the bottleneck instead of the matmuls. FA4 moves part of the exp onto the regular FMA units as a polynomial, skips the online-softmax rescale unless the running max moved enough to threaten stability (about 10x fewer rescales), stages operands through Blackwell&rsquo;s tensor memory with 2-CTA MMA, and is written in CuTe-DSL Python so it compiles 20 to 30x faster than the C++ template versions. Result: 1,613 TFLOPs/s in BF16 on B200, 71 percent utilization.
+Iteration speed. Each GPU generation needs a new FlashAttention, and C++ template metaprogramming made every rewrite slow to write and slow to compile. The Python-embedded DSL keeps the performance (it still generates the same class of kernels) while cutting compile time 20 to 30x, so the next hardware port starts faster.</p><div class="followup"><strong>Follow-up:</strong> Why rewrite in CuTe-DSL instead of staying in C++?</div></div></div>
+<div class="qa"><div class="q">Applied design: training uses FA2 but attention is still the bottleneck at 64K context. What do you try?</div><div class="a"><p>First confirm the profile: at 64K with FA2, is attention traffic-bound or compute-bound? If traffic-bound, upgrade to FA3 on Hopper or FA4 on Blackwell: 1.5 to 2x from asynchrony, and more from FP8 or MXFP8. If compute-bound, the quadratic itself is the wall: reduce it with grouped-query attention (fewer KV heads), context parallelism across GPUs (split the sequence), or sparsity on top of FlashAttention, which the slides show gives the fastest runtimes. The interview signal: name the regime first, then pick the tool for that regime.
+Because of this lesson&rsquo;s rule: name the bottleneck
+first, then pick the mechanism for that regime. FA3/FA4
+attack HBM traffic, which this lesson measured. GQA
+attacks KV-cache traffic, which the lesson names.
+Context parallelism splits the sequence across GPUs,
+and the lesson establishes that decoding reads the
+whole KV cache: every attention layer must then fetch
+cache shards from other GPUs over the interconnect.
+That network cost is a new bottleneck the lesson never
+profiles, so it stays the last resort.</p><div class="followup"><strong>Follow-up:</strong> Why is context parallelism the last resort?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
-<p>The story in eight steps. Each step answers the one before it.</p>
+<p>The story in ten steps. Each step answers the one before it.</p>
 <ol>
 <li><strong>Attention is quadratic.</strong> N by N scores: O(N squared)
    memory and compute. Long sequences (books, audio,
@@ -598,7 +935,31 @@ Because it communicates: splitting the sequence across GPUs means every attentio
 <li><strong>6x faster with more FLOPs.</strong> 75.2 vs 66.6 GFLOPs,
    4.4 vs 40.3 GB traffic, 7.3 vs 41.7 ms. Lower FLOPs
    do not imply wall-clock speedup.</li>
+<li><strong>One algorithm, four hardware ports.</strong> FA2: better
+   parallelism. Flash-Decoding: the inference twin, up
+   to 8x on long-context decode. FA3: Hopper asynchrony
+   and FP8, 740 TFLOPs/s. FA4: Blackwell, softmax off
+   the choke point, 1,613 TFLOPs/s.</li>
+<li><strong>Name the bottleneck first.</strong> Every generation
+    answered a new imbalance with the same algorithm.
+    The mechanism is always a response to a measurement.</li>
 </ol>
+<h2 id="go-deeper">Go deeper</h2>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/9vcsZK3a76w" title="FlashAttention Explained" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+<ul>
+<li>FlashAttention Explained: The Secret Behind Fast LLMs: https://www.youtube.com/watch?v=9vcsZK3a76w</li>
+<li>FlashAttention Explained: Never Write the N x N Matrix: https://www.youtube.com/watch?v=Q63CLQ3r-b4</li>
+<li>PyTorch Attention Profiling: FlashAttention, SDPA and cuDNN GPU Performance: https://www.youtube.com/watch?v=4XddvBNJ7tM</li>
+<li>Flash Attention 3 and ThunderKittens (Tri Dao, Stanford MLSys): https://www.youtube.com/watch?v=gMOAud7hZg4</li>
+<li>FlashAttention (Dao et al., NeurIPS 2022): https://arxiv.org/abs/2205.14135</li>
+<li>FlashAttention-2 (Dao, 2023): https://arxiv.org/abs/2307.08691</li>
+<li>FlashAttention-3 (Shah et al., 2024): https://arxiv.org/abs/2407.08608</li>
+<li>FlashAttention-4 (Zadouri et al., MLSys 2026): https://arxiv.org/abs/2603.05451</li>
+<li>Efficient Transformers: A Survey (Tay et al.): https://arxiv.org/abs/2009.06732</li>
+</ul>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Hardware Aware Algorithm Design slide deck, attention
@@ -608,29 +969,19 @@ Because it communicates: splitting the sequence across GPUs means every attentio
   derivation.
 - Dao, &ldquo;FlashAttention-2&rdquo; (2023): better parallelism and
   work partitioning.
+- Shah et al., &ldquo;FlashAttention-3&rdquo; (2024): asynchrony and
+  FP8 for Hopper.
+- Zadouri et al., &ldquo;FlashAttention-4&rdquo; (MLSys 2026): the
+  Blackwell rewrite.
 - Tay et al., &ldquo;Efficient Transformers: A Survey&rdquo; (2022):
   the approximation taxonomy.</p>
 <p><strong>Caveats from these sources.</strong> Benchmark numbers (9x, 6x,
 41.7 ms) are from the 2022 paper&rsquo;s A100 measurements.
-Newer GPUs and FlashAttention-3 change the constants. The
-O(N^2 d^2 M^-1) bound assumes SRAM size M. Sparse and
-low-rank quality gaps are dataset-dependent. The Pile
-perplexity plots are one data point.</p>
-<h2 id="go-deeper">Go deeper</h2>
-<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
-<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/9vcsZK3a76w" title="FlashAttention Explained" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-</div>
-
-<ul>
-<li>FlashAttention Explained: The Secret Behind Fast LLMs: https://www.youtube.com/watch?v=9vcsZK3a76w</li>
-<li>FlashAttention: fast and memory-efficient exact attention: https://www.youtube.com/watch?v=Q63CLQ3r-b4</li>
-<li>Visual Intuition for Flash Attention: https://www.youtube.com/watch?v=coc0PollSXo</li>
-<li>Flash Attention 3 and ThunderKittens: https://www.youtube.com/watch?v=gMOAud7hZg4</li>
-<li>FlashAttention (Dao et al., NeurIPS 2022): https://arxiv.org/abs/2205.14135</li>
-<li>FlashAttention-2 (Dao, 2023): https://arxiv.org/abs/2307.08691</li>
-<li>FlashAttention-3 (Shah et al., 2024): https://arxiv.org/abs/2407.08608</li>
-<li>Efficient Transformers: A Survey (Tay et al.): https://arxiv.org/abs/2009.06732</li>
-</ul>
+FA3&rsquo;s 740 TFLOPs/s is H100. FA4&rsquo;s 1,613 TFLOPs/s is B200
+BF16. Newer GPUs change the constants. The O(N^2 d^2
+M^-1) bound assumes SRAM size M. Sparse and low-rank
+quality gaps are dataset-dependent. The Pile perplexity
+plots are one data point.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
 <li><strong>CS229S L03:</strong> fusion, tiling, and recompute: the
@@ -639,11 +990,15 @@ perplexity plots are one data point.</p>
   the hardware it targets.</li>
 <li><strong>CS229S L09:</strong> attention-free architectures: the other
   answer to O(N squared).</li>
+<li><strong>CS229S L10:</strong> context parallelism: splitting the
+  sequence when one GPU&rsquo;s SRAM is not enough.</li>
+<li><strong>CS229 L15:</strong> GQA, MQA, MLA: shrink the KV traffic
+  that FlashAttention moves.</li>
 <li><strong>CS336 L04:</strong> linear attention and MoE in full.</li>
 <li><strong>CS336 L10:</strong> the same memory-bound attention at
   inference time.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Hardware Aware Algorithm Design slide deck, attention sections (Fall 2023 headers)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2205.14135" target="_blank" rel="noopener">Dao et al., FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness (NeurIPS 2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2307.08691" target="_blank" rel="noopener">Dao, FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning (2023)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2009.06732" target="_blank" rel="noopener">Tay et al., Efficient Transformers: A Survey (2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2006.16236" target="_blank" rel="noopener">Katharopoulos et al., Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention (ICML 2020)</a></li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Hardware Aware Algorithm Design slide deck, attention sections (Fall 2023 headers)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2205.14135" target="_blank" rel="noopener">Dao et al., FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness (NeurIPS 2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2307.08691" target="_blank" rel="noopener">Dao, FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning (2023)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2407.08608" target="_blank" rel="noopener">Shah et al., FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision (2024)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2603.05451" target="_blank" rel="noopener">Zadouri et al., FlashAttention-4: Optimizing Attention for Blackwell GPUs (MLSys 2026)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2009.06732" target="_blank" rel="noopener">Tay et al., Efficient Transformers: A Survey (2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2006.16236" target="_blank" rel="noopener">Katharopoulos et al., Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention (ICML 2020)</a></li></ul></section>
       <nav class="pager"><a href="../cs229s/l05-gpu-execution-model.html"><span class="lbl">← Previous</span>Lecture 5: CUDA and GPU Programming for AI</a><a href="../cs229s/l07-memory-efficient-networks.html"><span class="lbl">Next →</span>Lecture 7: Memory-Efficient Neural Networks</a></nav>
     </article>
     <footer class="pagefoot">
