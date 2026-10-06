@@ -13,7 +13,7 @@ offering: "NPTEL (IIT Roorkee)"
 video_id: 0UxcDQz4sWQ
 video_title: "Lecture 49: Bayes' theorem and Random variables (NPTEL)"
 video_caption: "The NPTEL lecture this chapter follows: Bayes' theorem, random variables, and the base-rate idea."
-concepts: [probability, conditional-probability, bayes-theorem, expectation, variance, random-variable, base-rate]
+concepts: [probability, conditional-probability, independence, bayes-theorem, total-probability, expectation, variance, random-variable, base-rate, naive-bayes-bridge]
 sources:
   - tag: video
     label: "Essential Mathematics for Machine Learning: Lecture 49 (Bayes' theorem and Random variables)"
@@ -79,6 +79,38 @@ everything: that is the whole next section.
 
 ![Conditional probability restricts the world](assets/plate-l05-conditional.svg "P(A|B) = P(A and B) / P(B). First keep only B, then measure A. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
 
+### Subchapter: independence, when conditioning changes nothing
+
+The cards example hid a special case: P(ace | red card) = 1/13
+equaled the unconditional P(ace) = 1/13. When conditioning
+changes nothing, the events are **independent**:
+
+```ascii
+A and B independent  <-->  P(A | B) = P(A)
+                     <-->  P(A and B) = P(A) * P(B)
+```
+
+Color and rank are independent in a standard deck: knowing the
+card is red tells you nothing about its rank.
+
+Now a dependent pair. P(king) = 4/52 = 1/13. But
+P(king | face card) = 4/12 = 1/3: knowing it is a face card
+multiplies the chance it is a king by about 4.33. The ratio is
+(4/12) / (4/52) = 13/3. Conditioning changed the
+number, so rank and "faceness" are dependent. Check the product
+rule: P(king and face) = 4/52 = 0.0769, but P(king) * P(face) =
+(4/52)(12/52) = 0.0178. The gap between the two is the
+dependence.
+
+In ML, independence is usually an assumption, not a fact. Naive
+Bayes (CS229 L05) assumes features are independent given the
+class: that is the "naive" in its name. When the assumption
+holds, likelihoods multiply cleanly. When it does not, the
+posterior still often ranks correctly, which is why the method
+survives.
+
+![Independence: conditioning changes nothing](assets/plate-l05-independence.svg "P(ace|red) = P(ace): independent. P(king|face) ≈ 4.33× P(king): dependent. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
+
 ## Where the gut breaks: the base rate dominates
 
 Run the numbers. 10,000 people. 1% carry the disease: 100 sick,
@@ -135,6 +167,35 @@ into a product of small ones.
 
 ![Bayes flips likelihood into posterior](assets/plate-l05-bayes-flip.svg "Posterior = likelihood x prior / evidence. Name the pieces every time. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
 
+### Subchapter: the law of total probability, where the denominator comes from
+
+The piece-by-piece subchapter used P(positive) = 0.1085 without
+deriving it. Here is the derivation. The **law of total
+probability** splits any event across a partition of the world:
+
+```ascii
+P(E) = P(E | H) * P(H) + P(E | not H) * P(not H)
+```
+
+The evidence arrives through every hypothesis, weighted by how
+likely each hypothesis is. Apply it to the test:
+
+```ascii
+P(positive) = P(positive | sick) * P(sick)
+            + P(positive | healthy) * P(healthy)
+            = 0.95 * 0.01 + 0.10 * 0.99
+            = 0.0095 + 0.0990
+            = 0.1085
+```
+
+That is the 0.1085. The two terms are the two counts from the
+earlier figure: 95 true positives and 990 false alarms, each over
+10,000 people. Whenever a Bayes problem hands you a denominator,
+this law is where it was built. Write it out every time: it is
+the step where base-rate errors get caught.
+
+![The denominator, derived](assets/plate-l05-totalprob.svg "P(positive) = 0.0095 + 0.0990 = 0.1085. Every hypothesis contributes its share. Shell 3. Source: original arithmetic. Project: Stanford Frontier AI.")
+
 ### Subchapter: two tests are better than one
 
 A second independent positive test multiplies the likelihoods.
@@ -144,6 +205,38 @@ apply the test again: P(sick | ++) = (0.95 * 0.088) / (0.95*0.088
 The evidence accumulates multiplicatively. This is why real
 diagnosis retests, and why naive Bayes multiplies per-feature
 likelihoods: each feature is one more "test."
+
+![Two positives: 47.8%](assets/plate-l05-twotests.svg "One positive: 8.8%. A second independent positive: 47.8%. Evidence multiplies. Shell 3. Source: original arithmetic. Project: Stanford Frontier AI.")
+
+### Subchapter: the spam filter toy, one feature of naive Bayes
+
+The medical test is Bayes with one "feature": the test result.
+Text classification is Bayes with thousands. Shrink it to one
+word to see the bridge to naive Bayes (CS229 L05).
+
+20% of incoming mail is spam. The word "free" appears in 40% of
+spam and in 5% of legitimate mail. An email containing "free"
+arrives. Spam or not?
+
+```ascii
+P(spam | "free") = P("free" | spam) * P(spam) / P("free")
+
+P("free") = 0.40 * 0.20 + 0.05 * 0.80
+          = 0.08 + 0.04 = 0.12
+
+P(spam | "free") = 0.08 / 0.12 = 0.667
+```
+
+One word moves the belief from 20% to 66.7%. Naive Bayes repeats
+this for every word in the vocabulary and multiplies the
+likelihoods: P("free" | spam) * P("money" | spam) * ... Each word
+is one more "test," exactly like the second medical test in the
+previous subchapter. The independence assumption says the words
+do not interact: "free" and "money" are treated as separate
+tests. They are not, in reality. The classifier still works,
+because ranking rarely needs the exact probability.
+
+![One word moves the belief](assets/plate-l05-spam.svg "P(spam|free) = 0.08/0.12 = 0.667. One word: 20% to 66.7%. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
 
 ## Expectation and variance: summarize a random variable in two numbers
 
@@ -220,7 +313,7 @@ episode. Variance does not split so cleanly: Var(X + Y) = Var(X)
 | Expectation linearity | SGD theory | split loss and gradient over batches |
 | Posterior | LLM next token | the model outputs P(token \| context) |
 
-![Probability: what is used where](assets/plate-l05-used-where.svg "Every classifier is a bet priced by these rules. Shell 5. Source: standard ML practice. Project: Stanford Frontier AI.")
+![Chapter plate: price the bet](assets/plate-l05-chap-bayes.svg "Chapter plate L05-C1. Left: the gut: a positive test feels like 95%; 95 true vs 990 false alarms. Center: Bayes' rule: P(H|E) = P(E|H)P(H)/P(E), denominator 0.1085. Right: count: one positive 8.8%, two positives 47.8%, evidence multiplies. Bottom: tests cost time and money; independence is assumed, rarely true. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 > [!QA]
 > Q: A test is 95% accurate and I tested positive. Am I 95% likely to be sick?
@@ -264,6 +357,12 @@ episode. Variance does not split so cleanly: Var(X + Y) = Var(X)
 > Follow-up: When are they equal?
 > A: When the base rates match: P(A|B) = P(B|A) exactly when P(A) = P(B). Otherwise the rarer event's conditional is the smaller one. If a stakeholder quotes the lab's 95% as your risk, ask for the prevalence: that is the missing number.
 
+> [!QA]
+> Q: Where did the 0.1085 in the Bayes denominator come from?
+> A: The law of total probability: P(positive) = P(positive | sick) P(sick) + P(positive | healthy) P(healthy) = 0.95 * 0.01 + 0.10 * 0.99 = 0.0095 + 0.0990 = 0.1085. Every hypothesis contributes its share of the evidence. The two terms are the two counts: 95 true positives and 990 false alarms per 10,000 people. Writing this out is the step where base-rate errors get caught.
+> Follow-up: Walk me through the spam toy.
+> A: Prior: 20% of mail is spam. Likelihoods: "free" appears in 40% of spam, 5% of ham. Evidence: P("free") = 0.4*0.2 + 0.05*0.8 = 0.12. Posterior: 0.08/0.12 = 0.667. One word moved the belief from 20% to 66.7%. Naive Bayes repeats this per word and multiplies: each word is another independent "test."
+
 ## Recap: the whole lesson on one screen
 
 1. **The task.** Bet correctly under uncertainty: three rules, random variables, probabilities.
@@ -271,8 +370,8 @@ episode. Variance does not split so cleanly: Var(X + Y) = Var(X)
 3. **Where it breaks.** Base rate: 990 false alarms drown 95 true hits. Posterior is 8.8%, not 95%.
 4. **The key question.** How to flip P(evidence | hypothesis) into P(hypothesis | evidence)?
 5. **The new idea.** Bayes' theorem: posterior = likelihood times prior, renormalized. Name the pieces every time. A second test multiplies in: 47.8%.
-6. **The ML engine.** Naive Bayes (CS229 L05): priors over classes, factorized likelihoods over features, classify by highest posterior.
-7. **Summarize in two numbers.** Expectation (loaded die: 4.5) and variance (3.25), computed by hand. Linearity splits sums with no assumptions.
+6. **The ML engine.** Naive Bayes (CS229 L05): priors over classes, factorized likelihoods over features, classify by highest posterior. The spam toy: one word moves belief from 20% to 66.7%. Independence means conditioning changes nothing (cards). Dependence means it does (kings and face cards).
+7. **Summarize in two numbers.** Expectation (loaded die: 4.5) and variance (3.25), computed by hand. Linearity splits sums with no assumptions. The law of total probability builds every Bayes denominator: 0.0095 + 0.0990 = 0.1085.
 8. **The price and the bridge.** Bayes needs a prior and a likelihood. Bad priors or wrong likelihoods give confident wrong answers. L06 builds the distributions those likelihoods come from.
 
 ## Go deeper
@@ -302,5 +401,27 @@ episode. Variance does not split so cleanly: Var(X + Y) = Var(X)
 ## Connections to the other courses
 
 - **CS229 L05:** naive Bayes classifier: priors, likelihoods, the independence assumption, Laplace smoothing.
-- **CS229 L08:** the Bayesian view of regularization: priors over weights become penalty terms.
+- **CS229 L06:** the Bayesian view of regularization: priors over weights become penalty terms (ridge regression as MAP under a Gaussian prior).
 - **CS329H:** choice theory and Bayesian decision theory build directly on posterior reasoning.
+
+## Coverage map
+
+Every lecture concept, and where this lesson covers it:
+
+| Lecture concept | Covered in | Lines |
+|---|---|---|
+| probability as the math of betting, three rules | The task: reason under uncertainty | l05:28-48 |
+| base-rate fallacy, the 95% gut trap | First attempt: trust the test result | l05:49-59 |
+| conditional probability, restrict then measure | Subchapter: conditional probability restricts the world | l05:60-81 |
+| independence vs dependence, product rule check | Subchapter: independence | l05:82-112 |
+| the base rate dominates: 95 hits vs 990 false alarms | Where the gut breaks: the base rate dominates | l05:113-133 |
+| Bayes' theorem, prior/likelihood/evidence/posterior | Subchapter: Bayes' theorem, piece by piece | l05:140-168 |
+| law of total probability, the 0.1085 derived | Subchapter: the law of total probability | l05:169-197 |
+| sequential updates, evidence multiplies | Subchapter: two tests are better than one | l05:198-207 |
+| spam filter toy, the naive Bayes bridge | Subchapter: the spam filter toy | l05:208-237 |
+| expectation, the loaded die mean 4.5 | Subchapter: expectation, the long-run average | l05:243-259 |
+| variance 3.25, standard deviation 1.80 | Subchapter: variance, the spread | l05:260-279 |
+| linearity of expectation, Var(X) shortcut | Subchapter: the three expectation facts ML reuses | l05:280-302 |
+| what is used where: naive Bayes, base rate, SGD, LLM posterior | What is used where | l05:303-314 |
+| 8 interview Q&As with follow-ups | QA blocks | l05:315-362 |
+| full-lesson recap | Recap | l05:363-372 |
