@@ -254,6 +254,26 @@ for each one. Memory bandwidth bound, light on flops
 decode step loads all 140 GB to produce one token: 140 GB of memory
 traffic per token. At 3.3 TB/s, that is 42 ms per token before any
 compute. The GPU is a glorified memory loader <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=2067s" target="_blank" rel="noopener">34:27 <span class="ts">⏱34:27</span></a>.</p>
+<h3 id="subchapter-work-the-decode-tax">Subchapter: work the decode tax</h3>
+<p>The arithmetic, end to end. 70B parameters in bf16: 2 bytes each,
+140 GB of weights. One decode step: load all 140 GB from HBM to
+the SMs, do a few hundred GFLOPs of actual math, write one token&rsquo;s
+logits. Memory traffic: 140 GB per token. H100 bandwidth: 3.3
+TB/s. Time per token: 140/3300 = 42 ms. Tokens per second per GPU:
+~24. The compute is nearly free: the matmuls are tiny (one token&rsquo;s
+worth). The bill is all memory movement.</p>
+<p>The consequence: decode throughput scales with bandwidth, not
+flops. A GPU with 2x the flops and the same bandwidth decodes no
+faster. This is why Groq&rsquo;s LPU exists: a chip that trades flops
+for bandwidth and SRAM, purpose-built for the decode tax. And why
+batching helps decode: one 140 GB load serves the whole batch&rsquo;s
+tokens at once, amortizing the tax across requests. The decode
+tax is also why KV cache compression (MLA) is a serving
+innovation, not just an architecture one: smaller cache, more
+requests per GPU, less bandwidth per token.</p>
+<figure><img alt="Decode tax" src="assets/media-generation-cs336-l18-decode-bytes-0-e11a8f41-01d4-41e6-8066-78f5606873ec.webp"><figcaption>140 GB per token. 42 ms at 3.3 TB/s. The GPU is a memory loader. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
+<div class="qa"><div class="q">Walk me through prefill vs decode. Why are they different bottlenecks?</div><div class="a"><p>Prefill: 10,000 never-seen tokens in, one forward pass over all of them, activations and one logit out. The matmuls are huge (10k tokens x model dim): compute-bound, like training without the backward pass. One shot, then done. Decode: generate one token at a time. Each step loads the entire model (140 GB for 70B bf16) to produce one token: memory-bandwidth-bound, light on flops. 42 ms per token at 3.3 TB/s. Prefill takes longer per request (seconds for a book-paste). Decode runs far more steps (once per generated token). The systems conclusion: prefill wants tensor-core-rich GPUs, decode wants bandwidth-rich chips. One fleet cannot be optimal for both: disaggregation splits them, and hardware follows (NVIDIA for prefill, Groq-style LPUs for decode).
+Because decode&rsquo;s cost is per-step memory traffic, and batching amortizes it. One 140 GB load serves B requests&rsquo; tokens at once: the per-token tax drops by ~B. Prefill is compute-bound: batching helps utilization but the flops are the flops. The limit for decode batching is KV cache memory: each request&rsquo;s cache grows with its length, and the GPU fills up. Continuous batching exists to keep the batch full as requests finish: admit new ones mid-step, evict the done. The batch is the amortization. The KV cache is the ceiling.</p><div class="followup"><strong>Follow-up:</strong> Why does batching help decode more than prefill?</div></div></div>
 <p>Prefill takes longer per request. Decode runs far more steps (once
 per generated token). One fleet cannot specialize for both: the
 prefill fleet wants tensor-core-rich GPUs, the decode fleet wants
@@ -282,6 +302,24 @@ logits into &ldquo;hi hi hi&rdquo; loops, off-by-one reads that emit random
 Chinese characters, tool-call handlers that loop for tens of
 thousands of tokens <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=1314s" target="_blank" rel="noopener">21:54 <span class="ts">⏱21:54</span></a>. Early days: in ten years this
 will look obvious.</p>
+<h3 id="subchapter-cache-aware-routing-the-40-win">Subchapter: cache-aware routing (the 40% win)</h3>
+<p>The two lines of routing, unpacked. Every incoming request gets a
+cache-hit estimate: what fraction of its tokens are already in the
+KV store? Mid-conversation turns: ~90%+ (the whole history is
+cached). Fresh book-paste: ~0%. Route below-threshold to the
+&ldquo;cold&rdquo; prefill pool, above to the &ldquo;warm&rdquo; pool.</p>
+<p>The win, worked. One pool, mixed traffic: the book-paste takes 5
+seconds of prefill while 90 chat requests queue behind it. P99
+latency: 5+ seconds. Two pools: the book-paste still takes 5
+seconds, but only in the cold pool. The warm pool serves 90 chats
+with no queueing: P99 under a second. 40% faster serving overall,
+from two lines of routing code. The principle: never let the
+elephant block the mice. It is the same scheduling lesson as
+operating systems (shortest-job-first), rediscovered for
+transformers.</p>
+<figure><img alt="Two fleets" src="assets/media-generation-cs336-l18-two-fleets-0-45b13cd1-6746-4fdb-ba16-aa5989733f19.webp"><figcaption>Prefill: compute-bound. Decode: bandwidth-bound. Two fleets, each specialized. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
+<div class="qa"><div class="q">When does disaggregation hurt?</div><div class="a"><p>When the traffic is uniform. If every request is a short chat turn, the prefill/decode split buys nothing: prefill is trivial for everyone, and the routing overhead (moving KV cache between fleets over the network) is pure cost. Disaggregation also adds a network hop: the prefill fleet must ship the KV cache to the decode fleet. For small models or short contexts that transfer is cheap. For 70B with 128k context it is gigabytes per request. The decision rule: disaggregate when the workload mix is bimodal (book-pastes plus chats) or when the phases have clearly different hardware optima. One uniform workload, one fleet. The 40% win came from mixed traffic: it is not free.
+After prefill computes the KV cache on the prefill fleet, the decode fleet needs it. Shipping gigabytes per request over the datacenter network: bandwidth, latency, and failure modes. The systems answers: keep the cache where it was computed (colocated disaggregation), compress it (MLA&rsquo;s whole point: smaller cache, cheaper transfer), or recompute it (skip the transfer, pay the flops). Each is a point on the same tradeoff. The disaggregation paper&rsquo;s contribution was showing the win survives the transfer cost: 40% net, not gross.</p><div class="followup"><strong>Follow-up:</strong> What is the KV cache transfer problem?</div></div></div>
 <h2 id="continuous-batching-fill-the-gaps">Continuous batching: fill the gaps</h2>
 <p>Static batches wait for the slowest request. <strong>Continuous batching</strong>:
 requests join and leave mid-step. Decode one token per sequence per
@@ -302,6 +340,26 @@ new ones <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=1082s" targe
 cheaper and slower <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=1543s" target="_blank" rel="noopener">25:43 <span class="ts">⏱25:43</span></a>. Evict with LRU, prefetch when a
 user reopens an old conversation. Classic OS paging, rediscovered for
 activations <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=1671s" target="_blank" rel="noopener">27:51 <span class="ts">⏱27:51</span></a>.</p>
+<h3 id="subchapter-the-radix-tree-worked">Subchapter: the radix tree, worked</h3>
+<p>The data structure. A radix tree (prefix tree) over token
+sequences. Each node: a token prefix, the KV cache for that
+prefix. Insert: walk the tree, create nodes for new suffixes.
+Lookup: walk as far as the tokens match. The matched prefix is
+free: its KV cache already exists. Only the new suffix is
+computed.</p>
+<p>Work the sharing. User A pastes a 10k-token book, asks a question.
+User B pastes the same book, asks a different question. Without
+sharing: 20k tokens of prefill. With the radix tree: the book&rsquo;s
+prefix matches, 10k cached, only the questions computed. The
+system prompt (identical for every request) is the ultimate
+shared prefix: every request after the first skips it. The tree
+also dedupes within a conversation: each turn reuses all previous
+turns&rsquo; prefixes. The eviction policy (LRU) decides which prefixes
+survive when memory fills: hot conversations stay, cold ones go
+to CPU DRAM, then SSD.</p>
+<figure><img alt="Radix prefix" src="assets/media-generation-cs336-l18-radix-prefix-0-3d34f936-9631-4639-b825-5fa479c3b46c.webp"><figcaption>Shared prefixes computed once. The tree remembers what users repeat. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
+<div class="qa"><div class="q">Walk me through tiered KV offload. When does each tier get used?</div><div class="a"><p>Tier one: GPU HBM. Hot prefixes, active conversations. Fastest, smallest: a 70B model&rsquo;s KV cache for one long conversation can be gigabytes. Tier two: CPU DRAM. Warm prefixes: conversations idle for minutes. Slower (PCIe transfer), much larger. When the user sends the next message, prefetch the cache back to GPU: the transfer overlaps with the prefill of the new tokens. Tier three: SSD. Cold prefixes: conversations idle for hours or days. Cheapest, slowest. Reload on reopen. Eviction is LRU across tiers: the least recently used prefix drops from GPU to CPU, from CPU to SSD, from SSD to gone. The failure mode: thrashing. If the working set exceeds GPU memory, every request pays a PCIe transfer: the cache helps nothing. The fix is admission control: queue when full (continuous batching&rsquo;s rule) rather than thrash. Classic OS paging, and the same failure modes.
+Because agents repeat more. An agentic loop re-sends the entire trajectory every turn: tool definitions, previous actions, observations. A 20-turn agent run re-sends turn 1&rsquo;s tokens 20 times. Without prefix sharing, that is 20x prefill on the same tokens. With the radix tree, turns 2-20 reuse turn 1&rsquo;s cache: near-free. Chat repeats the system prompt and history: a smaller win. Batch translation repeats nothing: no win. The sharing win is proportional to the repetition, and agentic workloads are the most repetitive. This is also why MLA matters most for agents: the cache being shared is the cache being compressed.</p><div class="followup"><strong>Follow-up:</strong> Why is prefix sharing a bigger win for agents than for chat?</div></div></div>
 <h2 id="megakernels-kill-the-gaps">Megakernels: kill the gaps</h2>
 <p>One kernel per op leaves streaming multiprocessors idle: launch gaps,
 tail effects, gaps between kernels add up. The <strong>Megakernel</strong> fuses
@@ -317,6 +375,32 @@ for one hardware, two or three models, batch sizes 1 to 16, per year.
 Batch 17 means starting over <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=3817s" target="_blank" rel="noopener">63:37 <span class="ts">⏱63:37</span></a>. The most extreme
 version of the lecture-5 lesson: the fastest code is hand-fitted to
 the exact shape.</p>
+<h3 id="subchapter-the-megakernels-overlap-schedule">Subchapter: the megakernel&rsquo;s overlap schedule</h3>
+<p>The schedule, concretely. A standard transformer layer at decode:
+QKV projection, RoPE, attention (load KV cache), O projection,
+MLP. One kernel per op: each kernel launches, loads its weights,
+computes, writes back, exits. Between kernels: launch latency,
+SMs draining, tail effects. The gaps are pure waste: no flops,
+no bytes, just idle silicon.</p>
+<p>The megakernel fuses the whole layer into one kernel and
+schedules the loads like a distributed system. While the SMs
+compute QKV-plus-RoPE, the next wave of threads starts loading
+the KV cache from HBM. While attention computes, the O-projection
+weights are already in flight. The loads hide behind the
+compute: the memory pipeline never stalls. Result: 72% of peak
+HBM bandwidth on H100 (the theoretical ceiling for a
+bandwidth-bound op), 30-70% faster attention inference, one
+full Llama-1B layer in a single kernel.</p>
+<p>The price is specificity. The schedule is hand-tuned for one
+GPU architecture, one model shape, batch sizes 1-16. Batch 17:
+the tile sizes, the overlap points, the register budget all
+change. Start over. One engineer, one hardware, a few models a
+year. The megakernel is the logical extreme of the course&rsquo;s
+kernel lesson: the fastest code is fitted to the exact shape,
+and the exact shape includes the batch size.</p>
+<figure><img alt="Megakernel fusion" src="assets/media-generation-cs336-l18-megakernel-fusion-0-a5e4270b-a8f0-49cc-9430-820f136742d6.webp"><figcaption>Fuse the layer. Overlap everything. 72% of peak bandwidth. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
+<div class="qa"><div class="q">Why does batch 17 mean starting over for a megakernel?</div><div class="a"><p>Because the megakernel&rsquo;s schedule is a hand-tuned packing of work into the GPU&rsquo;s resources: tile sizes, register allocation, shared-memory budget, the exact points where loads overlap compute. All of these depend on the batch size. Batch 1-16: the schedule was tuned for each, one by one, by a kernel engineer. Batch 17: the shapes change (different tile counts, different occupancy), the overlap points move, the register budget breaks. There is no parametric formula: the tuning was manual. So batch 17 is a new tuning project. The general lesson: hand-fitted performance does not generalize. The megakernel buys 30-70% on exactly the shapes it was fitted for and nothing else. Production serving uses dynamic batching (continuous batching): the batch size changes every step. The megakernel&rsquo;s answer is to fit the common sizes and accept the rest. Extreme performance, extreme specificity: pick one.
+ThunderKittens is a lower-level kernel library (Stanford/Together) that exposes more hardware control than Triton: finer scheduling of loads, explicit overlap, register-level decisions. Triton abstracts the GPU into tiles and lets the compiler schedule: great for 90% of peak with 10% of the effort. The megakernel needs the last 10%: the exact overlap of KV loads with QKV compute, which requires controlling the schedule at a granularity Triton does not expose. The tradeoff is the course&rsquo;s eternal one: abstraction for productivity, hand-fitting for the last drop. One engineer-year per hardware per few models is the price of the last drop.</p><div class="followup"><strong>Follow-up:</strong> What is ThunderKittens and why not Triton?</div></div></div>
 <h2 id="parcae-flops-without-parameters">Parcae: flops without parameters</h2>
 <p>A different scaling question: is more parameters the only way?
 <strong>Parcae</strong> loops transformer blocks, reusing parameters for more
@@ -336,9 +420,17 @@ and better perplexity than the same-parameter transformer baseline
 parameters. Today&rsquo;s models have zero recurrence and tons of data,
 sitting at the far left of the curve, which suggests pre-training may
 be under-looping <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=3495s" target="_blank" rel="noopener">58:15 <span class="ts">⏱58:15</span></a>. Inference bonus: fewer parameters
-means more KV cache and less cross-GPU communication
-<a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=3723s" target="_blank" rel="noopener">62:03 <span class="ts">⏱62:03</span></a>.</p>
+means more KV cache and less cross-GPU communication</p>
+<div class="qa"><div class="q">Walk me through Parcae&#x27;s stability fix. Why does the spectral radius matter?</div><div class="a"><p>Parcae loops transformer blocks: same parameters, more flops per token. The danger: looping amplifies. Each pass multiplies activations by the block&rsquo;s effective matrix A. If A&rsquo;s largest eigenvalue (the spectral radius) exceeds 1, activations grow geometrically: loop 4 times with radius 1.2, activations grow 1.2^4 = 2.07x per pass, compounding across layers to NaN. The fix from state-space theory: constrain A to a negative diagonal matrix with entries like -0.9. Spectral radius 0.9 &lt; 1: magnitudes shrink 10% per pass, bounded forever. The negative sign alternates the activations (they do not collapse to zero: the network still computes, just with bounded energy). Result: stable training where naive loops NaN, and better perplexity than the same-parameter baseline. The scaling finding: as data grows, scale recurrence alongside parameters. Today&rsquo;s models sit at zero recurrence with tons of data: possibly under-looping. The inference bonus is free: fewer parameters means a smaller model to load (the decode tax drops) and less cross-GPU communication.
+When serving cost dominates. Looping adds flops without parameters: the model file stays small, the decode tax (140 GB per token for 70B) does not grow, but each token gets more compute. For a fixed serving budget, a looped small model can beat a big model on quality per dollar: same memory traffic, more thinking. The price: training stability needs the spectral constraint, and the flops still cost time (more compute per token, slower tokens). The decision rule: parameters are a memory tax, loops are a latency tax. Pick the tax your deployment can afford.</p><div class="followup"><strong>Follow-up:</strong> When would you loop instead of adding parameters?</div></div></div>
+<p><a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=3723s" target="_blank" rel="noopener">62:03 <span class="ts">⏱62:03</span></a>.</p>
 <h2 id="co-design-one-decision">Co-design: one decision</h2>
+<div class="qa"><div class="q">You are serving an agentic coding product (long contexts, tool calls, multi-turn trajectories). Design the stack.</div><div class="a"><p>Start from the workload. Long contexts: 100k+ tokens of repo plus trajectory. Tool calls: bursty, repetitive prefixes (the tool definitions repeat every turn). Multi-turn: the trajectory re-sends every turn. The stack: one: prefix sharing with a radix tree. The tool definitions and trajectory prefixes are the win: cache them, never recompute. Two: MLA or GQA for the model: the KV cache is the binding constraint at 100k context, and compression multiplies the requests per GPU. Three: disaggregate prefill and decode. The repo-paste is the book-paste: route it to the cold pool, keep the chat pool warm. Cache-aware routing: 40% for free. Four: continuous batching with KV-aware admission: the cache fills fast at 100k context, queue rather than thrash. Five: speculative decoding for the decode phase: the agent&rsquo;s outputs are often predictable (boilerplate code), and the draft model is cheap. The decision rule: agents are the most repetitive workload in serving. Every technique that exploits repetition (prefix sharing, cache compression, speculation) pays double for agents. Design for repetition first, latency second.
+Nowhere, initially. The megakernel is fitted to batch sizes 1-16 and one model shape: an agentic product has dynamic batching and long variable contexts. The megakernel&rsquo;s specificity fights the workload&rsquo;s variability. Use it only if one shape dominates (a fixed model, a fixed batch size, a latency SLA that nothing else meets) and you have a kernel engineer to spare. The general order: algorithmic wins first (prefix sharing, batching, speculation), then kernels. The 30-70% from the megakernel is real but last: it is the most expensive percent in the stack.</p><div class="followup"><strong>Follow-up:</strong> Where does the megakernel fit in this stack?</div></div></div>
+<p>One decision connects the stack: the model architecture, the
+parallelism, the batching, the cache policy, the hardware. Change
+the model (MLA) and the cache math changes, the batching changes,
+the hardware choice changes.</p>
 <p>Inference closes the loop back to architecture. Size your model to
 the chip&rsquo;s memory (a Groq LPU holds ~250MB). Match quantization to
 the hardware (NVFP4 on NVIDIA, MXFP4 on AMD) <a href="https://www.youtube.com/watch?v=9EEm4iMAF5s&amp;t=3887s" target="_blank" rel="noopener">64:47 <span class="ts">⏱64:47</span></a>.
@@ -455,6 +547,16 @@ decision, made together or paid for separately.</p>
    parameters. Scale recurrence with data. Co-design: model and
    fleet are one decision.</li>
 </ol>
+<h2 id="go-deeper">Go deeper</h2>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/fs_OP_AdOSA" title="Interlude: Continuous Batching and Paged Attention, Explained" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+<ul>
+<li>Continuous Batching and Paged Attention, Explained (the embed above): https://www.youtube.com/watch?v=fs_OP_AdOSA</li>
+<li>Kwon et al., PagedAttention: https://arxiv.org/abs/2305.13245</li>
+<li>vLLM documentation: https://docs.vllm.ai</li>
+<li>vLLM project: https://github.com/vllm-project/vllm</li>
+</ul>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Lecture 18 video (guest lecture, Dan Fu, UCSD / Together AI).
