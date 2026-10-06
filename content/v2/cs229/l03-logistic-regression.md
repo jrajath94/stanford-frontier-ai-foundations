@@ -19,6 +19,9 @@ sources:
   - tag: video
     label: "Lecture 3 video, Stanford Online YouTube"
     url: https://www.youtube.com/watch?v=uJF_gL3jhxI
+  - tag: video
+    label: "Explainer: StatQuest, Logistic Regression"
+    url: https://www.youtube.com/watch?v=yIYKR4sgzI8
   - tag: notes
     label: "Official subtitle transcript (en-US)"
   - tag: notes
@@ -104,6 +107,26 @@ Same answer, cleaner arithmetic.
 
 ![Maximum likelihood](assets/svg/l03-mle.svg "Maximum likelihood. Each knob setting scores the observed data. Pick the knobs that make the data most likely. Source: original plate for Stanford Frontier AI.")
 
+### Subchapter: the log, three reasons with numbers
+
+Why maximize the log likelihood instead of the likelihood? Three
+reasons, each with a number.
+
+First, products of tiny probabilities underflow. Ten thousand
+examples at probability 0.5 each give a likelihood of 0.5^10000,
+which floating point rounds to exactly 0. The log turns the product
+into a sum: 10000 * log(0.5) = -6931, a perfectly normal number.
+
+Second, derivatives of sums are easy. The derivative of a sum is the
+sum of the derivatives. The derivative of a 10,000-factor product
+needs the product rule 10,000 times.
+
+Third, the log is monotone: it never changes the location of the
+peak. The knobs that maximize L also maximize log L. For the models
+in this course the log likelihood is also concave, which means one
+peak and no local traps. Logistic regression has a unique best
+answer because of this concavity.
+
 ## Least squares was MLE all along
 
 Here is the payoff. Assume each house price equals the line's
@@ -167,6 +190,39 @@ inside:
 theta_j := theta_j - alpha * (g(theta^T x^(i)) - y^(i)) * x_j^(i)
 ```
 
+### Subchapter: odds and log-odds, the natural scale
+
+Probabilities live on 0 to 1, an asymmetric scale. Moving from 0.5
+to 0.6 is not the same evidence as moving from 0.89 to 0.99, but
+both are 0.1 on the probability ruler. Odds fix this: odds =
+p/(1-p). At p = 0.5, odds are 1 (even money). At p = 0.88, odds are
+7.33. At p = 0.12, odds are 0.136.
+
+Log-odds take the log: log(1) = 0, log(7.33) = 2, log(0.136) = -2.
+Now the scale is symmetric: +2 and -2 are mirror images. Logistic
+regression fits its line to the log-odds. The score z = theta^T x
+IS the log-odds, and the sigmoid maps back to probabilities because
+it is exactly the inverse: p = 1/(1+e^-z) undoes z = log(p/(1-p)).
+
+![Log-odds ladder](assets/plate-l03-logodds.webp "The log-odds ladder. Probabilities 0.12, 0.5, 0.88 map to log-odds -2, 0, +2. The line lives on the symmetric scale. Source: original toy for the logit scale. Project: Stanford Frontier AI.")
+
+### Subchapter: the gradient, worked
+
+One gradient-descent step on the tumor toy. Two tumors: size 1.5
+benign (y = 0), size 2.5 malignant (y = 1). Start theta = (0, 0), so
+z = 0 and h = 0.5 for both. Errors: 0.5 - 0 = 0.5, 0.5 - 1 = -0.5.
+
+Gradient for the intercept (x_0 = 1): 0.5 + (-0.5) = 0. Gradient for
+the size knob: 0.5 * 1.5 + (-0.5) * 2.5 = 0.75 - 1.25 = -0.5. Update
+with alpha = 1: the intercept stays 0, the size knob becomes 0.5.
+
+New scores: z = 0.75 for the small tumor (p = 0.68), z = 1.25 for
+the big one (p = 0.78). The big tumor moved the right way. The small
+one moved the wrong way. The intercept will fix the small one next
+step. This tug-of-war is what every gradient step computes.
+
+![Sigmoid squeeze](assets/plate-l03-sigmoid-vs-line.webp "The squeeze that fixes the line. The line predicts -0.3 and 1.2 for two tumors. The sigmoid squeezes them to 0.43 and 0.77. Source: original toy for the tumor job. Project: Stanford Frontier AI.")
+
 ## Newton's method: use the curvature
 
 Gradient descent uses only the slope. **Newton's method** also uses
@@ -196,6 +252,24 @@ the weights from the new predictions, repeat. The weights focus each
 round on the examples the model is currently unsure about.
 
 ![Newton's method](assets/svg/l03-newton.svg "Newton's method. Fit a parabola at the current point, jump to its bottom. Each step on logistic regression is a weighted least-squares fit. Source: original plate for Stanford Frontier AI.")
+
+### Subchapter: IRLS by hand, one round
+
+One Newton step on three tumors. Current predictions: h = 0.5, 0.5,
+0.9 for labels y = 0, 1, 1. Weights are h(1-h): 0.25, 0.25, 0.09.
+
+The third tumor is already confident, so it gets 0.09, barely a
+vote. The two uncertain ones get 0.25 each, full votes. The weighted
+least-squares fit bends toward the uncertain pair and nearly ignores
+the confident one. Next round the predictions shift and the weights
+recompute. After 5 to 10 rounds the weights settle and the fit is
+done.
+
+The whole algorithm: fit, reweight by uncertainty, repeat. The
+examples the model is sure about quietly excuse themselves from the
+next vote.
+
+![IRLS](assets/plate-l03-irls.webp "One Newton step refits the unsure. Predictions 0.5, 0.5, 0.9 become weights 0.25, 0.25, 0.09. The confident tumor barely votes. Source: original toy for IRLS. Project: Stanford Frontier AI.")
 
 ## The honest price: n times d-squared plus d-cubed
 
@@ -242,6 +316,53 @@ expensive, loses to many steps, each dirt cheap.
 > Follow-up: What is iteratively reweighted least squares?
 > A: Newton's method applied to logistic regression. Each Newton step equals a weighted least-squares fit with weights h(1-h): examples the model is unsure about (h near 0.5) get full weight, confident ones get near zero. Refit, recompute weights, repeat. It is the mechanism inside the "press the button" stats packages.
 
+![One framework](assets/plate-l03-mle-menu.webp "One framework, many losses. Pick a noise model and MLE hands you the loss: Gaussian noise gives squared loss, Bernoulli outcomes give cross-entropy, multinomial gives softmax loss. Source: original diagram for the MLE framework. Project: Stanford Frontier AI.")
+
+## What is used where
+
+**Logistic regression is the most deployed classifier in the
+world.** Credit scoring, medical risk scores, and ad click prediction
+all run logistic regression or its regularized cousins, because the
+output is a calibrated probability and each coefficient is readable:
+a coefficient of 0.7 on "missed payment" means the log-odds of
+default rise by 0.7. Scikit-learn's LogisticRegression defaults to
+LBFGS, a memory-light cousin of Newton's method.
+
+**Newton's full method rules classical statistics.** R's glm fits
+logistic regression by IRLS, the Newton procedure from this lesson,
+because d is small and no learning rate needs tuning. For text
+classification at scale, logistic regression on word counts was the
+production standard before neural nets, and it still beats deep
+models on small data where they overfit.
+
+## Watch next
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/yIYKR4sgzI8" title="StatQuest: Logistic Regression" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: StatQuest, Logistic Regression. Josh Starmer derives the sigmoid and the odds scale from scratch. Watch after the sigmoid section.</p></div>
+
+> [!QA]
+> Q: Walk me through the mechanism: derive the logistic regression gradient from the log-likelihood in four steps.
+> A: Step 1: l(theta) = sum over i of y_i log h_i + (1 - y_i) log(1 - h_i), with h_i = g(theta^T x_i). Step 2: dh/dz = g(z)(1 - g(z)) = h(1-h). The sigmoid's derivative factors into itself. Step 3: d/dz of the log terms: y/h * dh/dz - (1-y)/(1-h) * dh/dz. Step 4: substitute dh/dz = h(1-h) and the denominators cancel: (y(1-h) - (1-y)h) x_j = (y - h) x_j. Minimizing the negative log-likelihood flips the sign to (h - y) x_j, the same error-times-feature shape as linear regression. The beautiful cancellation is why the sigmoid and the log loss are a matched pair.
+> Follow-up: What happens if you pair the sigmoid with squared loss instead?
+> A: The cancellation dies. The gradient keeps the h(1-h) factor, so confident wrong predictions get near-zero gradient and the model gets stuck. This is the flat-gradient trap the lesson warns about: the loss must match the output squashing.
+
+> [!QA]
+> Q: Applied design: your fraud model sees 1% positives. Logistic regression predicts low probabilities everywhere and reports 99% accuracy. What is wrong, and what do you change?
+> A: Accuracy lies on imbalanced data: predicting "not fraud" always scores 99%. The model learned the base rate, not the signal. Change the metric first: optimize precision-recall AUC or expected cost, not accuracy. Then either tune the decision threshold on a validation set (e.g. flag above 0.3 instead of 0.5) or train with class weights that make positives count more.
+> Follow-up: Do class weights change the probabilities?
+> A: Yes, and they break calibration: the outputs no longer match true frequencies. If you need honest probabilities downstream (expected loss, bidding), recalibrate afterward with Platt scaling (fit a sigmoid on validation scores) or isotonic regression. If you only need a ranking, skip recalibration.
+
+> [!QA]
+> Q: When do you pick Newton/IRLS over SGD for logistic regression, and what does scikit-learn do?
+> A: Pick Newton or LBFGS when the feature count d is under a few thousand and the data fits in memory: no learning rate to tune, quadratic finish, done in 5 to 15 iterations. Pick SGD when d is huge, the data streams, or examples arrive faster than a full pass. Scikit-learn's LogisticRegression defaults to LBFGS, which is the memory-light Newton cousin: it approximates the curvature from recent steps instead of building the d-by-d Hessian.
+> Follow-up: What is the failure mode of Newton at d = 100,000?
+> A: The Hessian is 100,000 by 100,000. You cannot store it, let alone invert it. LBFGS avoids the matrix but still needs full passes; at that scale SGD or a linear SVM with a dual solver wins.
+
+> [!QA]
+> Q: What does one coefficient mean, exactly? If the coefficient on "missed payment" is 0.7, what do you tell the product manager?
+> A: A one-unit rise in the feature raises the log-odds of the positive class by 0.7, holding other features fixed. Exponentiate for the odds ratio: e^0.7 = 2.0, so the odds of default double. Tell the PM: "a missed payment doubles the odds of default." Never say it doubles the probability: odds and probability differ, and at high base rates doubling odds barely moves probability.
+> Follow-up: When does that reading break?
+> A: When features correlate. With two near-duplicate features the 0.7 splits arbitrarily between them, and neither coefficient means anything alone. Correlated features share credit. Read coefficients only after checking correlations or regularizing.
+
 ## Recap: the whole lesson on one screen
 
 1. **The job.** Tumor: benign or malignant, with a probability. A
@@ -265,12 +386,22 @@ expensive, loses to many steps, each dirt cheap.
 8. **The honest price.** O(n d^2 + d^3) per step. At d = 20 it is
    408,000 ops and wonderful. At d = 1B it is 10^27 ops and dead.
    SGD is the workhorse.
+9. **The log trick.** Products underflow (0.5^10000 = 0). Sums of
+   logs do not (-6931). Monotone, so the peak stays put. Concave,
+   so one peak.
+10. **Log-odds.** The line lives on the symmetric scale: 0.12, 0.5,
+    0.88 become -2, 0, +2. The sigmoid is the exact inverse.
+11. **One gradient step.** On the tumor toy, alpha = 1 moves the
+    size knob to 0.5. The big tumor improves, the small one waits
+    for the intercept.
+12. **MLE picks the loss.** Gaussian noise gives squared loss,
+    Bernoulli gives cross-entropy, multinomial gives softmax loss.
 
 ## Official sources and further reading
 
 **Official:**
 - Lecture 3 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=uJF_gL3jhxI — Chris Ré derives
+  - [Chris Ré derives](https://www.youtube.com/watch?v=uJF_gL3jhxI)
   MLE, the sigmoid, logistic regression, and Newton's method as
   iteratively reweighted least squares.
 - Official subtitle transcript (en-US): the lecture's spoken text.
