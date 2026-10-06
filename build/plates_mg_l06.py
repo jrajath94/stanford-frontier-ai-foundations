@@ -22,11 +22,14 @@ for label, formula, note in steps:
     p.text(206, yy + 16, formula, size=15, bold=True)
     p.text(206, yy + 44, note, size=13, color=MUTED)
     yy += 96
-p.rect(640, p.top + 16, 288, 200, NEW, label="ELBO", size=18, rx=12)
-p.text(664, p.top + 80, "= E_q[log p(x|z)]", size=15)
-p.text(664, p.top + 108, "- KL(q(z|x) || p(z))", size=15)
-p.text(664, p.top + 152, "gap = KL(q || true posterior)", size=14, bold=True, color=FOCUS)
-p.text(664, p.top + 180, "q = posterior -> gap 0", size=13, color=TEAL)
+# "ELBO" drawn as a header above the formula: the centered rect label
+# stamped over the "- KL(q(z|x) || p(z))" line.
+p.rect(640, p.top + 16, 288, 200, NEW, size=18, rx=12)
+p.text(664, p.top + 40, "ELBO", size=18, bold=True)
+p.text(664, p.top + 88, "= E_q[log p(x|z)]", size=15)
+p.text(664, p.top + 116, "- KL(q(z|x) || p(z))", size=15)
+p.text(664, p.top + 160, "gap = KL(q || true posterior)", size=14, bold=True, color=FOCUS)
+p.text(664, p.top + 188, "q = posterior -> gap 0", size=13, color=TEAL)
 p.save("l06-jensen-chain.webp")
 
 # 2. Two-coin toy numbers
