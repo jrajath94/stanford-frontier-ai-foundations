@@ -65,7 +65,7 @@ Bayes' rule flips, Laplace smoothing.</p>
 <div class="rc-body">
 <strong><a href="l06-bias-variance.html">L6. Bias, Variance, Selection</a></strong>
 <p>Bias-variance, double descent, train/dev/test, Hyperband. Test sets
-rot; use them once.</p>
+rot. Use them once.</p>
 </div>
 </div>
 <div class="recap-card">
