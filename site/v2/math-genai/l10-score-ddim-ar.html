@@ -81,6 +81,7 @@
 <li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
 <li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
 <li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../cs229s/crash-course-02.html" data-page="cs229s-crash-02">CS229S · Crash course 2</a></li>
 </ul>
 <h3>CS224N: NLP with Deep Learning</h3><ul>
 <li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
@@ -146,18 +147,14 @@
 </ul>
 <h3>CS329A: Self-Improving AI Agents</h3><ul>
 <li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
-<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
-<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
-<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
-<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
-<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
-<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
-<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
-<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
-<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
-<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
-<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
-<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+<li><a href="../cs329a/l01-course-overview.html" data-page="cs329a-l01">L01 · Course Overview</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Compute Scaling</a></li>
+<li><a href="../cs329a/l03-feedback-tools-code.html" data-page="cs329a-l03">L03 · Feedback, Tools, Code</a></li>
+<li><a href="../cs329a/l04-planning-multistep-reasoning.html" data-page="cs329a-l04">L04 · Planning and Multi-Step Reasoning</a></li>
+<li><a href="../cs329a/l05-search-at-scale.html" data-page="cs329a-l05">L05 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l06-train-time-scaling.html" data-page="cs329a-l06">L06 · Train-Time Scaling</a></li>
+<li><a href="../cs329a/l07-agentic-evaluations.html" data-page="cs329a-l07">L07 · Agentic Evaluations</a></li>
+<li><a href="../cs329a/l08-future-directions.html" data-page="cs329a-l08">L08 · Future Directions</a></li>
 </ul>
 <h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
 <li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
@@ -226,7 +223,7 @@ equivalence: predicting ε is predicting the <strong>score</strong>,
 the gradient of the log-density:</p>
 <pre class="ascii">score(x_t) = grad log p(x_t) = -epsilon / sqrt(1 - a_bar_t)
 </pre>
-<p>The score is an arrow at every point, pointing toward
+<p>All logs in this lesson are natural logs (base e). The score is an arrow at every point, pointing toward
 higher probability. In the Lesson 9 toy:
 −0.688/0.4359 = −1.578. At x_2 = 3.9, the arrow points
 left with strength 1.578: probability increases toward
@@ -234,6 +231,41 @@ smaller x. The denoiser learned a map of arrows covering
 the whole noisy space. That reframes everything:
 generation is hill-climbing on probability.</p>
 <figure><img alt="The score is an arrow field pointing uphill on probability" src="assets/l10-score-field.webp"><figcaption>At x = 3.9 the arrow points left with strength 1.578. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="tweedies-formula-the-denoisers-best-guess">Tweedie&rsquo;s formula: the denoiser&rsquo;s best guess</h3>
+<p>The score gives the single best guess of the clean
+image for free. <strong>Tweedie&rsquo;s formula</strong> says the
+posterior mean of x_0 given x_t is:</p>
+<pre class="ascii">E[x_0 | x_t] = ( x_t + (1 - a_bar_t) * score(x_t) ) / sqrt(a_bar_t)
+</pre>
+<p>Work it on the toy: x_t = 3.9, score = −1.578,
+ᾱ_t = 0.81.</p>
+<pre class="ascii">E[x_0 | x_2] = ( 3.9 + 0.19 * (-1.578) ) / 0.9
+             = ( 3.9 - 0.300 ) / 0.9
+             = 3.600 / 0.9 = 4.000
+</pre>
+<p>The denoised estimate is 4.000: the true clean value
+4.0, recovered to three decimals from the noisy 3.9.
+The score pointed left with strength 1.578, and
+Tweedie converts that arrow into a location. DDIM&rsquo;s
+x̂_0 prediction (below) is exactly this formula with
+the learned score. One precondition: the formula
+needs the true score. With a learned score it is an
+estimate, and its error is the sampler&rsquo;s error.</p>
+<h3 id="denoising-score-matching-the-older-objective">Denoising score matching: the older objective</h3>
+<p>Before DDPM, the score-matching literature trained
+scores directly. <strong>Denoising score matching</strong>
+(Vincent 2011): corrupt x with Gaussian noise of
+variance σ² to get x̃, then train s_θ(x̃) to match
+the known score of the corruption, (x − x̃)/σ²:</p>
+<pre class="ascii">L = E[ || s_theta(x_tilde) - (x - x_tilde)/sigma^2 ||^2 ]
+</pre>
+<p>Work it: x = 4.0, x̃ = 3.9, σ = 0.1. The target is
+(4.0 − 3.9)/0.01 = 10. If the network outputs 8, the
+loss is (10 − 8)² = 4. The lecture&rsquo;s point: DDPM&rsquo;s
+noise-prediction loss trains the same object. Lesson
+9&rsquo;s ε_θ and this lesson&rsquo;s s_θ are the same network in
+different clothes. Two communities, one arrow field,
+one loss family.</p>
 <h2 id="first-attempt-follow-the-arrows-naively">First attempt: follow the arrows naively</h2>
 <h3 id="langevin-dynamics">Langevin dynamics</h3>
 <p>If the score points uphill, sample by walking uphill:
@@ -263,6 +295,26 @@ DDPM&rsquo;s ancestral sampler (Lesson 9) is the stabilized,
 scheduled version of this walk. The schedule is the fix
 for the fiddliness: instead of one δ, a planned sequence
 of noise levels that anneals the walk to the answer.</p>
+<h3 id="annealed-langevin-the-schedule-fixes-the-fiddle">Annealed Langevin: the schedule fixes the fiddle</h3>
+<p><strong>Annealed Langevin dynamics</strong> runs the walk at a
+sequence of noise levels σ_1 &gt; σ_2 &gt; &hellip; &gt; σ_L,
+finishing near zero noise. At high noise the smoothed
+distribution is easy to walk (no sharp peaks). Each
+level&rsquo;s samples seed the next. The step size scales
+with the noise: δ_l proportional to σ_l².</p>
+<p>One step at σ = 1.0 on a standard Gaussian target.
+The score of N(0,1) at x is −x. At x = 2.0 the score
+is −2.0. With δ = 0.1 and z = 0.5:</p>
+<pre class="ascii">x &lt;- 2.0 + 0.05 * (-2.0) + 0.316 * 0.5
+   = 2.0 - 0.100 + 0.158 = 2.058
+</pre>
+<p>The walk explores broadly at high noise, then the
+schedule drops σ and the walk settles. This is the
+sampling half of the score-based modeling paper
+(Song and Ermon 2019): train one score network
+conditioned on σ, anneal from high to low. DDPM&rsquo;s
+1000-step sampler is this idea with the noise levels
+renamed t = 1000..1.</p>
 <h2 id="the-key-question">The key question</h2>
 <p>The sampler still costs T steps. Can we take bigger
 strides without retraining?</p>
@@ -282,6 +334,10 @@ from t = 100 to t = 50 in one stride, deterministically.</p>
 <pre class="ascii">x_hat_0 = ( x_t - sqrt(1 - a_bar_t) * e_theta ) / sqrt(a_bar_t)
 x_s     = sqrt(a_bar_s) * x_hat_0 + sqrt(1 - a_bar_s) * e_theta
 </pre>
+<p>Precondition: ᾱ_t &gt; 0 (division by √ᾱ_t). In
+practice ᾱ_T is tiny but nonzero (0.00004 on the
+linear schedule), so the stride from T is steep but
+defined.</p>
 <h3 id="worked-15-2844-in-one-stride">Worked: 1.5 → 2.844 in one stride</h3>
 <p>Work it. t = 100, s = 50, ᾱ_100 = 0.05, ᾱ_50 = 0.5,
 x_100 = 1.5, ε_θ = 0.8:</p>
@@ -303,6 +359,91 @@ decision rule: use DDIM strides when latency matters
 matters most. The network never changes. Only the walk
 does.</p>
 <figure><img alt="DDIM: predict clean, re-noise to the target step" src="assets/l10-ddim-stride.webp"><figcaption>One stride from t = 100 to s = 50. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="the-family-from-ddim-to-ddpm">The η family: from DDIM to DDPM</h3>
+<p>The deterministic stride is one point on a dial. The
+DDIM paper adds per-stride noise with a knob η:</p>
+<pre class="ascii">sigma_t(eta) = eta * sqrt((1 - a_bar_s)/(1 - a_bar_t))
+                     * sqrt(1 - a_bar_t/a_bar_s)
+x_s = sqrt(a_bar_s)*x_hat_0 + sqrt(1 - a_bar_s - sigma^2)*e_theta
+      + sigma * z
+</pre>
+<p>η = 0 is the deterministic DDIM stride. η = 1
+recovers DDPM&rsquo;s stochastic sampler. Work η = 1 on the
+toy (t = 100, s = 50, ᾱ_100 = 0.05, ᾱ_50 = 0.5):</p>
+<pre class="ascii">sigma = 1 * sqrt(0.5/0.95) * sqrt(1 - 0.05/0.5)
+      = 0.7255 * 0.9487 = 0.688
+</pre>
+<p>The stride becomes x_50 = 2.278 + 0.130 + 0.688·z:
+mean 2.408 plus a 0.688 wobble. Note the mean moved down
+from the deterministic stride&rsquo;s 2.844: the η = 1 noise
+steals weight from the ε_θ term (its coefficient shrinks
+from √0.5 = 0.707 to √(1−ᾱ_s−σ²) = 0.162).
+The decision rule: η = 0 for speed and
+reproducibility, η = 1 for maximum diversity. The
+network never changes. Only the walk does.</p>
+<h3 id="the-probability-flow-ode">The probability flow ODE</h3>
+<p>Every stochastic diffusion has a deterministic twin.
+The <strong>probability flow ODE</strong> removes the random
+wobble but keeps the same marginal distributions at
+every t:</p>
+<pre class="ascii">dx = [ f(x,t) - 0.5 * g(t)^2 * score(x,t) ] dt
+</pre>
+<p>No z term. The same ε_θ supplies the score. Because
+the marginals match, the ODE and the SDE describe
+the same noising process: one with dice, one without.
+DDIM&rsquo;s deterministic stride is this ODE discretized.
+The practical wins: exact likelihood computation
+(the ODE is invertible: run it forward to get the
+latent, read off the change-of-variables), and
+deterministic generation (same x_T, same x_0, every
+time). The price is the same as DDIM&rsquo;s: less
+exploration than the stochastic sampler.</p>
+<h3 id="worked-one-euler-step-of-the-probability-flow-ode">Worked: one Euler step of the probability flow ODE</h3>
+<p>Work the ODE on numbers. Take the drift f(x,t) = −0.2·x,
+the diffusion coefficient g(t) = 0.5, and the score from
+this lesson&rsquo;s toy, score(x,t) = −1.578. At x = 3.9:</p>
+<pre class="ascii">dx/dt = f(x,t) - 0.5 * g(t)^2 * score(x,t)
+      = -0.2*3.9 - 0.5*0.25*(-1.578)
+      = -0.78 + 0.197 = -0.583
+</pre>
+<p>One Euler step backward in time (dt = −0.1):</p>
+<pre class="ascii">x &lt;- 3.9 + (-0.583)*(-0.1) = 3.958
+</pre>
+<p>Read the two terms. The drift −0.78 pulls toward the
+noise endpoint (the origin): pure noising, no data. The
+score term +0.197 pushes uphill toward the data (the
+clean 4.0). The ODE walks the balance of the two with no
+z term: run the same x_T twice and you get the same x_0
+twice. That determinism is what makes the ODE invertible
+for likelihood computation.</p>
+<h3 id="consistency-models-one-step">Consistency models: one step</h3>
+<p><strong>Consistency models</strong> (Song et al. 2023) push the
+stride idea to its limit: a network f_θ(x_t, t)
+that maps any point on a diffusion trajectory
+directly to its origin x_0. The consistency
+property: f_θ(x_t, t) = f_θ(x_s, s) for any two
+points on the same trajectory. Train it by
+distilling a trained diffusion model (or from
+scratch with a consistency loss). Sampling: draw
+x_T, evaluate f_θ once, done. One network
+evaluation per image: GAN speed, diffusion
+lineage. The price is distillation cost and some
+quality loss versus the teacher. FLUX.1-schnell&rsquo;s
+1–4 step sampling is this family&rsquo;s commercial
+form (adversarial distillation rather than pure
+consistency, same goal: collapse the walk).</p>
+<figure><img alt="Consistency: any point on the trajectory maps to x_0" src="assets/l10-consistency.webp"><figcaption>One evaluation per image. The walk collapses to a jump. Shell 3. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="worked-one-consistency-jump">Worked: one consistency jump</h3>
+<p>Take the DDIM toy trajectory: x_100 = 1.5, x_50 = 2.844,
+origin x̂_0 = 3.221. A trained consistency model f_θ maps
+any trajectory point to the origin. Say it outputs
+f_θ(1.5, 100) = 3.21 and f_θ(2.844, 50) = 3.23. Both land
+near 3.22: the consistency property, two points on one
+trajectory agreeing on the origin. The training loss
+penalizes disagreement: (3.21 − 3.23)² = 0.0004. Sampling
+is one evaluation: draw x_T = −0.7, compute f_θ(−0.7, T)
+= 3.22, done. One network evaluation per image, no walk
+at all.</p>
 <h2 id="steering-and-shrinking-guided-and-latent-diffusion">Steering and shrinking: guided and latent diffusion</h2>
 <p>Two more W9 ideas, each one mechanism.</p>
 <h3 id="guided-diffusion-steer-with-a-classifier">Guided diffusion: steer with a classifier</h3>
@@ -321,6 +462,27 @@ scale is the dial. Too much guidance and the walk
 leaves the data manifold chasing the classifier&rsquo;s
 whims: the classic failure is oversaturated,
 caricatured images.</p>
+<h3 id="classifier-free-guidance-no-classifier-needed">Classifier-free guidance: no classifier needed</h3>
+<p><strong>Classifier-free guidance</strong> (Ho and Salimans 2022)
+drops the classifier entirely. Train the denoiser
+twice in one network: conditioned on the prompt
+(ε_c) and unconditioned (ε_u), by randomly dropping
+the prompt 10% of the time during training. At
+sampling, extrapolate:</p>
+<pre class="ascii">e_tilde = e_u + w * (e_c - e_u)
+</pre>
+<p>Work it: ε_u = 0.5, ε_c = 0.9, w = 7.5 (the Stable
+Diffusion 1.5 default). ε̃ = 0.5 + 7.5·0.4 = 3.5. The
+guided prediction overshoots the conditional one by
+7.5× the (conditional − unconditional) gap: it pushes
+hard in the direction the prompt adds. The mechanism:
+(e_c − e_u) is an implicit classifier gradient,
+estimated without any classifier. w = 1.0 is plain
+conditional sampling. w = 0 is unconditional. The
+decision rule: raise w for prompt adherence, lower
+it for naturalness. The same caricature failure at
+high w applies: the extrapolation leaves the
+manifold the network was trained on.</p>
 <h3 id="latent-diffusion-shrink-the-space">Latent diffusion: shrink the space</h3>
 <p><strong>Latent diffusion</strong> shrinks the problem. Lesson 8&rsquo;s
 price was full-size latents at every step. Instead,
@@ -333,6 +495,63 @@ This is the architecture behind Stable Diffusion.
 The price is the VAE&rsquo;s bottleneck: compression
 artifacts the diffusion cannot fix.</p>
 <figure><img alt="Latent diffusion: shrink the space, keep the process" src="assets/l10-latent-diffusion.webp"><figcaption>786,432 numbers become 16,384: 48x cheaper per step. Shell 2. Source: original computation. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="three-generations-of-latent-diffusion-on-numbers">Three generations of latent diffusion, on numbers</h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Image</th>
+<th>Latent (f=8)</th>
+<th>Ratio</th>
+<th>Denoiser</th>
+<th>Objective</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SD 1.5 (2022)</td>
+<td>512²×3 = 786,432</td>
+<td>64²×4 = 16,384</td>
+<td>48×</td>
+<td>UNet</td>
+<td>DDPM ε-loss</td>
+</tr>
+<tr>
+<td>SDXL (2023)</td>
+<td>1024²×3 = 3,145,728</td>
+<td>128²×4 = 65,536</td>
+<td>48×</td>
+<td>Bigger UNet</td>
+<td>DDPM ε-loss</td>
+</tr>
+<tr>
+<td>SD 3.5 (2024)</td>
+<td>1024²×3 = 3,145,728</td>
+<td>128²×16 = 262,144</td>
+<td>12×</td>
+<td>MMDiT 8B</td>
+<td>Rectified flow</td>
+</tr>
+<tr>
+<td>FLUX.1 (2024)</td>
+<td>1024²×3 = 3,145,728</td>
+<td>128²×16 = 262,144</td>
+<td>12×</td>
+<td>DiT 12B</td>
+<td>Rectified flow</td>
+</tr>
+</tbody>
+</table>
+<p>Two trends. The denoiser moved from UNet to
+transformer (DiT/MMDiT): attention scales better
+than convolution, the same lesson language models
+taught. The objective moved from noise prediction to
+rectified flow: straight-line paths from noise to
+data, which need fewer steps. The latent grid stayed:
+compress once with the VAE, diffuse in the small
+space, decode once. The 48× of SD 1.5 is why 2022&rsquo;s
+laptops could run it. The 12× of SD 3.5 buys back
+fidelity with 16 channels.</p>
 <h2 id="the-fourth-family-autoregressive-models">The fourth family: autoregressive models</h2>
 <h3 id="the-chain-rule-factorization">The chain-rule factorization</h3>
 <p>The course closes (W10) with the family that needs no
@@ -366,6 +585,56 @@ are the chain-rule family, trained by plain MLE, with
 exact likelihoods and slow sequential sampling. The
 price is strict: token 1000 waits for 999 before it.
 No parallelism across positions at generation time.</p>
+<h3 id="pixelcnn-the-chain-rule-on-images">PixelCNN: the chain rule on images</h3>
+<p>The chain rule works on pixels too. <strong>PixelCNN</strong>
+orders the pixels (raster scan: top-left to
+bottom-right) and predicts each pixel from the ones
+before it, with masked convolutions that hide the
+future. Each pixel&rsquo;s distribution is a 256-way
+softmax per color channel. A 32×32 RGB image is 3072
+positions: 3072 sequential predictions, each a small
+classification. Exact likelihood, sharp samples, and
+glacial generation: 3072 network evaluations per
+image, each waiting for the last. Diffusion beat it
+on speed (parallel denoising of all pixels at once).
+Transformers beat it on images later by tokenizing
+first (VQ-VAE codes, then the chain rule on tokens).</p>
+<h3 id="the-sampling-bill-per-family">The sampling bill, per family</h3>
+<p>Count network evaluations per sample:</p>
+<ul>
+<li>GAN: 1 forward pass. Fastest, least stable
+  training.</li>
+<li>VAE: 1 forward pass. Fast, blurry.</li>
+<li>DDPM: 1000 passes. Slow, stable, sharp.</li>
+<li>DDIM-50: 50 passes. 20× faster, slightly less
+  diverse.</li>
+<li>FLUX.1-schnell: 1–4 passes (distilled rectified
+  flow). Near-GAN speed, diffusion lineage.</li>
+<li>AR language model: one pass per token. A 1000-token
+  answer costs 1000 passes, strictly sequential.</li>
+<li>GPT-4o image generation: autoregressive over image
+  tokens per the system card, then a diffusion-like
+  decode to pixels.</li>
+</ul>
+<p>The field&rsquo;s direction: keep the stable training,
+cut the sampling bill. Distillation, strides, and
+straight-line flows are all bill-cutting.</p>
+<h3 id="rectified-flow-straightening-the-path">Rectified flow: straightening the path</h3>
+<p><strong>Rectified flow</strong> (Liu et al. 2022) redraws the
+noising path as a straight line: x_t = (1−t)·ε +
+t·x_0 for t in [0,1]. The network predicts the
+constant velocity v = x_0 − ε:</p>
+<pre class="ascii">L = E[ || v_theta(x_t, t) - (x_0 - epsilon) ||^2 ]
+</pre>
+<p>Straight paths cross less and need fewer steps to
+follow: the sampler is Euler integration along
+near-straight lines. FLUX.1 (12B parameters, 2024)
+trains this objective, and its schnell variant
+distills it to 1–4 steps. Stable Diffusion 3/3.5
+uses the same family. The diffusion of Lessons 8-9
+is the curved-path special case. The score view,
+Tweedie, and guidance all carry over: only the path
+changed.</p>
 <h2 id="the-honest-price-per-shortcut">The honest price, per shortcut</h2>
 <h3 id="langevin">Langevin</h3>
 <p>Principled but fiddly. Step size can diverge the walk.
@@ -436,7 +705,7 @@ Diffusion learns to clean noise, one small step at a
 time. Autoregressive models learn what comes next.
 Four answers to &ldquo;how do you teach a machine to
 create?&rdquo;, each with its bill attached.</p>
-<figure><img alt="Four families, one recipe, four prices" src="assets/l10-four-families.webp"><figcaption>The course arc: from counting what exists to making what does not. Chapter plate. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
+<figure><img alt="Four families, one recipe, four prices" src="assets/l10-four-families.webp"><figcaption>The course arc: from counting what exists to making what does not. Chapter plate. Shell 5. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
 <h3 id="where-these-ideas-run-in-real-systems">Where these ideas run in real systems</h3>
 <p>The score view is the bridge between DDPM training and
 the sampling literature: any sampler that needs scores
@@ -445,9 +714,37 @@ fast sampler for diffusion models when latency matters.
 Latent diffusion is the architecture of Stable
 Diffusion-class models: VAE codec plus diffusion in
 latent space. Autoregressive next-token prediction is
-the training objective of every large language model.
-[uncertain] Exact sampler choices and guidance scales in
-production systems are not public.</p>
+the training objective of every large language model.</p>
+<p>Verified deployments, October 2026:</p>
+<ul>
+<li><strong>Sora</strong> (OpenAI, 2024): text-conditional diffusion
+  models with a transformer on spacetime patches of
+  video and image latent codes. Up to 60 seconds of
+  1920×1080 video. The DiT-at-scale proof.</li>
+<li><strong>Stable Diffusion 3.5</strong> (2024): MMDiT transformer
+  (8B Large, 2.5B Medium), rectified flow objective,
+  16-channel VAE, guidance scale 3.5–4.5 (lower than
+  SD 1.5&rsquo;s 7.5: rectified-flow models follow prompts
+  more tightly).</li>
+<li><strong>FLUX.1</strong> (Black Forest Labs, 2024): 12B rectified
+  flow transformer. The schnell variant distills to
+  1–4 steps via latent adversarial diffusion
+  distillation under Apache 2.0.</li>
+<li><strong>GPT-4o image generation</strong> (2025): autoregressive
+  per OpenAI&rsquo;s own system-card addendum (&ldquo;unlike
+  DALL-E, which operates as a diffusion model, 4o
+  image generation is an autoregressive model natively
+  embedded within ChatGPT&rdquo;). The AR family, at image
+  scale.</li>
+<li><strong>DALL-E 3</strong>: diffusion-based per the same system
+  card. [uncertain] Internals not public.</li>
+<li><strong>Midjourney v7</strong>: [uncertain] Architecture not
+  public.</li>
+</ul>
+<p>The arc: UNet DDPM (2020) → latent diffusion (2022)
+→ DiT + rectified flow (2024) → autoregressive images
+(2025). Each step kept the probability machinery of
+this course and changed the network and the path.</p>
 <h2 id="videos-for-this-lesson">Videos for this lesson</h2>
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/qiMJBB8chzI" title="W9L38: Denoising Difusion Implicit Models (DDIMs)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: DDIMs and inference, the strides that skip steps. If the embed is blocked: <a href="https://www.youtube.com/watch?v=qiMJBB8chzI" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
 
@@ -468,7 +765,7 @@ Because it completes the four-family map: adversarial (GAN), learned-latent (VAE
 <div class="qa"><div class="q">DDIM with 50 strides gives worse samples than DDPM with 1000 steps on your data. Diagnose it.</div><div class="a"><p>Two suspects. First, the strides may be too long for your schedule: each stride assumes the marginals match, which holds by construction, but the deterministic jump accumulates prediction error without the stochastic correction. Second, diversity loss: the deterministic path may collapse near modes. Try: shorter strides (100 instead of 50), re-added noise per stride, or check whether the failure is quality (strides too long) versus variety (determinism). The network is innocent until proven guilty: it never changed.
 When maximum diversity and quality matter more than latency: final production renders, evaluation benchmarks. DDIM is for interaction. The 20× speedup is real, but it is a trade, not a free lunch.</p><div class="followup"><strong>Follow-up:</strong> When do you keep DDPM sampling despite the cost?</div></div></div>
 <div class="qa"><div class="q">Your guided samples look like caricatures: oversaturated, exaggerated features. What happened?</div><div class="a"><p>The guidance scale s is too high. The classifier gradient overwhelms the data score, and the walk leaves the data manifold chasing &ldquo;more cat-like&rdquo; past the point of realism. The toy shows the mechanism: at s = 2 the guided score was −0.578, still sane. At s = 10 it would be −1.578 + 5.0 = +3.422, pointing away from the data entirely. Lower s until the steering bends the walk without breaking it.
-Small s tilts the probability landscape toward the class while the data score still dominates, so you sample the class-conditional region. Large s rewrites the landscape: the classifier&rsquo;s idea of the class (often a caricature) becomes the peak. The classifier was trained to discriminate, not to generate. Its gradients are trustworthy only near the manifold.</p><div class="followup"><strong>Follow-up:</strong> Why does a little guidance help but a lot hurts?</div></div></div>
+Small s tilts the probability toward the class while the data score still dominates, so you sample the class-conditional region. Large s hands the peak to the classifier&rsquo;s idea of the class (often a caricature). The classifier was trained to discriminate, not to generate. Its gradients are trustworthy only near the manifold.</p><div class="followup"><strong>Follow-up:</strong> Why does a little guidance help but a lot hurts?</div></div></div>
 <div class="qa"><div class="q">You must pick one family for a new product: real-time avatar generation on a phone. Decide.</div><div class="a"><p>Latent diffusion with DDIM strides, or a distilled variant. The constraints: phone compute (needs the 48× latent saving), real-time (needs the 20× stride saving), quality (diffusion beats GAN/VAE on stability). AR is out (sequential, and the modality is images). Pure GAN is out (training instability risk). The bill: some diversity loss from strides, VAE artifacts from the bottleneck. If latency is extreme, distill the strided model further.
 VAE or diffusion with an encoder. GANs have no encoder. Inversion is a separate hard problem. VAEs give the cleanest latent handles. Diffusion gives better quality with noisier handles. Pick by whether editing or quality matters more.</p><div class="followup"><strong>Follow-up:</strong> And for a research tool that must edit photos by latent manipulation?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
