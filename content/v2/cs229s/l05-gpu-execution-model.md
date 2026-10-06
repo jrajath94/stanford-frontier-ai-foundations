@@ -71,7 +71,7 @@ fine. Data-dependent early exits per token are not.
 
 ![Warp divergence](assets/plate-l05-warp-divergence.webp "Split votes serialize: both branches run, half the lanes masked each time. Shell 2. Source: original toy for warp divergence. Project: Stanford Frontier AI.")
 
-![GPU execution model](assets/slide-l05-gpu-execution-model.png "Shell 1. Grids of blocks map to SMs. Warps of 32 threads execute in lockstep. Source: Stanford slides.")
+![GPU execution model](assets/slide-l05-gpu-execution-model.png "Shell 1. Grids of blocks map to SMs. Warps of 32 threads execute in lockstep. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 The capacity formula follows. Maximum active threads = (number
 of SMs) x (max blocks per SM) x (max threads per block).
@@ -133,8 +133,12 @@ fetched four times. If they collaborate through shared
 memory, one load serves all four: half the memory accesses
 disappear. Tiling is Lecture 3's matmul tiling, now stated as
 a programming pattern: share inputs across outputs on-chip.
+Shared memory has one trap: it is split into banks, and threads
+in a warp that hit the same bank at once serialize instead of
+running in parallel, a bank conflict. Spread each warp's
+accesses across banks.
 
-![Tiling](assets/slide-l05-tiling.png "Shell 2. Threads collaborate through shared memory instead of loading independently. Half the accesses disappear. Source: Stanford slides.")
+![Tiling](assets/slide-l05-tiling.png "Shell 2. Threads collaborate through shared memory instead of loading independently. Half the accesses disappear. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 ### Subchapter: the coalescing math
 
@@ -178,7 +182,7 @@ Lecture 3, and it explains a FlashAttention design choice in
 the next lecture: tile sizes are chosen for the hardware's
 fast path, not for the algorithm's elegance.
 
-![Tensor cores](assets/slide-l05-tensor-cores.png "Shell 3. Tensor cores multiply 16x16 tiles. Keep them busy with large tiles. Source: Stanford slides, credit Dan Fu and Chris Re.")
+![Tensor cores](assets/slide-l05-tensor-cores.png "Shell 3. Tensor cores multiply 16x16 tiles. Keep them busy with large tiles. Source: Stanford slides, credit Dan Fu and Chris Re. Project: Stanford Frontier AI.")
 
 ### Subchapter: the 16x gap, worked
 
@@ -202,7 +206,7 @@ shells of memory hierarchy.
 **One GPU (device).** Streaming multiprocessors do the math:
 108 SMs on an A100. Next to them the four pools from Lecture
 3: registers (256 KB per SM), shared memory (192 KB per SM),
-L2 cache (40 MB), HBM device memory (40 GB at about 2 TB/s).
+L2 cache (40 MB), HBM device memory (40 GB at about 1.6 TB/s).
 A kernel loads from HBM, computes on-chip, writes back.
 
 **One node.** Eight GPUs connected by NVLink, a very high
@@ -213,7 +217,7 @@ node is fast.
 much slower than NVLink. Communication across nodes is the
 expensive move.
 
-![Device block](assets/plate-device-block.svg "Shell 4. One GPU, one node of 8 GPUs on NVLink, many nodes on InfiniBand. Source: original plate. Defined here, reused by MS&E435.")
+![Device block](assets/plate-device-block.svg "Shell 4. One GPU, one node of 8 GPUs on NVLink, many nodes on InfiniBand. Source: original plate. Defined here, reused by MS&E435. Project: Stanford Frontier AI.")
 
 ### Subchapter: NVLink versus InfiniBand, in numbers
 
@@ -288,8 +292,10 @@ ideas recur everywhere else with different names.
 | ThunderKittens | CUDA templates for AI kernels | the FlashAttention-3 implementation |
 
 Frontier training (GPT, Gemini, Llama, DeepSeek) runs on
-NVIDIA GPUs with CUDA, NCCL collectives, and kernels written
-in CUDA, Triton, or CUTLASS. Inference stacks add their own:
+NVIDIA GPUs with CUDA, NCCL collectives (NVIDIA's library for
+GPU-to-GPU collective communication), and kernels written
+in CUDA, Triton, or CUTLASS (NVIDIA's open template library
+for fast matrix-multiply kernels). Inference stacks add their own:
 vLLM and SGLang ship hand-tuned kernels for attention and
 quantization. The warp size and the link speeds change across
 vendors. The hierarchy (fast small memories near the math,
@@ -315,7 +321,8 @@ memories near the math, slow big memory far away, fast links
 inside the box and slow links between boxes. The numbers are
 A100/H100 generation (108 SMs, 40 GB HBM, up to 16x
 tensor-core speedup). Newer GPUs differ. The 8-GPUs-per-node
-layout is the standard NVIDIA DGX/HGX server configuration the course
+layout is the standard NVIDIA DGX/HGX server configuration
+(NVIDIA's reference 8-GPU server designs) the course
 assumes.
 
 > [!QA]
@@ -334,7 +341,7 @@ assumes.
 > Q: Why do tensor cores want large tiles?
 > A: They natively multiply 16 by 16 tiles, and launching them costs time: a 64 by 64 multiply has roughly the same latency as a 16 by 16 one. Large tiles amortize the fixed launch cost over more work. Small tiles pay the launch and leave the fast path underused.
 > Follow-up: What should an algorithm designer do about this?
-express the work as large matrix multiplications so tensor cores can take it, and size tiles for the hardware's fast path rather than the algorithm's elegance. This is the hardware-specific optimization principle from Lecture 3.
+> A: Express the work as large matrix multiplications so tensor cores can take it, and size tiles for the hardware's fast path rather than the algorithm's elegance. This is the hardware-specific optimization principle from Lecture 3.
 
 > [!QA]
 > Q: Walk me through a kernel launch, from the CPU call to threads running.
@@ -435,3 +442,25 @@ in detail but not in spirit.
   hardware substrate.
 - **CS229S L06:** FlashAttention uses every pattern on this
   page.
+
+## Coverage map
+
+Every lecture concept mapped to the line that teaches it. File:
+l05-gpu-execution-model.md.
+
+| Lecture concept | Anchor | Line |
+|---|---|---|
+| Kernel (one GPU operation) | "A **kernel** is one" | 32 |
+| Grid of blocks, blocks to SMs | "grid" / "blocks" | 43 |
+| Warps of 32, SIMT | "groups of 32" | 51 |
+| Warp divergence (split vote) | "warp divergence" | 65 |
+| Capacity formula (221,184 threads) | "capacity formula" | 76 |
+| Three memories (global/shared/registers) | "three memories" | 103 |
+| Coalesced access (128-byte transactions) | "Coalesced access" | 122 |
+| Tiling (shared-memory collaboration) | "Partition the data" | 126 |
+| Tensor cores (16x16 GEMM, 16x gap) | "specialized units for generalized" | 166 |
+| Device block (GPU/node/cluster) | "## The device block" | 200 |
+| NVLink (900 GB/s intra-node) | "NVLink" | 212 |
+| InfiniBand (50 GB/s per port) | "much slower than NVLink" | 217 |
+| Caching vs recompute in backward pass | "backward pass" / "recompute" | 247 |
+| Honest price (NVIDIA specifics) | "honest price" | 315 |
