@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.classList.remove('no-js');</script>
 <title>Lecture 5: Probability and Bayes&#x27; Theorem — Stanford Frontier AI</title>
-<meta name="description" content="Uncertainty as arithmetic: conditional probability, a medical-test Bayes update worked to 8.7 percent, and expectation and variance on a loaded die.">
+<meta name="description" content="Uncertainty as arithmetic: conditional probability, a medical-test Bayes update worked to 8.8 percent, and expectation and variance on a loaded die.">
 <link rel="stylesheet" href="../assets/vendor/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
 </head>
@@ -219,7 +219,7 @@
       <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Machine Learning</a> / Lecture 5: Probability and Bayes&#x27; Theorem</nav>
       <h1>Lecture 5: Probability and Bayes&#x27; Theorem</h1>
       <p class="meta-line">2026-10-05 · Instructor: Prof. Sanjeev Kumar and Prof. S. K. Gupta · NPTEL (IIT Roorkee)</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h2 id="the-task-reason-under-uncertainty">The task: reason under uncertainty</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="0UxcDQz4sWQ"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/0UxcDQz4sWQ" title="Lecture 49: Bayes&#x27; theorem and Random variables (NPTEL)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=0UxcDQz4sWQ" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=0UxcDQz4sWQ" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">The NPTEL lecture this chapter follows: Bayes' theorem, random variables, and the base-rate idea.</p></div><h2 id="the-task-reason-under-uncertainty">The task: reason under uncertainty</h2>
 <p>Every ML prediction is a bet. The model sees symptoms and bets on
 the disease. It sees an email and bets on spam. It sees pixels and
 bets on &ldquo;cat&rdquo;. The mathematics of betting correctly is
@@ -242,10 +242,21 @@ The test&rsquo;s accuracy is P(positive | sick): the chance of a positive
 * given * sickness. The question asks the reverse: P(sick |
 positive). Confusing the two is the <strong>base-rate fallacy</strong>, and it
 is the most expensive probability mistake in applied ML.</p>
+<h3 id="subchapter-conditional-probability-restricts-the-world">Subchapter: conditional probability restricts the world</h3>
 <p><strong>Conditional probability</strong> P(A | B) means the probability of A
 given that B happened: restrict the world to B, then measure A.</p>
 <pre class="ascii">P(A | B) = P(A and B) / P(B)
 </pre>
+<p>Read it as a two-step procedure. Step 1: throw away every outcome
+where B did not happen. Step 2: measure A inside what remains. The
+denominator P(B) is the renormalization: it rescales the surviving
+world back to probability 1.</p>
+<p>Concrete: a deck of cards. P(ace | red card): restrict to the 26
+red cards, count the 2 red aces: 2/26 = 1/13. Same as the
+unconditional P(ace) = 4/52 = 1/13 here, because color and rank are
+independent. When they are not independent, conditioning changes
+everything: that is the whole next section.</p>
+<figure><img alt="Conditional probability restricts the world" src="assets/plate-l05-conditional.svg"><figcaption>P(A|B) = P(A and B) / P(B). First keep only B, then measure A. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="where-the-gut-breaks-the-base-rate-dominates">Where the gut breaks: the base rate dominates</h2>
 <p>Run the numbers. 10,000 people. 1% carry the disease: 100 sick,
 9,900 healthy.</p>
@@ -260,61 +271,81 @@ being sick. The 990 false alarms drown the 95 true hits because
 the disease is rare. The base rate, the 1%, dominated the test&rsquo;s
 95% accuracy. Anyone deploying a classifier on rare events who
 ignores this ships a false-alarm machine.</p>
+<figure><img alt="990 false alarms drown 95 true hits" src="assets/plate-l05-bayes-counts.svg"><figcaption>Posterior = 95 / 1085 = 8.8%. The base rate dominates the test. Shell 3. Source: original arithmetic. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-key-question">The key question</h2>
 <p>How do you flip a conditional probability: turn P(evidence |
 hypothesis), which tests and models give you, into P(hypothesis |
 evidence), which is what you actually want?</p>
-<h2 id="the-new-idea-bayes-theorem">The new idea: Bayes&rsquo; theorem</h2>
+<h3 id="subchapter-bayes-theorem-piece-by-piece">Subchapter: Bayes&rsquo; theorem, piece by piece</h3>
 <p><strong>Bayes&rsquo; theorem</strong> is the flip:</p>
 <pre class="ascii">P(H | E) = P(E | H) * P(H) / P(E)
-
-P(H):       prior.      Belief before the evidence. (1% sick)
-P(E | H):   likelihood. How data looks if H is true. (95%)
-P(E):       evidence.   Total chance of this evidence.
-P(H | E):   posterior.  Belief after. (8.8%)
 </pre>
-<p>Name each piece every time you use it. The prior is your starting
-belief. The likelihood is the model&rsquo;s job: it predicts what data
-each hypothesis produces. The posterior is the updated belief.
-Learning, in the Bayesian view, is prior times likelihood,
-renormalized.</p>
-<p>In ML this is the engine of <strong>naive Bayes</strong> (CS229 L05): the prior
-is how common each class is, the likelihood is how each class
-generates features, and classification picks the class with the
-highest posterior. &ldquo;Naive&rdquo; because it assumes features are
+<p>Name each piece every time you use it:</p>
+<ul>
+<li><strong>P(H), the prior.</strong> Belief before the evidence. 1% sick.</li>
+<li><strong>P(E | H), the likelihood.</strong> How data looks if H is true. 95%
+  of sick patients test positive. This is the model&rsquo;s job: it
+  predicts what data each hypothesis produces.</li>
+<li><strong>P(E), the evidence.</strong> Total chance of seeing this evidence:
+  95 true positives + 990 false alarms, over 10,000 people. It
+  just renormalizes so the posteriors sum to 1.</li>
+<li><strong>P(H | E), the posterior.</strong> Belief after. 8.8%.</li>
+</ul>
+<p>Learning, in the Bayesian view, is prior times likelihood,
+renormalized. In ML this is the engine of <strong>naive Bayes</strong> (CS229
+L05): the prior is how common each class is, the likelihood is how
+each class generates features, and classification picks the class
+with the highest posterior. &ldquo;Naive&rdquo; because it assumes features are
 independent given the class, which factorizes one big likelihood
 into a product of small ones.</p>
+<figure><img alt="Bayes flips likelihood into posterior" src="assets/plate-l05-bayes-flip.svg"><figcaption>Posterior = likelihood x prior / evidence. Name the pieces every time. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-two-tests-are-better-than-one">Subchapter: two tests are better than one</h3>
+<p>A second independent positive test multiplies the likelihoods.
+After one positive: posterior 8.8%. Treat 8.8% as the new prior,
+apply the test again: P(sick | ++) = (0.95 * 0.088) / (0.95<em>0.088
++ 0.10</em>0.912) = 0.0836 / 0.1748 = 47.8%. Two positives: 47.8%.
+The evidence accumulates multiplicatively. This is why real
+diagnosis retests, and why naive Bayes multiplies per-feature
+likelihoods: each feature is one more &ldquo;test.&rdquo;</p>
 <h2 id="expectation-and-variance-summarize-a-random-variable-in-two-numbers">Expectation and variance: summarize a random variable in two numbers</h2>
 <p>A random variable&rsquo;s full distribution can be complex. Two numbers
 summarize most of what you need.</p>
+<h3 id="subchapter-expectation-the-long-run-average">Subchapter: expectation, the long-run average</h3>
 <p><strong>Expectation</strong>, E[X], is the long-run average. For values x_i with
 probabilities p_i: E[X] = sum of x_i * p_i.</p>
-<p><strong>Variance</strong>, Var(X), is the average squared distance from the
-mean: E[(X - E[X])^2]. It measures spread. Its square root is the
-<strong>standard deviation</strong>.</p>
 <p>A loaded die, worked by hand. Faces 1-5 are fair-ish, face 6 is
 heavy:</p>
 <pre class="ascii">P(1..5) = 0.1 each,  P(6) = 0.5
 
 E[X] = 1*.1 + 2*.1 + 3*.1 + 4*.1 + 5*.1 + 6*.5
      = 0.1 + 0.2 + 0.3 + 0.4 + 0.5 + 3.0 = 4.5
-
-Var(X) = E[(X-4.5)^2]
+</pre>
+<p>Mean 4.5, above the fair die&rsquo;s 3.5, pulled by the heavy 6.</p>
+<h3 id="subchapter-variance-the-spread">Subchapter: variance, the spread</h3>
+<p><strong>Variance</strong>, Var(X), is the average squared distance from the
+mean: E[(X - E[X])^2]. It measures spread. Its square root is the
+<strong>standard deviation</strong>.</p>
+<pre class="ascii">Var(X) = E[(X-4.5)^2]
   = .1*(1-4.5)^2 + .1*(2-4.5)^2 + .1*(3-4.5)^2
     + .1*(4-4.5)^2 + .1*(5-4.5)^2 + .5*(6-4.5)^2
   = .1*12.25 + .1*6.25 + .1*2.25 + .1*0.25 + .1*0.25 + .5*2.25
   = 1.225 + 0.625 + 0.225 + 0.025 + 0.025 + 1.125 = 3.25
 </pre>
-<p>Mean 4.5 (above the fair die&rsquo;s 3.5, pulled by the heavy 6),
-variance 3.25. Two numbers capture the loading.</p>
-<p>Three expectation facts the ML courses use constantly:</p>
+<p>Variance 3.25, standard deviation 1.80. Two numbers capture the
+loading. Why square the distances? So that overshoots and
+undershoots do not cancel: spread must count both directions.</p>
+<figure><img alt="Two numbers summarize a random variable" src="assets/plate-l05-expectation.svg"><figcaption>Loaded die: mean 4.5, variance 3.25. Both computed term by term. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-three-expectation-facts-ml-reuses">Subchapter: the three expectation facts ML reuses</h3>
 <pre class="ascii">E[aX + b] = a E[X] + b            (linearity: constants pass through)
 E[X + Y] = E[X] + E[Y]            (sums split, always, no independence needed)
 Var(X) = E[X^2] - (E[X])^2        (the computational shortcut)
 </pre>
 <p>Linearity of expectation needs no independence assumption. That
 is why it appears in every other proof in ML: you can always split
-an expectation of a sum.</p>
+an expectation of a sum. Most quantities in ML are sums: the loss
+over a dataset, the gradient over a batch, the return over an
+episode. Variance does not split so cleanly: Var(X + Y) = Var(X)
++ Var(Y) + 2 Cov(X, Y). The extra term is why L06 exists.</p>
 <table>
 <thead>
 <tr>
@@ -351,32 +382,88 @@ an expectation of a sum.</p>
 </tr>
 </tbody>
 </table>
-<div class="qa"><div class="q">A test is 95% accurate and I tested positive. Am I 95% likely to be sick?</div><div class="a"><p>No: about 8.8% in the worked example. The 95% is P(positive | sick); you want P(sick | positive). With 1% prevalence, 100 sick people yield 95 true positives but 9,900 healthy people yield 990 false alarms, so 95 out of 1,085 positives are truly sick. The base rate dominates. This is the base-rate fallacy, and it bites every rare-event classifier.
+<h2 id="what-is-used-where-the-real-systems">What is used where: the real systems</h2>
+<table>
+<thead>
+<tr>
+<th>Math idea</th>
+<th>Where it appears</th>
+<th>Why there</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bayes&rsquo; rule</td>
+<td>Naive Bayes (CS229 L05)</td>
+<td>priors x likelihoods; classify by posterior</td>
+</tr>
+<tr>
+<td>Base rate</td>
+<td>Fraud/disease classifiers</td>
+<td>rare events: posteriors stay small</td>
+</tr>
+<tr>
+<td>Two-test update</td>
+<td>Ensemble methods</td>
+<td>independent evidence multiplies</td>
+</tr>
+<tr>
+<td>Expectation linearity</td>
+<td>SGD theory</td>
+<td>split loss and gradient over batches</td>
+</tr>
+<tr>
+<td>Posterior</td>
+<td>LLM next token</td>
+<td>the model outputs P(token | context)</td>
+</tr>
+</tbody>
+</table>
+<figure><img alt="Probability: what is used where" src="assets/plate-l05-used-where.svg"><figcaption>Every classifier is a bet priced by these rules. Shell 5. Source: standard ML practice. Project: Stanford Frontier AI.</figcaption></figure>
+<div class="qa"><div class="q">A test is 95% accurate and I tested positive. Am I 95% likely to be sick?</div><div class="a"><p>No: about 8.8% in the worked example. The 95% is P(positive | sick). You want P(sick | positive). With 1% prevalence, 100 sick people yield 95 true positives but 9,900 healthy people yield 990 false alarms, so 95 out of 1,085 positives are truly sick. The base rate dominates. This is the base-rate fallacy, and it bites every rare-event classifier.
 Two levers. Raise the decision threshold so fewer healthy cases trigger alarms, or gather more evidence (a second independent test multiplies the likelihoods). Naive Bayes handles it automatically: the prior P(spam) is small, so the posterior stays small unless the likelihood ratio is overwhelming.</p><div class="followup"><strong>Follow-up:</strong> How do you fix it in a real classifier?</div></div></div>
-<div class="qa"><div class="q">What do prior, likelihood, and posterior actually mean?</div><div class="a"><p>The prior is what you believed before seeing data: 1% disease prevalence. The likelihood is how each hypothesis generates data: 95% of sick patients test positive. The posterior is the updated belief: 8.8% after a positive test. Bayes&rsquo; theorem multiplies prior by likelihood and renormalizes. Training a generative classifier is estimating likelihoods; predicting is computing posteriors.
+<div class="qa"><div class="q">Walk me through Bayes&#x27; theorem on the medical test, naming each piece.</div><div class="a"><p>Prior P(sick) = 0.01: one in a hundred people is sick, before any test. Likelihood P(positive | sick) = 0.95: the test catches 95% of sick patients. Evidence P(positive) = (95 + 990)/10,000 = 0.1085: about 11% of everyone tests positive. Posterior = 0.95 * 0.01 / 0.1085 = 0.088: after the positive, 8.8%. Prior times likelihood, renormalized.
 It is the total probability of the evidence under all hypotheses: P(E) = sum over H of P(E|H) P(H). In the toy: 95 true positives + 990 false alarms, over 10,000 people. It just rescales so the posteriors sum to 1. When comparing two hypotheses you can often ignore it, since it is the same for both.</p><div class="followup"><strong>Follow-up:</strong> Where does P(E), the denominator, come from?</div></div></div>
+<div class="qa"><div class="q">What do prior, likelihood, and posterior actually mean?</div><div class="a"><p>The prior is what you believed before seeing data: 1% disease prevalence. The likelihood is how each hypothesis generates data: 95% of sick patients test positive. The posterior is the updated belief: 8.8% after a positive test. Bayes&rsquo; theorem multiplies prior by likelihood and renormalizes. Training a generative classifier is estimating likelihoods. Predicting is computing posteriors.
+Update again, using 8.8% as the new prior: posterior = 0.95<em>0.088 / (0.95</em>0.088 + 0.10*0.912) = 47.8%. Evidence accumulates multiplicatively. This is the mechanism inside naive Bayes: each feature is another &ldquo;test&rdquo; multiplying into the posterior.</p><div class="followup"><strong>Follow-up:</strong> A second positive test arrives. Now what?</div></div></div>
 <div class="qa"><div class="q">Why is linearity of expectation such a big deal?</div><div class="a"><p>Because E[X + Y] = E[X] + E[Y] holds with zero assumptions: no independence needed. Most quantities in ML are sums or averages: the loss over a dataset, the gradient over a batch, the return over an episode. Linearity lets you push expectations inside sums everywhere, which is why proofs about stochastic gradient descent and generalization start with it.
 Only if X and Y are uncorrelated. In general Var(X+Y) = Var(X) + Var(Y) + 2 Cov(X,Y). The extra term is why L06 exists: correlated features inflate variance, and covariance measures exactly that inflation.</p><div class="followup"><strong>Follow-up:</strong> Does Var(X + Y) = Var(X) + Var(Y)?</div></div></div>
+<div class="qa"><div class="q">Compute the mean and variance of the loaded die by hand.</div><div class="a"><p>P(1..5) = 0.1 each, P(6) = 0.5. Mean: 1<em>.1 + 2</em>.1 + 3<em>.1 + 4</em>.1 + 5<em>.1 + 6</em>.5 = 4.5. Variance: average squared distance from 4.5: .1<em>12.25 + .1</em>6.25 + .1<em>2.25 + .1</em>0.25 + .1<em>0.25 + .5</em>2.25 = 3.25. Standard deviation 1.80. The heavy 6 pulls the mean above the fair 3.5 and inflates the spread.
+So overshoots and undershoots do not cancel. Without squaring, the average signed distance from the mean is always exactly zero: useless as a spread measure. Squaring (or absolute value) makes both directions count.</p><div class="followup"><strong>Follow-up:</strong> Why square the distances in variance?</div></div></div>
+<div class="qa"><div class="q">Your fraud classifier flags 1% of transactions with 99% precision on the test set. In production, precision collapses. Why?</div><div class="a"><p>Base-rate shift. Precision depends on prevalence: the same likelihood ratio produces far more false alarms when fraud is rarer in production than in the test set. This is the medical-test lesson at scale: 990 false alarms drowned 95 true hits at 1% prevalence. Recalibrate the threshold on production prevalence, or reweight by the new prior.
+Monitor the flagged rate. If the model flags 5% of traffic but the historical fraud rate is 0.1%, either fraud exploded or the threshold is wrong for current prevalence. Track P(flagged) against the known base rate. Divergence is the alarm.</p><div class="followup"><strong>Follow-up:</strong> How do you detect base-rate shift before it burns you?</div></div></div>
+<div class="qa"><div class="q">Explain the difference between P(A|B) and P(B|A) to a non-technical stakeholder.</div><div class="a"><p>P(positive | sick) is &ldquo;how good is the test at catching sick people&rdquo;: the lab&rsquo;s number, 95%. P(sick | positive) is &ldquo;I tested positive, how worried should I be&rdquo;: your number, 8.8%. The first describes the test. The second describes you. Mixing them up is a billion-dollar mistake in screening programs.
+When the base rates match: P(A|B) = P(B|A) exactly when P(A) = P(B). Otherwise the rarer event&rsquo;s conditional is the smaller one. If a stakeholder quotes the lab&rsquo;s 95% as your risk, ask for the prevalence: that is the missing number.</p><div class="followup"><strong>Follow-up:</strong> When are they equal?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
 <li><strong>The task.</strong> Bet correctly under uncertainty: three rules, random variables, probabilities.</li>
 <li><strong>First attempt.</strong> Trust the 95%-accurate test: a positive means 95% sick.</li>
 <li><strong>Where it breaks.</strong> Base rate: 990 false alarms drown 95 true hits. Posterior is 8.8%, not 95%.</li>
 <li><strong>The key question.</strong> How to flip P(evidence | hypothesis) into P(hypothesis | evidence)?</li>
-<li><strong>The new idea.</strong> Bayes&rsquo; theorem: posterior = likelihood times prior, renormalized. Name the pieces every time.</li>
+<li><strong>The new idea.</strong> Bayes&rsquo; theorem: posterior = likelihood times prior, renormalized. Name the pieces every time. A second test multiplies in: 47.8%.</li>
 <li><strong>The ML engine.</strong> Naive Bayes (CS229 L05): priors over classes, factorized likelihoods over features, classify by highest posterior.</li>
-<li><strong>Summarize in two numbers.</strong> Expectation (loaded die: 4.5) and variance (3.25), computed by hand.</li>
-<li><strong>The price and the bridge.</strong> Bayes needs a prior and a likelihood; bad priors or wrong likelihoods give confident wrong answers. L06 builds the distributions those likelihoods come from.</li>
+<li><strong>Summarize in two numbers.</strong> Expectation (loaded die: 4.5) and variance (3.25), computed by hand. Linearity splits sums with no assumptions.</li>
+<li><strong>The price and the bridge.</strong> Bayes needs a prior and a likelihood. Bad priors or wrong likelihoods give confident wrong answers. L06 builds the distributions those likelihoods come from.</li>
 </ol>
+<h2 id="go-deeper">Go deeper</h2>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/9wCnvr7Xw4E" title="StatQuest: Bayes' Theorem, Clearly Explained" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+<ul>
+<li>StatQuest, &ldquo;Bayes&rsquo; Theorem, Clearly Explained&rdquo; (the embed above): https://www.youtube.com/watch?v=9wCnvr7Xw4E</li>
+<li>The NPTEL lecture for this lesson (frontmatter video): https://www.youtube.com/watch?v=0UxcDQz4sWQ</li>
+<li>Bishop, &ldquo;Pattern Recognition and Machine Learning&rdquo;, ch. 1: probability rules, Bayes, expectation.</li>
+<li>Deisenroth, Faisal, Ong, &ldquo;Mathematics for Machine Learning&rdquo;, ch. 6 (free): https://mml-book.github.io: discrete and continuous probability.</li>
+</ul>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
-- &ldquo;Essential Mathematics for Machine Learning&rdquo; playlist, Lectures 47-50:
-  https://www.youtube.com/playlist?list=PLLy_2iUCG87D1CXFxE-SxCFZUiJzQ3IvE
-- NPTEL course page (111107137): https://archive.nptel.ac.in/courses/111/107/111107137/</p>
+- &ldquo;Essential Mathematics for Machine Learning&rdquo; playlist, Lecture 49 (this lesson&rsquo;s video): <a href="https://www.youtube.com/watch?v=0UxcDQz4sWQ">paper</a>
+- NPTEL course page (111107137): https://nptel.ac.in/courses/111107137</p>
 <p><strong>Further reading:</strong>
-- Bishop, &ldquo;Pattern Recognition and Machine Learning&rdquo;, ch. 1 — probability rules, Bayes, expectation.
+- Bishop, &ldquo;Pattern Recognition and Machine Learning&rdquo;, ch. 1: probability rules, Bayes, expectation.
 - Deisenroth, Faisal, Ong, &ldquo;Mathematics for Machine Learning&rdquo;, ch. 6 (free):
-  https://mml-book.github.io — discrete and continuous probability.</p>
+  - <a href="https://mml-book.github.io">discrete and continuous probability.</a></p>
 <p><strong>Caveats.</strong> The medical-test numbers and the loaded die are the lesson&rsquo;s own worked examples, in the standard textbook style. The lecture&rsquo;s exact examples are [uncertain] (transcripts for L47-L50 were not recovered). The lecture-1 transcript confirms the course frames probability as underpinning all ML algorithms.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
@@ -384,7 +471,7 @@ Only if X and Y are uncorrelated. In general Var(X+Y) = Var(X) + Var(Y) + 2 Cov(
 <li><strong>CS229 L08:</strong> the Bayesian view of regularization: priors over weights become penalty terms.</li>
 <li><strong>CS329H:</strong> choice theory and Bayesian decision theory build directly on posterior reasoning.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/playlist?list=PLLy_2iUCG87D1CXFxE-SxCFZUiJzQ3IvE" target="_blank" rel="noopener">Essential Mathematics for Machine Learning — Lectures 47 (Operations on Sets), 48 (Review on Probability), 49 (Bayes&#x27; theorem and Random variables), 50 (Expectation and Variance)</a></li><li><span class="src-tag">SUPPLEMENT</span>Bishop, Pattern Recognition and Machine Learning, ch. 1</li><li><span class="src-tag">SUPPLEMENT</span><a href="https://mml-book.github.io" target="_blank" rel="noopener">Deisenroth, Faisal, Ong, Mathematics for Machine Learning, ch. 6</a></li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=0UxcDQz4sWQ" target="_blank" rel="noopener">Essential Mathematics for Machine Learning: Lecture 49 (Bayes&#x27; theorem and Random variables)</a></li><li><span class="src-tag">SUPPLEMENT</span>Bishop, Pattern Recognition and Machine Learning, ch. 1</li><li><span class="src-tag">SUPPLEMENT</span><a href="https://mml-book.github.io" target="_blank" rel="noopener">Deisenroth, Faisal, Ong, Mathematics for Machine Learning, ch. 6</a></li></ul></section>
       <nav class="pager"><a href="../math-ml/l04-svd-low-rank.html"><span class="lbl">← Previous</span>Lecture 4: SVD and Low-Rank Approximation</a><a href="../math-ml/l06-distributions-covariance.html"><span class="lbl">Next →</span>Lecture 6: Distributions and Covariance</a></nav>
     </article>
     <footer class="pagefoot">
