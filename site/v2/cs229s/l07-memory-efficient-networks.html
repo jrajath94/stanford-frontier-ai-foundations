@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.classList.remove('no-js');</script>
 <title>Lecture 7: Memory-Efficient Neural Networks — Stanford Frontier AI</title>
-<meta name="description" content="Shrink the model three ways: pruning and sparsity, quantization from FP32 down to integers, and knowledge distillation. All numbers worked by hand.">
+<meta name="description" content="Shrink the model three ways: pruning and sparsity, quantization from FP32 down to NVFP4, and knowledge distillation. All numbers worked by hand.">
 <link rel="stylesheet" href="../assets/vendor/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
 </head>
@@ -81,6 +81,7 @@
 <li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
 <li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
 <li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../cs229s/crash-course-02.html" data-page="cs229s-crash-02">CS229S · Crash course 2</a></li>
 </ul>
 <h3>CS224N: NLP with Deep Learning</h3><ul>
 <li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
@@ -146,18 +147,14 @@
 </ul>
 <h3>CS329A: Self-Improving AI Agents</h3><ul>
 <li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
-<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
-<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
-<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
-<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
-<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
-<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
-<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
-<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
-<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
-<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
-<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
-<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+<li><a href="../cs329a/l01-course-overview.html" data-page="cs329a-l01">L01 · Course Overview</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Compute Scaling</a></li>
+<li><a href="../cs329a/l03-feedback-tools-code.html" data-page="cs329a-l03">L03 · Feedback, Tools, Code</a></li>
+<li><a href="../cs329a/l04-planning-multistep-reasoning.html" data-page="cs329a-l04">L04 · Planning and Multi-Step Reasoning</a></li>
+<li><a href="../cs329a/l05-search-at-scale.html" data-page="cs329a-l05">L05 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l06-train-time-scaling.html" data-page="cs329a-l06">L06 · Train-Time Scaling</a></li>
+<li><a href="../cs329a/l07-agentic-evaluations.html" data-page="cs329a-l07">L07 · Agentic Evaluations</a></li>
+<li><a href="../cs329a/l08-future-directions.html" data-page="cs329a-l08">L08 · Future Directions</a></li>
 </ul>
 <h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
 <li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
@@ -219,133 +216,256 @@
       <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS229S: Systems for Machine Learning</a> / Lecture 7: Memory-Efficient Neural Networks</nav>
       <h1>Lecture 7: Memory-Efficient Neural Networks</h1>
       <p class="meta-line">2024-10-14 · Instructor: Azalia Mirhoseini · Fall 2024</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h2 id="the-problem-the-model-does-not-fit">The problem: the model does not fit</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h3 id="coverage-and-sourcing">Coverage and sourcing</h3>
+<p>This lesson follows the CS229S &ldquo;Memory-Efficient Neural
+Networks&rdquo; slide deck (Fall 2024 offering, Fall 2023
+headers), taught by Azalia Mirhoseini, with MIT 6.5940
+(TinyML, Prof. Song Han) as the stated inspiration. The
+deck&rsquo;s arc runs: pruning (magnitude, iterative,
+structured vs unstructured, 2:4 sparsity), the number
+formats (integers, fixed point, FP32/FP16/BF16), k-means
+quantization, linear quantization, LLM-scale breakdown
+and fixes, and knowledge distillation. The lesson adds
+the post-deck history, each fact dated: SparseGPT and
+Wanda one-shot pruning (2023), the GPTQ/AWQ/SmoothQuant
+family, native FP8 training (DeepSeek-V3, December 2024),
+and NVFP4/MXFP4 on Blackwell (2025-2026, October 2026
+updates throughout). The Fall 2024 calendar lists
+&ldquo;Butterfly and Monarch matrices&rdquo; under this lecture&rsquo;s
+sparsity topics. The shipped deck does not contain them.
+They are marked [uncertain] below, never asserted.</p>
+<h2 id="the-problem-the-model-does-not-fit">The problem: the model does not fit</h2>
 <p>Lecture 5 taught reducing memory <em>accesses</em>. This lecture
 reduces the memory <em>required</em>. The difference matters on
 small devices. Microcontrollers have 3x less memory than
 mobile phones, and widely used vision models exceed the
 microcontroller memory limit by up to 100x for ResNet-50
-(Lin, 2020). A model that cannot fit cannot run, no matter
-how clever the kernel. Three classical methods shrink it:
-prune weights away, spend fewer bits per weight, or teach a
-small model what the big one knows.</p>
-<figure><img alt="Memory chapter plate" src="assets/media-generation-plate-chapter-l07-memory-0-e99a1302-0e56-463a-917c-27764af8b66a.webp"><figcaption>Shell 1. Prune, quantize, distill: three cuts, one smaller model. Source: original chapter plate.</figcaption></figure>
+(Lin, 2020). A model that cannot fit cannot run, no
+matter how clever the kernel.</p>
+<p>The same wall moved up the stack. A 7B model in FP16
+needs 14 GB for the weights alone: it fits on one good
+GPU. A 70B model needs 140 GB: it does not fit on one 80
+GB GPU. A 671B model needs 1.3 TB: it does not fit on one
+server. Three classical methods shrink it: prune weights
+away, spend fewer bits per weight, or teach a small model
+what the big one knows.</p>
+<figure><img alt="Memory chapter plate" src="assets/media-generation-plate-chapter-l07-memory-0-e99a1302-0e56-463a-917c-27764af8b66a.webp"><figcaption>Shell 1. Prune, quantize, distill: three cuts, one smaller model. Source: original chapter plate. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="first-method-pruning">First method: pruning</h2>
-<p>Start from the weights. <strong>Pruning</strong> discards a subset of parameters after training.
-The result is a sparse network. Formally: given original
-weights W, find pruned weights Wp minimizing the loss
-L(x. Wp) subject to ||Wp||_0 &lt; T, where ||.||_0 counts
-nonzeros and T is the target parameter count. An ideal
-pruning process accelerates training or inference on real
-hardware, retains accuracy, and generalizes across models.</p>
-<figure><img alt="Pruning definition" src="assets/slide-l07-pruning-def.png"><figcaption>Shell 2. Minimize loss subject to a nonzero budget. Source: Stanford slides, Han et al. 2015.</figcaption></figure>
+<p>Start from the weights. <strong>Pruning</strong> discards a subset of
+parameters after training. The result is a sparse
+network. Formally: given original weights W, find pruned
+weights Wp minimizing the loss L(x, Wp) subject to
+||Wp||_0 &lt; T, where ||.||_0 counts nonzeros and T is the
+target parameter count. An ideal pruning process
+accelerates training or inference on real hardware,
+retains accuracy, and generalizes across models.</p>
+<figure><img alt="Pruning definition" src="assets/slide-l07-pruning-def.png"><figcaption>Shell 2. Minimize loss subject to a nonzero budget. Source: Stanford slides, Han et al. 2015. Project: Stanford Frontier AI.</figcaption></figure>
 <p>Watch the selection rule on a toy. Input X = [x1, x2, x3],
 weights W = [5, 0.3, -0.4], ReLU activation. The neuron
 computes Y = ReLU(5 x1 + 0.3 x2 - 0.4 x3). <strong>Magnitude
-pruning</strong> keeps weights with large absolute values: 5 stays,
-0.3 and -0.4 go. Coarse-grained magnitude pruning works on
-rows: keep rows whose sums of absolute values are large.
-<strong>Regression-based pruning</strong> (He et al., 2017) is smarter:
-pick rows to minimize the layer-output reconstruction
-error ||Z - Zhat||_F^2 subject to a nonzero budget, then
-relearn the remaining weights. Direct one-shot pruning is
-hard. Iterative prune-and-fine-tune works better (Han et
-al., 2015).</p>
+pruning</strong> keeps weights with large absolute values: 5
+stays, 0.3 and -0.4 go. Coarse-grained magnitude pruning
+works on rows: keep rows whose sums of absolute values are
+large. <strong>Regression-based pruning</strong> (He et al., 2017) is
+smarter: pick rows to minimize the layer-output
+reconstruction error ||Z - Zhat||_F^2 subject to a nonzero
+budget, then relearn the remaining weights. Direct
+one-shot pruning is hard. Iterative prune-and-fine-tune
+works better (Han et al., 2015).</p>
 <h3 id="subchapter-why-iterative-beats-one-shot">Subchapter: why iterative beats one-shot</h3>
 <p>One-shot pruning removes 90 percent of the weights in a
 single cut. The network&rsquo;s structure collapses: too many
 co-adapted weights vanish at once, and fine-tuning cannot
-find its way back. Iterative pruning removes a slice, lets
-the network heal, and repeats.</p>
+find its way back. Iterative pruning removes a slice,
+lets the network heal, and repeats.</p>
 <p>The arithmetic: to keep 10 percent after 5 rounds, keep
-0.1^0.2 = 0.63 per round. Prune 37 percent, fine-tune,
+0.1^0.2 = 0.631 per round. Prune 37 percent, fine-tune,
 repeat five times. Each round&rsquo;s cut is small enough that
-the surviving weights re-learn their roles. The schedule is
-the method: gentle cuts compound to the same 90 percent
-that one brutal cut destroys.</p>
+the surviving weights re-learn their roles. The schedule
+is the method: gentle cuts compound to the same 90
+percent that one brutal cut destroys.</p>
 <figure><img alt="Iterative pruning" src="assets/plate-l07-iterative-prune.webp"><figcaption>Five rounds of 37 percent reach 90 percent sparsity. One 90 percent cut does not recover. Shell 3. Source: original toy for the pruning schedule. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-one-shot-pruning-at-llm-scale">Subchapter: one-shot pruning at LLM scale</h3>
+<p>At LLM scale, iterative prune-and-fine-tune is too
+expensive: nobody fine-tunes a 175B model five times to
+prune it. Two 2023 methods made one-shot pruning work
+without retraining.</p>
+<p><strong>SparseGPT</strong> (Frantar and Alistarh, 2023) prunes to 50
+percent sparsity in one pass, no retraining. The trick is
+second-order information: for each weight, it estimates
+how much the loss would move if that weight vanished,
+using the inverse Hessian, then picks the removal order
+that hurts least and compensates the survivors in closed
+form. 50 percent of a 175B model is 87.5B weights gone,
+accuracy nearly intact.</p>
+<p><strong>Wanda</strong> (Sun et al., 2023) is simpler: prune by weight
+magnitude times input activation norm. A weight matters
+if it is large <em>and</em> its input fires often. No Hessian,
+one forward pass of calibration data, and it matches
+SparseGPT on most models.</p>
+<p>The systems catch, stated plainly: neither speeds up
+dense GEMM (general matrix multiply: one dense
+matrix-matrix product). The zeros are unstructured, so
+the hardware
+still does the full multiply unless a sparse kernel
+exploits the pattern. One-shot pruning at LLM scale
+saves memory only with 2:4-structured variants or sparse
+kernels. Research result, not a serving default.</p>
 <h2 id="where-naive-pruning-breaks-the-pattern">Where naive pruning breaks: the pattern</h2>
 <p>Removing weights is not enough. The <em>pattern</em> of what
 remains decides whether hardware gets faster.</p>
-<p><strong>Unstructured</strong> (fine-grained) pruning removes individual
-weights: higher accuracy, but the surviving nonzeros scatter
-randomly, so you still read and write every memory block to
-find them. <strong>Structured</strong> (coarse-grained) pruning removes
-whole rows, channels, or blocks: lower accuracy, but memory
-access stays regular and hardware stays fast. Reading random
-locations is the slowest access pattern on a GPU. Sequential
-reads are the fastest. Unstructured sparsity pays the random
-price.</p>
-<p>The hardware compromise is <strong>2:4 structured sparsity</strong>: in
-every contiguous group of 4 values, exactly 2 are zero.
-NVIDIA Ampere&rsquo;s sparse tensor cores exploit this pattern:
-regular enough for low metadata overhead, and 50% of
-weights disappear while accuracy holds.</p>
-<figure><img alt="N:M sparsity" src="assets/slide-l07-nm-sparsity.png"><figcaption>Shell 3. 2:4 structured sparsity: 2 of every 4 contiguous values are zero. Ampere sparse tensor cores exploit it. Source: Stanford slides.</figcaption></figure>
+<p><strong>Unstructured</strong> (fine-grained) pruning removes
+individual weights: higher accuracy, but the surviving
+nonzeros scatter randomly, so you still read and write
+every memory block to find them. <strong>Structured</strong>
+(coarse-grained) pruning removes whole rows, channels, or
+blocks: lower accuracy, but memory access stays regular
+and hardware stays fast. Reading random locations is the
+slowest access pattern on a GPU. Sequential reads are the
+fastest. Unstructured sparsity pays the random price.</p>
+<p>The hardware compromise is <strong>2:4 structured sparsity</strong>:
+in every contiguous group of 4 values, exactly 2 are
+zero. NVIDIA Ampere&rsquo;s sparse tensor cores exploit this
+pattern: regular enough for low metadata overhead, and
+50% of weights disappear while accuracy holds.</p>
+<figure><img alt="N:M sparsity" src="assets/slide-l07-nm-sparsity.png"><figcaption>Shell 3. 2:4 structured sparsity: 2 of every 4 contiguous values are zero. Ampere sparse tensor cores exploit it. Source: Stanford slides. Project: Stanford Frontier AI.</figcaption></figure>
 <h3 id="subchapter-the-24-pattern-worked">Subchapter: the 2:4 pattern, worked</h3>
-<p>Four contiguous weights: [a, 0, b, 0]. Store a and b plus 2
-bits of metadata saying which two survived. Half the
+<p>Four contiguous weights: [a, 0, b, 0]. Store a and b plus
+2 bits of metadata saying which two survived. Half the
 weights are gone. The metadata is 2 bits per group of 4
-values, or 0.5 bits per weight: negligible. Ampere&rsquo;s sparse
-tensor cores skip the zeros in hardware and run the sparse
-GEMM at up to 2x the dense throughput.</p>
-<p>The constraint is exact: exactly 2 zeros in every group of
-4, no exceptions. The pattern is regular enough that the
-hardware can plan around it. This is the compromise the
-lecture names: unstructured sparsity is accurate but
-unusable, structured blocks are usable but coarse, and 2:4
-is the point the hardware chose to accelerate.</p>
+values, or 0.5 bits per weight: negligible. Ampere&rsquo;s
+sparse tensor cores skip the zeros in hardware and run
+the sparse GEMM at up to 2x the dense throughput.</p>
+<p>The constraint is exact: exactly 2 zeros in every group
+of 4, no exceptions. The pattern is regular enough that
+the hardware can plan around it. This is the compromise
+the lecture names: unstructured sparsity is accurate but
+unusable, structured blocks are usable but coarse, and
+2:4 is the point the hardware chose to accelerate.</p>
 <figure><img alt="The 2:4 pattern" src="assets/plate-l07-2to4.webp"><figcaption>Two of every four values are zero. 2 bits of metadata per group. Sparse tensor cores skip the zeros. Shell 4. Source: original toy for N:M sparsity. Project: Stanford Frontier AI.</figcaption></figure>
-<p>The interview point: sparsity only speeds up inference if
-the pattern matches what the hardware accelerates. One
-global sparsity number is also wrong: layers differ, so
+<h3 id="subchapter-sensitivity-analysis-per-layer">Subchapter: sensitivity analysis, per layer</h3>
+<p>One global sparsity number is wrong: layers differ, so
 <strong>sensitivity analysis</strong> prunes each layer at increasing
 ratios in magnitude order and measures accuracy. Early
-layers tend to be sensitive. Fully connected layers tend
-not to be. Per-layer numbers are right.</p>
+layers tend to be sensitive: they build the features
+everything else uses. Fully connected layers near the
+output tend not to be: they have redundancy to spare.</p>
+<p>The procedure: for each layer, sweep the sparsity ratio
+from 0 to 90 percent, record the accuracy curve, and pick
+the ratio where the curve bends. Assign aggressive ratios
+only where accuracy survives. The interview point:
+sparsity only speeds up inference if the pattern matches
+what the hardware accelerates, and the ratio only holds
+if it is set per layer.</p>
 <h2 id="the-key-question">The key question</h2>
 <p>Pruning removes weights. But the weights that remain are
 still 32-bit floats. What if the numbers themselves used
 fewer bits?</p>
 <h2 id="how-numbers-live-in-bits">How numbers live in bits</h2>
-<p>The operation is simple. <strong>Quantization</strong> maps values from a large set to a smaller
-set. The <strong>quantization error</strong> is |true value - quantized
-value|. The economic case is two lines:</p>
+<p>The operation is simple. <strong>Quantization</strong> maps values from
+a large set to a smaller set. The <strong>quantization error</strong>
+is |true value - quantized value|. The economic case is
+two lines:</p>
 <pre><code>Storage = number of parameters x bits per parameter
 Add cost: O(N) in bit-width N | Multiply cost: O(N^2)
 </code></pre>
 <p>Halving the bits halves the storage and quarters the
-multiply cost. Before quantizing, the lecture rebuilds how
-numbers live in bits, because the bit layout is the thing
-being changed.</p>
-<p><strong>Integers.</strong> Unsigned n-bit: 0 to 2^n - 1. Signed: one bit
-for sign. Two layouts: sign-magnitude (a sign bit plus
-magnitude) and two&rsquo;s complement (negation by bit-flip plus
-one). The slides show -70 as 10111010 in two&rsquo;s complement
-against sign-magnitude&rsquo;s 11000110.</p>
-<p><strong>Fixed point.</strong> A fixed split between integer and fraction
-bits. The slides&rsquo; 8-bit example with 4 fraction bits reads
--4.375.</p>
+multiply cost. Before quantizing, the lecture rebuilds
+how numbers live in bits, because the bit layout is the
+thing being changed.</p>
+<p><strong>Integers.</strong> Unsigned n-bit: 0 to 2^n - 1. Signed: one
+bit for sign. Two layouts: sign-magnitude (a sign bit
+plus magnitude) and two&rsquo;s complement (negation by
+bit-flip plus one). The slides show -70 as 10111010 in
+two&rsquo;s complement against sign-magnitude&rsquo;s 11000110.
+Two&rsquo;s complement wins in hardware: addition needs no
+special sign logic, and there is one zero instead of
+two.</p>
+<p><strong>Fixed point.</strong> A fixed split between integer and
+fraction bits. The slides&rsquo; 8-bit example with 4 fraction
+bits reads -4.375. Fixed point is cheap: the hardware is
+integer arithmetic with an implied binary point. The
+price is range: the split is fixed, so values outside the
+chosen window clip.</p>
 <p><strong>Floating point (IEEE 754).</strong> Value = (-1)^sign x (1 +
 fraction) x 2^(exponent - bias). The exponent buys
-<strong>dynamic range</strong>: the gap between the largest and smallest
-representable values. Bias (127 for FP32&rsquo;s 8-bit exponent)
-shifts the exponent range to cover small values.</p>
+<strong>dynamic range</strong>: the gap between the largest and
+smallest representable values. Bias (127 for FP32&rsquo;s 8-bit
+exponent) shifts the exponent range to cover small
+values.</p>
 <p>Worked FP32 example from the slides: exponent bits sum to
 120, bias 127, fraction 2^-2 = 0.25. Value = 1.25 x
 2^(120-127) = 1.25 x 2^-7 = 0.0097656.</p>
-<figure><img alt="FP32 example" src="assets/slide-l07-fp32-example.png"><figcaption>Shell 4. Sign, 8-bit exponent, 23-bit mantissa. The worked value is 0.0097656. Source: Stanford slides.</figcaption></figure>
+<figure><img alt="FP32 example" src="assets/slide-l07-fp32-example.png"><figcaption>Shell 4. Sign, 8-bit exponent, 23-bit mantissa. The worked value is 0.0097656. Source: Stanford slides. Project: Stanford Frontier AI.</figcaption></figure>
 <p>Edge cases: exponent all zeros gives subnormals (value =
 (-1)^sign x fraction x 2^(1-127)). All-ones exponent with
 zero fraction is infinity. A nonzero fraction is NaN. You
-cannot represent infinitely small values: the format has a
-floor.</p>
+cannot represent infinitely small values: the format has
+a floor.</p>
 <p><strong>FP16 versus BF16.</strong> FP16: 5 exponent bits, 10 fraction
 bits. BF16: 8 exponent bits, 7 fraction bits. BF16 trades
 precision for dynamic range, which stabilizes training:
-gradients span many orders of magnitude, and range matters
-more than fine resolution. This is why BF16 is the default
-training format.</p>
+gradients span many orders of magnitude, and range
+matters more than fine resolution. This is why BF16 is
+the default training format.</p>
+<h3 id="subchapter-the-bit-ladder-2026-edition">Subchapter: the bit ladder, 2026 edition</h3>
+<p>The lecture&rsquo;s ladder stopped at INT8. Production kept
+climbing down:</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Bits</th>
+<th>Where it lives (Oct 2026)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FP32</td>
+<td>32</td>
+<td>master weights, Adam states</td>
+</tr>
+<tr>
+<td>BF16</td>
+<td>16</td>
+<td>training default, activations</td>
+</tr>
+<tr>
+<td>FP8 (E4M3: 4 exponent bits, 3 mantissa bits)</td>
+<td>8</td>
+<td>DeepSeek-V3 native training; Hopper inference</td>
+</tr>
+<tr>
+<td>INT8</td>
+<td>8</td>
+<td>LLM.int8() activations; older GPUs</td>
+</tr>
+<tr>
+<td>FP4/NVFP4</td>
+<td>4</td>
+<td>Blackwell inference (TensorRT-LLM, vLLM)</td>
+</tr>
+<tr>
+<td>INT4 (GPTQ/AWQ)</td>
+<td>4</td>
+<td>consumer GPUs, laptops</td>
+</tr>
+<tr>
+<td>NF4</td>
+<td>4</td>
+<td>QLoRA frozen base</td>
+</tr>
+<tr>
+<td>INT2/INT1</td>
+<td>2/1</td>
+<td>research (quality cliff)</td>
+</tr>
+</tbody>
+</table>
+<p>Each rung halves the memory and moves the quality cliff
+closer. The lecture&rsquo;s two classical methods (k-means,
+linear) sit at the INT8 rung. The rest of this section
+climbs down the modern rungs.</p>
 <h2 id="second-method-part-1-k-means-quantization">Second method, part 1: k-means quantization</h2>
 <p>Han et al., Deep Compression (ICLR 2016 best paper). The
 inference procedure:</p>
@@ -356,101 +476,185 @@ inference procedure:</p>
 <li>At compute time, reconstruct weights through the index
    map. Computation stays FP32.</li>
 </ol>
-<figure><img alt="K-means quantization" src="assets/slide-l07-kmeans-quant.png"><figcaption>Shell 5. Cluster FP32 weights, store 2-bit indices plus 4 centroids, reconstruct at compute time. Source: Stanford slides, Han et al. 2016.</figcaption></figure>
-<p>Work the storage. For a D by D FP32 matrix: 32 x D^2 bits
-originally. After: log2(S) x D^2 index bits + S x 32
-centroid bits. At D = 4, S = 4: 64 bytes become 20 bytes,
-3.2x compression, and the ratio improves as S stays small
-relative to D.</p>
-<figure><img alt="K-means storage" src="assets/slide-l07-kmeans-storage.png"><figcaption>Shell 6. 64 bytes become 20 bytes: 3.2x compression on the 4x4 toy. Source: Stanford slides, Han et al. 2016.</figcaption></figure>
+<figure><img alt="K-means quantization" src="assets/slide-l07-kmeans-quant.png"><figcaption>Shell 5. Cluster FP32 weights, store 2-bit indices plus 4 centroids, reconstruct at compute time. Source: Stanford slides, Han et al. 2016. Project: Stanford Frontier AI.</figcaption></figure>
+<p>Work the storage. For a D by D FP32 matrix: 32 x D^2
+bits originally. After: log2(S) x D^2 index bits + S x
+32 centroid bits. At D = 4, S = 4: 64 bytes become 20
+bytes, 3.2x compression, and the ratio improves as S
+stays small relative to D.</p>
+<figure><img alt="K-means storage" src="assets/slide-l07-kmeans-storage.png"><figcaption>Shell 6. 64 bytes become 20 bytes: 3.2x compression on the 4x4 toy. Source: Stanford slides, Han et al. 2016. Project: Stanford Frontier AI.</figcaption></figure>
 <p>There are no compute savings: the math is still FP32.
 Fine-tuning trains the shared centroids, not individual
 weights: dL/dCk sums dL/dWij over all weights assigned to
-centroid k, then the centroid updates by gradient descent.
-Huffman coding on the indices exploits nonuniform cluster
-frequencies for 20%+ further savings on AlexNet&rsquo;s last
-layer.</p>
+centroid k, then the centroid updates by gradient
+descent. Huffman coding on the indices exploits nonuniform
+cluster frequencies for 20%+ further savings on AlexNet&rsquo;s
+last layer.</p>
+<h3 id="subchapter-why-k-means-fits-weights">Subchapter: why k-means fits weights</h3>
+<p>Weight distributions are bell-shaped: most values crowd
+near zero, few live in the tails. K-means puts more
+centroids where the values are dense, so the quantization
+error concentrates where it matters least. Uniform linear
+quantization (next section) spaces its levels evenly and
+wastes resolution on empty tail regions. The price of the
+smarter placement: an index lookup per weight at compute
+time, and no integer-math speedup.</p>
 <h2 id="second-method-part-2-linear-quantization">Second method, part 2: linear quantization</h2>
-<p>Jacob et al. (2017). Map real values r to integers q with a
-scale S and zero-point Z:</p>
+<p>Jacob et al. (2017). Map real values r to integers q with
+a scale S and zero-point Z:</p>
 <pre><code>r = S (q - Z)
 </code></pre>
-<p>Given rmin and rmax from the weight matrix and qmin, qmax
-from the bit-width (for N bits, -2^(N-1) to 2^(N-1) - 1),
-solve the two equations rmax = S(qmax - Z) and rmin =
-S(qmin - Z) for S and Z. The slides&rsquo; 2-bit example maps
-weights like 2.09 to integer 1 with S = 1.07.</p>
+<p>Given rmin and rmax from the weight matrix and qmin,
+qmax from the bit-width (for N bits, -2^(N-1) to
+2^(N-1) - 1), solve the two equations rmax = S(qmax - Z)
+and rmin = S(qmin - Z) for S and Z. The slides&rsquo; 2-bit
+example maps weights like 2.09 to integer 1 with S =
+1.07.</p>
 <p>Integer-only matmul follows by substitution. With Y =
 Sy(qY - ZY), W = Sw(qW - Zw), X = Sx(qX - Zx):</p>
 <pre><code>qY = (Sw Sx / Sy) (qW - Zw)(qX - Zx) + Zy
 </code></pre>
-<p>All integer math, with one rescale to N bits. Weights and
-compute are both integer: storage and speed improve
+<p>All integer math, with one rescale to N bits. Weights
+and compute are both integer: storage and speed improve
 together.</p>
-<h3 id="subchapter-what-breaks-at-llm-scale">Subchapter: what breaks at LLM scale</h3>
+<figure><img alt="Linear quantization" src="assets/slide-l07-linear-quant-sz.png"><figcaption>Shell 7. Solve for scale S and zero-point Z from the value ranges, then run the matmul in integers. Source: Stanford slides, Jacob et al. 2017. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-calibration-the-ptq-recipe">Subchapter: calibration, the PTQ recipe</h3>
+<p>Post-training quantization needs the ranges rmin and
+rmax before it can solve for S and Z. <strong>Calibration</strong>
+runs a few hundred representative inputs through the
+model and records the activation ranges. Min-max
+calibration takes the observed extremes. Percentile
+calibration (say 99.9%) clips the extremes: one freak
+activation no longer stretches the whole range and
+crushes everything else into a few bins.</p>
+<p>The decision rule: calibrate on data shaped like
+production traffic, not random text. A calibration set
+that never exercises the long-tail activations produces
+ranges that clip them at serving time. Calibration is
+where PTQ quality is won or lost, and it costs minutes,
+not GPU-days.</p>
+<h2 id="what-breaks-at-llm-scale">What breaks at LLM scale</h2>
 <p>Naive quantization works on small models and breaks past
 about 6B parameters. The cause: outlier features. A few
-feature dimensions (about 0.1 percent) develop values tens
-of times larger than the rest. One scale factor cannot
-cover both the outliers and the normal values: either the
-outliers clip or the normal values quantize to noise.</p>
+feature dimensions (about 0.1 percent) develop values
+tens of times larger than the rest. One scale factor
+cannot cover both the outliers and the normal values:
+either the outliers clip or the normal values quantize
+to noise.</p>
 <p>LLM.int8() (Dettmers et al., 2022) splits the problem:
 compute the 0.1 percent of outlier dimensions in FP16 and
-quantize the rest to INT8. At dmodel 4096, that is about 4
-dimensions in FP16 and 4092 in INT8. The memory savings
+quantize the rest to INT8. At dmodel 4096, that is about
+4 dimensions in FP16 and 4092 in INT8. The memory savings
 survive. The accuracy survives.</p>
 <figure><img alt="The outlier problem" src="assets/plate-l07-outliers.webp"><figcaption>0.1 percent of dimensions are outliers. LLM.int8() keeps them in FP16 and quantizes the rest. Shell 5. Source: original toy for the outlier split. Project: Stanford Frontier AI.</figcaption></figure>
-<h3 id="subchapter-the-llm-quantization-family">Subchapter: the LLM quantization family</h3>
+<h3 id="subchapter-smoothquant-move-the-difficulty">Subchapter: SmoothQuant, move the difficulty</h3>
+<p>LLM.int8() keeps outliers in high precision. SmoothQuant
+(Xiao et al., 2022) moves them instead. Activations have
+outliers. Weights do not. Multiply the activations by a
+per-channel smoothing factor s and divide the weights by
+s: the math is unchanged, but the activation outliers
+shrink and the weights absorb the range they can handle.
+Now both quantize cleanly to INT8. Same trick as
+LLM.int8(), opposite direction: instead of splitting the
+problem, rebalance it.</p>
+<h2 id="the-llm-quantization-family">The LLM quantization family</h2>
 <p>Three methods dominate LLM deployment as of October 2026,
 each answering the outlier problem differently.</p>
-<p><strong>GPTQ</strong> quantizes to 3-4 bits in one shot after training,
-using second-order (Hessian) information to choose rounding
-that hurts least. Fast to apply, no retraining.</p>
-<p><strong>AWQ</strong> (activation-aware) protects the weights that matter:
-it scales up the 1 percent of salient weights before
-quantizing, so their rounding error shrinks. Better accuracy
-than GPTQ at 4 bits on most models.</p>
-<p><strong>FP8</strong> skips post-training quantization entirely: train or
-serve in FP8 from the start. DeepSeek-V3 trained in FP8
-natively. The format matches Hopper&rsquo;s tensor cores, so the
-math is fast as well as small.</p>
+<p><strong>GPTQ</strong> quantizes to 3-4 bits in one shot after
+training, using second-order (Hessian) information to
+choose rounding that hurts least. It processes weights
+column by column, quantizing each and compensating the
+unquantized remainder in closed form. Fast to apply, no
+retraining. The 4-bit GPTQ of a 70B model is 35 GB:
+half the FP16 footprint.</p>
+<p><strong>AWQ</strong> (activation-aware) protects the weights that
+matter: it watches which weight channels see large
+activations, then scales up the 1 percent of salient
+weights before quantizing, so their rounding error
+shrinks. Better accuracy than GPTQ at 4 bits on most
+models. The observation it exploits: not all weights are
+equal, and the activations say which ones matter.</p>
+<p><strong>FP8</strong> skips post-training quantization entirely: train
+or serve in FP8 from the start. DeepSeek-V3 trained in
+FP8 natively (E4M3, block-scaled, December 2024): the
+first frontier model to validate FP8 at 671B scale. The
+format matches Hopper&rsquo;s tensor cores, so the math is fast
+as well as small.</p>
 <p>The choice: GPTQ for a quick one-shot shrink, AWQ for the
-best 4-bit accuracy, FP8 when the hardware and the training
-stack support it end to end.</p>
-<figure><img alt="Linear quantization" src="assets/slide-l07-linear-quant-sz.png"><figcaption>Shell 7. Solve for scale S and zero-point Z from the value ranges, then run the matmul in integers. Source: Stanford slides, Jacob et al. 2017.</figcaption></figure>
+best 4-bit accuracy, FP8 when the hardware and the
+training stack support it end to end.</p>
+<h3 id="subchapter-nvfp4-and-mxfp4-the-blackwell-rungs">Subchapter: NVFP4 and MXFP4, the Blackwell rungs</h3>
+<p>Blackwell added native 4-bit float tensor cores, and two
+micro-scaling formats split the rung. <strong>NVFP4</strong> is
+NVIDIA&rsquo;s format: E2M1 values (1 sign, 2 exponent, 1
+mantissa bit), block size 16, E4M3 scales per block.
+<strong>MXFP4</strong> is the OCP (Open Compute Project) standard:
+E2M1 values, block size 32, E8M0 (8 exponent, 0
+mantissa bits) power-of-two scales per block. NVFP4&rsquo;s smaller
+blocks and richer scales give finer granularity. MXFP4&rsquo;s
+power-of-two scales are cheaper in hardware.</p>
+<p>Work the memory. A 70B model in NVFP4: 70B x 0.5 bytes =
+35 GB of weights, against 140 GB in FP16. Mistral Large
+3 (675B) ships an NVFP4 checkpoint at about 340 GB
+against 1.35 TB in FP16. The serving stack as of October
+2026: TensorRT-LLM 0.17 and higher has the most mature
+NVFP4 path on B200, NVIDIA ModelOpt runs the PTQ
+calibration, vLLM serves dense and MoE NVFP4 models on
+Blackwell, and llm-compressor produces the checkpoints.
+The decision rule: NVFP4 when you serve on Blackwell and
+can calibrate well. Pick INT4 GPTQ/AWQ when you serve on older
+GPUs or consumer cards.</p>
+<figure><img alt="NVFP4" src="assets/plate-l07-nvfp4.webp"><figcaption>70B in NVFP4: 140 GB becomes 35 GB. Block 16, E4M3 scales. Shell 6. Source: original for the FP4 rung. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-key-question-again">The key question, again</h2>
-<p>Pruning removes weights. Quantization shrinks the numbers.
-Both keep the same architecture. What if we change the
-model itself: keep the knowledge, shrink the network?</p>
+<p>Pruning removes weights. Quantization shrinks the
+numbers. Both keep the same architecture. What if we
+change the model itself: keep the knowledge, shrink the
+network?</p>
 <h2 id="third-method-knowledge-distillation">Third method: knowledge distillation</h2>
-<p>Small models are wanted (phones, IoT, laptops) but hard to
-train: they underfit. <strong>Distillation</strong> trains a small
-<strong>student</strong> against a large <strong>teacher</strong> that already learned
-well. The design space aligns student and teacher on:
-output logits (Hinton et al., 2014), intermediate weights,
-intermediate features, gradients of feature maps, or
-sparsity patterns.</p>
+<p>Small models are wanted (phones, IoT, laptops) but hard
+to train: they underfit. <strong>Distillation</strong> trains a small
+<strong>student</strong> against a large <strong>teacher</strong> that already
+learned well. The design space aligns student and teacher
+on: output logits (the model&rsquo;s raw scores before the
+softmax, Hinton et al., 2014), intermediate
+weights, intermediate features, gradients of feature
+maps, or sparsity patterns.</p>
 <p>Logits matching, worked. Teacher says plane 5, car 1:
-softmax gives 0.982 and 0.017. Student says plane 3, car 2:
-0.731 and 0.269. The distillation loss (cross-entropy
-E(-pt log ps) or L2 on probabilities) pulls the student&rsquo;s
-distribution toward the teacher&rsquo;s. The student learns the
-teacher&rsquo;s uncertainty, not just the hard label: that dark
-knowledge is the point.</p>
-<figure><img alt="Distillation logits" src="assets/slide-l07-distill-logits.png"><figcaption>Shell 8. Teacher 5 vs 1, student 3 vs 2: the loss aligns the probability distributions. Source: Stanford slides.</figcaption></figure>
+softmax gives 0.982 and 0.017. Student says plane 3, car
+2: 0.731 and 0.269. The distillation loss (cross-entropy
+E(-pt log ps) or L2 on probabilities) pulls the
+student&rsquo;s distribution toward the teacher&rsquo;s. The student
+learns the teacher&rsquo;s uncertainty, not just the hard
+label: that dark knowledge is the point.</p>
+<figure><img alt="Distillation logits" src="assets/slide-l07-distill-logits.png"><figcaption>Shell 8. Teacher 5 vs 1, student 3 vs 2: the loss aligns the probability distributions. Source: Stanford slides. Project: Stanford Frontier AI.</figcaption></figure>
 <h3 id="subchapter-the-temperature-knob">Subchapter: the temperature knob</h3>
-<p>The lecture&rsquo;s worked example uses plain softmax. Hinton&rsquo;s
-full method adds a temperature T: p_i = exp(z_i / T) /
-sum(exp(z_j / T)). Higher T softens the distribution and
-reveals more dark knowledge.</p>
+<p>The lecture&rsquo;s worked example uses plain softmax.
+Hinton&rsquo;s full method adds a temperature T: p_i = exp(z_i
+/ T) / sum(exp(z_j / T)). Higher T softens the
+distribution and reveals more dark knowledge.</p>
 <p>Teacher logits plane 5, car 1. At T = 1: 0.982 and 0.017,
-nearly a hard label. At T = 5: exp(1) = 2.718, exp(0.2) =
-1.221, giving 0.690 and 0.310. The student now sees that
-the teacher finds the car 31 percent plausible, not 2
-percent. Train the student against the softened targets at
-high T, then run it at T = 1. The temperature is the
+nearly a hard label. At T = 5: exp(1) = 2.718, exp(0.2)
+= 1.221, giving 0.690 and 0.310. The student now sees
+that the teacher finds the car 31 percent plausible, not
+2 percent. Train the student against the softened targets
+at high T, then run it at T = 1. The temperature is the
 bandwidth of the knowledge transfer.</p>
 <figure><img alt="The temperature knob" src="assets/plate-l07-temperature.webp"><figcaption>T 1 gives 0.98 and 0.02. T 5 gives 0.69 and 0.31: the dark knowledge appears. Shell 6. Source: original toy for temperature. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-distillation-at-frontier-scale">Subchapter: distillation at frontier scale</h3>
+<p>Distillation grew up. DeepSeek-R1&rsquo;s reasoning traces were
+distilled into Qwen2.5 and Llama 3 students (public in the
+R1 report, January 2025): the students learned
+chain-of-thought reasoning they could never have found by
+training on labels alone. Llama 4 Maverick was
+co-distilled from the unreleased Behemoth teacher. Apple
+distills large models into on-device models that ship in
+INT4/INT8 on phones.</p>
+<p>The systems reason distillation matters: the teacher runs
+once, offline, on a cluster. The student runs a billion
+times on devices. Every unit of teacher quality
+transferred is inference cost avoided forever. That is
+why the largest labs distill their best models into
+their smallest: the economics point one way.</p>
 <h2 id="what-is-used-where-real-deployments">What is used where: real deployments</h2>
 <p>Shrinking runs production inference. Facts as of October
 2026.</p>
@@ -470,23 +674,48 @@ bandwidth of the knowledge transfer.</p>
 </tr>
 <tr>
 <td>vLLM</td>
-<td>AWQ, GPTQ, FP8 serving</td>
+<td>AWQ, GPTQ, FP8, NVFP4 serving</td>
 <td>public; quantized serving at scale</td>
 </tr>
 <tr>
-<td>DeepSeek-V3</td>
-<td>native FP8 training</td>
-<td>public in the V3 paper</td>
+<td>SGLang</td>
+<td>FP8, NVFP4, FA4 attention backends</td>
+<td>public; DeepSeek V3/V4 reference serving</td>
 </tr>
 <tr>
-<td>Apple on-device models</td>
-<td>INT4/INT8 quantization</td>
-<td>public; phones cannot hold FP16 70B</td>
+<td>TensorRT-LLM 0.17+</td>
+<td>NVFP4 on Blackwell</td>
+<td>public; most mature FP4 path</td>
+</tr>
+<tr>
+<td>NVIDIA ModelOpt</td>
+<td>PTQ calibration for FP8/FP4</td>
+<td>public; the calibration pipeline</td>
+</tr>
+<tr>
+<td>DeepSeek-V3</td>
+<td>native FP8 training (E4M3, block-scaled)</td>
+<td>public in the V3 paper</td>
 </tr>
 <tr>
 <td>DeepSeek-R1 distills</td>
 <td>reasoning distilled into Qwen2.5 and Llama 3</td>
 <td>public in the R1 report</td>
+</tr>
+<tr>
+<td>GPT-OSS 120B</td>
+<td>MXFP4-native (117B in about 61 GB)</td>
+<td>public; OpenAI&rsquo;s open model</td>
+</tr>
+<tr>
+<td>Mistral Large 3</td>
+<td>NVFP4 checkpoint (675B in about 340 GB)</td>
+<td>public; Apache 2.0</td>
+</tr>
+<tr>
+<td>Apple on-device models</td>
+<td>INT4/INT8 quantization</td>
+<td>public; phones cannot hold FP16 70B</td>
 </tr>
 <tr>
 <td>SparseGPT / Wanda</td>
@@ -495,11 +724,12 @@ bandwidth of the knowledge transfer.</p>
 </tr>
 </tbody>
 </table>
-<p>Two honest notes. Pruning at LLM scale is mostly research:
-SparseGPT and Wanda are public papers, but production
-serving shrinks with quantization, not pruning. And which
-quant a frontier vendor uses internally (GPT, Gemini) is
-not public. The table lists what is.</p>
+<p>Two honest notes. Pruning at LLM scale is mostly
+research: SparseGPT and Wanda are public papers, but
+production serving shrinks with quantization, not
+pruning. And which quant a frontier vendor uses
+internally (GPT, Gemini) is not public. The table lists
+what is.</p>
 <h2 id="mapping-back-three-cuts-one-smaller-model">Mapping back: three cuts, one smaller model</h2>
 <table>
 <thead>
@@ -526,6 +756,11 @@ not public. The table lists what is.</p>
 <td>Integer arithmetic end to end</td>
 </tr>
 <tr>
+<td>LLM quants (GPTQ/AWQ/FP8/NVFP4)</td>
+<td>Storage bits and math at scale</td>
+<td>Accuracy via outlier handling and calibration</td>
+</tr>
+<tr>
 <td>Distillation</td>
 <td>The whole model</td>
 <td>The teacher&rsquo;s knowledge as soft targets</td>
@@ -534,22 +769,188 @@ not public. The table lists what is.</p>
 </table>
 <p>The Deep Compression results show the combination beats
 either alone: pruning and quantization compose. For each
-method, accuracy falls as compression rises. That curve is
-the price of every cut.</p>
+method, accuracy falls as compression rises. That curve
+is the price of every cut.</p>
 <h2 id="the-honest-price">The honest price</h2>
 <p>Every shrink trades accuracy for memory. Unstructured
-pruning without hardware support saves nothing at runtime.
-2:4 sparsity needs Ampere-or-newer sparse tensor cores and
-matching kernels. Naive quantization breaks at LLM scale:
-outlier features past 6B parameters need model-aware fixes
-like LLM.int8(). Distillation needs a teacher worth
-imitating and a student architecture that can absorb the
-lessons.</p>
-<div class="callout"><span class="co-label">Note</span><p>The Fall 2024 calendar lists &ldquo;Butterfly and Monarch
-matrices&rdquo; under this lecture&rsquo;s sparsity topics. The
-shipped deck does not contain them. [uncertain]: treat
-any claim about them as unverified until checked against
-the 2024 lecture recording.</p></div>
+pruning without hardware support saves nothing at
+runtime. 2:4 sparsity needs Ampere-or-newer sparse tensor
+cores and matching kernels. Naive quantization breaks at
+LLM scale: outlier features past 6B parameters need
+model-aware fixes like LLM.int8(). Distillation needs a
+teacher worth imitating and a student architecture that
+can absorb the lessons. NVFP4 needs Blackwell and good
+calibration: the format is only as good as the ranges.
+Butterfly and Monarch matrices are calendar-listed but
+not in the shipped deck: [uncertain] until checked
+against the 2024 lecture recording.</p>
+<h2 id="coverage-map-every-lecture-claim-and-where-it-lives">Coverage map: every lecture claim and where it lives</h2>
+<table>
+<thead>
+<tr>
+<th>Lecture claim</th>
+<th>Covered in</th>
+<th>File line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shrink memory required, not just accesses; microcontrollers 3x less than phones; ResNet-50 100x over limit</td>
+<td>The problem: the model does not fit</td>
+<td>L63</td>
+</tr>
+<tr>
+<td>Pruning: minimize loss subject to nonzero budget; ideal properties</td>
+<td>First method: pruning</td>
+<td>L83</td>
+</tr>
+<tr>
+<td>Magnitude vs regression pruning; W = [5, 0.3, -0.4] toy</td>
+<td>First method: pruning</td>
+<td>L83</td>
+</tr>
+<tr>
+<td>Iterative prune-and-fine-tune; 37% x 5 rounds to 90%</td>
+<td>why iterative beats one-shot</td>
+<td>L109</td>
+</tr>
+<tr>
+<td>SparseGPT and Wanda one-shot LLM pruning, 50% no retraining (post-deck)</td>
+<td>one-shot pruning at LLM scale</td>
+<td>L126</td>
+</tr>
+<tr>
+<td>Unstructured vs structured; random access slowest; 2:4 Ampere compromise</td>
+<td>Where naive pruning breaks: the pattern</td>
+<td>L157</td>
+</tr>
+<tr>
+<td>2:4 worked: 2 bits metadata per group, 0.5 bits per weight, 2x sparse GEMM</td>
+<td>the 2:4 pattern, worked</td>
+<td>L180</td>
+</tr>
+<tr>
+<td>Sensitivity analysis: per-layer ratios, early layers fragile</td>
+<td>sensitivity analysis, per layer</td>
+<td>L198</td>
+</tr>
+<tr>
+<td>Quantization definition and error; storage and multiply cost in bit-width</td>
+<td>How numbers live in bits</td>
+<td>L221</td>
+</tr>
+<tr>
+<td>Integers: two&rsquo;s complement vs sign-magnitude, -70 worked</td>
+<td>How numbers live in bits</td>
+<td>L221</td>
+</tr>
+<tr>
+<td>Fixed point: -4.375 at 4 fraction bits</td>
+<td>How numbers live in bits</td>
+<td>L221</td>
+</tr>
+<tr>
+<td>FP32: (-1)^s(1+f)2^(e-127); 0.0097656 worked; subnormals, inf, NaN</td>
+<td>How numbers live in bits</td>
+<td>L221</td>
+</tr>
+<tr>
+<td>FP16 vs BF16: 8 exponent bits stabilize training</td>
+<td>How numbers live in bits</td>
+<td>L221</td>
+</tr>
+<tr>
+<td>Bit ladder 2026: FP32 to NF4/INT2 (Oct 2026 update)</td>
+<td>the bit ladder, 2026 edition</td>
+<td>L280</td>
+</tr>
+<tr>
+<td>K-means: cluster, log2(S)-bit indices, FP32 centroids; 4x4 toy 64 to 20 bytes</td>
+<td>Second method, part 1: k-means quantization</td>
+<td>L301</td>
+</tr>
+<tr>
+<td>Centroid fine-tuning via dL/dCk; Huffman 20%+ on AlexNet</td>
+<td>Second method, part 1: k-means quantization</td>
+<td>L301</td>
+</tr>
+<tr>
+<td>Why k-means fits weights: bell distribution, dense centroids</td>
+<td>why k-means fits weights</td>
+<td>L330</td>
+</tr>
+<tr>
+<td>Linear: r = S(q-Z); solve from ranges; 2-bit example S=1.07; integer matmul</td>
+<td>Second method, part 2: linear quantization</td>
+<td>L341</td>
+</tr>
+<tr>
+<td>Calibration: min-max vs percentile; production-shaped data</td>
+<td>calibration, the PTQ recipe</td>
+<td>L370</td>
+</tr>
+<tr>
+<td>Outlier features past 6B; LLM.int8() 0.1% in FP16</td>
+<td>What breaks at LLM scale</td>
+<td>L388</td>
+</tr>
+<tr>
+<td>SmoothQuant: move outliers into weights via per-channel s</td>
+<td>SmoothQuant, move the difficulty</td>
+<td>L406</td>
+</tr>
+<tr>
+<td>GPTQ: Hessian rounding, 3-4 bit one-shot</td>
+<td>The LLM quantization family</td>
+<td>L418</td>
+</tr>
+<tr>
+<td>AWQ: protect 1% salient weights</td>
+<td>The LLM quantization family</td>
+<td>L418</td>
+</tr>
+<tr>
+<td>FP8 native: DeepSeek-V3 E4M3 block-scaled (Oct 2026 update)</td>
+<td>The LLM quantization family</td>
+<td>L418</td>
+</tr>
+<tr>
+<td>NVFP4 vs MXFP4: E2M1, block 16 vs 32; 70B in 35 GB; TRT-LLM/vLLM/ModelOpt (Oct 2026)</td>
+<td>NVFP4 and MXFP4, the Blackwell rungs</td>
+<td>L450</td>
+</tr>
+<tr>
+<td>Distillation: student vs teacher; logits matching 0.982/0.017 vs 0.731/0.269</td>
+<td>Third method: knowledge distillation</td>
+<td>L483</td>
+</tr>
+<tr>
+<td>Temperature: T=1 vs T=5, 0.69/0.31 dark knowledge</td>
+<td>the temperature knob</td>
+<td>L504</td>
+</tr>
+<tr>
+<td>R1 distills into Qwen2.5/Llama 3; Llama 4 from Behemoth; Apple on-device (Oct 2026)</td>
+<td>distillation at frontier scale</td>
+<td>L521</td>
+</tr>
+<tr>
+<td>Deployments table: llama.cpp, vLLM, SGLang, TRT-LLM, ModelOpt, V3, R1, GPT-OSS, Mistral, Apple (Oct 2026)</td>
+<td>What is used where</td>
+<td>L539</td>
+</tr>
+<tr>
+<td>Three cuts mapped to what shrinks and what is kept</td>
+<td>Mapping back</td>
+<td>L565</td>
+</tr>
+<tr>
+<td>Honest price: every cut trades accuracy; NVFP4 needs Blackwell; Butterfly/Monarch [uncertain]</td>
+<td>The honest price</td>
+<td>L580</td>
+</tr>
+</tbody>
+</table>
 <div class="qa"><div class="q">Why does unstructured pruning often fail to speed up inference?</div><div class="a"><p>Because the surviving weights scatter randomly across memory. The hardware still reads and writes every block to find the nonzeros, so the memory traffic barely drops. Structured patterns like 2:4 N:M keep accesses regular, which is what sparse tensor cores need. Accuracy favors fine-grained. Speed favors structured.
 Sensitivity analysis: prune each layer at increasing ratios in magnitude order and measure accuracy. Layers have different sensitivity, with early layers usually more fragile. Assign aggressive ratios only where accuracy survives.</p><div class="followup"><strong>Follow-up:</strong> How do you pick the sparsity ratio per layer?</div></div></div>
 <div class="qa"><div class="q">Work out the k-means storage saving for a 4x4 FP32 matrix with 4 clusters.</div><div class="a"><p>Original: 32 bits x 16 weights = 64 bytes. After: each weight stores a 2-bit cluster index (log2 4), so 16 x 2 bits = 4 bytes, plus 4 FP32 centroids = 16 bytes. Total 20 bytes. Saving: 64 - 20 = 44 bytes, 3.2x compression. Compute is unchanged because weights reconstruct to FP32 before the matmul.
@@ -562,23 +963,29 @@ Small models underfit: they cannot find the good solutions on their own from har
 Because each cut destroys co-adapted structure. Pruning 37 percent and fine-tuning lets the survivors re-learn their roles. Repeating five times reaches 90 percent sparsity with accuracy intact. One 90 percent cut removes too much structure at once and fine-tuning cannot recover. The schedule is the method.</p><div class="followup"><strong>Follow-up:</strong> Why iterate instead of pruning once to the target?</div></div></div>
 <div class="qa"><div class="q">What does the temperature do in distillation?</div><div class="a"><p>It controls how much dark knowledge the teacher reveals. With logits plane 5, car 1: at T = 1 the targets are 0.982 and 0.017, nearly a hard label. At T = 5 they are 0.690 and 0.310: the student learns the teacher finds the car 31 percent plausible. Higher temperature means softer targets and more information per example about the decision boundary. Train at high T, deploy at T = 1.
 Yes. As T grows, the distribution flattens toward uniform and the teacher&rsquo;s ranking information washes out. The temperature is tuned, not maximized: enough softness to reveal confusions, not so much that everything looks equally plausible.</p><div class="followup"><strong>Follow-up:</strong> Can the temperature be too high?</div></div></div>
-<div class="qa"><div class="q">Applied design: serve a 70B model on one 80 GB GPU. Pick your cuts.</div><div class="a"><p>The weights in FP16 are 140 GB: they do not fit, so quantization is mandatory. INT4 (GPTQ or AWQ) brings weights to 35 GB, leaving 45 GB for the KV cache and activations. Check the cache budget: at 0.5 MB per token (GQA 70B), 45 GB holds 90k tokens of context. If the workload needs longer context, the choices are a smaller model, a bigger GPU, or offloading. Pruning does not help here: it saves parameters, not the serving path, and 2:4 needs kernel support. Distillation changes the model: a distilled 8B in FP16 is 16 GB and fits trivially, but it is a different model with different quality.
+<div class="qa"><div class="q">Why does naive quantization break past about 6B parameters, and what are the two fixes?</div><div class="a"><p>Outlier features: about 0.1 percent of dimensions develop values tens of times larger than the rest, so one scale factor cannot cover both the outliers and the normal values. LLM.int8() splits the problem: compute the outlier dimensions in FP16 and quantize the rest to INT8. SmoothQuant rebalances it: scale activations down and weights up by a per-channel factor so both quantize cleanly to INT8. Split the problem or move the difficulty. Both keep the accuracy that naive quantization loses.
+GPTQ uses second-order information to pick the rounding order that hurts least, quantizing column by column with closed-form compensation: a better rounding strategy. AWQ uses the activations to find the 1 percent of salient weights and scales them up before quantizing so their error shrinks: a better protection strategy. GPTQ is the quick one-shot shrink. AWQ usually wins at 4 bits.</p><div class="followup"><strong>Follow-up:</strong> How do GPTQ and AWQ differ in handling the same problem?</div></div></div>
+<div class="qa"><div class="q">Applied design: serve a 70B model on one 80 GB GPU. Pick your cuts.</div><div class="a"><p>The weights in FP16 are 140 GB: they do not fit, so quantization is mandatory. INT4 (GPTQ or AWQ) brings weights to 35 GB, leaving 45 GB for the KV cache and activations. On Blackwell, NVFP4 also gives 35 GB with native tensor-core speed. Check the cache budget: at 0.5 MB per token (GQA 70B), 45 GB holds 90k tokens of context. If the workload needs longer context, the choices are a smaller model, a bigger GPU, or offloading. Pruning does not help here: it saves parameters, not the serving path, and 2:4 needs kernel support. Distillation changes the model: a distilled 8B in FP16 is 16 GB and fits trivially, but it is a different model with different quality.
 INT8 weights are 70 GB: they fit, but leave only 10 GB for cache and activations, capping context at about 20k tokens. INT4 doubles the headroom. The cost is accuracy: 4-bit needs AWQ or GPTQ done well, and some tasks degrade. The design answer names the tradeoff: context length and quality, priced in bits per weight.</p><div class="followup"><strong>Follow-up:</strong> Why INT4 and not INT8?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
-<p>The story in eight steps. Each step answers the one before it.</p>
+<p>The story in nine steps. Each step answers the one
+before it.</p>
 <ol>
 <li><strong>The model does not fit.</strong> Microcontrollers have 3x
    less memory than phones. ResNet-50 exceeds their limit
-   by up to 100x. Shrink the memory required, not just the
-   accesses.</li>
-<li><strong>Pruning removes weights.</strong> Minimize loss subject to a
-   nonzero budget. Magnitude keeps large weights
+   by up to 100x. Shrink the memory required, not just
+   the accesses.</li>
+<li><strong>Pruning removes weights.</strong> Minimize loss subject to
+   a nonzero budget. Magnitude keeps large weights
    (W = [5, 0.3, -0.4] keeps 5). Regression picks rows by
-   reconstruction error. Iterative beats one-shot.</li>
+   reconstruction error. Iterative beats one-shot. At LLM
+   scale, SparseGPT and Wanda prune 50% in one pass, but
+   unstructured zeros need sparse kernels to matter.</li>
 <li><strong>Patterns decide sparsity value.</strong> Unstructured
    pruning is accurate but scatters memory access. 2:4
    structured sparsity matches Ampere tensor cores: 50%
-   fewer weights, real speedup.</li>
+   fewer weights, real speedup. Set ratios per layer by
+   sensitivity analysis.</li>
 <li><strong>Numbers live in bits.</strong> Integers, fixed point,
    FP32: (-1)^s (1+f) 2^(e-127). The worked value is
    0.0097656. BF16 trades precision for range and trains
@@ -589,14 +996,37 @@ INT8 weights are 70 GB: they fit, but leave only 10 GB for cache and activations
    stays FP32.</li>
 <li><strong>Linear quantization runs integer math.</strong> r = S(q -
    Z). Solve S, Z from the ranges. The matmul becomes
-   qY = (SwSx/Sy)(qW-Zw)(qX-Zx) + Zy: all integer.</li>
+   qY = (SwSx/Sy)(qW-Zw)(qX-Zx) + Zy: all integer.
+   Calibrate the ranges on production-shaped data.</li>
+<li><strong>Outliers break naive quants at scale.</strong> 0.1% of
+   dimensions run tens of times hot. LLM.int8() splits
+   them into FP16. SmoothQuant rebalances them into the
+   weights. GPTQ rounds smart. AWQ protects the salient
+   1%. NVFP4/MXFP4 take 4-bit to Blackwell: 70B in 35 GB.</li>
 <li><strong>Distillation teaches uncertainty.</strong> The student
    matches the teacher&rsquo;s probability distribution, not
-   just labels. Align on logits, features, or gradients.</li>
+   just labels. Temperature sets the bandwidth. Frontier
+   labs distill their best into their smallest: the
+   teacher runs once, the student runs a billion times.</li>
 <li><strong>Cuts compose. Accuracy pays.</strong> Pruning plus
    quantization beats either alone. Every method trades a
    little accuracy for a lot of memory.</li>
 </ol>
+<h2 id="go-deeper">Go deeper</h2>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/1JWnEze9V5g" title="Quantization for LLMs" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+<ul>
+<li>Quantization Explained: reducing LLM size without losing accuracy: https://www.youtube.com/watch?v=1JWnEze9V5g</li>
+<li>LLM quantization methods compared (GGUF, GPTQ, AWQ): https://www.youtube.com/watch?v=WmvZwR4rKJg</li>
+<li>Deep Compression (Han et al., ICLR 2016): https://arxiv.org/abs/1510.00149</li>
+<li>Quantization and Training of Neural Networks (Jacob et al.): https://arxiv.org/abs/1712.05877</li>
+<li>LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale: https://arxiv.org/abs/2208.07339</li>
+<li>GPTQ: Accurate Post-Training Quantization: https://arxiv.org/abs/2210.1730</li>
+<li>AWQ: Activation-aware Weight Quantization: https://arxiv.org/abs/2306.00978</li>
+<li>Distilling the Knowledge in a Neural Network (Hinton et al.): https://arxiv.org/abs/1503.02531</li>
+</ul>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Memory-Efficient Neural Networks slide deck (Fall 2023
@@ -611,29 +1041,19 @@ INT8 weights are 70 GB: they fit, but leave only 10 GB for cache and activations
   Inference&rdquo; (2017).
 - Dettmers et al., &ldquo;LLM.int8()&rdquo; (2022): what breaks at
   LLM scale and the outlier fix.
-- Xiao et al., &ldquo;SmoothQuant&rdquo; (2022): the deck&rsquo;s motivating
-  LLM quantization figure.</p>
+- Frantar et al., &ldquo;GPTQ&rdquo; (2023): one-shot 4-bit with
+  second-order rounding.
+- Lin et al., &ldquo;AWQ&rdquo; (2023): activation-aware 4-bit.
+- Xiao et al., &ldquo;SmoothQuant&rdquo; (2022): the deck&rsquo;s
+  motivating LLM quantization figure.</p>
 <p><strong>Caveats from these sources.</strong> The deck&rsquo;s quantization
 examples are small-matrix illustrations. LLM-scale
 behavior adds outlier features that break naive schemes
 (see LLM.int8()). The 2:4 sparsity speedup needs
 Ampere-or-newer sparse tensor cores and matching kernels.
-unstructured sparsity rarely speeds up dense GEMM.
-Butterfly and Monarch matrices are calendar-listed but not
-in the shipped deck: [uncertain].</p>
-<h2 id="go-deeper">Go deeper</h2>
-<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
-<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/1JWnEze9V5g" title="Quantization for LLMs" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-</div>
-
-<ul>
-<li>Quantization Explained: reducing LLM size without losing accuracy: https://www.youtube.com/watch?v=1JWnEze9V5g</li>
-<li>LLM quantization methods compared (GGUF, GPTQ, AWQ): https://www.youtube.com/watch?v=WmvZwR4rKJg</li>
-<li>Deep Compression (Han et al., ICLR 2016): https://arxiv.org/abs/1510.00149</li>
-<li>Quantization and Training of Neural Networks (Jacob et al.): https://arxiv.org/abs/1712.05877</li>
-<li>LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale: https://arxiv.org/abs/2208.07339</li>
-<li>Distilling the Knowledge in a Neural Network (Hinton et al.): https://arxiv.org/abs/1503.02531</li>
-</ul>
+Unstructured sparsity rarely speeds up dense GEMM.
+Butterfly and Monarch matrices are calendar-listed but
+not in the shipped deck: [uncertain].</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
 <li><strong>CS336 L02:</strong> the precision ladder (FP32 to FP4) and
@@ -644,8 +1064,10 @@ in the shipped deck: [uncertain].</p>
   fine-tuning memory cost.</li>
 <li><strong>CS229S L01:</strong> the memory wall: why shrinking matters
   at all.</li>
+<li><strong>CS229 L15:</strong> quantization for serving (INT8, FP8,
+  GPTQ, AWQ) from the serving side.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Memory-Efficient Neural Networks slide deck (Fall 2023 headers)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1506.02626" target="_blank" rel="noopener">Han et al., Learning both Weights and Connections for Efficient Neural Networks (2015)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1510.00149" target="_blank" rel="noopener">Han et al., Deep Compression (ICLR 2016)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1712.05877" target="_blank" rel="noopener">Jacob et al., Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference (2017)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1503.02531" target="_blank" rel="noopener">Hinton et al., Distilling the Knowledge in a Neural Network (2014)</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://hanlab.mit.edu/courses/2023-fall-65940" target="_blank" rel="noopener">MIT 6.5940 TinyML and Efficient Deep Learning Computing (Prof. Song Han)</a></li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Memory-Efficient Neural Networks slide deck (Fall 2023 headers)</li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1506.02626" target="_blank" rel="noopener">Han et al., Learning both Weights and Connections for Efficient Neural Networks (2015)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1510.00149" target="_blank" rel="noopener">Han et al., Deep Compression (ICLR 2016)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1712.05877" target="_blank" rel="noopener">Jacob et al., Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference (2017)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1503.02531" target="_blank" rel="noopener">Hinton et al., Distilling the Knowledge in a Neural Network (2014)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2208.07339" target="_blank" rel="noopener">Dettmers et al., LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale (2022)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2210.1730" target="_blank" rel="noopener">Frantar et al., GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers (2023)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2306.00978" target="_blank" rel="noopener">Lin et al., AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration (2023)</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://hanlab.mit.edu/courses/2023-fall-65940" target="_blank" rel="noopener">MIT 6.5940 TinyML and Efficient Deep Learning Computing (Prof. Song Han)</a></li></ul></section>
       <nav class="pager"><a href="../cs229s/l06-flash-attention.html"><span class="lbl">← Previous</span>Lecture 6: Efficient Attention and FlashAttention</a><a href="../cs229s/l08-finetuning-and-peft.html"><span class="lbl">Next →</span>Lecture 8: Fine-Tuning Large Language Models and PEFT</a></nav>
     </article>
     <footer class="pagefoot">
