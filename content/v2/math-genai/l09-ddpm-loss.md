@@ -11,11 +11,16 @@ date: "2026-10-05"
 instructor: "Prof. Prathosh A P"
 offering: "2025"
 video_id: yzU0ueuABLw
+video_title: "W8L30: Optimization of DDPM loss"
+video_caption: "The lecture video for this lesson: turning the DDPM ELBO into the noise-prediction loss. Timestamps in the text link to the exact moment."
 concepts: [ddpm-elbo, forward-posterior, noise-prediction, mse-loss, denoising, sampling]
 sources:
   - tag: video
-    label: "W8L28/L29: ELBO for DDPM (videos AnWitwNPnN4, wPx64rVy2c4)"
+    label: "W8L28: ELBO for DDPM Part 1 (video AnWitwNPnN4)"
     url: https://www.youtube.com/watch?v=AnWitwNPnN4
+  - tag: video
+    label: "W8L29: ELBO for DDPM Part 2 (video wPx64rVy2c4)"
+    url: https://www.youtube.com/watch?v=wPx64rVy2c4
   - tag: video
     label: "W8L30: Optimization of DDPM loss (video yzU0ueuABLw)"
     url: https://www.youtube.com/watch?v=yzU0ueuABLw
@@ -48,16 +53,25 @@ gradient ascent on the bound.
 
 ## Where the naive ELBO breaks
 
+### A thousand coupled Gaussians
+
 Watch it struggle. Each KL term compares two Gaussians
 whose parameters both move during training. The gradient
 must tune means and variances jointly across 1000 coupled
 terms, and the variance parameters are notoriously
 twitchy: a slightly wrong Σ_θ explodes or collapses the
 KL. Training is slow, unstable, and the samples are
-mediocre. The bound is correct but unusable in raw form.
-The lecture's whole W8 block is the rescue: three
+mediocre.
+
+### Correct but unusable
+
+The bound is correct but unusable in raw form. The
+lecture's whole W8 block is the rescue: three
 algebraic moves that turn this monster into one clean
-regression.
+regression. The decision rule to remember: when a bound
+is correct but untrainable, look for conditioning that
+makes the intractable parts tractable. Training knows
+the answer (x_0). Use it.
 
 ## The key question
 
@@ -66,10 +80,11 @@ the answer simplify what each reverse step must learn?
 
 ## The new idea: condition on the answer
 
-**Move 1: the tractable posterior.** The ELBO's per-step
-KL compares p_θ(x_{t-1}|x_t) against the true reverse
-q(x_{t-1}|x_t), which is intractable. But conditioned on
-x_0, which training knows, the posterior
+### Move 1: the tractable posterior
+
+The ELBO's per-step KL compares p_θ(x_{t-1}|x_t) against
+the true reverse q(x_{t-1}|x_t), which is intractable. But
+conditioned on x_0, which training knows, the posterior
 q(x_{t-1}|x_t, x_0) is a Gaussian with a closed form.
 (Bayes' rule on three Gaussians: q(x_t|x_{t-1}) times
 q(x_{t-1}|x_0), normalized.) Its mean is:
@@ -95,15 +110,17 @@ variance is β̃_t = ((1−ᾱ_{t-1})/(1−ᾱ_t))·β_t =
 (0.1/0.19)·0.1 = 0.0526: small, because knowing x_0
 removes most uncertainty.
 
-**Move 2: KL of Gaussians is squared error.** The KL
-between two Gaussians with the same variance is
+### Move 2: KL of Gaussians is squared error
+
+The KL between two Gaussians with the same variance is
 proportional to the squared distance of their means.
 So each ELBO term becomes ||μ̃_t − μ_θ(x_t, t)||², up
-to constants. Still a mean to predict. But, 
+to constants. Still a mean to predict. But,
 
-**Move 3: predict the noise, not the mean.** From
-Lesson 8's closed form, x_t = √ᾱ_t x_0 + √(1−ᾱ_t) ε,
-solve for x_0 and substitute into μ̃_t. The mean
+### Move 3: predict the noise, not the mean
+
+From Lesson 8's closed form, x_t = √ᾱ_t x_0 + √(1−ᾱ_t)
+ε, solve for x_0 and substitute into μ̃_t. The mean
 rewrites as a function of x_t and the *noise* ε that
 was added. So instead of predicting μ̃_t directly,
 have the network predict the noise:
@@ -120,6 +137,8 @@ a random step t, add the corresponding noise, ask the
 network what noise was added. Denoising as
 noise-prediction.
 
+### Worked: the loss is 0.0354
+
 Work the loss on the toy. Building x_2 = 3.900 used
 combined noise ε = 0.688 (Lesson 8). Suppose the
 network predicts ε_θ = 0.5:
@@ -133,7 +152,11 @@ One number. Its gradient pushes the prediction toward
 The lecture's punchline: the world's best image
 generators train on this MSE.
 
+![Three moves turn the ELBO monster into one MSE](assets/l09-three-moves.webp "Condition on x_0. Reduce KL to squared error. Predict the noise. Shell 3. Source: original. Project: Stanford Frontier AI.")
+
 ## Three faces of the same prediction
+
+### Noise, clean image, score
 
 The W8L31 lecture ("ELBO equivalence") shows the
 noise prediction is one of three equivalent targets.
@@ -152,7 +175,23 @@ The score view connects diffusion to an older
 literature (score matching) and to the sampling
 methods of Lesson 10.
 
+### Why noise trains best
+
+The noise has a fixed scale (standard Gaussian) at
+every step t, while x_0's scale relative to x_t varies
+wildly with t. A network predicting a fixed-scale
+target trains more stably: the loss landscape looks
+the same at t = 10 and t = 900. Predicting x_0 would
+ask the network to output tiny corrections at high
+noise and huge ones at low noise. Same information,
+friendlier regression. The decision rule: pick the
+prediction target with the most constant scale.
+
+![One prediction, three faces: noise, clean image, score](assets/l09-three-faces.webp "Know one, know all three. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
+
 ## Inference: walking the chain backward
+
+### The reverse step formula
 
 Trained ε_θ gives the reverse mean via the move-3
 substitution. One sampling step:
@@ -161,6 +200,8 @@ substitution. One sampling step:
 x_{t-1} = (1/sqrt(a_t)) * ( x_t - (b_t / sqrt(1 - a_bar_t)) * e_theta )
           + sqrt(beta_tilde_t) * z,    z ~ N(0,1)
 ```
+
+### Worked: 3.9 → 4.059
 
 With the toy numbers (t = 2, x_2 = 3.9, ε_θ = 0.5):
 
@@ -176,6 +217,8 @@ Repeat down to t = 1 and x_0 emerges. The wobble
 (z term) is what makes samples vary: same x_T,
 different z's, different photos.
 
+![One reverse step: from 3.9 back toward 4.0, plus a wobble](assets/l09-sampling-step.webp "Remove the predicted noise, then add controlled randomness for variety. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
 ```mermaid
 flowchart LR
   XT["x_T: pure noise"] --> R["reverse step: remove predicted noise"]
@@ -184,7 +227,19 @@ flowchart LR
   R2 --> X0["x_0: photo"]
 ```
 
+### Why the wobble stays
+
+Why add noise during generation? Why not just take the
+mean? The mean path gives one deterministic output per
+x_T: less variety, and errors compound without the
+stochastic correction. The added noise keeps each step
+a true sample from the reverse Gaussian, which is what
+the ELBO trained. Deterministic variants exist (DDIM,
+Lesson 10) but they change the sampler deliberately.
+
 ## The honest price
+
+### A reweighted bound
 
 L_simple is not the true ELBO. Dropping the per-term
 weights optimizes a reweighted bound: slightly worse
@@ -193,11 +248,15 @@ samples. (Weightings that restore the true ELBO exist
 and train worse-looking models. An honest trade,
 stated plainly.)
 
+### Fixed variances
+
 Second, the variance Σ_θ is fixed, not learned, in
 the basic DDPM. The model cannot express uncertainty
 about its denoising beyond the schedule's β̃_t.
 Learned variances help likelihood and hurt nothing
 much, but the simple version won on sample quality.
+
+### Still T slow steps
 
 Third, sampling still costs T steps. The loss is
 beautiful. The sampler is slow. Lesson 10 attacks
@@ -209,11 +268,34 @@ exactly this.
 | KL of moving Gaussians unstable | Same-variance KL = squared error | Per-step MSE on means |
 | Predicting means is awkward | Substitute x_0 via the noise | L_simple = \|\|ε − ε_θ\|\|² = 0.0354 in the toy |
 
+### Where L_simple runs in real systems
+
+L_simple is the training loss inside every DDPM-lineage
+image generator: pick t, add noise, predict the noise.
+The three-faces equivalence is why the same trained
+network can drive DDIM sampling (Lesson 10) and
+score-based guidance without retraining: the weights
+already encode all three views. [uncertain] Which
+production models use exactly L_simple versus weighted
+variants is not public.
+
+## Videos for this lesson
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/AnWitwNPnN4" title="W8L28: ELBO for DDPM : Part 1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: the DDPM ELBO derived, part 1. If the embed is blocked: <a href="https://www.youtube.com/watch?v=AnWitwNPnN4" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/0p7T-3WiPnQ" title="W8L33: Inference in DDPM" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: inference in DDPM, walking the chain backward to generate. If the embed is blocked: <a href="https://www.youtube.com/watch?v=0p7T-3WiPnQ" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
 > [!QA]
 > Q: How does the horrible DDPM ELBO become a simple MSE?
 > A: Three moves. Condition on the known x_0 to get a tractable Gaussian posterior per step (mean 3.944 in the toy). Use the Gaussian KL closed form: it reduces to squared error between means. Reparameterize the mean through the added noise: predicting the mean equals predicting ε. Result: L_simple = E||ε − ε_θ(x_t, t)||². In the toy the loss was (0.688 − 0.5)² = 0.0354.
 > Follow-up: Is L_simple still a valid ELBO?
 > A: It is a reweighted version: the per-step weights of the true ELBO are dropped. It optimizes a slightly different bound with slightly worse likelihood but much better samples. The field kept the reweighting deliberately.
+
+> [!QA]
+> Q: Walk me through move 1 on fresh numbers.
+> A: x_0 = 10.0, x_3 = 6.934 (from the Lesson 8 exercise), α_3 = 0.8, ᾱ_2 = 0.64, ᾱ_3 = 0.512, β_3 = 0.2. Coeff of x_0: √0.64·0.2/(1−0.512) = 0.8·0.2/0.488 = 0.328. Coeff of x_3: √0.8·(1−0.64)/0.488 = 0.8944·0.36/0.488 = 0.660. μ̃_3 = 0.328·10 + 0.660·6.934 = 3.28 + 4.576 = 7.856. Between the noisy 6.934 and the clean 10, closer to the noisy point because β_3 is large. Variance: ((1−0.64)/(1−0.512))·0.2 = (0.36/0.488)·0.2 = 0.148.
+> Follow-up: Why is the mean closer to x_3 than x_0 here?
+> A: Because this step's noise (β_3 = 0.2) is large relative to the accumulated certainty. The posterior hedges: it trusts the noisy observation more when the step noise is big. As β_t → 0, the mean converges to x_t itself: no noise added, nothing to undo.
 
 > [!QA]
 > Q: What is the network actually predicting?
@@ -226,6 +308,24 @@ exactly this.
 > A: Draw x_T ~ N(0,1), then iterate x_{t-1} = (1/√α_t)(x_t − (β_t/√(1−ᾱ_t))ε_θ) + √β̃_t·z down to t = 1. In the toy, x_2 = 3.9 became x_1 = 4.059 with z = 0.3: a step back toward the clean 4.0 plus controlled randomness. The z terms at each step are what make outputs differ.
 > Follow-up: Why add noise during generation? Why not just take the mean?
 > A: The mean path gives one deterministic output per x_T: less variety, and errors compound without the stochastic correction. The added noise keeps each step a true sample from the reverse Gaussian, which is what the ELBO trained. Deterministic variants exist (DDIM, Lesson 10) but they change the sampler deliberately.
+
+> [!QA]
+> Q: Your DDPM trains but the samples are noisy at low t and blurry at high t. What went wrong?
+> A: The network underfits at different noise levels differently. Noisy-at-low-t means it never learned fine denoising: the schedule may kill the signal too fast, starving low-t training, or the network lacks capacity at fine detail. Blurry-at-high-t means the coarse structure prediction is weak. Diagnose per-t: plot the loss broken down by t. The fix follows the curve: rebalance the schedule or add capacity where the loss is high.
+> Follow-up: Why does L_simple hide this?
+> A: It averages over t uniformly. A disaster at 50 steps can hide inside a good average over 1000. Always inspect the loss per noise level, not just the mean. The reweighting that made L_simple simple also made it blind to per-t failures.
+
+> [!QA]
+> Q: You want the model to also report uncertainty per step (learn Σ_θ). What changes?
+> A: Add a variance head to the network and restore the true ELBO weights: the loss becomes the full per-step KL, not the unweighted MSE. Likelihood improves (the model can say "I am unsure here"), sample quality usually drops slightly, and training gets twitchier: the variance head is the unstable part move 2 removed. The decision rule: learn variances for likelihood benchmarks, fix them for sample quality.
+> Follow-up: Why did the simple version win on samples?
+> A: Because the unweighted MSE spends equal effort at every noise level, which matches human perception better than the ELBO's weights (which overweight near-noiseless steps). The "wrong" objective trains the right thing for the eye. Another case of the field choosing samples over likelihood.
+
+> [!QA]
+> Q: Design a training loop for a DDPM on 32×32 images. Write the steps.
+> A: Repeat these steps. (1) Sample a batch of images x_0. (2) Sample t uniformly from 1..T per image. (3) Sample ε ~ N(0,1) with the image's shape. (4) Form x_t = √ᾱ_t x_0 + √(1−ᾱ_t) ε via the closed form (no chaining). (5) Predict ε_θ(x_t, t). (6) Set loss = mean((ε − ε_θ)²). (7) Backprop and step. That is the entire loop. No adversary, no posterior, no variance heads.
+> Follow-up: Where can this loop go wrong in practice?
+> A: Three places. The schedule (signal dies too fast, starving some t). The t sampling (uniform is standard, non-uniform needs reweighting). And the network's time conditioning (if ε_θ ignores t, one network must handle all noise levels blind: it cannot). Check all three before blaming the math.
 
 ## Recap: the whole lesson on one screen
 
@@ -241,15 +341,14 @@ exactly this.
 ## Official sources and further reading
 
 **Official:**
-- W8L28/L29: ELBO for DDPM (Parts 1-2):
-  https://www.youtube.com/watch?v=AnWitwNPnN4
-- W8L30: Optimization of DDPM loss:
-  https://www.youtube.com/watch?v=yzU0ueuABLw
-- W8L31: ELBO Equivalence. W8L32/33: Training/Inference of DDPM.
+- W8L28: ELBO for DDPM Part 1: [paper](https://www.youtube.com/watch?v=AnWitwNPnN4)
+- W8L29: ELBO for DDPM Part 2: [paper](https://www.youtube.com/watch?v=wPx64rVy2c4)
+- W8L30: Optimization of DDPM loss: [paper](https://www.youtube.com/watch?v=yzU0ueuABLw)
+- W8L33: Inference in DDPM: [paper](https://www.youtube.com/watch?v=0p7T-3WiPnQ)
 
 **Further reading:**
 - Ho, Jain, Abbeel, "Denoising Diffusion Probabilistic Models" (2020):
-  https://arxiv.org/abs/2006.11239: sections 3-4 are this lesson's three moves.
+  - [sections 3-4 are this lesson's three moves.](https://arxiv.org/abs/2006.11239)
 
 **Caveats.** The W8L28 transcript was fetched but not read in full. W8L30-33 transcripts were not recovered. This lesson follows the Ho et al. derivation, which the lecture series tracks. [uncertain] The lecture's exact algebraic path and emphasis are unknown.
 
