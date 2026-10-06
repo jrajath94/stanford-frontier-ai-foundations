@@ -52,7 +52,8 @@ Backward pass, right to left. The local derivatives at the
 forward values: dL/dv = w3 = 3, dL/dw3 = v = 20, dv/du = 2,
 du/dw1 = w2 = 5, du/dw2 = w1 = 2. Chain them: dL/dw1 =
 (dL/dv)(dv/du)(du/dw1) = 3 x 2 x 5 = 30. Similarly dL/dw2 =
-12 and dL/dw3 = 20. Update: w1 = w1 - lr x 30, and so on.
+12 and dL/dw3 = 20. Update: w1 = w1 - lr x 30, and so on,
+where lr is the learning rate, the size of each update step.
 
 Two systems facts fall out of the toy.
 
@@ -67,12 +68,12 @@ cost is why activation checkpointing exists.
 
 ## Count the FLOPs
 
-Now count a middle MLP (multilayer perceptron) layer with batch B,
+Now count a middle MLP (multilayer perceptron) layer with batch B (the group of examples processed in one step),
 hidden dimension H, output N. Forward: B x H x N multiply-adds, each counting
 twice (multiply plus add), so 2BHN FLOPs. The rule of thumb:
 forward FLOPs are about **2 x B x (number of parameters)**.
 
-![FLOPs rule](assets/slide-l04-flops-rule.png "Shell 1. Forward: 2BHN. Rule of thumb: about 2 x batch x parameter count. Source: Stanford slides.")
+![FLOPs rule](assets/slide-l04-flops-rule.png "Shell 1. Forward: 2BHN. Rule of thumb: about 2 x batch x parameter count. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 The backward pass needs two more matmuls per layer.
 dL/dW2 = a1^T dL/dz2 costs 2HBN FLOPs, and dL/da1 = dL/dz2
@@ -81,7 +82,7 @@ Total: 4BHN, about twice the forward pass. And backprop must
 cache a1, the layer input, to reuse it: the memory cost from
 the toy, now quantified.
 
-![Backprop FLOPs](assets/slide-l04-backprop-flops.png "Shell 2. Backward: 4BHN, about 2x the forward 2BHN. Activations must be cached. Source: Stanford slides.")
+![Backprop FLOPs](assets/slide-l04-backprop-flops.png "Shell 2. Backward: 4BHN, about 2x the forward 2BHN. Activations must be cached. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 So one training step costs about 3x one forward pass: 1x
 forward, 2x backward, plus the activation storage. Training
@@ -123,7 +124,7 @@ token recomputes K and V for the whole prefix: 2 x (2Nd^2) =
 With the cache, each token computes K, Q, V for itself only:
 3 x (2d^2) = 2.5e7 per layer, plus the 2Nd score and mix:
 8.4e6. Per layer about 3.4e7. Over 24 layers about 8.1e8.
-The ratio: 4.1e11 / 8.1e8 = 511. Caching cuts per-token
+The ratio: 4.1e11 / 8.1e8 = 512. Caching cuts per-token
 attention FLOPs by about 500x at this length, and the factor
 grows with N.
 
@@ -157,7 +158,7 @@ Times 130k tokens: 25.6 GB, which is the 26 GB of headroom
 from the capacity calculation. The formula closes the loop.
 
 Now a 70B model (80 layers, dmodel 8192): 2 x 2 x 80 x 8192 =
-2.6 MB per token. At 32K context that is 84 GB of cache,
+2.6 MB per token. At 32K context that is 86 GB of cache,
 against 140 GB of weights. The cache is no longer a rounding
 error. It is the second weight matrix. This is why every
 frontier model since Llama 2 uses grouped-query attention:
@@ -166,7 +167,7 @@ token.
 
 ![The KV block, byte by byte](assets/plate-l04-kv-block.webp "Four choices multiply to 196,608 bytes per token on the 7B example. Shell 2. Source: original toy for the KV block. Project: Stanford Frontier AI.")
 
-![KV block](../cs336/assets/l10-kv-cache.svg "Shell 3. Store keys and values. Never recompute the prefix. Source: CS336 L10 figure, reused.")
+![KV block](../cs336/assets/l10-kv-cache.svg "Shell 3. Store keys and values. Never recompute the prefix. Source: CS336 L10 figure, reused. Project: Stanford Frontier AI.")
 
 ## When does caching win? Work the ratio
 
@@ -219,7 +220,7 @@ model with 24 layers and dmodel 2048, sequence length 1024.
 4. Capacity: 26 / 0.0002 = 130k tokens.
 5. Batch size at 1024 tokens each: 130k / 1024 = 128.
 
-![KV cache capacity](assets/slide-l04-kvcache-capacity.png "Shell 4. 14 GB of weights leaves 26 GB. At 200k bytes per token that is 130k tokens, or batch 128 at length 1024. Source: Stanford slides.")
+![KV cache capacity](assets/slide-l04-kvcache-capacity.png "Shell 4. 14 GB of weights leaves 26 GB. At 200k bytes per token that is 130k tokens, or batch 128 at length 1024. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 Memory, not compute, sets the serving batch size. This is the
 calculation behind every serving-system capacity plan.
@@ -233,7 +234,7 @@ MB for the MLP per layer. Over 3 GB of memory traffic per
 token, to produce 2 bytes of output. Arithmetic intensity is
 about 2 x batch: tiny.
 
-![Decode cost](assets/slide-l04-decode-cost.png "Shell 5. Over 3 GB read per token for GPT-2-XL. An RTX 4090 has compute for 30,000 tokens/s but decodes about 300. Source: Stanford slides.")
+![Decode cost](assets/slide-l04-decode-cost.png "Shell 5. Over 3 GB read per token for GPT-2-XL. An RTX 4090 has compute for 30,000 tokens/s but decodes about 300. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 An RTX 4090 (about 1 TB/s memory bandwidth, 83 TFLOPS) has
 the compute for roughly 30,000 tokens per second but decodes
@@ -248,7 +249,7 @@ Three words the lecture separates carefully. **Latency** is
 time per item: what interactive users feel. **Throughput** is
 items per second: what batch pipelines maximize. **Bandwidth**
 is the hardware property: the ceiling neither can exceed. Do
-Do not trade one vocabulary for another in an interview.
+not trade one vocabulary for another in an interview.
 
 ### Subchapter: prefill and decode live on opposite sides
 
@@ -286,12 +287,12 @@ almost nothing, because the verification batch was memory
 bound anyway. Usually 10 to 100 guesses per batch, depending
 on hardware.
 
-![Speculative decoding](assets/plate-speculative-decoding.svg "Shell 6. Draft, verify in one batch, accept the agreed prefix. Source: original plate. Leviathan and Kalman et al. 2023.")
+![Speculative decoding](assets/plate-speculative-decoding.svg "Shell 6. Draft, verify in one batch, accept the agreed prefix. Source: original plate. Leviathan and Kalman et al. 2023. Project: Stanford Frontier AI.")
 
 Results: 2 to 3x speedup on Chinchilla 70B, T5 11B, and LaMDA
 137B (Leviathan and Kalman et al., 2023, and Chen et al., 2023).
 
-![Speculative results](assets/slide-l04-speculative-results.png "Shell 7. 2-3x speedups on Chinchilla 70B, T5 11B, LaMDA 137B. Source: Stanford slides.")
+![Speculative results](assets/slide-l04-speculative-results.png "Shell 7. 2-3x speedups on Chinchilla 70B, T5 11B, LaMDA 137B. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 Three ways to draft. **Smaller draft model**: a small model
 trained on the same data guesses the tokens. Transformers are
@@ -300,8 +301,9 @@ draft about 15x smaller than the main model. Costs: another
 model to manage, imperfect agreement, extra memory. **Medusa
 heads**: train extra heads that predict the token after next,
 and the one after that, directly. Nearly free at inference,
-easy to train and deploy. But it approximates a joint
-distribution with a mean-field factorization, so guesses
+easy to train and deploy. But each head predicts its token
+independently of the others, a mean-field factorization that
+ignores how the guessed tokens depend on each other, so guesses
 degrade fast: good for about 2x, unlikely to reach 4x.
 **Lossy optimization**: make the model itself fast and
 reckless with INT4 quantization, skipped layers, skipped
@@ -309,7 +311,7 @@ heads, early exit. No extra model, highly correlated with
 the full model, but complicated code. Probably
 underexplored.
 
-![Guessing options](assets/slide-l04-guessing-options.png "Shell 8. Draft model, Medusa heads, lossy optimization: the three guessing strategies and their tradeoffs. Source: Stanford slides.")
+![Guessing options](assets/slide-l04-guessing-options.png "Shell 8. Draft model, Medusa heads, lossy optimization: the three guessing strategies and their tradeoffs. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 ### Subchapter: the acceptance math
 
@@ -415,7 +417,7 @@ is a trade against the memory roof.
 
 > [!QA]
 > Q: Walk me through the KV cache byte math for a 70B model. When does the cache rival the weights?
-> A: Take 80 layers and dmodel 8192. Per token: 2 (K and V) x 2 bytes (FP16) x 80 x 8192 = 2.6 MB. At 32K context: 2.6 MB x 32,768 = 84 GB of cache, against 140 GB of weights. The cache is 60 percent of the weights. At 128K context it is 336 GB: the cache dwarfs the model. This is why long-context serving is a cache problem first. With grouped-query attention at 8 KV heads instead of 64, the per-token bill falls 8x to 0.3 MB, and 32K context costs 10 GB.
+> A: Take 80 layers and dmodel 8192. Per token: 2 (K and V) x 2 bytes (FP16) x 80 x 8192 = 2.6 MB. At 32K context: 2.6 MB x 32,768 = 86 GB of cache, against 140 GB of weights. The cache is about 61 percent of the weights. At 128K context it is 344 GB: the cache dwarfs the model. This is why long-context serving is a cache problem first. With grouped-query attention at 8 KV heads instead of 64, the per-token bill falls 8x to 0.3 MB, and 32K context costs 10 GB.
 > Follow-up: Why did the 7B example in the lecture not have this problem?
 > A: Scale. 192 KB per token times 130k tokens is 26 GB: the cache fit the leftover HBM. The cache grows with layers times width times context, while weights are fixed. Longer contexts and bigger models flip which one binds.
 
@@ -495,7 +497,6 @@ empirical rules from the slides, not theorems.
 - Build KV Cache Layer From Scratch (20x speedup, memory math): https://www.youtube.com/watch?v=emZxqRScfc0
 - KV Cache: The Invisible Trick Behind Every LLM: https://www.youtube.com/watch?v=tGp6Ns9GtSU
 - Speculative Decoding: How a Dumb Model Makes LLMs 3x Faster: https://www.youtube.com/watch?v=YFwsSaWerDY
-- Speculative decoding explained: draft models, acceptance rate: https://www.youtube.com/watch?v=jAvqmEHvwUU
 - Fast Inference from Transformers via Speculative Decoding (Leviathan et al.): https://arxiv.org/abs/2211.17192
 - Accelerating LLM Decoding with Speculative Sampling (Chen et al.): https://arxiv.org/abs/2302.01318
 - Transformer Inference Arithmetic (Carol Chen): https://blog.eleuther.ai/transformer-math/
@@ -512,3 +513,27 @@ empirical rules from the slides, not theorems.
   memory-bound attention.
 - **CS229S L07:** quantization shrinks the weights that
   decoding keeps re-reading.
+
+## Coverage map
+
+Every lecture concept mapped to the line that teaches it. File:
+l04-transformer-performance.md.
+
+| Lecture concept | Anchor | Line |
+|---|---|---|
+| Backprop by hand (chain rule toy) | "backpropagation" | 36 |
+| FLOPs rule (forward = 2BHN) | "rule of thumb" | 73 |
+| Backward pass costs 2x forward (4BHN) | "backward pass" | 51 |
+| 6N rule worked on a 7B model | "6N rule" | 92 |
+| Autoregressive repeated work | "autoregressive" | 109 |
+| Wasted-FLOPs bill (512x at N=1024) | "autoregressive" section | 109 |
+| KV caching (never recompute the prefix) | "keeps the keys and values" | 140 |
+| KV block byte math (192 KB/token) | "KV block" | 146 |
+| Tmem/Tmath ratio (208 = ridge) | "Tmem / Tmath" | 179 |
+| Serving capacity (130k tokens, batch 128) | "tokens fit on one GPU" | 212 |
+| Decode is memory bound (RTX 4090) | "memory bound" | 189 |
+| Prefill vs decode regimes | "prefill" | 254 |
+| Speculative decoding (draft + verify) | "draft K tokens" | 282 |
+| Acceptance math (alpha, K) | "acceptance rate" | 318 |
+| EAGLE and MTP (2024-2026 drafts) | "EAGLE" | 337 |
+| Honest price (cache costs HBM) | "honest price" | 384 |
