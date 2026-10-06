@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.classList.remove('no-js');</script>
-<title>Lecture 8: Judging a Creator — Likelihood, FID, and What They Miss — Stanford Frontier AI</title>
+<title>Lecture 8: Judging a Creator: Likelihood, FID, and What They Miss — Stanford Frontier AI</title>
 <meta name="description" content="Five machines, one question: which learned the rule? Likelihood worked by hand, FID worked on 2-D Gaussians, the Inception Score, and each metric&#x27;s demonstrated">
 <link rel="stylesheet" href="../assets/vendor/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
@@ -216,10 +216,10 @@
   </nav>
   <main class="content" id="main">
     <article>
-      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative Models</a> / Lecture 8: Judging a Creator — Likelihood, FID, and What They Miss</nav>
-      <h1>Lecture 8: Judging a Creator — Likelihood, FID, and What They Miss</h1>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative Models</a> / Lecture 8: Judging a Creator: Likelihood, FID, and What They Miss</nav>
+      <h1>Lecture 8: Judging a Creator: Likelihood, FID, and What They Miss</h1>
       <p class="meta-line">2026-10-05 · Instructor: Prof. Prathosh A P · 2025</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="5Mchnh2xedI"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/5Mchnh2xedI" title="Lecture 8: Judging a Creator — Likelihood, FID, and What They Miss" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=5Mchnh2xedI" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=5Mchnh2xedI" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original Stanford lecture. Timestamps in the text link to the exact moment.</p></div><h2 id="the-question-needs-a-judge">The question needs a judge</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="5Mchnh2xedI"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/5Mchnh2xedI" title="W4L16: Evaluation of Generative Models (IIT Madras)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=5Mchnh2xedI" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=5Mchnh2xedI" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">The lecture this chapter follows. Likelihood, FID, and the post-training warning.</p></div><h2 id="the-question-needs-a-judge">The question needs a judge</h2>
 <p>Eight lessons, five machines, one question: learn the rule,
 sample from it. Now the uncomfortable part: which machine
 learned it? &ldquo;The samples look good&rdquo; is not a metric. Two models
@@ -270,6 +270,27 @@ contest. Likelihood measures &ldquo;did you cover everything,&rdquo;
 never &ldquo;are your samples crisp.&rdquo; And three of our five machines
 (VAE bound, diffusion bound, EBM unnormalized) cannot even
 report it exactly.</p>
+<h3 id="subchapter-bits-per-dimension-likelihoods-fair-scale">Subchapter: bits per dimension: likelihood&rsquo;s fair scale</h3>
+<p>Raw log-likelihoods do not compare across datasets: a bigger
+image has more nats by construction. <strong>Bits per dimension</strong>
+(bpd) normalizes: bpd = -log2 p(x) / d, the average surprise
+per pixel per channel, in bits. Lower is better. A model at 3.5
+bpd on CIFAR-10 assigns each pixel-channel about 2^3.5 = 11.3
+effective choices of surprise: tighter than uniform (8 bits),
+looser than perfect prediction (0 bits).</p>
+<p>Bpd is the fair scale for the exact-density families. Flows
+report it (dequantized, per L04). Autoregressive models report
+it. Diffusion models can report it via the full weighted ELBO,
+but usually do not: the L_simple objective that trains the
+best samples is not a bound, and the bound that is honest
+trains worse samples. [uncertain]: exact bpd numbers for
+current diffusion models. The field&rsquo;s revealed preference is
+the point: sample quality won, likelihood reporting lost.</p>
+<p>The decision rule: compare bpd only within one dataset and one
+dequantization scheme. A bpd of 3.1 on CIFAR-10 and 3.1 on
+ImageNet-64 are not the same achievement. And never compare a
+bound&rsquo;s bpd against an exact bpd without saying which is
+which: the bound flatters the model by an unknown gap.</p>
 <h2 id="metric-2-fid-the-feature-judge">Metric 2: FID, the feature judge</h2>
 <p>The <strong>Frechet Inception Distance</strong> compares real and generated
 images in the feature space of an Inception network pretrained
@@ -288,6 +309,7 @@ Sigma_g = 4I. (Sigma_r Sigma_g)^{1/2} = 2I:</p>
 <pre class="ascii">FID^2 = 0.25 + Tr(I + 4I - 4I) = 0.25 + Tr(I) = 2.25
 FID = 1.5
 </pre>
+<figure><img alt="FID sees both failures: shift and spread" src="assets/plate-l08-fid.webp"><figcaption>Mean shift 0.5 -&gt; FID 0.5. Doubled spread -&gt; FID 1.5. Shell 2. Source: original toy (Heusel et al., 2017). Project: Stanford Frontier AI.</figcaption></figure>
 <p>FID sees both failures: shifted means (0.5) and wrong spreads
 (1.5 vs 0.5). It correlates with human judgment better than any
 earlier metric, which is why the field adopted it.</p>
@@ -306,6 +328,41 @@ and misses everything between. Third, the features: the
 Inception layer is a hyperparameter, and ImageNet features judge
 dog photos well and medical scans poorly. FID measures distance
 in someone else&rsquo;s feature space.</p>
+<h3 id="subchapter-kid-the-unbiased-cousin">Subchapter: KID: the unbiased cousin</h3>
+<p>FID&rsquo;s estimator is <strong>biased</strong>: with finite samples, the
+estimated FID systematically overshoots the truth, and the bias
+shrinks only as sample count grows. Comparing a 10k-sample FID
+against a 50k-sample FID is comparing two different biases.
+<strong>KID</strong> (Kernel Inception Distance, Binkowski et al., 2018)
+replaces the Frechet distance with the <strong>maximum mean
+discrepancy</strong>: a kernel-based distance between the two feature
+clouds with an unbiased estimator.</p>
+<p>The tradeoff is compute: KID&rsquo;s unbiased estimator costs O(n^2)
+in sample count against FID&rsquo;s O(n). At 50,000 samples, that is
+2.5 billion kernel evaluations: nobody runs it there. The
+decision rule: FID for leaderboards (large n, bias roughly
+equal across models, standard practice), KID for small-sample
+comparisons where FID&rsquo;s bias would dominate. Both inherit the
+memorization blind spot: neither asks if the samples are new.</p>
+<h3 id="subchapter-memorization-tests-catching-the-parrot">Subchapter: memorization tests: catching the parrot</h3>
+<p>FID 0 for the parrot is a scandal the field patches with
+separate tests. The standard one is the <strong>nearest-neighbor
+test</strong>: for each generated sample, find its closest training
+image (in pixels or features) and record the distance.</p>
+<figure><img alt="The parrot scores FID 0 and learned nothing" src="assets/plate-l08-parrot.webp"><figcaption>Generated set = training set: the Gaussians match exactly. FID never asks 'is it new?' Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
+<p>The parrot&rsquo;s distances are all ~0: every &ldquo;sample&rdquo; is a training
+photo. A healthy generator&rsquo;s distances spread out: some near,
+most far. The decision rule: report the fraction of samples
+within epsilon of a training image. Near 1.0 means memorization.
+Near 0.0 with good FID means genuine generation. Diffusion
+models get extra scrutiny here because their training sets are
+enormous and their samples occasionally reproduce training
+images verbatim: the test that catches it is nearest-neighbor,
+not FID.</p>
+<p>A second test: <strong>train/test FID split</strong>. Compute FID against the
+training set and against a held-out test set. A memorizer
+scores ~0 on train and poorly on test. A generalizer scores
+similarly on both. Two numbers where the leaderboard shows one.</p>
 <h2 id="metric-3-inception-score-the-sharpness-diversity-judge">Metric 3: Inception Score, the sharpness-diversity judge</h2>
 <p>The <strong>Inception Score</strong> never looks at real data. It asks two
 things of generated samples: is each sample confidently one
@@ -324,6 +381,8 @@ KL = log 1000 = 6.9 nats per sample, and p(y) is uniform:</p>
 rewards anything the classifier finds confident, including sharp
 images of nothing real. The field keeps it for quick checks and
 trusts FID more.</p>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/9zTwSzXxNDo" title="Frechet inception distance (FID), Applied Deep Learning, Lecture 69" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: Applied Deep Learning, Lecture 69, Frechet inception distance. What FID computes, why it beats the Inception Score, and where it breaks. Watch after the FID section.</p></div>
+
 <h2 id="the-honest-price-no-single-judge">The honest price: no single judge</h2>
 <p>The lecture&rsquo;s warning frames everything: after training,
 P_theta* is not P_X. Sample averages stand in for the true
@@ -342,22 +401,27 @@ not the platonic model, and every metric is blind somewhere:</p>
 <tr>
 <td>Human rating</td>
 <td>True visual quality</td>
-<td>Parrot scores 5/5; 41 hours per comparison</td>
+<td>Parrot scores 5/5. 41 hours per comparison</td>
 </tr>
 <tr>
 <td>Likelihood</td>
 <td>Full-distribution coverage</td>
-<td>Blurry beats Sharp by infinity; 3 of 5 families cannot report it</td>
+<td>Blurry beats Sharp by infinity. 3 of 5 families cannot report it</td>
 </tr>
 <tr>
 <td>FID</td>
 <td>Feature-space distance</td>
-<td>Memorization scores 0; spike-mixture scores 0.005; ImageNet features</td>
+<td>Memorization scores 0. Spike mixture scores 0.005. ImageNet features</td>
+</tr>
+<tr>
+<td>KID</td>
+<td>Feature-space distance, unbiased</td>
+<td>Same blind spots as FID. O(n^2) cost</td>
 </tr>
 <tr>
 <td>Inception Score</td>
 <td>Sharpness + diversity</td>
-<td>1,000-photo memory machine scores 1000; never sees real data</td>
+<td>1,000-photo memory machine scores 1000. Never sees real data</td>
 </tr>
 </tbody>
 </table>
@@ -369,36 +433,107 @@ on a toy: 10 generated faces, 8 near real faces, and 10 real
 face types, 5 imitated:</p>
 <pre class="ascii">precision = 8/10 = 0.8,   recall = 5/10 = 0.5
 </pre>
+<figure><img alt="Precision 0.8, recall 0.5: the pair diagnoses" src="assets/plate-l08-prec-rec.webp"><figcaption>Mode collapse: precision 1.0, recall 0.1. FID reports one mediocre number. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <p>A mode-collapsed generator that makes one perfect face: precision
 1.0, recall 0.1. The pair catches what any single number hides.
 Use likelihood where it exists, FID for the leaderboard,
 precision/recall for the diagnosis, humans for the final word.
 No metric replaces the question. Together they triangulate it.</p>
+<h3 id="subchapter-density-and-coverage-refined">Subchapter: density and coverage, refined</h3>
+<p>Raw precision/recall uses a fixed neighborhood radius, which is
+fragile. <strong>Density and coverage</strong> (Naeem et al., 2020) refine it
+with k-nearest-neighbor manifolds. <strong>Density</strong>: for each
+generated sample, count how many real neighborhoods contain it,
+averaged. High density means samples land where real data is
+dense. <strong>Coverage</strong>: the fraction of real samples whose
+neighborhood contains at least one generated sample. High
+coverage means no real mode is abandoned.</p>
+<p>The refinement matters because a generator can game raw recall
+by scattering noisy samples near many modes: each mode gets
+&ldquo;covered&rdquo; by garbage. Density punishes that: scattered samples
+land in low-density neighborhoods and score poorly. The decision
+rule: precision/recall for the quick diagnosis, density/coverage
+when you suspect gaming. Both live in feature space, so both
+inherit the Inception-features caveat.</p>
+<h2 id="what-is-used-where-the-judges-in-production">What is used where: the judges in production</h2>
+<table>
+<thead>
+<tr>
+<th>Judge</th>
+<th>Where it runs</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FID</td>
+<td>Papers-with-code leaderboards. Every text-to-image paper reports it</td>
+<td>Public: the field standard since 2017</td>
+</tr>
+<tr>
+<td>Human eval</td>
+<td>Model launches (DALL-E 2, Imagen papers report human preference rates)</td>
+<td>Public: reported in the papers&rsquo; evaluation sections</td>
+</tr>
+<tr>
+<td>Likelihood / bpd</td>
+<td>Flow and autoregressive papers, compression benchmarks</td>
+<td>Public: reported wherever exact densities exist</td>
+</tr>
+<tr>
+<td>CLIP score</td>
+<td>Text-to-image alignment: cosine similarity of prompt and image CLIP embeddings</td>
+<td>Public: widely reported alongside FID</td>
+</tr>
+<tr>
+<td>Nearest-neighbor tests</td>
+<td>Memorization audits of diffusion models</td>
+<td>Public: reported in replication studies</td>
+</tr>
+</tbody>
+</table>
+<p>The pattern: FID for the leaderboard, humans for the launch,
+likelihood where it exists, CLIP for prompt match,
+nearest-neighbor for the parrot audit. No lab ships on one
+number.</p>
 <div class="qa"><div class="q">Why can a blurry model beat a sharp model on likelihood?</div><div class="a"><p>Likelihood punishes missed coverage infinitely and blur barely. On the toy, true data is faces at -5 and +5. Model Sharp puts all mass at +5 and scores log(0+) = -infinity on a held-out -5 face, while Model Blurry&rsquo;s 0.5/0.5 split scores -0.693. Likelihood asks &ldquo;did you cover everything,&rdquo; never &ldquo;are samples crisp.&rdquo; That is why VAEs win likelihood contests and lose beauty contests.
 No. It is the only metric that checks the whole distribution, and it is exact for the storyteller and the warper. But it cannot rank a GAN against a diffusion model (neither reports exact likelihoods), and it disagrees with human judgment on sharpness. Use it where it exists, for what it measures: coverage.</p><div class="followup"><strong>Follow-up:</strong> Should we then ignore likelihood?</div></div></div>
 <div class="qa"><div class="q">What does FID actually compute?</div><div class="a"><p>Fit a Gaussian to Inception features of real images (mu_r, Sigma_r) and another to generated images (mu_g, Sigma_g), then take the Frechet distance: ||mu_r - mu_g||^2 + Tr(Sigma_r + Sigma_g - 2(Sigma_r Sigma_g)^{1/2}). On the 2-D toy, a mean shift of 0.5 gives FID 0.5. Doubling the spread gives FID 1.5. Lower is better. It sees both location and spread errors in feature space.
 FID compares two feature distributions. If the generated set equals the training set, the Gaussians match exactly and FID = 0. Nothing in the formula asks whether a sample is new. Detecting memorization needs nearest-neighbor tests against the training set, a separate check the lecture&rsquo;s evaluation pipeline does not include.</p><div class="followup"><strong>Follow-up:</strong> Why is FID blind to memorization?</div></div></div>
 <div class="qa"><div class="q">When is precision/recall better than FID?</div><div class="a"><p>When you need the diagnosis, not just the ranking. FID is one number mixing quality and coverage. Precision/recall splits them. The toy mode-collapsed generator (one perfect face) shows why: precision 1.0, recall 0.1. FID would report a single mediocre number. The pair names the disease: perfect quality, no coverage. For model development the pair beats the scalar.
 Yes. Both depend on a neighborhood rule in feature space (which Inception layer, what radius), and a generator can inflate recall by scattering noisy samples near many modes. No metric survives adversarial optimization against itself. That is why the honest answer is a portfolio plus human judgment, not a single number.</p><div class="followup"><strong>Follow-up:</strong> Can precision/recall be gamed too?</div></div></div>
-<figure><img alt="Chapter plate: no single judge, triangulate with a portfolio" src="assets/plate-l08.png"><figcaption>Chapter plate. No single judge; likelihood, FID, precision/recall, and humans triangulate. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<div class="qa"><div class="q">Walk me through computing FID on the 2-D toy.</div><div class="a"><p>Real features: N([0,0], I), so mu_r = [0,0], Sigma_r = I. Generated: N([0.5,0], I), so mu_g = [0.5,0], Sigma_g = I. Mean term: ||[0.5,0]||^2 = 0.25. Covariance term: Tr(I + I - 2(I x I)^{1/2}) = Tr(0) = 0. FID^2 = 0.25, FID = 0.5. Now double the generated spread: Sigma_g = 4I. Mean term still 0.25. Covariance term: Tr(I + 4I - 2(4I)^{1/2}) = Tr(I + 4I - 4I) = Tr(I) = 2. FID^2 = 2.25, FID = 1.5. The plate draws both cases.
+The formula is identical. Only the dimension changes. The 2-D toy lets you verify the arithmetic by hand. In 2,048 dimensions the matrix square root (Sigma_r Sigma_g)^{1/2} is the expensive step, computed numerically. Same math, bigger matrices.</p><div class="followup"><strong>Follow-up:</strong> Why 2-D toys when real FID uses 2,048 dimensions?</div></div></div>
+<div class="qa"><div class="q">FID vs KID: when does the unbiasedness matter?</div><div class="a"><p>FID&rsquo;s estimator overshoots with finite samples, and the bias depends on sample count. Comparing a 10k-sample FID with a 50k-sample FID compares two different biases. KID&rsquo;s MMD estimator is unbiased, so small-sample comparisons are fair. The price is O(n^2) compute: at 50k samples KID is unaffordable, FID is routine. Rule: FID for leaderboards, KID for small-n ablations.
+No. KID compares the same two feature clouds as FID. A parrot&rsquo;s clouds match exactly under MMD too. Unbiasedness fixes the sample-count problem, not the novelty problem. Memorization needs nearest-neighbor tests, a different instrument.</p><div class="followup"><strong>Follow-up:</strong> Does KID fix the memorization blind spot?</div></div></div>
+<div class="qa"><div class="q">How do you catch the parrot? Work the test.</div><div class="a"><p>Nearest-neighbor distances. For each of 10,000 generated samples, find the closest training image and record the distance. The parrot&rsquo;s distances are ~0: every output is a training photo. A healthy generator&rsquo;s distances spread: a few near, most far. Report the fraction within epsilon of a training image: near 1.0 is memorization, near 0.0 with good FID is genuine generation. Second test: FID against train vs against held-out test. The parrot scores ~0 on train and badly on test. The generalizer scores similarly on both.
+Their training sets are enormous (billions of images) and their samples occasionally reproduce training images verbatim. FID cannot see this. It compares distributions, not instances. Every memorization audit of a diffusion model runs nearest-neighbor, not FID.</p><div class="followup"><strong>Follow-up:</strong> Why does this matter more for diffusion models?</div></div></div>
+<div class="qa"><div class="q">Applied: you launch a text-to-image product. Name the metric portfolio and what each catches.</div><div class="a"><p>Five instruments. FID for the leaderboard: feature-space distance to real images, catches quality and coverage regressions. CLIP score for prompt match: catches &ldquo;beautiful but wrong&rdquo; generations. Precision/recall for diagnosis: precision catches quality drops, recall catches mode collapse. Nearest-neighbor for the parrot audit: catches memorization before lawyers do. Humans for the final word: catches everything the numbers miss, at 41 hours per comparison. No single number ships.
+The blind spots in order: memorization (nearest-neighbor: did FID reward copying?), the feature space (is Inception judging your domain badly?), then precision vs recall (did quality rise while coverage fell, or vice versa?). FID improving while users complain means the metric and the users measure different things: find which one moved.</p><div class="followup"><strong>Follow-up:</strong> Your FID improves but users complain. What do you check first?</div></div></div>
+<figure><img alt="Chapter plate: no single judge, triangulate with a portfolio" src="assets/plate-l08.png"><figcaption>Chapter plate. No single judge. Likelihood, FID, precision/recall, and humans triangulate. Source: original plate for Stanford Frontier AI.</figcaption></figure>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
 <li><strong>The question needs a judge.</strong> Five machines, one question. &ldquo;Looks good&rdquo; is not a metric.</li>
 <li><strong>Humans fail, counted.</strong> The parrot scores 5/5. 41 rater-hours per comparison. Irreproducible.</li>
-<li><strong>Likelihood, by hand.</strong> log 0.6 = -0.511 beats log 0.4 = -0.916. Blind spot: Blurry beats Sharp by infinity (-0.693 vs -infinity). Coverage, not crispness.</li>
-<li><strong>FID, by hand.</strong> Mean shift 0.5 -&gt; FID 0.5. Doubled spread -&gt; FID 1.5. The field&rsquo;s standard.</li>
+<li><strong>Likelihood, by hand.</strong> log 0.6 = -0.511 beats log 0.4 = -0.916. Blind spot: Blurry beats Sharp by infinity (-0.693 vs -infinity). Coverage, not crispness. Bits per dimension is the fair scale.</li>
+<li><strong>FID, by hand.</strong> Mean shift 0.5 -&gt; FID 0.5. Doubled spread -&gt; FID 1.5. The field&rsquo;s standard. KID is the unbiased cousin for small samples.</li>
 <li><strong>FID&rsquo;s blind spots, numbered.</strong> Memorization: FID 0. Spike mixture: FID 0.005 with same mean/variance. ImageNet features judge dogs, not scans.</li>
+<li><strong>Catching the parrot.</strong> Nearest-neighbor distances: the parrot&rsquo;s are ~0. Train/test FID split: the memorizer diverges.</li>
 <li><strong>Inception Score, gamed.</strong> A 1,000-photo memory machine scores IS = 1000. Never sees real data.</li>
 <li><strong>The key question.</strong> What if metrics see what eyes miss? Answer: a portfolio.</li>
-<li><strong>Precision/recall.</strong> Toy: precision 0.8, recall 0.5. Mode collapse: 1.0 and 0.1. The pair diagnoses. No scalar does.</li>
+<li><strong>Precision/recall.</strong> Toy: precision 0.8, recall 0.5. Mode collapse: 1.0 and 0.1. The pair diagnoses. Density/coverage refines against gaming.</li>
+<li><strong>No single judge.</strong> Likelihood where it exists, FID for the leaderboard, CLIP for prompt match, precision/recall for diagnosis, nearest-neighbor for the parrot audit, humans for the final word.</li>
 </ol>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - W4L16: Evaluation of Generative Models (video 5Mchnh2xedI): the lecture this chapter follows. The FID formula, the Inception-feature construction, and the post-training P_theta* != P_X warning are confirmed from the lecture transcript.
-- Heusel et al. (2017): https://arxiv.org/abs/1706.08500 — FID.</p>
+- Heusel et al. (2017): https://arxiv.org/abs/1706.08500 (FID).</p>
 <p><strong>Further reading:</strong>
 - Salimans et al., Improved Techniques for Training GANs (2016): the Inception Score.
-- Sajjadi et al. (2018), Kynkäänniemi et al. (2019): precision and recall for generative models.</p>
+- Binkowski et al., KID (2018): https://arxiv.org/abs/1801.01401 (the unbiased cousin).
+- Kynkäänniemi et al., precision and recall (2019): https://arxiv.org/abs/1904.06991 (the diagnostic pair).
+- Naeem et al., density and coverage (2020): the gaming-resistant refinement.
+- Stanford CS236, Lecture 11 slides: https://deepgenerativemodels.github.io/2018/assets/slides/cs236_lecture11.pdf (FID and KID side by side).</p>
 <p><strong>Caveats from these sources.</strong> The 2-D Gaussian toys are illustrative. Real FID uses 2,048-dimensional Inception features over tens of thousands of images. The spike-mixture FID of 0.005 assumes matched first two moments. Real feature distributions differ in subtler ways FID partially sees. IS = 1000 is the theoretical maximum for the memory machine, not a reported result.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
@@ -408,7 +543,7 @@ Yes. Both depend on a neighborhood rule in feature space (which Inception layer,
 <li><strong>CS336:</strong> evaluation at scale: why leaderboards standardize on FID despite its blind spots, and the cost of human eval for frontier models.</li>
 </ul>
       <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=5Mchnh2xedI" target="_blank" rel="noopener">W4L16: Evaluation of Generative Models (video 5Mchnh2xedI)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1706.08500" target="_blank" rel="noopener">Heusel et al., GANs Trained by a Two Time-Scale Update Rule Converge to a Local Nash Equilibrium (2017)</a></li></ul></section>
-      <nav class="pager"><a href="../math-genmodels/l07-energy-based-models.html"><span class="lbl">← Previous</span>Lecture 7: Energy-Based Models — The Critic</a><a href="../math-genmodels/cheatsheet.html"><span class="lbl">Next →</span>Math-GenModels Cheatsheet</a></nav>
+      <nav class="pager"><a href="../math-genmodels/l07-energy-based-models.html"><span class="lbl">← Previous</span>Lecture 7: Energy-Based Models: The Critic</a><a href="../math-genmodels/cheatsheet.html"><span class="lbl">Next →</span>Math-GenModels Cheatsheet</a></nav>
     </article>
     <footer class="pagefoot">
       <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
