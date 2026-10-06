@@ -249,7 +249,7 @@ and they are properties of the hardware, not of your algorithm.</p>
 second. Our toy processor moves 4 items per second.</p>
 <p><strong>Compute bandwidth</strong>: the maximum number of operations done
 per second. The toy processor does 8 operations per second.</p>
-<figure><img alt="Peak performance toy" src="assets/slide-l03-peak-performance-toy.png"><figcaption>Shell 1. Memory moves 4 items/s; the processor does 8 ops/s. The slower one wins. Source: Stanford slides.</figcaption></figure>
+<figure><img alt="Peak performance toy" src="assets/slide-l03-peak-performance-toy.png"><figcaption>Shell 1. Memory moves 4 items/s. The processor does 8 ops/s. The slower one wins. Source: Stanford slides.</figcaption></figure>
 <p>Define two times. <strong>Tmem</strong> is time spent on memory:
 (bytes accessed) / (memory bandwidth). <strong>Tmath</strong> is time spent
 on math: (operations) / (compute bandwidth). If memory and
@@ -265,7 +265,7 @@ Write takes 2 seconds. At steady state, 4 items arrive per
 second and the processor does 4 ops per second out of a
 possible 8. Result: 50% compute utilization, 100% memory
 utilization. Memory bound.</p>
-<figure><img alt="Memory-bound example" src="assets/slide-l03-memory-bound-example.png"><figcaption>Shell 2. Doubling compute on a memory-bound kernel changes nothing; doubling bandwidth cuts the time. Source: Stanford slides.</figcaption></figure>
+<figure><img alt="Memory-bound example" src="assets/slide-l03-memory-bound-example.png"><figcaption>Shell 2. Doubling compute on a memory-bound kernel changes nothing. Doubling bandwidth cuts the time. Source: Stanford slides.</figcaption></figure>
 <p>The diagnosis dictates the fix. Double the compute speed to 16
 ops/s. Total time is unchanged: 25% compute utilization, 100%
 memory utilization. Faster math bought nothing. Now instead
@@ -301,7 +301,7 @@ The compute roof is flat on the right. Your algorithm is a
 point on this plot. Left of the ridge: buy bandwidth, fuse
 kernels, tile better. Right of the ridge: buy compute, use
 tensor cores.</p>
-<figure><img alt="Roofline" src="assets/plate-roofline.svg"><figcaption>Shell 4. Below the ridge of 161, memory bounds you; above it, compute does. Source: original plate; numbers from Stanford slides.</figcaption></figure>
+<figure><img alt="Roofline" src="assets/plate-roofline.svg"><figcaption>Shell 4. Below the ridge of 161, memory bounds you. Above it, compute does. Source: original plate. Numbers from Stanford slides.</figcaption></figure>
 <h3 id="subchapter-the-ridge-moves-with-the-chip">Subchapter: the ridge moves with the chip</h3>
 <p>The ridge is hardware, so it moves with the generation. Compute
 it for the current fleet from public dense specs:</p>
@@ -355,7 +355,7 @@ memory-bound inference. B200 in FP8 pushes the ridge to 562.</p>
 and memory bound on an H100 (200 &lt; 295). The same code flips its
 bottleneck when the chip changes. Diagnose on the chip you run,
 not the chip the paper used.</p>
-<figure><img alt="The ridge across four chips" src="assets/plate-l03-ridge-chips.webp"><figcaption>The same kernel flips its bottleneck when the chip changes. Shell 3. Source: original; specs from public NVIDIA numbers. Project: Stanford Frontier AI.</figcaption></figure>
+<figure><img alt="The ridge across four chips" src="assets/plate-l03-ridge-chips.webp"><figcaption>The same kernel flips its bottleneck when the chip changes. Shell 3. Source: original. Specs from public NVIDIA numbers. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="worked-matrix-multiplication">Worked: matrix multiplication</h2>
 <p>C = A B with A N by K, B K by M, C N by M. Each of the NM
 entries is a dot product: K multiplies and K adds, so 2K
@@ -421,14 +421,14 @@ rule  : share inputs across outputs on-chip, AI rises with reuse
 AI rises with reuse. Real kernels tile to the SRAM size, not to
 2 by 2: a 128 by 128 tile reuses each loaded value 128 times,
 and AI climbs into the hundreds. The worked example shows the
-mechanism; the tile size sets the scale.</p>
+mechanism. The tile size sets the scale.</p>
 <div class="qa"><div class="q">Walk me through a roofline diagnosis on a B200 for a kernel with AI 400.</div><div class="a"><p>Step 1: the ridge. B200 does 2,250 TFLOPS FP16 over 8,000 GB/s: ridge = 281 FLOPs per byte. Step 2: compare. AI 400 is above 281, so the kernel is compute bound on a B200. Step 3: prescribe. Optimize the math: tensor cores, FP8, better tiling. Buying bandwidth would not help. Step 4: sanity check. The same kernel on an H100 (ridge 295) is also compute bound. But a kernel with AI 200 is compute bound on the A100 (ridge 161) and memory bound on the H100: the diagnosis travels with the chip.
 FP8 doubles the FLOPs (4,500 vs 2,250 TFLOPS) while bandwidth stays 8,000 GB/s. The ridge is their ratio, so it doubles to 562. Lower precision makes more kernels memory bound, because each byte now feeds twice the math. This is why FP8 inference is a bandwidth game.</p><div class="followup"><strong>Follow-up:</strong> The B200 in FP8 has ridge 562. Why does lower precision raise the ridge?</div></div></div>
 <div class="qa"><div class="q">Your 70B model&#x27;s decode is slow on an H200. Diagnose and fix it, with numbers.</div><div class="a"><p>Decode at batch 1 has AI around 2 FLOPs per byte: each token streams the full weights once for a couple of FLOPs per byte. The H200 ridge is 206. AI 2 is far below, so decode is memory bound. The fixes all attack bytes: quantize weights to INT4 (70B goes from 140 GB to 35 GB, and each token streams 4x fewer bytes), batch requests (batch 32 raises AI toward the ridge), and shrink the KV cache (GQA, quantization, eviction). Do not optimize the math: the FLOPs are not the bottleneck.
 The weights are read once per batch, not once per token. With batch 32, one weight read serves 32 tokens worth of math: AI rises 32x. The same bytes feed more FLOPs. Batching is the cheapest way to climb toward the ridge.</p><div class="followup"><strong>Follow-up:</strong> Why does batching help a memory-bound decode?</div></div></div>
 <div class="qa"><div class="q">When is recomputation the wrong call?</div><div class="a"><p>When the recompute is asymptotically heavier than the store. KV caching is the case: recomputing keys and values each step would redo O(N) attention work per token, growing quadratically over the sequence. Storing them costs O(N) bytes per layer once. The bytes are cheap next to the FLOPs, even on the memory-bound side of the ridge. The rule &ldquo;recompute when memory bound&rdquo; holds only when the extra math is small: compare the FLOPs of recompute against the bytes of the store, at your precision, on your chip.
 Because the store would cost N squared bytes of HBM traffic and the recompute replays cheap on-chip math from a small cached state. The FLOPs are free on the memory-bound side, and the bytes saved are quadratic. The comparison favors recompute by the same logic that favors caching for the KV case.</p><div class="followup"><strong>Follow-up:</strong> FlashAttention&#x27;s backward pass recomputes the N by N matrix. Why does that not violate the rule?</div></div></div>
-<figure><img alt="Tiling raises reuse" src="assets/plate-l03-tiling.webp"><figcaption>2D tiling shares rows and columns on-chip; AI rises with reuse. Shell 3. Source: original toy for matmul tiling. Project: Stanford Frontier AI.</figcaption></figure>
+<figure><img alt="Tiling raises reuse" src="assets/plate-l03-tiling.webp"><figcaption>2D tiling shares rows and columns on-chip. AI rises with reuse. Shell 3. Source: original toy for matmul tiling. Project: Stanford Frontier AI.</figcaption></figure>
 <h3 id="subchapter-4-caching-versus-recomputation-the-decision-rule">Subchapter: 4. caching versus recomputation, the decision rule</h3>
 <p>For compute-bound workloads, cache intermediates. For
 memory-bound workloads, recompute them: the extra math is free
@@ -442,14 +442,14 @@ recompute would redo O(N) attention work per step. The rule has
 an exception when recompute is not cheap.</p>
 <p>FlashAttention&rsquo;s backward pass: recompute the attention matrix
 from a small cached state instead of storing it (L06). The
-matrix is N by N; storing it costs N squared bytes of traffic,
+matrix is N by N. Storing it costs N squared bytes of traffic,
 and the workload is memory bound. Recompute wins.</p>
 <p>The decision rule: compare the bytes of storing against the
 FLOPs of recomputing, on your side of the ridge. Memory bound:
 bytes are dear, FLOPs are free, recompute. Compute bound: FLOPs
 are dear, bytes are cheap, cache. The exception: when the
 recompute itself is asymptotically heavier, cache anyway.</p>
-<figure><img alt="Cache or recompute" src="assets/plate-l03-cache-recompute.webp"><figcaption>Bytes are dear on the memory-bound side; FLOPs are dear on the compute-bound side. Shell 3. Source: original for the cache-recompute rule. Project: Stanford Frontier AI.</figcaption></figure>
+<figure><img alt="Cache or recompute" src="assets/plate-l03-cache-recompute.webp"><figcaption>Bytes are dear on the memory-bound side. FLOPs are dear on the compute-bound side. Shell 3. Source: original for the cache-recompute rule. Project: Stanford Frontier AI.</figcaption></figure>
 <h3 id="subchapter-5-pipelining-hide-behind-the-max">Subchapter: 5. pipelining, hide behind the max</h3>
 <p>Overlap computation with memory reads and writes to avoid
 stalls. This is the assumption behind the max(Tmem, Tmath)
@@ -468,7 +468,7 @@ tensor-core example: modern GPUs multiply 16 by 16 tiles
 natively, and launching them costs time, so tile sizes should
 keep them busy. This is the same reuse story as tiling, stated
 in silicon.</p>
-<p>The numbers: an A100 tensor core reaches 312 TFLOPS in FP16; its
+<p>The numbers: an A100 tensor core reaches 312 TFLOPS in FP16. Its
 plain CUDA cores reach about 19.5 TFLOPS in FP32. The 16x gap is
 why matmuls target tensor cores and why tile dimensions are
 multiples of 16. A kernel tiled to 13 by 13 pads to 16 and
@@ -586,20 +586,20 @@ flips from memory bound to compute bound as N grows from 128
 to 8192. Diagnose the workload you actually run, on the
 device you actually run it on.</p>
 <div class="qa"><div class="q">What decides whether a program is memory bound or compute bound?</div><div class="a"><p>Compare Tmath, the time the math takes, against Tmem, the time the data movement takes. Total time is the max of the two when they overlap. Whichever is longer names the bottleneck. This single comparison drives every optimization decision in the course.
-Modern GPUs pipeline memory transfers with computation, so the two hide behind each other. The max formula is the ideal; real systems approach it with pipelining, which is one of the six principles.</p><div class="followup"><strong>Follow-up:</strong> Why assume compute and memory overlap?</div></div></div>
-<div class="qa"><div class="q">Define arithmetic intensity and the ridge, with the A100 numbers.</div><div class="a"><p>Arithmetic intensity is total FLOPs divided by total bytes moved between memory and processor. The ridge is the device&rsquo;s peak FLOPs divided by its peak memory bandwidth: 312 TFLOPS over 1,935 GB/s equals 161 FLOPs per byte on an A100. Below the ridge you are memory bound; above it, compute bound.
+Modern GPUs pipeline memory transfers with computation, so the two hide behind each other. The max formula is the ideal. Real systems approach it with pipelining, which is one of the six principles.</p><div class="followup"><strong>Follow-up:</strong> Why assume compute and memory overlap?</div></div></div>
+<div class="qa"><div class="q">Define arithmetic intensity and the ridge, with the A100 numbers.</div><div class="a"><p>Arithmetic intensity is total FLOPs divided by total bytes moved between memory and processor. The ridge is the device&rsquo;s peak FLOPs divided by its peak memory bandwidth: 312 TFLOPS over 1,935 GB/s equals 161 FLOPs per byte on an A100. Below the ridge you are memory bound. Above it, compute bound.
 Its memory access. AI 100 sits below the ridge of 161, so the bottleneck is data movement. Faster math cannot help until the bytes per operation drop.</p><div class="followup"><strong>Follow-up:</strong> An algorithm has AI 100 on an A100. Do you optimize its math or its memory access?</div></div></div>
 <div class="qa"><div class="q">Work out whether an 8192-by-8192 matmul with batch 128 is memory or compute bound on an A100.</div><div class="a"><p>FLOPs are 2MNK and bytes are 2(KM + NK + NM) in FP16, giving AI = 124.1 FLOPs per byte. The A100 ridge is 161. Since 124.1 is below 161, the operation is memory bound. Growing N to 8192 raises AI to 2730.6, flipping it to compute bound. The same kernel changes bottleneck with shape.
 Inference runs small batches, so N is small and the bytes of the weight matrices dominate the FLOPs. Training runs large batches with large N, pushing AI above the ridge. This is why inference optimization is mostly a memory-bandwidth game, as Lecture 4 shows.</p><div class="followup"><strong>Follow-up:</strong> Why does inference usually land memory bound?</div></div></div>
-<div class="qa"><div class="q">Tiling raised matmul arithmetic intensity from 0.5 to 1.0 in the worked example. What physically changed?</div><div class="a"><p>Data reuse. The naive thread loads 2K values per output element computed. The 2D-tiled thread loads 4K values but computes 4 outputs, sharing rows and columns in fast on-chip memory. Nothing about the math changed; the bytes per operation fell because each loaded byte served more outputs.</p></div></div>
+<div class="qa"><div class="q">Tiling raised matmul arithmetic intensity from 0.5 to 1.0 in the worked example. What physically changed?</div><div class="a"><p>Data reuse. The naive thread loads 2K values per output element computed. The 2D-tiled thread loads 4K values but computes 4 outputs, sharing rows and columns in fast on-chip memory. Nothing about the math changed. The bytes per operation fell because each loaded byte served more outputs.</p></div></div>
 <blockquote>
-<p>Follow-up: Why did the intensity only double instead of jumping far higher? Because the 2D tile is small: 2 by 2. Each loaded byte serves only 2 outputs. Bigger tiles raise the reuse ratio, and the A100-sized tiles in real kernels push intensity orders of magnitude higher. The worked example shows the mechanism; the tile size sets the scale.</p>
+<p>Follow-up: Why did the intensity only double instead of jumping far higher? Because the 2D tile is small: 2 by 2. Each loaded byte serves only 2 outputs. Bigger tiles raise the reuse ratio, and the A100-sized tiles in real kernels push intensity orders of magnitude higher. The worked example shows the mechanism. The tile size sets the scale.</p>
 </blockquote>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <p>The story in eight steps. Each step answers the one before it.</p>
 <ol>
 <li><strong>Big-O does not run your code.</strong> Strassen beats naive
-   multiplication asymptotically; constants and
+   multiplication asymptotically. Constants and
    implementation decide real runtime. Hardware utilization
    is the missing metric.</li>
 <li><strong>The toy processor.</strong> Move data, compute, move back.
@@ -610,10 +610,10 @@ Inference runs small batches, so N is small and the bytes of the weight matrices
    Doubling bandwidth cuts the time. Fix the bottleneck, not
    the hobby.</li>
 <li><strong>Arithmetic intensity is the diagnosis.</strong> FLOPs per
-   byte. Below the device ridge you are memory bound; above
+   byte. Below the device ridge you are memory bound. Above
    it, compute bound. A100 ridge: 161 FLOPs/byte.</li>
 <li><strong>The roofline makes it visual.</strong> Memory roof slopes up
-   left of the ridge; compute roof is flat right of it.
+   left of the ridge. Compute roof is flat right of it.
    Place your algorithm, then read the prescription.</li>
 <li><strong>Shape decides the bottleneck.</strong> Same matmul: AI 124
    with N=128 (memory bound), AI 2731 with N=8192 (compute
@@ -637,9 +637,9 @@ Inference runs small batches, so N is small and the bytes of the weight matrices
 - Williams et al., &ldquo;Roofline: An Insightful Visual
   Performance Model&rdquo;: the original roofline paper.</p>
 <p><strong>Caveats from these sources.</strong> A100 figures (312 TFLOPS
-FP16, 1,935 GB/s) are the dense specs from the slides;
+FP16, 1,935 GB/s) are the dense specs from the slides.
 sparse tensor-core throughput is higher. The toy overlap
-model (total = max) is ideal; real kernels approach it but
+model (total = max) is ideal. Real kernels approach it but
 add launch and synchronization costs. The tiling AI limits
 (0.5, 0.67, 1.0) follow the slide expressions for large K.</p>
 <h2 id="go-deeper">Go deeper</h2>
@@ -651,12 +651,12 @@ add launch and synchronization costs. The tiling AI limits
 <li>The Memory Wall Explained: Why Peak FLOPs Do Not Predict Real Performance: https://www.youtube.com/watch?v=DfnV32AmtlE</li>
 <li>How is hardware reshaping LLM design (roofline, memory wall, inference engines): https://www.youtube.com/watch?v=BSzhrZOp2x8</li>
 <li>Roofline analysis on Apple Silicon GPUs (worked, with code): https://github.com/wangkuiyi/wangkuiyi.github.io/blob/HEAD/roofline.md</li>
-<li>NVIDIA CUDA C++ Programming Guide: https://docs.nvidia.com/cuda/cuda-c-programming-guide/</li>
+<li>NVIDIA CUDA C++ Programming Guide: https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html</li>
 <li>NVIDIA Ampere Architecture In-Depth: https://developer.nvidia.com/blog/nvidia-ampere-architecture-in-depth/</li>
 </ul>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
-<li><strong>CS336 L05:</strong> the full GPU architecture treatment; this
+<li><strong>CS336 L05:</strong> the full GPU architecture treatment. This
   lecture is its decision procedure.</li>
 <li><strong>CS336 L06:</strong> Triton kernels: tiling and fusion in code.</li>
 <li><strong>CS229S L05:</strong> the device block: the hierarchy here,
@@ -666,7 +666,7 @@ add launch and synchronization costs. The tiling AI limits
 <li><strong>CS229S L04:</strong> KV caching as the caching-versus-recompute
   decision.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Hardware-Aware Algorithm Design slide deck (Fall 2023 headers)</li><li><span class="src-tag">SUPPLEMENT</span><a href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/" target="_blank" rel="noopener">NVIDIA CUDA C++ Programming Guide</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://developer.nvidia.com/blog/nvidia-ampere-architecture-in-depth/" target="_blank" rel="noopener">NVIDIA Ampere Architecture In-Depth</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://en.wikipedia.org/wiki/Roofline_model" target="_blank" rel="noopener">Roofline model (Wikipedia)</a></li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Hardware-Aware Algorithm Design slide deck (Fall 2023 headers)</li><li><span class="src-tag">SUPPLEMENT</span><a href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html" target="_blank" rel="noopener">NVIDIA CUDA C++ Programming Guide</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://developer.nvidia.com/blog/nvidia-ampere-architecture-in-depth/" target="_blank" rel="noopener">NVIDIA Ampere Architecture In-Depth</a></li><li><span class="src-tag">SUPPLEMENT</span><a href="https://en.wikipedia.org/wiki/Roofline_model" target="_blank" rel="noopener">Roofline model (Wikipedia)</a></li></ul></section>
       <nav class="pager"><a href="../cs229s/l02-sequence-models.html"><span class="lbl">← Previous</span>Lecture 2: Sequence Models and the Transformer</a><a href="../cs229s/l04-transformer-performance.html"><span class="lbl">Next →</span>Lecture 4: Analyzing the Performance of Transformers</a></nav>
     </article>
     <footer class="pagefoot">
