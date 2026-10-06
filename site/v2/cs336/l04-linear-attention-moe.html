@@ -329,7 +329,7 @@ exactly the Mamba-2 gate from this lecture. One idea added: the SSD
 (state-space duality) form. Now the dense form trains in parallel on
 GPUs and the recurrent form infers with a fixed state, the same
 duality as linear attention. Mamba-1 selected. Mamba-2 selects and
-dualizes. Same selection, new math form, both fast paths unlocked.</p>
+dualizes. Same selection, new math form, both fast paths available.</p>
 <h2 id="gated-delta-net-erase-before-writing">Gated delta net: erase before writing</h2>
 <p>Push further. Add a second gate beta(t) controlling how much of the
 current input enters the state, plus a projector (I - beta k k^T) that
@@ -536,7 +536,7 @@ attention at all: GQA plus scale still competes.</p>
 Back through the 8 chosen experts and the router weights w_i, plus the router&rsquo;s own scores via the softmax. The 247 idle experts get no gradient from this token. That sparsity is why MoE needs the balancing loss: experts that never get chosen never learn.</p><div class="followup"><strong>Follow-up:</strong> Where does this token&#x27;s gradient go?</div></div></div>
 <div class="qa"><div class="q">You must serve a 1T-parameter MoE at low latency. What breaks first?</div><div class="a"><p>Memory capacity and expert all-to-all communication. 1T parameters in bf16 is 2TB: you need many GPUs just to hold the weights, so expert parallelism shards experts across devices. Each token&rsquo;s top-8 experts usually live on different devices, so every layer does an all-to-all exchange of activations. At batch size 1 the all-to-all latency dominates. The fixes from the field: downproject before the collective (Nemotron-3), keep hot experts on the same device, and quantize weights to fp8. The interview signal: name the two bottlenecks (capacity, all-to-all), then the tool that attacks each.
 The all-to-all moves activations per token per layer. Small batches give the communication nothing to amortize against, so latency per token stays high. Large batches amortize it but need more KV cache. MoE serving is a batch-size negotiation between the router&rsquo;s traffic and the cache.</p><div class="followup"><strong>Follow-up:</strong> Why does batch size matter so much for MoE serving?</div></div></div>
-<div class="qa"><div class="q">Expert-choice routing balances load for free. Why does token-choice still win?</div><div class="a"><p>Because load balance is not the objective; loss is. Token-choice gives every token its best experts, so each token gets the highest-quality computation. Expert-choice gives every expert a fair workload, so some tokens get served by experts that scored them low, or get dropped entirely. OlMoE&rsquo;s ablations show token-choice beating expert-choice on both loss and benchmarks. The field&rsquo;s answer: take token-choice and pay for balance separately with the F x P auxiliary loss.
+<div class="qa"><div class="q">Expert-choice routing balances load for free. Why does token-choice still win?</div><div class="a"><p>Because load balance is not the objective. Loss is. Token-choice gives every token its best experts, so each token gets the highest-quality computation. Expert-choice gives every expert a fair workload, so some tokens get served by experts that scored them low, or get dropped entirely. OlMoE&rsquo;s ablations show token-choice beating expert-choice on both loss and benchmarks. The field&rsquo;s answer: take token-choice and pay for balance separately with the F x P auxiliary loss.
 When the serving system cannot tolerate imbalance. Expert-choice guarantees fixed compute per expert per step, which simplifies capacity planning. Production frontier models still pick token-choice, but research systems with strict device budgets sometimes prefer the guarantee.</p><div class="followup"><strong>Follow-up:</strong> When would expert-choice be the right call?</div></div></div>
 <div class="qa"><div class="q">When would you pick a dense model over an MoE?</div><div class="a"><p>Below the size where your infrastructure can handle routing. The operational cost (expert parallelism, all-to-all tuning, balancing losses, router stability) exceeds the quality gain at small scale, and MoE fine-tuning overfits worse. The rule from the lecture: past a certain size nearly every released model is an MoE, because the threshold is operational, not scientific. If you cannot afford a systems engineer for the router, stay dense.
 Yes, on loss: Switch Transformer showed gains at modest sizes. The question is total cost, not loss. At small scale the extra engineering and serving complexity outweigh the loss win. That is why small labs stay dense while frontier labs go MoE.</p><div class="followup"><strong>Follow-up:</strong> Does the MoE advantage show at small scale at all?</div></div></div>
@@ -637,6 +637,16 @@ ablation says otherwise.</p>
    take everything and 62 sit idle. The gradient pushes probability
    mass off popular experts.</li>
 </ol>
+<h2 id="go-deeper">Go deeper</h2>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/9dSkvxS2EB0" title="Mamba Explained" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+<ul>
+<li>Mamba Explained (the embed above): https://www.youtube.com/watch?v=9dSkvxS2EB0</li>
+<li>Gu and Dao, Mamba: Linear-Time Sequence Modeling: https://arxiv.org/abs/2312.00752</li>
+<li>DeepSeek-V3 Technical Report: https://arxiv.org/abs/2412.19437</li>
+<li>Fedus et al., Switch Transformers: https://arxiv.org/abs/2101.03961</li>
+</ul>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Lecture 4 video and slides.
