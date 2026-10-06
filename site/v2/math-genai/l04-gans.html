@@ -81,6 +81,7 @@
 <li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
 <li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
 <li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../cs229s/crash-course-02.html" data-page="cs229s-crash-02">CS229S · Crash course 2</a></li>
 </ul>
 <h3>CS224N: NLP with Deep Learning</h3><ul>
 <li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
@@ -146,18 +147,14 @@
 </ul>
 <h3>CS329A: Self-Improving AI Agents</h3><ul>
 <li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
-<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
-<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
-<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
-<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
-<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
-<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
-<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
-<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
-<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
-<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
-<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
-<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+<li><a href="../cs329a/l01-course-overview.html" data-page="cs329a-l01">L01 · Course Overview</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Compute Scaling</a></li>
+<li><a href="../cs329a/l03-feedback-tools-code.html" data-page="cs329a-l03">L03 · Feedback, Tools, Code</a></li>
+<li><a href="../cs329a/l04-planning-multistep-reasoning.html" data-page="cs329a-l04">L04 · Planning and Multi-Step Reasoning</a></li>
+<li><a href="../cs329a/l05-search-at-scale.html" data-page="cs329a-l05">L05 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l06-train-time-scaling.html" data-page="cs329a-l06">L06 · Train-Time Scaling</a></li>
+<li><a href="../cs329a/l07-agentic-evaluations.html" data-page="cs329a-l07">L07 · Agentic Evaluations</a></li>
+<li><a href="../cs329a/l08-future-directions.html" data-page="cs329a-l08">L08 · Future Directions</a></li>
 </ul>
 <h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
 <li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
@@ -231,10 +228,39 @@ between 0 and 1. One objective, opposite goals:</p>
 discriminator: maximize J   (call real &quot;real&quot;, fake &quot;fake&quot;)
 generator:     minimize J   (fool the discriminator)
 </pre>
+<p>All logs in this lesson are natural logs (base e).</p>
 <p>The discriminator wants D = 1 on real data and D = 0 on fakes.
 The generator wants D = 1 on its fakes. This is a <strong>minimax</strong>
 game: min over θ, max over w. Training alternates: a few
 discriminator steps, then a generator step, repeat.</p>
+<h3 id="the-optimal-discriminator-derived">The optimal discriminator, derived</h3>
+<p>Fix the generator. What is the discriminator&rsquo;s best
+possible move? Maximize J pointwise: for each x, choose
+D(x) in (0,1) to maximize p_X(x)·log D + p_θ(x)·log(1−D).
+Differentiate and set to zero:</p>
+<pre class="ascii">p_X / D  -  p_theta / (1 - D) = 0
+p_X * (1 - D) = p_theta * D
+D*(x) = p_X(x) / ( p_X(x) + p_theta(x) )
+</pre>
+<p>The optimal critic reports the posterior probability
+that x came from the data rather than the generator.
+Where the data dominates, D<em> → 1. Where the generator
+dominates, D</em> → 0. Where they tie, D* = 0.5.</p>
+<h3 id="the-game-reduces-to-2js-log-4">The game reduces to 2·JS − log 4</h3>
+<p>Plug D<em> back into J. The generator&rsquo;s problem becomes
+minimizing C(G) = E_{p_X}[log D</em>] + E_{p_θ}[log(1−D*)].
+A short rearrangement:</p>
+<pre class="ascii">C(G) = E_{p_X}[ log( 2*p_X / (p_X + p_theta) ) ]
+     + E_{p_theta}[ log( 2*p_theta / (p_X + p_theta) ) ] - log 4
+     = 2 * JS(P_X || P_theta) - log 4
+</pre>
+<p>So the minimax game, with an optimal discriminator,
+minimizes the Jensen-Shannon divergence (up to the
+−log 4 shift). This is the fact Lesson 3 derived from
+the f-GAN side. The minimum is −log 4, reached when
+P_θ = P_X and D* = 0.5 everywhere. One precondition:
+the derivation divides by p_X + p_θ, which needs
+p_X(x) + p_θ(x) &gt; 0 at every x the expectations visit.</p>
 <h2 id="first-attempt-trace-two-rounds-by-hand">First attempt: trace two rounds by hand</h2>
 <h3 id="the-setup-a-one-point-world">The setup: a one-point world</h3>
 <p>Make everything tiny. Real data is a single point: x = 0,
@@ -364,6 +390,95 @@ divergence does not. The decision rule for diagnosis: if
 sample diversity collapses while the loss looks healthy,
 suspect the divergence, not the architecture.</p>
 <figure><img alt="Mode collapse: half the world missing, JS = 0.216" src="assets/l04-mode-collapse.webp"><figcaption>Truth {0: 0.5, 10: 0.5}. Model {0: 1.0}. The divergence shrugs. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
+<h2 id="the-conditional-variant-cgan">The conditional variant: cGAN</h2>
+<h3 id="conditioning-both-players">Conditioning both players</h3>
+<p>The game so far is unconditional: generate any plausible
+x. The <strong>conditional GAN</strong> adds a label y (a class, a
+caption, a segmentation map) to both players. The
+generator takes (z, y) and must produce an x that fits
+y. The discriminator takes (x, y) and judges the pair.</p>
+<pre class="ascii">J = E[ log D(x | y) ] + E[ log(1 - D(G(z | y) | y)) ]
+</pre>
+<h3 id="worked-conditioning-exposes-collapse">Worked: conditioning exposes collapse</h3>
+<p>Revisit the mode-collapse toy with labels. Truth: y = 0
+means x = 0, y = 1 means x = 10, each with probability
+0.5. The generator ignores y and outputs 0 always.</p>
+<p>The unconditional discriminator saw D(0) = 0.5 and was
+content. The conditional discriminator sees pairs.
+D(0|0): real (0,0) pairs and fake (0,0) pairs tie at 0.5.
+D(0|1): no real pair is ever (0,1), so D(0|1) = 0. When
+the generator is asked for y = 1, its output 0 scores 0:
+its non-saturating loss is −log(0) = infinity. The
+collapse is exposed per class. Conditioning forces the
+generator to cover every mode the label names. BigGAN&rsquo;s
+class-conditional ImageNet generation is this mechanism
+at scale.</p>
+<figure><img alt="Conditioning exposes the abandoned class" src="assets/l04-cgan.webp"><figcaption>D(0|1) = 0: the pair (fake 0, label 1) has no real counterpart. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
+<h2 id="the-scaffolding-dcgan-and-the-training-tricks">The scaffolding: DCGAN and the training tricks</h2>
+<h3 id="dcgans-architecture-rules">DCGAN&rsquo;s architecture rules</h3>
+<p>The original GAN paper used fully connected networks.
+<strong>DCGAN</strong> (Deep Convolutional GAN, Radford et al. 2016)
+replaced them with convolutions and a short rule list
+that became the default generator blueprint:</p>
+<ul>
+<li>Strided convolutions instead of pooling, in both
+  networks. The network learns its own downsampling.</li>
+<li>Batch normalization in both networks (not on the
+  generator&rsquo;s output layer or the discriminator&rsquo;s input).</li>
+<li>ReLU activations in the generator, LeakyReLU (slope
+  0.2) in the discriminator, tanh on the generator&rsquo;s
+  output.</li>
+<li>No fully connected hidden layers.</li>
+</ul>
+<p>The rules are empirical, not derived. They stabilize
+the two-player dynamics enough that the game trains on
+64×64 images. Every convolutional GAN since, including
+the StyleGAN line, descends from this blueprint.</p>
+<h3 id="one-sided-label-smoothing">One-sided label smoothing</h3>
+<p>Train D with target 0.9 on real data instead of 1.0.
+The mechanism: with target 1.0, D is rewarded for
+infinite confidence (logits to infinity), which
+saturates its sigmoid and kills the generator&rsquo;s
+gradient. Target 0.9 caps the reward: D stops pushing
+once it is confident enough, leaving gradient for the
+generator. Only the real side is smoothed. Smoothing
+the fake side encourages D to reward fakes.</p>
+<h3 id="minibatch-discrimination">Minibatch discrimination</h3>
+<p>Give D a feature computed across the batch, e.g. the
+standard deviation of each feature over the batch. If
+the generator collapses and emits 64 identical faces,
+the batch std is ~0 and D flags the batch as fake.
+The mechanism attacks collapse directly: the generator
+must now fool a critic that sees diversity, not just
+single samples. StyleGAN&rsquo;s minibatch-stddev layer is
+this trick, still in use.</p>
+<h3 id="r1-regularization-worked">R1 regularization, worked</h3>
+<p><strong>R1 regularization</strong> (Mescheder et al.) penalizes the
+discriminator&rsquo;s gradient on real data:</p>
+<pre class="ascii">R1 = (gamma / 2) * E[ ||grad_x D(x)||^2 ],  x real
+</pre>
+<p>Work it: γ = 10 (the StyleGAN2 value), and suppose
+||∇_x D(x)|| = 0.5 on a real batch. R1 = 5 · 0.25 =
+1.25. The mechanism: a discriminator with steep
+slopes near real data creates sharp cliffs the
+generator falls off. Penalizing the slope smooths D
+around the data manifold, which keeps the generator&rsquo;s
+compass readable. It is applied lazily (every 16
+steps in StyleGAN2) because the gradient-of-gradient
+is expensive. The decision rule: R1 is the default
+stabilizer for non-saturating GANs. It does not fix
+mode collapse. It fixes the critic&rsquo;s manners.</p>
+<h3 id="pacgan-pack-the-batch">PacGAN: pack the batch</h3>
+<p><strong>PacGAN</strong> packs m samples together and shows the
+discriminator the pack. A collapsed generator emits
+m near-identical samples per pack. The packed
+discriminator spots the missing diversity directly:
+real packs vary, fake packs repeat. The mechanism is
+minibatch discrimination taken to the limit: the
+whole input is the batch. The price is m times the
+discriminator&rsquo;s input size. It mitigates collapse
+without changing the divergence.</p>
+<figure><img alt="R1 = 1.25 smooths the critic around real data" src="assets/l04-r1.webp"><figcaption>Penalty (10/2)*0.25 on the real-data gradient. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-honest-price-the-saddle-point">The honest price: the saddle point</h2>
 <h3 id="three-concrete-costs">Three concrete costs</h3>
 <p>The GAN&rsquo;s bill comes due in the optimization itself. MLE
@@ -413,23 +528,45 @@ Lessons 6 through 10 are that move.</p>
 </tbody>
 </table>
 <h3 id="where-gans-run-in-real-systems">Where GANs run in real systems</h3>
+<p>Verified deployments, October 2026:</p>
 <p>The non-saturating loss from this lesson is the standard
-generator objective in every practical GAN lineage: the
-DCGAN architecture family, StyleGAN&rsquo;s progressive growing
-line, and BigGAN&rsquo;s large-batch training all optimize it.
-[uncertain] The exact loss variants and schedules differ per
-paper. The shared core is the Lesson 3 game with the
-non-saturating generator fix. What changed across the years
-was not the game but the scaffolding: normalization,
-progressive resolution, and bigger batches to keep the two
-players balanced. When diffusion models arrived (Lessons
-8-10), they won on training stability, not on sample quality
-alone: a plain minimization has no saddle point to fall off.</p>
+generator objective in every practical GAN lineage, with
+verified architectures around it:</p>
+<ul>
+<li><strong>DCGAN</strong> (Radford et al. 2016): the convolutional
+  blueprint above. <a href="https://arxiv.org/abs/1511.06434">the paper.</a></li>
+<li><strong>ProGAN</strong> (Karras et al. 2018): grows generator and
+  discriminator progressively from 4×4 to 1024×1024.
+  <a href="https://arxiv.org/abs/1710.10196">the paper.</a></li>
+<li><strong>BigGAN</strong> (Brock et al. 2019): class-conditional,
+  large batches, the cGAN mechanism at ImageNet scale.
+  <a href="https://arxiv.org/abs/1809.11096">the paper.</a></li>
+<li><strong>StyleGAN2</strong> (Karras et al. 2020): non-saturating
+  logistic loss with R1 regularization (γ on real-data
+  gradients, applied lazily every 16 steps), Adam with
+  β1 = 0, β2 = 0.99, mapping network z → w, weight
+  demodulation. The sharpest faces of the GAN era.
+  <a href="https://arxiv.org/abs/1912.04958">the paper.</a></li>
+<li><strong>Spectral normalization</strong> (Miyato et al. 2018):
+  divides each discriminator weight matrix by its
+  largest singular value, capping the Lipschitz
+  constant. A cleaner speed limit than WGAN&rsquo;s clipping.
+  <a href="https://arxiv.org/abs/1802.05957">the paper.</a></li>
+</ul>
+<p>What changed across the years was not the game but the
+scaffolding: normalization, progressive resolution,
+and bigger batches to keep the two players balanced.
+When diffusion models arrived (Lessons 8-10), they won
+on training stability, not on sample quality alone:
+a plain minimization has no saddle point to fall off.
+[uncertain] Whether any current frontier system still
+trains pure GANs is not public.</p>
 <h2 id="videos-for-this-lesson">Videos for this lesson</h2>
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/2RMeQ5YxIxI" title="W4L10: Saturation of GAN training" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: saturation of GAN training, the flat-gradient failure, on the board. If the embed is blocked: <a href="https://www.youtube.com/watch?v=2RMeQ5YxIxI" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/pWyRGWRUt6I" title="Generative Adversarial Networks (GANs) Explained" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">External explainer: the GAN game, both losses, mode collapse, and the DCGAN architecture, with a PyTorch training loop. If the embed is blocked: <a href="https://www.youtube.com/watch?v=pWyRGWRUt6I" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
 
+<figure><img alt="Chapter plate: the minimax game" src="assets/plate-l04-chap-gan.webp"><figcaption>No density, no MLE: the game replaces the likelihood, saddle point and all. Chapter plate. Shell 5. Source: original synthesis of the lesson. Project: Stanford Frontier AI.</figcaption></figure>
 <div class="qa"><div class="q">What is the GAN game, exactly?</div><div class="a"><p>Two networks, one objective J = E[log D(x)] + E[log(1 − D(G(z)))]. The discriminator maximizes J: output near 1 on real data, near 0 on fakes. The generator minimizes J: make fakes score near 1. In the hand trace, the discriminator step moved w from 0 to −0.5 (J rose from −1.386 to −1.006) and the generator step moved θ from 2 to 1.93, toward the data.
 Because each player&rsquo;s best move depends on the other&rsquo;s current state. A fully trained discriminator against a fixed bad generator gives no useful gradient (saturation), and a generator trained against a fixed weak discriminator fools only that weakling. They must co-evolve.</p><div class="followup"><strong>Follow-up:</strong> Why alternate instead of training one then the other?</div></div></div>
 <div class="qa"><div class="q">Walk me through one more round of the hand trace. Where does θ go next?</div><div class="a"><p>After round one: θ = 1.93, w = −0.5, b = 0. Discriminator step: D(0) = 0.5 still (x = 0 kills w), D(1.93) = sigmoid(−0.965) = 0.276. The w gradient is −2·D(θ)·(1−D(θ))·θ ≈ −2·0.276·0.724·1.93 ≈ −0.77, so w moves to about −0.89 with step 0.5. Generator step: ∂J/∂θ = −D·(1−D)·w·&hellip; with the steeper w, θ moves further toward 0. Each round the compass gets sharper as the discriminator improves.
@@ -465,6 +602,7 @@ Mode collapse, early. The generator found one face that fools D and stopped expl
 - Arjovsky, Chintala, Bottou, &ldquo;Wasserstein GAN&rdquo; (2017):
   - <a href="https://arxiv.org/abs/1701.07875">the answer to saturation (Lesson 5).</a></p>
 <p><strong>Caveats.</strong> The objective, the two-player structure, and the saturation topic are confirmed in the W2_L6 and evaluation transcripts. The hand trace, the 0.001/0.693 saturation numbers, and the 0.216 mode-collapse computation are the lesson&rsquo;s own worked examples. [uncertain] The lecture&rsquo;s exact numeric demonstrations are unknown.</p>
+<p>Scope exclusions, documented. The playlist&rsquo;s topic sequence lists two W3-W4 GAN topics the recovered transcripts do not treat, and they are excluded here rather than invented. <strong>GAN inversion</strong> (BiGAN, latent regression, bi-directional critics): the idea of learning an encoder alongside the generator to map data back to latent codes. The recovered lecture transcripts contain no substantive treatment, and the playlist&rsquo;s T7 (Bi-GAN) is a code tutorial, not math. <strong>GANs as classifier-guided generative sampler</strong> (W3L8): the reading of the GAN game as a classifier steering generation. The recovered transcripts contain no substantive treatment of this view beyond label conditioning, which the cGAN section above covers. Both remain honest gaps: named, not filled.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
 <li><strong>CS336 (training data):</strong> that course asks what language models memorize versus generate. Mode collapse is the GAN analogue of memorization failure in reverse: instead of regurgitating training points, the generator regurgitates one mode. A worked tie: a collapsed generator producing the single most common training image scores D = 0.5 forever, exactly like a language model stuck repeating its most frequent phrase. Both are optimization equilibria, not bugs in the architecture.</li>
