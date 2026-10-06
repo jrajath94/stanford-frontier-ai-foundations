@@ -207,7 +207,7 @@ Work the traffic. One layer of a 7B model: hidden size 4096, so one
 weight matrix is 4096x4096 = 16.7M parameters, 33MB in bf16. With
 4-way tensor parallel, column split: each rank holds 8MB. Forward:
 each rank computes its 1024-wide slice, then all-gather to full 4096
-width. Per token the activation is 4096 x 2 bytes = 8KB; the
+width. Per token the activation is 4096 x 2 bytes = 8KB. The
 all-gather moves about 6KB per rank per layer forward. Backward:
 reduce-scatter the same size. Per layer per step: about 12KB per rank
 per token at batch 1. Multiply by 32 layers, 2048 tokens, batch 4:
@@ -217,9 +217,9 @@ NVLink and never crosses InfiniBand.
 
 > [!QA]
 > Q: Tensor parallel: how much traffic per layer per step, with numbers?
-> A: One 7B layer at hidden 4096: the weight is 4096x4096, 33MB in bf16. With 4-way column split, each rank holds 8MB. Forward: each rank computes its 1024-wide slice, then all-gather to full 4096 width. Per token the activation is 8KB; the all-gather moves about 6KB per rank per layer forward. Backward: reduce-scatter the same size. So about 12KB per rank per token per layer. At 32 layers, 2048 tokens, batch 4: roughly 3GB per rank per step. That is the tax, and it repeats every layer.
+> A: One 7B layer at hidden 4096: the weight is 4096x4096, 33MB in bf16. With 4-way column split, each rank holds 8MB. Forward: each rank computes its 1024-wide slice, then all-gather to full 4096 width. Per token the activation is 8KB. The all-gather moves about 6KB per rank per layer forward. Backward: reduce-scatter the same size. So about 12KB per rank per token per layer. At 32 layers, 2048 tokens, batch 4: roughly 3GB per rank per step. That is the tax, and it repeats every layer.
 > Follow-up: Why does this force NVLink but data parallel does not?
-> A: Frequency. Tensor parallel's traffic fires per layer per step: thousands of small all-gathers with tight synchronization. Data parallel's traffic fires once per step: one big all-reduce that tolerates latency. The slow link survives the rare big transfer; it drowns under the constant chatter.
+> A: Frequency. Tensor parallel's traffic fires per layer per step: thousands of small all-gathers with tight synchronization. Data parallel's traffic fires once per step: one big all-reduce that tolerates latency. The slow link survives the rare big transfer. It drowns under the constant chatter.
 
 ## Third cut: pipeline parallelism
 
@@ -361,6 +361,16 @@ The story in eight steps. Each step answers the one before it.
    tax. Tolerates slow links.
 8. **Hardware picks the cut.** Tensor in the node, data across nodes,
    pipeline if needed. Match communication to links.
+
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/JA1l96tjrs4" title="Deepak Narayanan: Training Large Language Models at Scale" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- Deepak Narayanan, Training LLMs at Scale (the embed above): https://www.youtube.com/watch?v=JA1l96tjrs4
+- Rajbhandari et al., ZeRO: https://arxiv.org/abs/1910.02054
+- Shoeybi et al., Megatron-LM: https://arxiv.org/abs/1909.08053
+- Narayanan et al., Efficient Large-Scale LM Training on GPU Clusters: https://arxiv.org/abs/2104.04473
 
 ## Official sources and further reading
 
