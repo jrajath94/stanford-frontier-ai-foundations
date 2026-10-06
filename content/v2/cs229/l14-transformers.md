@@ -19,6 +19,12 @@ sources:
   - tag: video
     label: "Lecture 14 video, Stanford Online YouTube"
     url: https://www.youtube.com/watch?v=pwQ0l4hFCVI
+  - tag: video
+    label: "Explainer: transformers, visualized"
+    url: https://www.youtube.com/watch?v=wjZofJX0v4M
+  - tag: paper
+    label: "Vaswani et al., Attention Is All You Need (2017)"
+    url: https://arxiv.org/abs/1706.03762
   - tag: notes
     label: "Official subtitle transcript (en-US)"
   - tag: notes
@@ -132,6 +138,35 @@ weights * V.
 
 ![Attention](assets/svg/l14-attn.svg "Attention. Queries meet keys, scores become weights, values mix. The toy: frame pulls 21/21/58 percent. Source: original plate for Stanford Frontier AI.")
 
+### Subchapter: the attention toy, audited
+
+Check the division. e^1 = 2.718 (twice), e^2 = 7.389. Total:
+12.825. Weights: 2.718/12.825 = 0.212, 0.212, 7.389/12.825 =
+0.576. The lesson's 0.21/0.21/0.58 rounds correctly. New frame:
+0.212*[1,0] + 0.212*[0,1] + 0.576*[1,1] = [0.788, 0.788]. Rounds
+to [0.79, 0.79]. Exact. Now change the query to [1, 0]: a token
+looking for counselor-like keys. Scores: 1, 0, 1. Softmax: e^1 =
+2.718, e^0 = 1, e^1 = 2.718. Total 6.436. Weights: 0.422, 0.155,
+0.422. The same keys, a different question, a different mix: the
+query decides. That is the whole mechanism in one changed number.
+
+![Toy audit](assets/plate-l14-toy-audit.webp "The toy, audited. Scores 1, 1, 2 give weights 0.212, 0.212, 0.576. New frame: [0.79, 0.79]. Change the query, change the mix. Source: original audit for the attention toy. Project: Stanford Frontier AI.")
+
+### Subchapter: the 1/sqrt(d) audit
+
+Why the scaling is not optional. Take d = 64, random vectors with
+unit-variance entries. Dot products have variance 64, std 8:
+scores spread over roughly ±16. Softmax: e^16 vs e^-16, a ratio
+of e^32 ≈ 8×10^13. One weight is 1, the rest are 0: winner-take-all
+on random noise, and gradients through the losers are dead.
+Divide by sqrt(64) = 8: std becomes 1, scores spread ±2, ratio
+e^4 = 54.6. The softmax stays responsive: weights differ, none
+vanish. The rule: dot products grow as sqrt(d). The scaling
+cancels the growth. Forget it and the first training steps weld
+each query to one random key.
+
+![sqrt(d)](assets/plate-l14-sqrt-d.webp "Why divide by sqrt(d). Raw dots at d=64: std 8, softmax ratio 8e13, winner-take-all. Scaled: std 1, ratio 55, responsive. Source: original plate for the scaling audit. Project: Stanford Frontier AI.")
+
 ## Causal masking: no peeking
 
 For next-word prediction, token 5 may only use tokens 1-4. If
@@ -157,6 +192,38 @@ the 50,000-token vocabulary: the next-token distribution. Train
 with cross-entropy (lecture 4) against the true next token.
 
 ![Transformer block](assets/svg/l14-t2.svg "The transformer block. Attention mixes across positions, MLP bends within positions, residuals and RMSNorm stabilize the stack. Source: original plate for Stanford Frontier AI.")
+
+### Subchapter: a block, counted
+
+Price one block at d = 4096. Attention: Q, K, V, O, four d-by-d
+matrices: 4 * 4096^2 = 67.1M parameters. MLP with 4x expansion:
+up 4096→16384 and down 16384→4096: 2 * 4 * 4096^2 = 134.2M. Per
+block: 201.3M. Thirty-two blocks: 6.44B. Add embeddings (50k
+vocab × 4096 = 204.8M): ~6.6B total. That is a "7B model": the
+label is the block count times 12*d^2 plus embeddings. The
+interview move: 12*d^2 per block (4 for attention, 8 for the MLP)
+is the whole sizing rule. Given a parameter budget and d, blocks =
+budget / (12*d^2).
+
+![Block counted](assets/plate-l14-block-count.webp "A block, counted. Attention 4d^2 = 67M, MLP 8d^2 = 134M, block 201M. 32 blocks: 6.4B. That is a 7B model. Source: original plate for the parameter count. Project: Stanford Frontier AI.")
+
+### Subchapter: exposure bias, priced
+
+Teacher forcing feeds the true prefix at every position. At
+generation the model feeds itself. Price the gap. Suppose each
+generated token has a 1% error rate independently. A 100-token
+answer contains at least one error with probability 1 - 0.99^100
+= 0.634: nearly two-thirds of answers. And errors compound: the
+model never trained on its own mistakes, so one wrong token
+poisons the context for all later ones. The attempted fix is
+scheduled sampling: during training, randomly feed the model's own
+predictions instead of the truth, growing the fraction over time.
+It helps and it is fiddly: the training distribution keeps
+shifting. The honest summary: teacher forcing trains fast and
+parallel. Generation drifts. The gap is structural to the
+autoregressive setup.
+
+![Exposure bias](assets/plate-l14-exposure.webp "Exposure bias, priced. Train: the true prefix, always. Generate: 1% error per token means 63% of 100-token answers contain an error. Source: original plate for the train-generate gap. Project: Stanford Frontier AI.")
 
 ## The honest price: quadratic
 
@@ -215,14 +282,59 @@ inference.
    generation.
 8. **The block.** Attention + MLP, residuals, RMSNorm, 32-96 deep.
    Softmax over vocabulary, cross-entropy loss.
-9. **The honest price.** N x N scores: 16.7M at N = 4,096. Won
-   training. Inference pays.
+> [!QA]
+> Q: Walk me through the mechanism: recompute the toy weights from the scores, then change the query.
+> A: Scores 1, 1, 2. e^1 = 2.718 twice, e^2 = 7.389, total 12.825. Weights: 0.212, 0.212, 0.576. New frame: 0.212*[1,0]+0.212*[0,1]+0.576*[1,1] = [0.788, 0.788]. Now query [1,0]: scores 1, 0, 1. Softmax: 2.718, 1, 2.718. Total 6.436. Weights: 0.422, 0.155, 0.422. Same keys, different question, different mix: counselor and frame now tie. The query decides the attention pattern. The keys only answer.
+> Follow-up: What do learned (non-identity) projections change?
+> A: They rotate the spaces: the query "what I look for" and the key "what I contain" need not live in token space. A token can ask about syntax while offering semantics. The arithmetic is identical: project, dot, softmax, mix. Identity projections just make the numbers visible.
+
+> [!QA]
+> Q: Applied design: you need a ~1B-parameter transformer at d=2048. How many blocks?
+> A: Per block: 12*d^2 = 12 * 2048^2 = 50.3M (4d^2 attention + 8d^2 MLP). Embeddings: 50,000 * 2048 = 102.4M. Blocks = (1,000M - 102.4M) / 50.3M = 17.8: use 18. Total: 18*50.3 + 102.4 = 1,008M. The 12*d^2 rule sizes any decoder: pick d for the width, divide the budget for the depth. Deeper-narrow vs shallower-wide at fixed budget is then a dev-set question.
+> Follow-up: Why not d=4096 with 4 blocks for the same 1B?
+> A: Four blocks give four rounds of mixing and bending: too shallow to compose the features language needs. Depth buys composition (lecture 7's lesson). The field's rule of thumb: depth and width grow together. Extreme aspect ratios underperform. At 1B, ~20 blocks at d~2048 is the balanced region.
+
+> [!QA]
+> Q: Why multiple heads instead of one big attention head?
+> A: One head gives each token one mix pattern. Language needs several simultaneous relations: one head can track syntax (which verb governs this noun), another coreference (which "it" is this), another position. Heads partition the width: d=4096 with 32 heads gives each head d=128 to work in. Total compute equals one 4096-wide head: the partition costs nothing. The capacity is in the diversity of mixes, not the arithmetic.
+> Follow-up: What goes wrong with too many heads?
+> A: Each head gets too narrow: 128 heads at d=4096 means d=32 per head, too thin to represent a useful query-key match. The mixes become noise. Head count is a dev-tuned dial, typically d/128 to d/64 per head.
+
+> [!QA]
+> Q: RMSNorm vs LayerNorm: what was dropped, and what breaks with no norm at all?
+> A: LayerNorm centers (subtract mean) then rescales (divide by std). RMSNorm drops the centering: it only rescales by root-mean-square. Cheaper, and in practice the centering bought little for transformers. With no normalization across 96 blocks, activation magnitudes drift: each block's output scale multiplies, signals explode or vanish down the stack, and training destabilizes. The norm is the guardrail that lets depth reach 96.
+> Follow-up: Where does the norm sit: before or after the sublayer?
+> A: Modern stacks put it before (pre-norm): norm, then attention, then residual add. Pre-norm keeps the residual stream unscaled and gradients flowing. Post-norm (original transformer) normalizes after the add and trains worse at depth. The lecture presents RMSNorm as the stabilizer. Pre-norm placement is the accompanying practice.
+
+10. **The audit.** Weights 0.212/0.212/0.576, frame [0.79,
+    0.79]. New query, new mix.
+11. **The scaling.** Raw dots at d=64: softmax ratio 8e13.
+    Scaled: 55. Responsive, not welded.
+12. **The count.** 12*d^2 per block. 32 blocks at 4096: 6.4B.
+    That is a 7B model.
+13. **The gap.** 1% per token: 63% of 100-token answers err.
+    Teacher forcing trains parallel. Generation drifts.
+
+## What is used where
+
+**The transformer is the deployed architecture.** GPT, Claude,
+Llama, Gemini: all decoder-only transformers running this
+lesson's block. BERT-style encoders run the same attention
+without the causal mask for classification and search. The 12*d^2
+sizing rule is the back-of-envelope every practitioner uses.
+RMSNorm and pre-norm residuals are the standard stack in every
+open-weights model. Subword tokenization (BPE/SentencePiece) is
+the universal text frontend.
+
+## Watch next
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/wjZofJX0v4M" title="Explainer: transformers visualized" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: transformers, visualized. Attention and the block stack animated end to end. Watch after the attention toy.</p></div>
 
 ## Official sources and further reading
 
 **Official:**
 - Lecture 14 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=pwQ0l4hFCVI — Tengyu Ma builds
+  - [Tengyu Ma builds](https://www.youtube.com/watch?v=pwQ0l4hFCVI)
   tokenization (subword, the "internationalization" and
   "LLMefication" examples), the autoregressive paradigm, attention
   from Q/K/V, causal masking, and the quadratic bottleneck.
