@@ -33,7 +33,7 @@ Non-negative. Zero iff distributions match. KL = u log u member.
 
 `argmin_θ KL(P_X‖P_θ) = argmax_θ (1/n) Σ log P_θ(x_i)`
 Cross-entropy = entropy + KL. Entropy is the floor: no model beats it.
-On H,H,T: 0.7-model wins (−1.918 vs −2.079).
+On H,H,T: 0.7-model wins (−1.917 vs −2.079).
 
 ## Variational bound (→ GAN)
 
@@ -118,7 +118,7 @@ Diffusion: slow sampling (T steps). AR: sequential generation.
 ## Numbers you must know cold
 
 0.511 (KL coin toy) · 0.102 (JS) · 0.4 (TV) · 0.693 (forward sharp toy. JS max = log 2) ·
-−1.918 vs −2.079 (MLE picks 0.7) · 0.001 vs 0.693 (saturation fix) · 0.216 (mode-collapse JS) ·
+−1.917 vs −2.079 (MLE picks 0.7) · 0.001 vs 0.693 (saturation fix) · 0.216 (mode-collapse JS) ·
 4 (FID toy) · −1.031 vs −0.968, gap 0.063 (ELBO toy) · 0.443 (VAE KL rent) ·
 3.900 (forward toy) · 3.944 (posterior mean) · 0.0354 (L_simple toy) · 4.059 (one reverse step) ·
 −1.578 (score toy) · 2.844 (DDIM stride) · 48× (latent saving) · 0.036 (AR toy)
