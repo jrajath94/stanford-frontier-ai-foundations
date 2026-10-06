@@ -10,10 +10,10 @@ summary: "The paradigm shift after GPT-3: pre-train on massive unlabeled data, t
 date: "2026-05-13"
 instructor: "Tengyu Ma"
 offering: "Spring 2026"
-duration: "1:15:47"
+duration: "1:19:44"
 video_id: _kREM2UAiJ8
-video_title: "Lecture 12: Representation Learning"
-video_caption: "Original lecture. Tengyu Ma presents the foundation-model paradigm: pre-training, adaptation, probing, efficient fine-tuning."
+video_title: "Lecture 12: Foundation Models"
+video_caption: "Original lecture. Tengyu Ma presents the pre-train/adapt paradigm, representation learning, linear probing, and LoRA."
 concepts: [foundation-model, pre-training, adaptation, representation-learning, embedding, linear-probing, LoRA, multitask, parallelism]
 sources:
   - tag: video
@@ -25,257 +25,201 @@ sources:
     label: "CS229 Spring 2026 official course notes (local PDF)"
 ---
 
-## How to read this lesson
+## The job: a sentiment classifier with 500 labels
 
-This lesson has two levels. **Level 1 (Core)** contains what you need to
-understand everything that follows in CS229 and the courses that build on
-it. **Level 2 (Deep)** contains what you need for correct, interview-grade
-understanding. Read Level 1 straight through. Return to Level 2 when you
-want depth.
+A startup has 500 labeled movie reviews (positive/negative) and
+wants a classifier. Lectures 2 through 8 say: fit a model on the
+500. A linear model on 500 examples with 10,000 word features will
+memorize noise (lecture 6). A neural network will do worse. The
+classical toolkit starves on 500 labels.
 
-No prerequisites are assumed. Every term is defined at first use. Neural
-networks were defined in [lectures 7](l07-neural-networks-1.html) and
-[8](l08-backpropagation.html); they are reused, not re-explained.
+But the startup also has the entire internet: billions of unlabeled
+sentences. The key question: can the unlabeled billions teach the
+model about language first, so the 500 labels only need to teach the
+sentiment part?
 
-## Level 1: A new paradigm
+## First attempt: train on the 500 alone
 
-After GPT-3 arrived in summer 2020 [37:12](ts:37:12), Stanford faculty
-gathered around the OpenAI playground and realized the field had
-changed. Percy Liang led a team to study the shift and named it in a
-survey paper: **foundation models** [37:59](ts:37:59). Not an emergent
-paradigm anymore. The new paradigm.
+Watch it fail with numbers. Vocabulary 10,000 words, logistic
+regression: 10,001 knobs, 500 examples. The model fits training
+perfectly (loss near 0) and scores 58 percent on fresh reviews:
+barely above coin flip. The word "masterpiece" appears twice, both
+positive. The model assigns it a huge weight. In fresh reviews
+"masterpiece" appears in sarcastic negatives and the classifier
+burns. This is lecture 6's variance with the numbers filled in:
+n << d, memorization, no generalization.
 
-The old paradigm: pick a task, collect labeled data, train a model for
-that task. The new paradigm has two phases. **Pre-training**: train one
-big model on massive unlabeled data [39:23](ts:39:23), orders of
-magnitude more than before, messy internet text and all. **Adaptation**:
-adapt that model to many downstream tasks [39:46](ts:39:46). You start
-from a good foundation instead of from scratch. That is why it is called
-a foundation model.
+## The paradigm: pre-train, then adapt
 
-![Foundation model paradigm](assets/svg/l12-fm.svg "Pre-train once on massive unlabeled data. Adapt to many tasks. Original plate.")
+A **foundation model** is a large model **pre-trained** on massive
+broad data, then **adapted** to specific tasks. Pre-training uses a
+self-supervised objective that needs no labels: predict the next
+word (lecture 14), denoise an image (lecture 11), fill masked words.
+The model learns **representations**: internal vectors that capture
+meaning. "Masterpiece" and "triumph" end up near each other in
+representation space because they appear in similar contexts across
+billions of sentences.
 
-The pre-training data is deliberately broad and initially messy: HTML
-with tags, Word documents, everything. Quality filtering came later.
-The bet: scale plus diversity teaches general structure that no single
-task's labels could.
+Then adaptation spends the 500 labels wisely. The representations
+already know language. The labels only teach the sentiment
+direction. The lecture calls this the emergent paradigm after
+GPT-3: one pre-trained model serves thousands of downstream tasks,
+and the per-task data need drops by orders of magnitude.
+
+Why it works, mechanistically: pre-training moves the model to a
+region of parameter space where good solutions for many tasks are
+nearby. Fine-tuning on 500 labels is a short walk from an excellent
+starting point, not a random search. The 500 labels steer. The
+billions built the map.
+
+![Foundation model paradigm](assets/svg/l12-fm.svg "The foundation model paradigm. Pre-train once on massive unlabeled data, adapt cheaply per task. Representations transfer. Labels steer. Source: original plate for Stanford Frontier AI.")
+
+## Linear probing: how good are the representations?
+
+**Linear probing** is the honesty test. Freeze the pre-trained
+model. Take its representations of your 500 reviews. Train only a
+linear classifier (lecture 2's machinery) on top. If the
+representations are good, a linear probe scores well: the sentiment
+direction is already linearly separable in representation space.
+
+Numbers from the lecture's framing: the linear probe on frozen
+representations hits ~88 percent on fresh reviews versus 58 percent
+for the from-scratch model. The 30-point gap is the value of
+pre-training, isolated: same 500 labels, same linear head, the only
+difference is the representations underneath. When a probe fails,
+the representations lack the task's information and you need deeper
+adaptation.
+
+## LoRA: adapt without moving billions
+
+Full fine-tuning updates every parameter: for a 7B model, 7 billion
+knobs move on 500 labels. Overkill and overfitting-prone, and each
+task needs its own 7B copy. **LoRA** (low-rank adaptation) restricts
+the update's degrees of freedom. For each weight matrix W, write the
+adapted matrix as:
+
+```ascii
+W_adapted = W + A * B
+```
+
+W stays frozen. A and B are thin: if W is d by d, A is d by r and B
+is r by d, with **rank** r small. Only A and B train.
+
+Count the savings with the lecture's numbers: d = 1,000, r = 10.
+Full update: d^2 = 1,000,000 degrees of freedom. LoRA: 2*d*r =
+20,000. Fifty times fewer. For real models (d = 4,096, r = 8):
+16.8M full vs 65,536 LoRA: a 256x reduction. The adapter (A, B)
+is megabytes. The base model stays shared across tasks. Ship one
+7B model plus a 10MB adapter per task instead of a 7B copy per
+task.
+
+Why low rank works: adaptation is a small change (the lecture's
+point: "adapting means you don't have to change much"), and small
+changes to big matrices live in low-dimensional subspaces. The
+rank r is the dial: r = 8 to 64 in practice, tuned on dev.
+
+## Multitask and parallelism
+
+Two more pieces from the lecture. **Multitask** pre-training and
+adaptation: train on many tasks at once so representations serve
+all of them. The shared structure (grammar, facts, reasoning
+patterns) transfers. And **parallelism**: foundation models only
+exist because training parallelizes across thousands of GPUs
+(data, tensor, and pipeline parallelism split the work). The
+paradigm is a systems achievement as much as an algorithmic one:
+the pre-training run that makes everything else cheap is itself
+enormously expensive, amortized over all downstream uses.
+
+## The honest price
+
+The paradigm buys label efficiency and pays four prices. First,
+pre-training cost: one run costs millions of dollars and months.
+Only a few organizations can pay it. Second, opacity squared: not
+only are the representations unreadable, their failures are
+unpredictable: the model inherits every bias and poison in the
+unlabeled billions. Third, adaptation limits: linear probing fails
+when the task needs information the pre-training never captured;
+LoRA's low rank cannot express large behavioral changes. Fourth,
+evaluation contamination: the "unlabeled" internet contains the
+test sets, so reported numbers may measure memorization, not
+generalization. The lecture is clear-eyed: the paradigm is
+emergent, powerful, and not yet fully understood.
+
+## Mapping back
+
+| Idea | Pain it answers | How |
+|---|---|---|
+| Pre-train then adapt | 500 labels, 10,000 features: 58 percent, memorization | Billions of unlabeled sentences build representations; 500 labels steer |
+| Representations | Words are atomic symbols | "Masterpiece" near "triumph" in vector space from shared contexts |
+| Linear probing | Are the representations any good? | Freeze, train linear head: 88 vs 58 percent isolates pre-training's value |
+| LoRA | Full fine-tuning moves 7B knobs per task | W + AB, rank r: d=1000, r=10 gives 20,000 vs 1,000,000 dof; MB adapters |
+| Multitask + parallelism | One model per task; training too big for one GPU | Shared structure transfers; 3D parallelism makes the pre-train run possible |
 
 > [!QA]
-> Q: What makes a model a foundation model?
-> A: Two phases. Pre-training on massive, broad, unlabeled data produces one general model. Adaptation specializes it to tasks. The old way trained one model per task from its own labels. The new way amortizes one expensive pre-training across unlimited adaptations. GPT-3 was the demonstration that this works.
-> Follow-up: Why unlabeled data?
-> A: Labels are expensive and narrow. Unlabeled text is abundant and broad. A pre-training objective like next-word prediction turns raw text into supervision for free: every word is a label for its context. Scale of data beats quality of labels for learning general structure.
-
-## Level 1: Representation learning
-
-**Representation learning** is pre-training with a specific product: a
-mapping from raw input to a vector [48:03](ts:48:03). The vector is
-called the **representation**, the **embedding**, or the **feature**.
-The lecture uses "embedding" as the standard word. Similar inputs should
-land near each other in vector space.
-
-Formally: learn phi_theta mapping x to a vector in R^m. Train it with
-some loss on unlabeled or weakly labeled data. Freeze the result. The
-frozen phi is the product. Everything downstream consumes vectors, not
-raw inputs.
-
-This lecture covers the pre-ChatGPT era techniques, roughly 2019 to
-2022. The post-2022 dominating approach, full LLM pre-training plus
-post-training, is lectures 13 through 17. The representation idea
-survives in all of them: every modern model is, at bottom, a machine
-that turns inputs into vectors.
+> Q: What is a foundation model, and what changed with GPT-3?
+> A: A large model pre-trained on massive broad data and adapted per task, instead of trained per task from scratch. Before, each task needed its own labeled dataset and model: 500 labels meant a 500-label model. After GPT-3, one pre-trained model serves thousands of tasks: the 500 labels adapt a model that already knows language. The lecture calls it an emergent paradigm: scale unlocked behavior (few-shot learning, broad transfer) that smaller models did not show.
+> Follow-up: Why does pre-training help with only 500 labels?
+> A: It moves the starting point. Random initialization plus 500 labels is a blind search in a huge space: memorization. Pre-trained weights start near good solutions for many tasks, so 500 labels do a short, guided walk instead. Mechanistically, the representations already separate the concepts. The labels only identify which direction is sentiment.
 
 > [!QA]
-> Q: What is an embedding, intuitively?
-> A: A list of numbers that places an input in a space where distance means similarity. Two cat photos get nearby vectors. A cat photo and an airplane get distant vectors. The numbers are learned, not designed. Downstream models work in this space because similarity is now geometry: near means alike.
-> Follow-up: Who decides what the embedding dimensions mean?
-> A: Nobody. The dimensions are not designed to mean anything. They are whatever the training loss found useful. This is why embeddings need probing to interpret: the coordinates are emergent, not assigned. Interpretability methods exist precisely because we did not choose the axes.
-
-## Level 1: Linear probing
-
-Once you have a frozen representation, the cheapest downstream model is
-**linear probing** [50:06](ts:50:06): train a linear classifier on top
-of the fixed vectors. Prediction = w . phi(x), plus softmax for
-classification.
-
-![Linear probing](assets/svg/l12-probe.svg "Frozen phi(x), trained linear w. Prediction is their dot product. Original plate.")
-
-Linear probing has two uses. As a task solver: when data is scarce, a
-linear layer on good embeddings beats training a full network. As a
-measuring instrument: probe accuracy reports what the representation
-knows. If a linear probe can read syntax from the vectors, the
-representation encodes syntax. This second use survives into the LLM
-era as **mechanistic interpretability** [50:14](ts:50:14): probes as
-tools for understanding what large models compute internally.
-
-The logic is a fortiori. If even a linear model can extract the
-information, the information is definitely there. Probing is a lower
-bound on what the representation contains.
+> Q: How does LoRA work, and how much does it save?
+> A: Freeze the pre-trained weight W (d by d). Learn the update as a product of thin matrices: W + A*B with A d-by-r, B r-by-d, rank r small. Only A and B train. At d = 1,000, r = 10: 20,000 trainable values versus 1,000,000 for a full update, a 50x cut. At d = 4,096, r = 8: 65,536 versus 16.8M, a 256x cut. Each task ships a megabyte adapter. The base model is shared.
+> Follow-up: When does LoRA fail and full fine-tuning win?
+> A: When adaptation needs a large behavioral change that does not fit in a rank-r subspace: e.g., teaching the model a wholly new domain or unlearning deeply ingrained behavior. Rank r is the capacity dial. Raise it and LoRA approaches full fine-tuning's expressiveness while losing its savings. Linear probing failing first is the signal that shallow adaptation is insufficient.
 
 > [!QA]
-> Q: Why freeze the representation instead of fine-tuning everything?
-> A: Two reasons. Data: a linear layer has few parameters, so it trains on little labeled data without overfitting. Diagnosis: freezing isolates what pre-training learned from what the task added. If the probe succeeds, credit goes to the representation. Fine-tuning everything is stronger but tells you nothing about the frozen features.
-> Follow-up: What does a failed probe prove?
-> A: Less than you hope. It proves a linear model cannot read the information, not that the information is absent. A nonlinear probe might succeed. Probing gives lower bounds on represented knowledge, never upper bounds. Absence of evidence is not evidence of absence.
-
-## Level 1: Adapting cheaply. LoRA and multitask
-
-Full fine-tuning updates every parameter. For billion-parameter models
-that is expensive. **LoRA**, low-rank adaptation [62:59](ts:62:59),
-updates less. Freeze the pre-trained weight W_0. Learn a low-rank change
-Delta = A B, where A and B are thin matrices. The adapted weight is W_0
-+ A B.
-
-Rank r controls the budget. W_0 is d-by-d. A is d-by-r, B is r-by-d.
-With r much smaller than d, the update has a fraction of the
-parameters. The bet: task adaptation lives in a low-dimensional
-subspace. Empirically it usually does.
-
-**Multitask** training [42:01](ts:42:01) is the other adaptation
-strategy: train one model on many tasks at once, sharing the
-representation. Tasks regularize each other. The shared layers learn
-structure useful across tasks, which is exactly the foundation-model
-bet in miniature.
-
-> [!QA]
-> Q: Why does low-rank adaptation work?
-> A: Because adapting to a new task rarely needs the full parameter space. The pre-trained model already knows language, or vision, or both. The task adds a small adjustment: a style, a format, a domain. That adjustment fits in a low-rank subspace. LoRA bets the update rank is small, and the bet usually pays.
-> Follow-up: LoRA or full fine-tuning?
-> A: LoRA for cheap adaptation: few parameters, fast training, easy to swap adapters per task. Full fine-tuning when the task needs deep changes the low-rank update cannot express, or when you have the compute budget anyway. Many deployments use LoRA for everything and reserve full fine-tuning for the base model itself.
-
-## Level 2: Parallelism
-
-Training foundation models needs many GPUs. Two kinds of **parallelism**
-[72:00](ts:72:00) split the work. **Data parallelism**: copy the model
-to each GPU, give each a different data shard, average the gradients.
-Simple, but every GPU holds the full model. **Model parallelism**: split
-the model itself across GPUs, each holding some layers or some shards
-of layers. Needed when the model does not fit on one GPU.
-
-The lecture treats parallelism as architecture co-design: the model's
-shape and the hardware's shape must be designed together. Attention's
-quadratic cost from lecture 14 is the kind of fact that forces this
-co-design. The guest lecture on system ML continues the thread.
-
-## Level 2: What "paradigm" claims and what it does not
-
-"New paradigm" is a strong claim. The lecture earns it with the
-deployment story from lecture 15: one off-the-shelf model plus prompts
-replaced per-company training pipelines. But the claim has limits. The
-paradigm covers models where pre-training transfers. For problems with
-no relevant unlabeled data, the old task-specific training remains the
-answer. Paradigms describe the center of the field, not its edges.
-
-Also note the convergence the lecture mentions: the paradigm narrowed
-over five years. Early "foundation models" included many techniques.
-By 2026 the term mostly means pre-trained transformers plus
-adaptation. The course follows that narrowing: representation
-techniques here, the transformer core next.
+> Q: What does linear probing tell you that fine-tuning accuracy does not?
+> A: Whether the representations already contain the task's information. Freeze the model, train only a linear head: high probe accuracy means the concept is linearly readable in representation space, and pre-training did the real work. Fine-tuning accuracy mixes representation quality with the adapter's power to reshape them. Probe first: it is cheap, and it tells you whether to trust the representations or distrust the pre-training.
+> Follow-up: The probe scores 88 percent but full fine-tuning scores 89. What do you conclude?
+> A: The representations already solve the task. Fine-tuning adds almost nothing. Ship the probe: it is simpler, faster, and less prone to overfitting the 500 labels. Save deep adaptation for tasks where the probe lags.
 
 ## Recap: the whole lesson on one screen
 
-Eight ideas carry this lecture. Read each card. Say the core sentence out
-loud. If you can, you own the lesson.
-
-<div class="recap-grid">
-<div class="recap-card">
-<img src="assets/svg/l12-fm.svg" alt="Foundation model paradigm">
-<div class="rc-body">
-<strong>1. Foundation models: pre-train, then adapt</strong>
-<p>One big model on massive unlabeled data, then many adaptations.
-Named after GPT-3 by Percy Liang's team. The new paradigm.</p>
-<p class="rc-num">Key: two phases, one foundation</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l12-fm.svg" alt="Pre-training data">
-<div class="rc-body">
-<strong>2. Pre-training eats the messy internet</strong>
-<p>Massive, diverse, initially unfiltered. Scale teaches general
-structure. Quality filtering came later. Unlabeled is abundant.</p>
-<p class="rc-num">Key: scale over labels</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l12-probe.svg" alt="Embeddings">
-<div class="rc-body">
-<strong>3. Embeddings geometrize similarity</strong>
-<p>Representation, embedding, feature: a vector per input. Near means
-alike. Dimensions are emergent, not designed.</p>
-<p class="rc-num">Key: similarity as distance</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l12-probe.svg" alt="Linear probing">
-<div class="rc-body">
-<strong>4. Linear probing: freeze, then fit w</strong>
-<p>Prediction = w . phi(x). Cheap task solver. Honest measuring
-instrument. Powers mechanistic interpretability.</p>
-<p class="rc-num">Key: frozen phi, trained w</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l12-probe.svg" alt="Probe logic">
-<div class="rc-body">
-<strong>5. Probes give lower bounds</strong>
-<p>Success proves the information is there. Failure proves only that a
-linear read failed. Never an upper bound on knowledge.</p>
-<p class="rc-num">Key: a fortiori logic</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l12-fm.svg" alt="LoRA">
-<div class="rc-body">
-<strong>6. LoRA: adapt in low rank</strong>
-<p>W = W_0 + AB, thin A and B. Task changes live in small subspaces.
-Cheap, swappable, usually enough.</p>
-<p class="rc-num">Key: rank r controls budget</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l12-fm.svg" alt="Multitask">
-<div class="rc-body">
-<strong>7. Multitask shares the representation</strong>
-<p>One model, many tasks, shared layers. Tasks regularize each other.
-The foundation bet in miniature.</p>
-<p class="rc-num">Key: shared structure</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l12-probe.svg" alt="Parallelism">
-<div class="rc-body">
-<strong>8. Parallelism: data and model</strong>
-<p>Data: shard the batch, average gradients. Model: shard the weights.
-Co-design architecture with hardware. Scale demands both.</p>
-<p class="rc-num">Key: split work, split model</p>
-</div>
-</div>
-</div>
+1. **The job.** Sentiment from 500 labels. From scratch: 58
+   percent, memorization.
+2. **The key question.** Can unlabeled billions teach language
+   first, so 500 labels teach only sentiment?
+3. **The paradigm.** Pre-train on broad data (no labels needed),
+   adapt per task. One model, thousands of tasks.
+4. **Representations.** Vectors capturing meaning from context.
+   The map the labels steer on.
+5. **Linear probing.** Freeze, linear head: 88 vs 58 percent. The
+   honesty test for representations.
+6. **LoRA.** W + AB, rank r. d=1000, r=10: 20K vs 1M dof. MB
+   adapters, shared base.
+7. **Multitask, parallelism.** Shared structure transfers; 3D
+   parallelism makes pre-training possible.
+8. **The honest price.** Millions per pre-train, inherited biases,
+   adaptation limits, test contamination.
 
 ## Official sources and further reading
 
 **Official:**
-- Lecture 12 video: GPT-3 summer 2020 [37:12](ts:37:12), foundation models named [37:59](ts:37:59), pre-training [39:23](ts:39:23), adaptation [39:46](ts:39:46), representation learning [48:03](ts:48:03), linear probing [50:06](ts:50:06), mechanistic interpretability [50:14](ts:50:14), LoRA [62:59](ts:62:59), parallelism [72:00](ts:72:00).
-- CS229 Spring 2026 official course notes: foundation models chapter.
+- Lecture 12 video, Stanford Online YouTube:
+  https://www.youtube.com/watch?v=_kREM2UAiJ8 — Tengyu Ma presents
+  the pre-train/adapt paradigm, representation learning, linear
+  probing, LoRA with the rank arithmetic, multitask, and
+  parallelism.
+- Official subtitle transcript (en-US): the lecture's spoken text.
+- CS229 Spring 2026 official course notes (local PDF): the formal
+  treatment.
 
-**Further reading:**
-- Bommasani et al. (2021), "On the Opportunities and Risks of Foundation Models": the survey paper.
-- Hu et al. (2021), "LoRA: Low-Rank Adaptation of Large Language Models."
-
-**Caveats from these sources.** The paradigm narrative is a framing,
-not a theorem; task-specific training still wins where unlabeled data
-is irrelevant. LoRA's rank is a hyperparameter; too small starves the
-task. Probing lower bounds are often misread as upper bounds; the
-lecture warns against it.
+**Caveats from these sources.** The LoRA arithmetic (d = 1,000,
+r = 10, 2dr vs d^2) is the lecture's own numerical illustration.
+The 500-label sentiment toy and its 58/88 percent numbers are an
+original miniature demonstrating the lecture's paradigm claims.
+The lecture presents the paradigm as emergent and not fully
+understood. The mechanisms given here are the lecture's.
 
 ## Connections to the other courses
 
-- **CS336:** the full pre-training pipeline is CS336's subject; this lecture is its conceptual on-ramp.
-- **CS224N:** word embeddings were the original representation-learning success; sentence embeddings generalize them.
-- **CS329H:** RLHF is adaptation by reinforcement; LoRA is adaptation by low-rank updates. Same phase, different tool.
-
-> [!CHEAT]
-> **Foundation model cheatsheet.** Paradigm: pre-train on massive unlabeled data, adapt to tasks. Named by Percy Liang's team post-GPT-3. Representation learning: phi_theta maps x to vectors; similar inputs near each other; "embedding" is standard. Linear probing: freeze phi, train w; prediction w.phi(x); measures what is represented; lower bounds only. LoRA: W_0 + AB, rank r budget. Multitask: shared layers across tasks. Parallelism: data shards batches, model shards weights.
-
-> [!MEMORY]
-> **Amortize the expensive part.** Pre-training is the cost. Adaptation is the dividend. Whenever one expensive computation serves many cheap uses, you are looking at a foundation-model-shaped deal.
+- **CS229 L06:** the bias-variance roots of the 500-label failure.
+- **CS229 L13:** contrastive learning: another way to build
+  representations without labels.
+- **CS229 L14-L15:** the transformer: the architecture that made
+  foundation models scale; SFT as adaptation.
+- **CS229 L17:** RL as the adaptation step for reasoning.
+- **CS336:** pre-training at scale: the systems behind the
+  paradigm.
+- **CS224N:** pre-training for language: from word vectors to
+  foundation models.
