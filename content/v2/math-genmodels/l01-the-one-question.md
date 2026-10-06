@@ -11,7 +11,9 @@ date: "2026-10-05"
 instructor: "Prof. Prathosh A P"
 offering: "2025"
 video_id: HUunmwZfGzc
-concepts: [generative-modeling, data-distribution, sampling, density-estimation, model-families, taxonomy]
+video_title: "W1_L2: Introduction and problem setting (IIT Madras)"
+video_caption: "The lecture this chapter follows. The one question, stated the course's way."
+concepts: [generative-modeling, data-distribution, sampling, density-estimation, model-families, taxonomy, maximum-likelihood, manifold-hypothesis]
 sources:
   - tag: video
     label: "W1_L2: Introduction & problem setting (video HUunmwZfGzc)"
@@ -65,10 +67,39 @@ probability 0.65, and so on. It works. It learned a distribution
 from samples and draws new ones. This is **density estimation**:
 estimating the probabilities, then sampling from the estimate.
 
+![The counting machine: rolls become a rule](assets/plate-l01-counting.webp "20 rolls give the rule (0.65, 0.20, 0.15). Rolling the rule draws fresh samples. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
 Two details matter. First, the machine stores one number per
 outcome. Three faces, three counters. Second, the machine can only
 produce outcomes it counted. It cannot invent face 4. For dice
 that is fine. For images it is fatal.
+
+### Subchapter: counting is maximum likelihood
+
+The counting machine has a famous name: **maximum likelihood
+estimation** (MLE). The likelihood of a rule is the probability it
+assigns to the observed rolls. The rule (0.65, 0.20, 0.15) assigns
+the highest possible probability to those exact 20 rolls of any
+rule. Any other rule, say (0.50, 0.25, 0.25), makes the observed
+sequence less probable. Counting picks the winner.
+
+This matters because every family in this course optimizes
+likelihood or a stand-in for it. The storyteller (L02) maximizes
+the likelihood of each token given its past. The sculptor (L03)
+maximizes a lower bound on it. The restorer (L05) maximizes a
+bound on it, one noise level at a time. When a lesson says
+"training minimizes negative log-likelihood," it means the
+machine is doing what the counting machine did, with a smarter
+rule. The sibling course (math-genai L02) builds the KL and MLE
+machinery in full. Here the fact to keep is one line: the counts
+are the likelihood-maximizing rule, and likelihood is the
+scoreboard every family plays on.
+
+The decision rule this buys: if a model's rule equals the data's
+own frequencies, it cannot invent. MLE replays the data's
+statistics exactly. Invention needs a rule with fewer knobs than
+outcomes, which forces generalization. That is what the five
+machines are.
 
 ## Where counting breaks: the table explodes
 
@@ -89,6 +120,8 @@ loaded die           3                     3
 256x256 color photo  ~10^473000            impossible
 ```
 
+![The table explodes](assets/plate-l01-explosion.webp "A thumbnail has 2^1024 outcomes. A photo has about 10^473000. No table survives. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
 The naive answer dies by counting. No table can hold the rule for
 real data. So every real generative model cheats the table. It
 assumes structure: the rule is not an arbitrary list of numbers,
@@ -96,11 +129,50 @@ but something with a shape that few parameters can describe. Each
 family cheats differently. That is the entire taxonomy of this
 course.
 
+### Subchapter: the real space is smaller than the table
+
+The 2^1024 count assumes every pixel combination is equally
+plausible. It is not. Real photos of faces vary along a small
+number of knobs: pose, lighting, identity, expression. Tens of
+knobs, not a million pixels. Almost all 2^1024 binary images are
+static noise no camera ever produced. The data lives on a thin
+**manifold**: a low-dimensional surface curled inside the huge
+pixel space.
+
+This is the **manifold hypothesis**, and it is what makes the
+smooth-function dodge work. A smooth neural map with a few
+thousand knobs cannot represent arbitrary tables, but it does not
+need to. It only needs to cover the thin manifold where the data
+lives. The counting machine fails because it budgets one counter
+per outcome, including the 10^308 outcomes that never occur. The
+five machines budget parameters for the manifold instead.
+
 A second crack runs deeper. The counting machine treats similar
 outcomes as strangers. A photo of a cat and the same photo shifted
 one pixel get separate counters, sharing nothing. Real data has
 smoothness: nearby outcomes have nearby probabilities. The naive
 machine cannot use that. It learns each counter alone.
+
+### Subchapter: two jobs, not one
+
+Look again at the counting machine. It does two jobs with one
+table: it learns the numbers (density estimation), and it rolls
+the numbers (sampling). The five machines split these jobs
+differently, and the split is the first thing to check on any new
+model:
+
+- **Storyteller and warper:** one mechanism does both. The chain
+  rule's conditionals are the density and the sampler. The
+  warper's invertible map gives p(x) and generates x.
+- **Sculptor and restorer:** the density is approximate (a bound),
+  but sampling is an exact procedure: draw latent noise, then decode.
+  Draw static, denoise.
+- **Critic:** sampling works (roll downhill), but the density is
+  never computed. The two jobs fully separate.
+
+Keep this split in mind. L08's judges exploit it: likelihood can
+only score the families that compute densities, while FID can
+score any family that produces samples.
 
 ## The key question
 
@@ -168,6 +240,8 @@ that fools a learned critic. Its mathematics belongs to the
 sibling course (math-genai, Lessons 3-5). It appears here only in
 the final comparison table.
 
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/EVXDYO7ZtvA" title="The Big Picture of Generative AI: How VAEs, GANs, Flows and Diffusion Actually Differ" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: The Big Picture of Generative AI, how VAEs, GANs, flows, and diffusion actually differ. Discriminative vs generative, latent space, one-shot vs iterative sampling, and a tradeoff table. Watch after the five-machines section.</p></div>
+
 ## Mapping back: how each machine dodges the table
 
 Each machine's trick answers one of the counting machine's
@@ -205,11 +279,44 @@ family's answer, a hand-worked toy, the failure demonstrated with
 numbers, the price named. By L08 you will judge any generator by
 asking which machine it is and whether it paid its price.
 
+## What is used where: the families in production
+
+The five machines are not museum pieces. Each one runs inside
+systems you can name. Facts below are from public papers, model
+cards, and company technical reports. Anything not public is
+marked unknown.
+
+| Machine | Where it runs | Evidence |
+|---|---|---|
+| Storyteller | GPT-4, Claude, Gemini: all generate left to right with next-token prediction | Public: decoder-only transformers, the standard LLM recipe |
+| Storyteller | WaveNet (DeepMind, 2016): raw audio, one sample at a time | Public: arxiv 1609.03499 |
+| Storyteller | DALL-E 1: autoregressive transformer over discrete image codes | Public: Ramesh et al., 2021 |
+| Sculptor | Stable Diffusion 1/2: a VAE compresses 512x512 images to 64x64 latents before diffusion | Public: Rombach et al., 2022, arxiv 2112.10752 |
+| Sculptor | VITS: conditional VAE for end-to-end text-to-speech | Public: Kim et al., 2021, arxiv 2106.06103 |
+| Warper | WaveGlow (NVIDIA, 2018): flow-based neural vocoder for speech | Public: Prenger et al., 2018, arxiv 1811.00002 |
+| Warper | Glow: 1x1 convolutions for image generation | Research: Kingma and Dhariwal, 2018 |
+| Restorer | Stable Diffusion 1/2, DALL-E 2, Imagen: text-to-image diffusion | Public: Rombach et al., 2022, Ramesh et al., 2022, Saharia et al., 2022 |
+| Restorer | Sora: video generation with a diffusion transformer | Public: OpenAI technical report, Feb 2024 |
+| Restorer | Stable Diffusion 3: rectified flow (the flow-matching cousin of diffusion) | Public: Esser et al., 2024, arxiv 2403.03206 |
+| Critic | Research stage: image modeling (Du and Mordatch, 2019), classifier energies (JEM, 2020) | No verified production deployment: unknown |
+| Sixth machine (GAN) | StyleGAN face generation. Real-ESRGAN photo upscaling ships adversarial loss | Public research and open source |
+
+Read the table as the course's promise kept: the mathematics you
+learn here is the mathematics running in production. The critic's
+row is the honest exception. Energy models never crossed into
+deployed products at the time of writing.
+
 > [!QA]
 > Q: What is the actual job of a generative model, in one sentence?
 > A: Learn the probability rule behind observed samples, then produce fresh samples that follow that rule. The die toy shows both halves: the counts estimate the rule (0.65, 0.20, 0.15 from 20 rolls), and rolling the estimated rule draws new samples. Everything else in this course is a smarter way to do those two halves when the outcome space is too big to count.
 > Follow-up: Why can the model not just memorize the dataset and replay it?
 > A: Because replay assigns zero probability to anything new, and the job asks for the rule, not the samples. The sibling course (math-genai L01) demonstrates this with its memory machine. Here the counting argument shows the stronger failure: for a 256x256 color photo the outcome count is ~10^473000, so a memorize-and-replay table cannot even be stored.
+
+> [!QA]
+> Q: Walk me through the counting machine: how does it learn, and how does it sample?
+> A: Learning: roll the die 20 times and tally. The toy gives counts 13, 4, 3. Divide by 20: the rule is (0.65, 0.20, 0.15). That is all of learning: frequencies become probabilities. Sampling: build a spinner with those three probabilities and spin it. Face 1 comes up about 65% of the time. Fresh outcomes, same statistics. The plate shows the pipeline: rolls, counts, rule, fresh rolls.
+> Follow-up: Where does the "learning" happen? There is no gradient descent.
+> A: In the division. The counts are the maximum-likelihood estimate: no other rule assigns higher probability to the observed 20 rolls. Gradient descent enters only when the rule has knobs to turn. The counting machine's rule is the counts themselves, so learning is arithmetic, not optimization.
 
 > [!QA]
 > Q: What is the difference between density estimation and sampling?
@@ -218,10 +325,28 @@ asking which machine it is and whether it paid its price.
 > A: The storyteller and the warper. The storyteller's chain rule multiplies exact step probabilities. The warper's change-of-variables formula is exact by construction. The sculptor and restorer give only lower bounds (ELBO-style approximations), and the critic gives unnormalized energies. This exactness column is the first thing to check when comparing families.
 
 > [!QA]
-> Q: Why does every family replace the table with a smooth function?
-> A: Because the table has two fatal properties: it needs one counter per outcome (2^1024 for a thumbnail), and each counter learns alone, so a shifted cat photo teaches nothing about the original. A smooth neural map shares: nearby inputs take nearby paths through the function, so one training example nudges the probabilities of its neighbors too. That sharing is what makes learning from finite data possible at all.
-> Follow-up: Does smoothness ever hurt?
-> A: Yes. It is an assumption, and wrong assumptions blur. The sculptor's smooth decoder is exactly why VAE samples look blurry: the model averages over plausible neighbors instead of picking one sharply. L03 demonstrates this with the KL penalty pulling reconstructions toward the average.
+> Q: Why is counting called maximum likelihood, and why should I care?
+> A: Because the counts are the rule that makes the observed data most probable. For the 20 rolls, (0.65, 0.20, 0.15) beats every alternative rule on the likelihood of that exact sequence. You should care because likelihood is the scoreboard for the whole course: the storyteller maximizes token likelihoods, the sculptor and restorer maximize lower bounds on it. The counting machine is the simplest player on that scoreboard.
+> Follow-up: If counting already maximizes likelihood, why do we need neural models?
+> A: Because the counts need one counter per outcome, and real outcome spaces have 10^473000 entries. Neural models maximize likelihood over a small set of knobs instead of a huge table. Same scoreboard, feasible players.
+
+> [!QA]
+> Q: Applied: you must build a generator for 8x8 black-and-white icons. Which machine do you pick?
+> A: Start with the storyteller or the warper. An 8x8 icon has 64 binary pixels: 2^64 outcomes, too many to count, but tiny for a neural model. The storyteller predicts pixel by pixel (64 steps, cheap) and gives exact likelihoods. The warper bends 64-dim noise with coupling layers and also gives exact likelihoods. Pick the storyteller if you want easy conditioning (draw the top half, complete it). Pick the warper if you need exact densities for ranking icons. Skip the restorer: 1,000 denoising steps for a 64-pixel icon is overkill.
+> Follow-up: What changes at 1024x1024 color?
+> A: Everything about cost. The storyteller needs 3M serial steps. The warper needs a 3M-dimensional invertible map. Both become impractical, which is why production image models are restorers (diffusion) in a compressed latent space: Stable Diffusion denoises 64x64 latents, not pixels.
+
+> [!QA]
+> Q: What is the manifold hypothesis, in one paragraph?
+> A: Real data does not fill its pixel space. Photos of faces vary along tens of knobs (pose, lighting, identity), not a million independent pixels. The 2^1024 outcome count assumes every combination is plausible. The manifold hypothesis says the plausible ones lie on a thin low-dimensional surface inside that space. This rescues the smooth-function dodge: a neural net with thousands of knobs cannot model arbitrary tables, but it can cover the thin manifold. The counting machine wastes counters on the 10^308 outcomes that never occur.
+> Follow-up: Is the hypothesis proven?
+> A: Not as a theorem. It is an empirical bet that has paid off: generative models with far fewer parameters than outcomes produce convincing samples, which would be impossible if the data truly filled the space. Treat it as the working assumption behind every family.
+
+> [!QA]
+> Q: Where do GANs fit, and why are they the sixth machine here?
+> A: A GAN is a generator trained against a learned critic: the generator tries to fool the discriminator, the discriminator tries to catch it. It answers the one question with a two-player game instead of a likelihood. It is sixth here because its mathematics (minimax, f-divergences) belongs to the sibling math-genai course, Lessons 3-5. In production it appears where one-step sampling matters: StyleGAN faces, Real-ESRGAN upscaling.
+> Follow-up: Why did diffusion beat GANs for text-to-image?
+> A: Training stability. GANs optimize a saddle point: the generator and discriminator must stay balanced, and training collapses or oscillates. Diffusion trains as plain regression on noise (L05), which is stable, and buys quality with 1,000 sampling steps. The field traded sampling speed for trainability, then spent years buying speed back (L06).
 
 ![Chapter plate: one question, five machines, each with its price](assets/plate-l01.png "Chapter plate. One question, five machines, each with its price. Source: original plate for Stanford Frontier AI.")
 
@@ -229,12 +354,14 @@ asking which machine it is and whether it paid its price.
 
 1. **The one question.** Learn the rule behind samples, then draw fresh samples from it.
 2. **The rule, concretely.** A distribution: probabilities per outcome. The loaded die: 0.50, 0.25, 0.25.
-3. **First attempt: counting.** 20 rolls give counts 13/4/3, rule 0.65/0.20/0.15. Works on dice.
+3. **First attempt: counting.** 20 rolls give counts 13/4/3, rule 0.65/0.20/0.15. Works on dice. Counting is maximum likelihood.
 4. **The table explodes.** A 32x32 binary image has 2^1024 outcomes. A color photo has ~10^473000. No table survives.
-5. **Similar outcomes share nothing.** The counter for a cat photo teaches nothing about the same photo shifted one pixel.
-6. **The key question.** What if several different machines answer the one question, each dodging the table differently?
-7. **The five machines.** Storyteller (steps), sculptor (hidden cause), warper (invertible warp), restorer (denoise), critic (energy valleys).
-8. **The price list.** Serial sampling, approximate density, rigid warps, 1,000 denoising steps, no normalization. Each lesson names its price.
+5. **The manifold hint.** Real data lives on a thin surface, not the whole space. Smooth functions cover the surface.
+6. **Two jobs.** Density estimation and sampling. Some families do both with one mechanism. The critic splits them.
+7. **The key question.** What if several different machines answer the one question, each dodging the table differently?
+8. **The five machines.** Storyteller (steps), sculptor (hidden cause), warper (invertible warp), restorer (denoise), critic (energy valleys).
+9. **The price list.** Serial sampling, approximate density, rigid warps, 1,000 denoising steps, no normalization. Each lesson names its price.
+10. **In production.** Storytellers write text (GPT, Claude, Gemini). Restorers paint images (Stable Diffusion, DALL-E 2, Sora). Sculptors compress (SD's VAE). Warpers speak (WaveGlow). Critics wait in the lab.
 
 ## Official sources and further reading
 
@@ -242,7 +369,7 @@ asking which machine it is and whether it paid its price.
 - W1_L2: Introduction & problem setting (Prof. Prathosh A P, playlist PLZ2ps__7DhBa5xCmncgH7kPqLqMBq7xlu): the lecture this chapter's framing follows. [uncertain]: the exact lecture treatment of the family taxonomy is not verified. The five-family map is the course's standard arc, assembled here from the playlist's lecture sequence.
 
 **Further reading:**
-- Goodfellow et al., Generative Adversarial Nets (2014): https://arxiv.org/abs/1406.2661 — the sixth machine, covered in the sibling course.
+- Goodfellow et al., Generative Adversarial Nets (2014): https://arxiv.org/abs/1406.2661 (the sixth machine, covered in the sibling course).
 - The sibling course math-genai L01-L03: the three-step recipe (parametric family, divergence, optimization) and the divergence zoo, which this course takes as given.
 
 **Caveats from these sources.** The five-family split is a teaching map, not a law: hybrids exist (diffusion in latent space, flow-based priors in VAEs). The outcome counts (2^1024, ~10^473000) assume independent pixels. Real images live on a much smaller manifold, which is exactly why the smooth-function dodge works.
