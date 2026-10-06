@@ -13,7 +13,7 @@ offering: "NPTEL (IIT Roorkee)"
 video_id: igG1egOAsRM
 video_title: "Lecture 12: Singular Value Decomposition (NPTEL)"
 video_caption: "The NPTEL lecture this chapter follows: the SVD, its properties, and low-rank approximation."
-concepts: [svd, singular-value, low-rank, eckart-young, frobenius-norm, rank]
+concepts: [svd, singular-value, low-rank, eckart-young, frobenius-norm, rank, condition-number, rectangular-svd]
 sources:
   - tag: video
     label: "Essential Mathematics for Machine Learning: Lecture 12 (Singular Value Decomposition)"
@@ -130,6 +130,48 @@ have rank 10: ten true directions, the rest noise or redundancy.
 
 ![Rank counts the nonzero singular values](assets/plate-l04-rank.svg "Sigma = [5, 0]: rank 1. The zero exposes the dead column. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
 
+### Subchapter: a rectangular, full-rank SVD, start to finish
+
+The hand recipe also handles rectangles with no zero singular
+values. Take a 3x2 data matrix:
+
+```ascii
+A = [  3  2 ]
+    [  2  3 ]
+    [ -2  2 ]
+
+step 1, A^T A:
+  [ 3 2 -2 ] [  3  2 ]   [ 9+4+4   6+6-4 ]   [ 17  8 ]
+  [ 2 3  2 ] [  2  3 ] = [ 6+6-4   4+9+4 ] = [  8 17 ]
+             [ -2  2 ]
+
+step 2, eigen-decompose:
+  det([17-lambda, 8; 8, 17-lambda]) = (17-lambda)^2 - 64 = 0
+  lambda = 17 + 8 = 25,   lambda = 17 - 8 = 9
+  singular values: sigma1 = 5, sigma2 = 3
+  v1 = [1, 1] / sqrt(2) = [0.7071, 0.7071]
+  v2 = [1, -1] / sqrt(2) = [0.7071, -0.7071]
+
+step 3, u_i = A v_i / sigma_i:
+  u1 = A [0.7071, 0.7071] / 5 = [3.5355, 3.5355, 0] / 5
+     = [0.7071, 0.7071, 0]
+  u2 = A [0.7071, -0.7071] / 3 = [0.7071, -0.7071, -2.8284] / 3
+     = [0.2357, -0.2357, -0.9428]
+
+step 4, verify two entries of A = U Sigma V^T:
+  entry (0,0): 5 * 0.7071 * 0.7071 + 3 * 0.2357 * 0.7071
+             = 2.5 + 0.5 = 3.0   correct.
+  entry (2,1): 5 * 0 * 0.7071 + 3 * (-0.9428) * (-0.7071)
+             = 0 + 2.0 = 2.0     correct.
+```
+
+Every direction carries weight here: sigma = [5, 3], no zeros, so
+the matrix is full rank 2. Truncating to rank 1 would cost
+sigma2 = 3 in Frobenius error: three times the toy's earlier cost.
+The spectrum decides whether truncation is cheap or fatal.
+
+![A full-rank rectangular SVD, verified](assets/plate-l04-rect.svg "3x2 matrix: singular values 5 and 3. Both entries of A rebuilt by hand. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
+
 ## Where the SVD earns its keep: low-rank approximation
 
 Here is the turn that matters for ML. Suppose the singular values
@@ -174,6 +216,28 @@ before truncating.
 
 ![Truncation error equals the dropped value](assets/plate-l04-eckart.svg "Drop sigma2 = 1: error ||B - B1|| = 1 exactly. Best possible. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
 
+### Subchapter: the condition number, the ratio that predicts optimization pain
+
+The ratio of the largest to the smallest singular value has a
+name: the **condition number**, kappa = sigma_max / sigma_min.
+For the rectangular toy above: kappa = 5 / 3 = 1.67.
+
+Read it as stretch imbalance. The matrix stretches one direction
+1.67 times harder than the other. When kappa is near 1, every
+direction is treated equally. When kappa is huge (10^6 or more),
+one direction dominates and the rest barely register.
+
+Why this matters for ML: gradient descent on a quadratic with
+Hessian H converges at a rate set by kappa(H). A large condition
+number means the loss surface is a long narrow valley: gradient
+steps zigzag across the valley walls and crawl along its floor.
+Preconditioning and second-order methods exist to fight exactly
+this ratio. L08 meets it again. When a matrix is singular, the
+smallest singular value is zero and kappa is infinite: the valley
+has no floor at all.
+
+![The condition number is stretch imbalance](assets/plate-l04-cond.svg "kappa = 5/3 = 1.67: mild. Large kappa means narrow valleys for gradient descent. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
+
 ### Subchapter: the 4096x4096 compression, in numbers
 
 A 4096x4096 weight matrix holds 16,777,216 numbers. Keep the top
@@ -185,7 +249,7 @@ CS229S L06.
 
 LoRA's version: instead of updating a frozen 4096x4096 weight W,
 train two small matrices B (4096x8) and A (8x4096): the update is
-BA, rank 8. Trainable numbers: 8 * 8193 = 65,544 against 16.8M.
+BA, rank 8. Trainable numbers: 8 * 8192 = 65,536 against 16.8M.
 Same rank idea, applied to the update instead of the weight (Hu et
 al., 2021).
 
@@ -218,7 +282,7 @@ The spectrum decides whether compression is free or fatal.
 | PCA via SVD | sklearn.decomposition.PCA | SVD of centered data = components, stabler |
 | Image compression | JPEG-style pipelines | drop small singular values |
 
-![SVD: what is used where](assets/plate-l04-used-where.svg "The compression trick behind adapters, recommenders, and PCA. Shell 5. Source: public papers and docs. Project: Stanford Frontier AI.")
+![Chapter plate: the honest price of compression](assets/plate-l04-chap-svd.svg "Chapter plate L04-C1. Left: full rank: 4096x4096 = 16,777,216 numbers. Center: the spectrum: sigma = [5, 3], rank = nonzero sigma, error = dropped sigma. Right: rank-64: 64 x 8193 = 524,352 numbers, 32x fewer. Bottom: every dropped sigma is permanent error; computing the SVD costs O(n^3). Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 > [!QA]
 > Q: What does the SVD actually say, in plain words?
@@ -246,7 +310,7 @@ The spectrum decides whether compression is free or fatal.
 
 > [!QA]
 > Q: How does LoRA use the SVD idea without computing an SVD?
-> A: LoRA never decomposes anything. It exploits the same insight: weight updates during fine-tuning are effectively low-rank. So instead of training a full 4096x4096 update (16.8M numbers), it trains B (4096x8) times A (8x4096): 65,544 numbers whose product is a rank-8 update. The base weights stay frozen. Same rank economics as truncation, applied to the delta.
+> A: LoRA never decomposes anything. It exploits the same insight: weight updates during fine-tuning are effectively low-rank. So instead of training a full 4096x4096 update (16.8M numbers), it trains B (4096x8) times A (8x4096): 65,536 numbers whose product is a rank-8 update. The base weights stay frozen. Same rank economics as truncation, applied to the delta.
 > Follow-up: Why does a rank-8 update suffice?
 > A: Because fine-tuning adapts rather than rebuilds: the pretrained model already knows language, and the task-specific change lives in a small subspace. Empirically, rank 8 to 64 matches full fine-tuning on many tasks (Hu et al., 2021). If the task needs genuinely new capabilities, the rank must rise.
 
@@ -262,14 +326,20 @@ The spectrum decides whether compression is free or fatal.
 > Follow-up: Full SVD of 4096x4096 is cubic. How do you actually get the top 64?
 > A: Randomized or iterative methods (randomized SVD, Lanczos): they find the top-k pieces without the full decomposition, in roughly O(mn k) time. You never pay the cubic price for the pieces you throw away.
 
+> [!QA]
+> Q: What does the condition number tell you that the singular values alone do not?
+> A: The imbalance: kappa = sigma_max / sigma_min. The rectangular toy has kappa = 5/3 = 1.67: mild imbalance, every direction pulls its weight. A kappa of 10^6 means one direction is stretched a million times harder than another: gradient descent zigzags across the steep walls and crawls along the flat floor. If sigma_min is zero, kappa is infinite and the matrix is singular.
+> Follow-up: How do you fix a huge condition number?
+> A: Precondition: multiply by an approximate inverse of the curvature so the transformed problem has kappa near 1. Or regularize: adding lambda I to X^T X lifts every singular value by lambda, which bounds kappa. Both are the same move: make the valley rounder.
+
 ## Recap: the whole lesson on one screen
 
 1. **The task.** Decompose non-square matrices: data tables, weight layers.
 2. **First attempt.** Eigen-decompose A^T A. It gives V and the stretches but loses U.
 3. **The key question.** Which input directions map to which output directions, each scaled by one number?
 4. **The new idea.** A = U Sigma V^T, built from the eigen-decomposition of A^T A plus u_i = A v_i / sigma_i. Toy verified entry by entry: 4 and 3 recovered.
-5. **Rank.** Nonzero singular values: the toy has rank 1. The zero exposes the dead column.
-6. **Low-rank approximation.** Drop small singular values. Eckart-Young: the top-k pieces are the best rank-k approximation. Error = first dropped value (1 in the toy).
+5. **Rank.** Nonzero singular values: the toy has rank 1. The zero exposes the dead column. A rectangular 3x2 worked start to finish: sigma = [5, 3], full rank 2, two entries rebuilt by hand. Truncation here would cost sigma2 = 3.
+6. **Low-rank approximation.** Drop small singular values. Eckart-Young: the top-k pieces are the best rank-k approximation. Error = first dropped value (1 in the toy). The condition number kappa = sigma_max/sigma_min = 1.67 measures stretch imbalance: huge kappa means narrow valleys for gradient descent (L08).
 7. **The ML payoff.** A 4096x4096 weight matrix compresses to 64 directions: 16.8M to 0.52M numbers, 32x. LoRA trains rank-8 updates: 65K numbers.
 8. **The price.** Full SVD is cubic. Use iterative top-k methods. Slow-decaying spectra resist compression.
 
@@ -302,3 +372,24 @@ The spectrum decides whether compression is free or fatal.
 - **CS229S L06:** low-rank weight compression and efficient inference. This lesson is the math it rests on.
 - **CS229 L10:** PCA via SVD: for centered data, the SVD of the data matrix gives the principal components directly.
 - **CS336:** LoRA fine-tuning keeps pretrained weights frozen and trains low-rank updates.
+
+## Coverage map
+
+Every lecture concept, and where this lesson covers it:
+
+| Lecture concept | Covered in | Lines |
+|---|---|---|
+| SVD: rotation, stretch, rotation, any matrix | The task: decompose the matrices eigen-decomposition cannot touch | l04:28-51 |
+| first attempt: eigen-decompose A^T A, loses U | First attempt: force eigenvectors on a rectangle | l04:52-59 |
+| the recipe from A^T A, singular values as sqrt of eigenvalues | Subchapter: the recipe, from A^T A | l04:66-90 |
+| build U via u_i = A v_i / sigma_i, the zero case | Subchapter: build U, one column at a time | l04:91-119 |
+| rank as count of nonzero singular values | Subchapter: rank counts the survivors | l04:120-132 |
+| rectangular full-rank SVD start to finish, verified | Subchapter: a rectangular, full-rank SVD | l04:133-174 |
+| low-rank approximation, Frobenius error = dropped value | Where the SVD earns its keep | l04:175-201 |
+| Eckart-Young optimality, slow-spectrum failure mode | Subchapter: Eckart-Young | l04:202-218 |
+| condition number, stretch imbalance, optimization pain | Subchapter: the condition number | l04:219-240 |
+| 4096x4096 compression: 32x, LoRA rank-8 update | Subchapter: the 4096x4096 compression, in numbers | l04:241-257 |
+| honest price: cubic cost, randomized top-k, lossy truncation | The honest price | l04:258-274 |
+| what is used where: LoRA, recommenders, PCA via SVD | What is used where | l04:275-286 |
+| 8 interview Q&As with follow-ups | QA blocks | l04:287-334 |
+| full-lesson recap | Recap | l04:335-344 |
