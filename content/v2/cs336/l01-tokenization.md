@@ -46,8 +46,13 @@ No prerequisites are assumed. Every term is defined at first use.
 
 ## Level 1: Definition of language modeling
 
-A language model is a probability distribution over sequences of tokens.
-Given a sequence, it assigns a probability to each possible next token.
+The model must score sentences. "The cat sat" should get a high
+number. "Cat the sat the" should get a low one. A **language model**
+is the machine that assigns these numbers: a probability distribution
+over sequences of tokens.
+
+Given a sequence, it assigns a probability to each possible next
+token.
 
 Formally, for tokens x_1 through x_n, the model defines P(x_1, ..., x_n).
 By the chain rule, this equals the product of P(x_t | x_1, ..., x_{t-1})
@@ -88,12 +93,14 @@ cost. **Scaling laws:** hyperparameters must adapt as compute grows.
 
 ## Level 1: Tokenization, the problem
 
-The model operates on integers. Text is not integers. Tokenization is
-the deterministic mapping between the two.
+The model computes on integers. Text is not integers. Something must
+convert between the two, and the conversion must be exact: decode what
+you encoded and you get the input back, character for character. That
+something is **tokenization**.
 
-It performs encoding (text to integers) and decoding (integers to text).
-The mapping must be invertible: decoding an encoding returns the input
-exactly.
+It performs encoding (text to integers) and decoding (integers to
+text). The mapping must be invertible: decoding an encoding returns
+the input exactly.
 
 ![Text to tokens to IDs](assets/media-generation-tokenizer-pipeline-0-ed513c16-c002-405d-b42a-d5968da4a611.webp "Three stages. Raw text becomes token chunks, which become integer IDs. The model receives only the IDs.")
 
@@ -232,6 +239,55 @@ frequent pairs.
 > Follow-up: What decides the split points?
 > A: BPE training counts adjacent pairs across the corpus and merges the most frequent ones. Split points fall where pairs are rare. The procedure is deterministic given the corpus and merge count.
 
+### Subchapter: the subword family (BPE, WordPiece, Unigram)
+
+BPE is one of three subword recipes. All three split rare words into
+reusable pieces. They differ in how they learn the piece set.
+
+**BPE** grows the vocabulary. Start from bytes. Merge the most frequent
+adjacent pair. Repeat until the target size. The rule is frequency: the
+pair that appears most wins. "th" and "he" merge early in English. Rare
+pairs never merge.
+
+**WordPiece** also grows the vocabulary. It starts from characters, but
+the merge rule is different: merge the pair that most increases the
+training data's likelihood, not the pair with the highest count. A pair
+that appears often but is predictable scores lower than its raw count
+suggests. BERT ships WordPiece with a 30,522 vocabulary. Its "##" prefix
+marks pieces that continue a word: "unhappiness" becomes "un",
+"##happi", "##ness".
+
+**Unigram** goes the other way. It starts with a huge vocabulary (all
+frequent substrings) and prunes: fit a unigram language model, drop the
+pieces whose removal hurts the total likelihood least, repeat until the
+target size. The segmentation is probabilistic: the same word can split
+in several ways, and the tokenizer picks the most likely one. T5 uses
+SentencePiece Unigram with a 32,000 vocabulary.
+
+Why did BPE win the LLM era? Three reasons. It is byte-level, so no
+unknown token exists. It is deterministic, so train and inference always
+agree. And it is simple to implement at scale, which matters when you
+retrain tokenizers on terabytes of new data. WordPiece stays strong in
+encoder models (the BERT family). Unigram stays strong where
+probabilistic segmentation helps, like multilingual T5.
+
+Worked toy. Corpus: "low lower lowest". BPE counts pairs: "lo" appears 3
+times, "ow" appears 3 times. Say "lo" merges first, then "low". The
+vocabulary gains "lo", then "low". WordPiece scores pairs by likelihood
+lift, not count: merging "lo" + "w" into "low" explains "low", "lower",
+"lowest" in one piece, so its likelihood jump is large and it merges
+early. Unigram starts with every substring, then prunes pieces like
+"lowes" whose removal barely changes the likelihood. Same corpus, three
+different vocabularies. Three different splits of "lowest".
+
+![The subword family](assets/media-generation-cs336-l01-subword-family-0-9c3e008f-9398-4507-abb2-3e92fe5e9b13.webp "BPE merges by frequency, WordPiece by likelihood lift, Unigram prunes from a big start. Same word, different cuts. Source: original toy. Project: Stanford Frontier AI.")
+
+> [!QA]
+> Q: Walk me through how BPE encodes a word it has never seen.
+> A: Take "unfamiliarity" with a trained BPE vocabulary. The encoder walks left to right and applies greedy longest match against the fixed merge list. Suppose the vocabulary contains "un", "fam", "ili", "ar", "ity". Position 0: "un" matches, the longest match, since "unf" is not in the vocabulary. Position 2: "fam" matches. Position 5: "ili". Position 8: "ar". Position 10: "ity". Output: ["un", "fam", "ili", "ar", "ity"]. The word never appeared in training, yet every piece did, so the model receives five known IDs instead of one unknown token. That is the whole point of subwords: represent anything with pieces.
+> Follow-up: Why greedy longest match instead of trying all splits and picking the best?
+> A: Speed. Greedy matching is linear in text length. Searching all splits is exponential, and the gain is small: BPE merges were learned greedily too, so the vocabulary is shaped to make greedy splits good. The interview signal is the tradeoff: near-optimal correctness at linear cost.
+
 ## Level 1: BPE training
 
 Start with 256 byte tokens. Repeat: find the most frequent adjacent pair,
@@ -302,6 +358,34 @@ context.
 > Follow-up: How does this affect multilingual deployment?
 > A: Languages with multi-byte scripts consume 2 to 3 times more tokens per word than English. This triples inference cost and shrinks effective context for those languages. Fertility measurement is standard when selecting tokenizers. Some labs train language-specific tokenizers to reduce this gap.
 
+### Subchapter: fertility, measured and priced
+
+Fertility is tokens per word. It is the number that turns a tokenizer
+into a bill.
+
+The lesson states English near 1.3. Work out what that buys. A 4,096
+token context window holds about 3,150 English words (4,096 / 1.3). The
+same window in a language with fertility 3 holds about 1,365 words. The
+model reads less than half the document. Nothing about the model
+changed. Only the tokenizer's fertility changed.
+
+Price follows the same math. At $2.50 per million tokens, a 1 million
+word English corpus costs about 1.3M tokens, so $3.25. The same corpus
+at fertility 3 costs 3M tokens, so $7.50. The non-English user pays 2.3
+times more for the same meaning.
+
+Two levers reduce fertility. A bigger vocabulary covers more multi-byte
+sequences directly: Llama 3's jump from 32K to 128K raised English
+compression from 3.17 to 3.94 characters per token (per the Llama 3
+report). And tokenizer training data that includes the language:
+DeepSeek-V3 modified its pretokenizer and training data explicitly for
+multilingual compression efficiency. Both levers cost embedding memory:
+128K entries times 4,096 dims is 524M parameters in the embedding table
+alone, against 131M at 32K. That is a 400M parameter price for better
+compression.
+
+![Fertility sets cost and context](assets/media-generation-cs336-l01-fertility-cost-0-33eeb420-d8ec-487b-8b65-750e7ae17764.webp "Same meaning, 3x tokens: 3x price, 1/3 context. Source: original toy. Project: Stanford Frontier AI.")
+
 ## Level 2: The embedding interface
 
 Each integer indexes a row of the embedding matrix. Token 1169 becomes a
@@ -317,6 +401,36 @@ training. Replacing it invalidates the model.
 > A: It controls cost and context. Pricing is per token, so fertility sets inference expense. Context windows count tokens, so the tokenizer decides how much text fits. Multilingual quality, code handling, and prompt injection surfaces all run through tokenization.
 > Follow-up: What would you change about current tokenizers?
 > A: Three directions are active. Lower fertility for non-English languages. Better handling of code and math, where current tokenizers split numbers awkwardly. And tokenizer-aware training, where the model learns with knowledge of merge structure. Each is a research area with interview relevance.
+
+### Subchapter: what is used where (production tokenizers)
+
+Every frontier lab ships a subword tokenizer. Only the recipe and the
+size differ.
+
+| Model | Tokenizer | Vocab | Source |
+|---|---|---|---|
+| GPT-4 / GPT-3.5 | tiktoken cl100k_base, byte-level BPE | 100K | OpenAI tiktoken |
+| GPT-4o | tiktoken o200k_base, byte-level BPE | 200K | OpenAI tiktoken |
+| Llama 3 | tiktoken-derived byte-level BPE, 28K added tokens | 128K | Llama 3 paper |
+| Llama 2 | SentencePiece BPE | 32K | Llama 2 paper |
+| Mistral 7B | SentencePiece BPE | 32K | Mistral release docs |
+| DeepSeek-V3 | byte-level BPE, custom pretokenizer | 128K | DeepSeek-V3 tech report |
+| Qwen 2.5 | byte-level BPE | 151,646 | Qwen 2.5 release |
+| Gemma 2 | SentencePiece | 256K | Gemma 2 model card |
+| BERT | WordPiece | 30,522 | BERT paper |
+| T5 | SentencePiece Unigram | 32K | T5 paper |
+| Claude | not public | unknown | Anthropic has not published it |
+
+Read the trend. Vocabularies grew: 32K in 2022, 100K to 256K in
+2024-2025. The growth buys compression: Llama 3's 128K improved English
+compression from 3.17 to 3.94 characters per token over Llama 2's 32K.
+The cost is embedding memory: 524M parameters for a 128K by 4096 table.
+The field moved from SentencePiece blobs to tiktoken-style byte-level
+BPE with merges baked into tokenizer.json. Byte-level won because
+multilingual coverage with zero unknown tokens beats everything else at
+scale.
+
+![Production tokenizers](assets/media-generation-cs336-l01-production-tokenizer-0-f63e2f31-7525-418d-93e2-f8fa14f9ebf2.webp "GPT-4, GPT-4o, Llama 3, DeepSeek V3, Mistral 7B: five recipes, one family. Source: public model cards. Project: Stanford Frontier AI.")
 
 ## Recap: the whole lesson on one screen
 
