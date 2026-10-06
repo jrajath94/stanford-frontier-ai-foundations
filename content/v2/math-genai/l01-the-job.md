@@ -102,6 +102,14 @@ f-divergences     3        a whole family. GANs fall out of it
 Wasserstein       5        never goes flat, even on disjoint supports
 ```
 
+KL, the first row, in one sentence: KL(P_X || P_θ) =
+E_{P_X}[log(P_X/P_θ)], the average surprise of the model's
+probabilities under the truth. It is large when the model
+ignores outcomes the truth produces. A **mode** is a peak
+of a distribution: a region where probability concentrates.
+Mode-covering means the model stretches to cover every peak
+of the truth. Lesson 2 defines KL in full.
+
 The decision rule: pick the divergence you can actually compute
 from samples. That constraint drives Lessons 2 through 5. A
 beautiful divergence you cannot estimate is useless.
@@ -128,6 +136,27 @@ trained model only lands near P_X, never exactly on it.
 The simplest machine that can "create" is a parrot. It memorizes
 the dataset. To make a new sample, it picks a random training
 point and returns it. No math, no learning.
+
+### The empirical distribution
+
+The memory machine has a formal name: the **empirical
+distribution** P̂. It puts probability 1/n on each training
+point and 0 everywhere else:
+
+```ascii
+P_hat(x) = (1/n) * sum over data of  delta(x - x_i)
+```
+
+On {2, 4, 6, 8}: P̂(4) = 0.25, P̂(5) = 0. The memory
+machine samples from P̂. Maximum likelihood on P̂ is
+memorization by definition: the empirical distribution
+is the closest distribution to the data with zero
+smoothness. Every generative model is an attempt to
+smooth P̂ into something that generalizes. The family
+is the smoother. The divergence decides how much
+smoothing the data supports.
+
+![The empirical distribution: 1/n on each training point, 0 elsewhere](assets/l01-empirical.webp "P_hat(4) = 0.25, P_hat(5) = 0. The family smooths it. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
 
 Watch it on a toy. The dataset has four exam scores: {2, 4, 6, 8}.
 The memory machine stores them. Ask it for five new samples. It
@@ -199,6 +228,54 @@ but plausible under the fitted rule. The machine created. This is
 the smallest possible generative model, and it shows the whole
 pattern: family, fit, sample.
 
+### The density, on paper: P(5) = 0.1995
+
+The plate claims the Gaussian assigns P(5) = 0.20 and P(3) =
+0.12. Verify both from the Gaussian formula. For a Gaussian
+with mean μ and standard deviation σ, the density at x is:
+
+```ascii
+p(x) = 1 / (sigma * sqrt(2 * pi)) * exp( -(x - mu)^2 / (2 * sigma^2) )
+```
+
+With μ = 5 and σ = 2: 1/(2·2.5066) = 0.1995. That is the
+density at the center, x = 5. At x = 3, two units left of
+center: 0.1995 · exp(−4/8) = 0.1995 · 0.6065 = 0.1210. The
+plate's 0.20 and 0.12 are these two numbers rounded. The
+memory machine assigns exactly 0 to both points. The gap
+between 0.20 and 0 is the whole lesson: smoothness turns
+four seen points into probability on every unseen point.
+
+### Two humps need two humps: the mixture toy
+
+The single Gaussian has one hump. Watch it fail on two
+clusters. The truth is a 50/50 mix: half the points near 3
+(Gaussian with mean 3, spread 1), half near 9 (mean 9,
+spread 1). The best single Gaussian fit has mean 6 (the
+overall center) and variance 10 (the overall spread:
+E[x²] = 46, minus 6² = 10). Its spread is σ = 3.16.
+
+Now score x = 6, the valley between the clusters. The
+truth's density there: each hump is 3 units away, and the
+Gaussian density 3 spreads from center is 0.0044 per hump,
+so the truth gives 0.0044. The single Gaussian's density
+at its own center 6: 1/(3.16·2.5066) = 0.126. The model
+puts 0.126 where the truth puts 0.0044: 28 times too much
+probability in the valley. Samples from the valley are
+blends: not near 3, not near 9, belonging to neither
+cluster.
+
+The fix is a family with two humps: a mixture of two
+Gaussians with means 3 and 9 and weights 0.5 each. Its
+density at 6 is exactly the truth's 0.0044. The decision
+rule from the last section now has teeth: count the humps
+in the data, then pick a family with at least that many.
+A neural network family learns the hump count from data,
+which is why it is the default for complex data. But it
+pays in data and compute for that flexibility.
+
+![One hump on two clusters: 0.126 in the valley where the truth has 0.0044](assets/l01-mixture-two-humps.webp "Single Gaussian mean 6, spread 3.16. Mixture of two Gaussians recovers the valley. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
 ### Smoothness spreads probability
 
 Why did the Gaussian succeed where memory failed? Because it is
@@ -216,6 +293,40 @@ flowchart LR
   M --> S["new samples x~"]
 ```
 
+### Discriminative versus generative
+
+A **discriminative** model learns P(y|x): given the
+input, predict the label. A spam filter learns
+P(spam|email). A **generative** model learns P(x):
+the distribution of emails themselves. The
+discriminative model answers questions about data it
+is given. The generative model produces the data.
+
+The two need different supervision. The spam filter
+needs labeled emails. The email generator needs only
+emails. And the generative model can do the
+discriminative job: Bayes' rule turns P(x|y) and P(y)
+into P(y|x). The reverse is not true: a spam filter
+cannot write an email. Generative is the harder,
+more general task. This course is all generative.
+
+### Sampling: how a computer draws from P_θ
+
+Fitting P_θ is half the job. The other half is
+drawing samples from it. For a coin with P(heads) =
+0.5: draw u uniformly from [0,1]. Output heads if u
+< 0.5, else tails. This is **inverse-CDF sampling**:
+the uniform draw picks a quantile, the distribution
+turns it into an outcome.
+
+For a Gaussian N(μ, σ²): draw ε ~ N(0,1), output
+μ + σ·ε. Same pattern: easy randomness in, shaped
+randomness out. For a neural push-forward: draw z ~
+N(0,1), output g_θ(z). Every sampler in this course
+is this pattern: a simple source of randomness
+pushed through a shaping function. The shaping
+function is the model.
+
 ### The decision rule for choosing a family
 
 One step remains mysterious: what does "hugs the data" mean, in
@@ -227,6 +338,49 @@ least that many. A mixture of k Gaussians has k humps. A neural
 network can learn the humps from data. The wrong family is the
 first of the three gaps below, and it is the one no amount of
 training fixes.
+
+## Explicit versus implicit: where the course forks
+
+The push-forward section below exposes a fork that runs
+through the whole course. Some models write down a
+density formula. Others give only samples. The fork
+decides which training roads are open.
+
+An **explicit** model defines p_θ(x) as a formula you can
+evaluate. The Gaussian above is explicit: plug in x, get
+a number. An **autoregressive** model builds its density
+one piece at a time: each piece's probability is conditioned
+on all the pieces before it. The chain rule multiplies those
+per-piece probabilities into the full density (Lesson 10
+develops this family). VAEs are explicit-ish: the ELBO
+bounds a density the model defines (Lessons 6-7).
+**Normalizing flows**, one more family, are explicit by
+construction: they warp noise through invertible maps,
+and the change-of-variables formula gives the exact
+density. [uncertain] Flows appear in the lecture's
+family list but are not developed in this course's ten
+lessons.
+
+An **implicit** model defines only a sampling procedure:
+run the procedure, get x, but no formula for p_θ(x)
+exists. The push-forward generator is the pure case.
+You can draw a million samples and still not answer
+"what is P_θ(3.1)?".
+
+The fork decides the training road. Maximum likelihood
+(Lesson 2) needs log p_θ(x) per data point: explicit
+models only. The adversarial road (Lessons 3-4) needs
+only samples: it was built for implicit models. This
+is why the course has two halves. The fork is not a
+preference. It is a constraint imposed by what the
+model can compute.
+
+| | Explicit | Implicit |
+|---|---|---|
+| You get | A formula for p_θ(x) | A procedure that emits x |
+| Example | Gaussian, autoregressive, VAE, flows | GAN generator (push-forward) |
+| Training road | Maximum likelihood (Lesson 2) | Adversarial critic (Lessons 3-4) |
+| Price | The formula constrains the architecture | No density, no likelihood, needs a critic |
 
 ## The push-forward trick
 
@@ -320,11 +474,62 @@ by its samples, not by a proof. Lesson 5 gives the judging tools.
 | Divergence metric D | A distance between distributions | Computed from samples, not densities |
 | Optimization over θ | Turn knobs to shrink D | Local minima, noisy gradients |
 
+## Where the families run in real systems
+
+Every production generator sits in one cell of the
+explicit/implicit table, and its training road follows.
+
+Explicit, autoregressive: GPT-4o, Claude, Gemini 2.5,
+Llama 4, DeepSeek-V3. All are decoder-only transformers
+trained with next-token cross-entropy, which Lesson 2
+proves is forward KL to the text distribution. Their
+densities are exact by the chain rule. Their price is
+Lesson 10's: strictly sequential sampling.
+
+A **latent variable** is a hidden variable the model
+invents to explain the data: never observed, but useful for
+generation. The **latent space** is the space of its possible
+values. Explicit, latent-variable: Stable Diffusion 1.x/2.x
+runs diffusion in a VAE's latent space (Rombach et al. 2022),
+so the VAE codec is explicit machinery inside a
+diffusion system. The diffusion ELBO (Lessons 8-9) is
+its training road.
+
+Implicit, adversarial: StyleGAN2 (Karras et al. 2020)
+trains a push-forward generator with the non-saturating
+logistic loss plus R1 regularization, the Lesson 4 fix
+with the critic kept honest. BigGAN (Brock et al. 2019)
+scales the same game with class conditioning.
+
+Implicit-become-explicit, diffusion: DDPM (Ho et al.
+2020) learns a denoiser, no adversary. Stable Diffusion
+3.5 (2024) replaced the UNet with an MMDiT transformer
+(8B parameters) and trains with rectified flow. FLUX.1
+(Black Forest Labs, 2024) is a 12B rectified flow
+transformer. Sora (OpenAI, 2024) runs a diffusion
+transformer on spacetime patches of video latents.
+
+Autoregressive images: GPT-4o's native image generation
+(2025) is autoregressive per OpenAI's own system card
+addendum, not diffusion. [uncertain] Midjourney v7 and
+DALL-E 3 internals are not public.
+
+The pattern: the field moved from implicit/adversarial
+(GAN era) to explicit latent-variable (diffusion era)
+because the training road is stabler, and the newest
+image systems are autoregressive again, reusing the
+transformer machinery of language models.
+
+*Model facts in this section verified October 2026.
+Anything not verifiable is marked [uncertain].*
+
 ## Videos for this lesson
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/HUunmwZfGzc" title="W1_L2: Introduction and problem setting" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Second lecture video for this lesson: the problem setting, worked on the board. If the embed is blocked: <a href="https://www.youtube.com/watch?v=HUunmwZfGzc" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/DLxNh7zVq3U" title="How AI Image Generators Really Work (Diffusion Explained)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">External explainer: how models like Stable Diffusion and Midjourney generate from noise, in plain English. If the embed is blocked: <a href="https://www.youtube.com/watch?v=DLxNh7zVq3U" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
+![Chapter plate: the three-slot recipe](assets/plate-l01-chap-recipe.webp "The three slots, the cost without them, and the three gaps that stay. Chapter plate. Shell 5. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 > [!QA]
 > Q: What is a generative model, in one sentence?
