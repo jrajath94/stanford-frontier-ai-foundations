@@ -59,7 +59,41 @@ divided by how likely 40 kg is overall. The denominator p(x) is the
 same for both species, so the decision is: pick the class with the
 bigger p(x|y) * p(y).
 
-![Two roads](assets/plate-l05-generative-vs-discriminative.webp "Two roads to the boundary. Discriminative: model p(y|x), draw the line directly. Generative: model each class, the line falls out of Bayes rule. Source: original diagram for the two framings. Project: Stanford Frontier AI.")
+### Subchapter: LDA, the other name
+
+GDA with shared **covariance** (how the features vary together, the
+shape of the spread) has a second name: **LDA**, linear
+discriminant analysis. Same model, same linear boundary, older
+name (Fisher, 1936). Interviewers use both. "LDA" usually means the
+shared-covariance Gaussian classifier. "QDA" means the
+separate-covariance version. "GDA" is the course's name for the
+shared version. Three names, two models: LDA = GDA (linear),
+QDA (quadratic).
+
+The naming trap: "discriminant analysis" sounds discriminative,
+but LDA/GDA are generative: they model p(x|y), not the boundary.
+Fisher's original LDA was derived differently (maximizing the ratio
+of between-class to within-class scatter), but the Gaussian
+shared-covariance model gives the same linear boundary. When a
+job posting says "LDA," read GDA.
+
+### Subchapter: one dataset, two roads
+
+Run both roads on one toy. Class 0: (0,0), (1,0). Class 1: (0,2),
+(1,2). Discriminative road: draw the boundary directly. The
+classes separate cleanly at y = 1. A logistic fit puts the line
+there.
+
+Generative road: model each class. mu_0 = (0.5, 0), mu_1 =
+(0.5, 2), shared Sigma = small. The bells cross at the midpoint:
+y = 1. Same line. The discriminative road asked "where is the
+dividing line". The generative road asked "what does each class
+look like" and the line fell out. Two framings, one boundary. The
+roads diverge when the class models are wrong: then the
+discriminative line still fits the boundary, while the generative
+line inherits the class models' mistakes.
+
+![Two roads](assets/plate-l05-generative-vs-discriminative.webp "Shell 1. Two roads to one decision boundary. Two roads to the boundary. Discriminative: model p(y|x), draw the line directly. Generative: model each class, the line falls out of Bayes rule. Source: original diagram for the two framings. Project: Stanford Frontier AI.")
 
 ## First attempt: compare the averages
 
@@ -72,10 +106,12 @@ perfectly ordinary small elephant.
 
 The failure: averages throw away spread. Cat weights cluster
 tightly around 4 kg. Elephant weights spread widely. Averages-only
-comparison cannot see that 40 kg sits 9 standard deviations above
+comparison cannot see that 40 kg sits 36 standard deviations above
 the cat mean but well inside the elephant range. The fix is to model
 the full distribution of each class, spread included. That is what
 generative models do.
+
+![Chapter plate: the generative turn](assets/plate-l05-chap-genframe.svg "Chapter plate L05-C1. Left: averages only: a 40 kg animal is closer to 4 than 4,000, so cat; wrong, because averages discard spread. Center: Bayes' rule p(y|x) = p(x|y)p(y)/p(x): model each class, pick the biggest p(x|y) times p(y). Right: two roads to the same line at y = 1; they diverge when the class models are wrong. Bottom: class models cost assumptions and buy one-pass training. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 ## Gaussian discriminant analysis
 
@@ -91,6 +127,23 @@ the average of the class's examples, the variance is the average
 squared deviation, and p(y) is the class fraction. Closed form, one
 pass over the data. The lecture stresses this: GDA is dirt cheap to
 train.
+
+### Subchapter: GDA's MLE, proved
+
+The proof is one line per parameter: maximize the joint log
+likelihood sum log p(x^(i)|y^(i)) + log p(y^(i)). The class
+fraction phi separates: derivative gives phi_hat = (number of
+class-1 examples)/m. The means separate per class: mu_0_hat is the
+average of class 0's examples, mu_1_hat the average of class 1's.
+The shared covariance pools both classes' squared deviations:
+Sigma_hat = (1/m) sum (x^(i) - mu_{y^(i)})(x^(i) -
+mu_{y^(i)})^T.
+
+Work it on class 0 = {1, 3}, class 1 = {7, 9}. mu_0 = 2, mu_1 = 8,
+phi = 0.5. Squared deviations: (1-2)^2 + (3-2)^2 + (7-8)^2 +
+(9-8)^2 = 4, over 4 examples: Sigma = 1. Four numbers, one pass,
+done. No iterations, no learning rate, no initialization. This is
+what "dirt cheap" means: the fit is arithmetic, not optimization.
 
 In two dimensions the Gaussian needs a **covariance matrix** Sigma:
 it describes spread in each direction and how features vary together.
@@ -112,7 +165,41 @@ gives a linear boundary: w^T x + b = 0, with w = Sigma^-1 (mu_1 -
 mu_0). GDA, the generative model, produces a linear classifier, the
 same shape as logistic regression's. Different road, same destination.
 
-![GDA](assets/svg/l05-gda.svg "Gaussian discriminant analysis. Each class is a Gaussian bell. The decision boundary is where the bells cross: x = 22 in the toy. Shared covariance makes it linear. Source: original plate for Stanford Frontier AI.")
+### Subchapter: the quadratic that cancels, step by step
+
+See exactly where linearity comes from. Decide by comparing log
+p(x|y=1) p(y=1) against log p(x|y=0) p(y=0). Each Gaussian
+log-density is -(1/2)(x - mu)^T Sigma^-1 (x - mu) plus constants.
+Expand: -(1/2) x^T Sigma^-1 x + mu^T Sigma^-1 x - (1/2) mu^T
+Sigma^-1 mu. The first term, -(1/2) x^T Sigma^-1 x, is identical
+for both classes because Sigma is shared. In the difference, it
+cancels.
+
+What survives is linear in x: (mu_1 - mu_0)^T Sigma^-1 x, plus the
+constant -(1/2) mu_1^T Sigma^-1 mu_1 + (1/2) mu_0^T Sigma^-1 mu_0
++ log(phi/(1-phi)). The decision is w^T x + b > 0 with
+w = Sigma^-1 (mu_1 - mu_0). The linearity is not an assumption. It
+is the shared covariance deleting the quadratic term. Give each
+class its own Sigma and the x^T Sigma^-1 x terms differ: nothing
+cancels, and the boundary keeps its x^2 terms. That is QDA.
+
+![GDA](assets/svg/l05-gda.svg "Shell 2. The boundary sits where the class bells cross. Gaussian discriminant analysis. Each class is a Gaussian bell. The decision boundary is where the bells cross: x = 22 in the toy. Shared covariance makes it linear. Source: original plate for Stanford Frontier AI.")
+
+### Subchapter: the prior p(y), worked
+
+The p(y) factor is not decoration. Ten thousand emails: 9,000 real,
+1,000 spam. p(spam) = 0.1, p(real) = 0.9. A new email has word
+scores p(words|spam) = 0.05 and p(words|real) = 0.008. The
+likelihood favors spam 6 to 1. Multiply by the priors: spam gets
+0.05 x 0.1 = 0.005, real gets 0.008 x 0.9 = 0.0072. Real wins.
+
+The rare class must shout louder to win: its likelihood advantage
+has to beat the 9-to-1 prior handicap. This is correct behavior
+when the priors match deployment: most mail is real. It is a trap
+when they do not: train on 50/50 lab data, deploy on 99/1 real
+traffic, and the prior misleads every decision. The fix is to set
+p(y) from deployment frequencies, not training frequencies, or to
+tune the decision threshold on a validation set afterward.
 
 ### Subchapter: QDA, the quadratic sibling
 
@@ -124,12 +211,32 @@ small yard.
 
 Count the price. In d = 2, GDA fits 2 means (4 numbers), 1 Sigma (3
 numbers), and the class fraction: 8 knobs. QDA fits 2 means and 2
-Sigmas: 11 knobs. In d = 100, GDA needs about 5,150 knobs and QDA
-about 10,200. Double the knobs, double the data needed to fit them
+Sigmas: 11 knobs. In d = 100, GDA needs about 5,251 knobs and QDA
+about 10,301. Double the knobs, double the data needed to fit them
 without overfitting. The decision rule: shared spread, use GDA.
 Wildly different spreads and plenty of data, QDA earns its keep.
 
-![GDA vs QDA](assets/plate-l05-gda-vs-qda.webp "GDA vs QDA. GDA shares one covariance: the boundary is a straight line. QDA gives each class its own: the boundary curves around the tighter class. Source: original toy for the covariance choice. Project: Stanford Frontier AI.")
+### Subchapter: QDA decision, worked
+
+Watch the quadratic boundary appear in one dimension. Class 0 ~
+Gaussian(0, 1), class 1 ~ Gaussian(3, 4) (standard deviation 2),
+equal priors. Set the densities equal: (1/sqrt(2 pi)) exp(-x^2/2)
+= (1/sqrt(8 pi)) exp(-(x-3)^2/8). Take logs and simplify:
+x^2/2 - (x-3)^2/8 = log 2 = 0.693. Multiply by 8: 4x^2 - (x^2 -
+6x + 9) = 5.545. So 3x^2 + 6x - 14.545 = 0, giving x = 1.42 or
+x = -3.42.
+
+Two crossing points: the boundary is quadratic, not a single
+number. Class 0, the tighter bell, wins the middle interval
+(-3.42, 1.42). Class 1, the wider bell, wins both tails: its fat
+tails beat the tight bell far from both centers. The picture is
+the fence around the small yard from the QDA subchapter, now with
+coordinates. GDA would have drawn one line and missed the tails
+entirely.
+
+![GDA vs QDA](assets/plate-l05-gda-vs-qda.webp "Shell 3. Shared covariance keeps the boundary straight. GDA vs QDA. GDA shares one covariance: the boundary is a straight line. QDA gives each class its own: the boundary curves around the tighter class. Source: original toy for the covariance choice. Project: Stanford Frontier AI.")
+
+![Chapter plate: Gaussian discriminant analysis](assets/plate-l05-chap-gda.svg "Chapter plate L05-C2. Left: the boundary drawn directly: logistic models p(y|x), the discriminative road. Center: per-class Gaussians fit by class averages in one pass: the bells cross at x = 22. Right: shared covariance gives w = Sigma^-1(mu_1 - mu_0): linear, 5,251 knobs vs QDA's 10,301 at d = 100. Bottom: shared spread buys linearity and half the knobs. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 ## The key question
 
@@ -156,6 +263,24 @@ dirt cheap to train, surprisingly accurate, dirt cheap at inference
 too: look up the word probabilities, multiply (or add the logs),
 pick the bigger class.
 
+### Subchapter: when independence fails badly, worked
+
+The lie has a worst case: perfectly correlated features. Two
+features, x_1 and x_2, where x_2 = x_1 always (a duplicated
+column). Spam: x_1 = 1 in 80% of spam. Real: x_1 = 1 in 10% of
+real. Naive Bayes counts the evidence twice: spam score gets
+0.8 x 0.8 = 0.64, real gets 0.1 x 0.1 = 0.01. The likelihood ratio
+is 64 to 1. The honest ratio, counting the evidence once, is 8 to
+1. The model is 8 times overconfident.
+
+With ten duplicated columns the ratio becomes 8^10: astronomical
+overconfidence from one real signal. The ranking usually survives
+(spam still wins), but the probabilities are fiction. The fixes in
+order: drop duplicated features, or move to logistic regression,
+which weighs the evidence jointly and splits the credit. The
+interview line: "Naive Bayes double-counts correlated evidence.
+The argmax (the class with the highest score) survives, the calibration does not."
+
 Work a toy. Vocabulary: {free, meeting}. Training: 10 spam, 10 real.
 "free" appears in 8 spam, 1 real. "meeting" appears in 2 spam, 9
 real. New email contains "free" but not "meeting". Score spam:
@@ -179,7 +304,28 @@ is. Scikit-learn ships both: BernoulliNB and MultinomialNB. The
 decision rule: short texts, try Bernoulli. Long documents, start
 multinomial.
 
-![Two event models](assets/plate-l05-bernoulli-vs-multinomial.webp "Two ways to count words. Bernoulli: present or not, one coin per word. Multinomial: counts repetitions, three frees cube the evidence. Source: original toy for the event models. Project: Stanford Frontier AI.")
+### Subchapter: the multinomial event model, worked
+
+Score the document "free free money" under both models.
+Vocabulary: {free, money, meeting}. Spam word probabilities:
+p(free|spam) = 0.4, p(money|spam) = 0.3, p(meeting|spam) = 0.05.
+Real: p(free|real) = 0.05, p(money|real) = 0.1, p(meeting|real) =
+0.4. Equal priors.
+
+Bernoulli (presence only): spam score = 0.4 x 0.3 x (1-0.05) =
+0.114. Real score = 0.05 x 0.1 x (1-0.4) = 0.003. Ratio: 38 to 1.
+The second "free" changed nothing: presence is binary.
+
+Multinomial (counts): spam score = 0.4^2 x 0.3 = 0.048. Real
+score = 0.05^2 x 0.1 = 0.00025. Ratio: 192 to 1. The repeated
+"free" squared its evidence: 0.4^2 vs 0.05^2. On long documents
+this compounding is the signal. On a three-word text it is mostly
+the same verdict, louder. The lecture's guidance: the event model
+is a modeling choice about what repetitions mean, not a detail.
+
+![Two event models](assets/plate-l05-bernoulli-vs-multinomial.webp "Shell 4. Two ways to count words as evidence. Two ways to count words. Bernoulli: present or not, one coin per word. Multinomial: counts repetitions, three frees cube the evidence. Source: original toy for the event models. Project: Stanford Frontier AI.")
+
+![Chapter plate: Naive Bayes](assets/plate-l05-chap-naivebayes.svg "Chapter plate L05-C3. Left: bell curves only: GDA needs real-valued features, but words are indicators. Center: words vote independently given the class: fit by counting, spam scores 0.8 x 0.8 x 0.5 = 0.32. Right: dirt cheap: spam wins 64 to 1, 10M emails a day on one core, scored in log space. Bottom: the independence lie double-counts correlated evidence; ranking survives, calibration does not. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 ## Where it breaks: the zero that kills
 
@@ -205,9 +351,9 @@ probabilities and shrinks confidence in all estimates, pulling wild
 fractions like 1/1 back toward uniform. It is the simplest form of
 **regularization**, the theme of lecture 6.
 
-![Laplace smoothing](assets/plate-l05-laplace.webp "Add one, save the filter. An unseen word scores 0 in both classes: blind. Laplace adds 1 to every count: 1/12, small and honest, no veto. Source: original toy for Laplace smoothing. Project: Stanford Frontier AI.")
+![Laplace smoothing](assets/plate-l05-laplace.webp "Shell 5. Add one so unseen words cannot veto. Add one, save the filter. An unseen word scores 0 in both classes: blind. Laplace adds 1 to every count: 1/12, small and honest, no veto. Source: original toy for Laplace smoothing. Project: Stanford Frontier AI.")
 
-![Naive Bayes spam filter](assets/svg/l05-naivebayes.svg "Naive Bayes. Words vote independently by their class probabilities. Laplace smoothing adds 1 to every count so unseen words cannot veto. Source: original plate for Stanford Frontier AI.")
+![Naive Bayes spam filter](assets/svg/l05-naivebayes.svg "Shell 6. Words vote independently by class probability. Naive Bayes. Words vote independently by their class probabilities. Laplace smoothing adds 1 to every count so unseen words cannot veto. Source: original plate for Stanford Frontier AI.")
 
 ### Subchapter: the log trick, again
 
@@ -219,6 +365,8 @@ The decision is unchanged (bigger is still better), and no product
 ever touches zero. Every Naive Bayes implementation scores in log
 space. Memorize the pair: the toy score was (0.32, 0.005), the log
 score is (-1.14, -5.30).
+
+![Chapter plate: Laplace smoothing](assets/plate-l05-chap-laplace.svg "Chapter plate L05-C4. Left: the zero that kills: an unseen word scores 0 in both classes and blinds the filter. Center: add 1 to every count: (0+1)/(10+2) = 1/12, small, honest, and non-vetoing. Right: no vetoes: wild fractions shrink toward uniform, scored in log space as (-1.14, -5.30). Bottom: the price of humility is small. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 ## The honest price
 
@@ -235,6 +383,26 @@ instead of modeling each class and hoping the boundary comes out
 right. What generative models keep: one-pass training, tiny
 inference cost, and they work when data is scarce, because the
 strong assumptions squeeze more from fewer examples.
+
+### Subchapter: Ng and Jordan, the sample-complexity duel
+
+The small-data claim has a theorem behind it. Ng and Jordan
+("On Discriminative vs. Generative Classifiers," 2001) compared
+logistic regression against GDA head to head. The result: GDA
+reaches its asymptotic (higher) error with O(log n) examples,
+while logistic regression needs O(n) examples to reach its
+asymptotic (lower) error. With n features, GDA needs on the order
+of log n samples to get close to its best. Logistic regression
+needs on the order of n.
+
+At n = 1,000 features: GDA is near its ceiling with tens of
+examples, logistic regression needs hundreds. But GDA's ceiling is
+higher: with infinite data, the discriminative model wins, because
+it optimizes the boundary directly. The practical duel: data
+scarce, go generative. Data plentiful, go discriminative. This is
+the theoretical spine of the lecture's "dwarfs" remark, and it is
+why GDA still ships in clinics and cold starts while logistic
+regression owns the data-rich world.
 
 ## Mapping back
 
@@ -287,6 +455,36 @@ strong assumptions squeeze more from fewer examples.
 > Follow-up: Name the fix that keeps the speed but fixes the confidence.
 > A: There is not a free one. Calibrated alternatives (logistic regression, Platt scaling on NB scores) cost the joint modeling NB skipped. Speed, accuracy of ranking, calibrated confidence: pick two cheaply, pay for the third.
 
+## Coverage map: every lecture claim and where it lives
+
+| Lecture claim | Covered in | File line |
+|---|---|---|
+| 40 kg animal: giant cat or small elephant | The job: a cat or a small elephant | L31 |
+| Bayes' rule: pick max p(x\|y) p(y) | The job: a cat or a small elephant | L31 |
+| LDA = GDA (linear); QDA (quadratic); Fisher 1936 | LDA, the other name | L62 |
+| One dataset, two roads, same boundary y = 1 | one dataset, two roads | L80 |
+| Averages-only comparison fails: ignores spread | First attempt: compare the averages | L98 |
+| GDA: per-class Gaussians, shared Sigma | Gaussian discriminant analysis | L114 |
+| GDA MLE: class averages, pooled variance, class fraction | GDA's MLE, proved | L129 |
+| Shared Sigma cancels the quadratic term: w = Sigma^-1(mu_1 - mu_0) | the quadratic that cancels, step by step | L166 |
+| Prior p(y): rare class must shout louder (0.005 vs 0.0072) | the prior p(y), worked | L186 |
+| QDA: own Sigma per class, curved boundary, knob counts | QDA, the quadratic sibling | L202 |
+| QDA 1-D worked: crossings at 1.42 and -3.42 | QDA decision, worked | L217 |
+| Words are not bell curves: can the idea survive | The key question | L237 |
+| Naive Bayes: independence, fit by counting; toy 0.32 vs 0.005 | Naive Bayes: the generative spam filter | L244 |
+| Correlated features double-counted: 64-to-1 vs honest 8-to-1 | when independence fails badly, worked | L262 |
+| Bernoulli vs multinomial event models | two ways to count words | L288 |
+| Multinomial worked: "free free money", ratio 192 to 1 | the multinomial event model, worked | L303 |
+| Unseen word zeroes every score | Where it breaks: the zero that kills | L324 |
+| Laplace smoothing: (0+1)/(10+2) = 1/12 | Where it breaks: the zero that kills | L324 |
+| Log space: (0.32, 0.005) -> (-1.14, -5.30) | the log trick, again | L352 |
+| Ng and Jordan 2001: O(log n) vs O(n) sample complexity | Ng and Jordan, the sample-complexity duel | L379 |
+
+Lecture video zRdE8A4UZes verified real via direct page-title fetch
+(Lecture 5: Gaussian Discriminant Analysis, Stanford Online). oEmbed
+401 = embedding disabled by owner, linked not embedded. Explainer
+embed O2L2Uv9pdDA verified via oEmbed.
+
 ## Recap: the whole lesson on one screen
 
 1. **The job.** 40 kg animal: giant cat or small elephant? Model
@@ -308,7 +506,7 @@ strong assumptions squeeze more from fewer examples.
    usually false. Discriminative models win on big data. Generative
    wins on small data and on speed.
 9. **QDA.** Each class gets its own Sigma: the boundary curves.
-   d = 100 needs ~10,200 knobs vs GDA's ~5,150. Different spreads
+   d = 100 needs ~10,301 knobs vs GDA's ~5,251. Different spreads
    plus plenty of data, or stay linear.
 10. **Two event models.** Bernoulli: present or not. Multinomial:
     counts repetitions. Long documents start multinomial.
@@ -317,17 +515,25 @@ strong assumptions squeeze more from fewer examples.
 
 ## What is used where
 
-**Naive Bayes filtered the world's email.** Early-2000s spam
+**Naive Bayes filtered the world's email.** [uncertain: historical
+claim, not sourced here.] Early-2000s spam
 filters (the lecture's direct descendant) ran Naive Bayes on every
-inbox. Modern filters layer rules, reputation, and learned ensembles
+inbox [uncertain: product internals, not public]. Modern filters layer
+rules, reputation, and learned ensembles
 on top, but NB remains the cheap first stage and the baseline every
-text classifier must beat. Sentiment analysis tutorials still start
-here.
+text classifier must beat [uncertain: industry practice, not sourced].
+Sentiment analysis tutorials still start
+here [uncertain: not surveyed].
 
-**GDA's family survives as LDA/QDA.** Scikit-learn ships both.
+**GDA's family survives as LDA/QDA.** Scikit-learn ships both
+(scikit-learn docs, checked Oct 2026: closed-form solutions, no
+hyperparameters to tune).
 They still ship in small-data production: brain-computer interfaces,
 medical diagnostics, and any cold-start classifier with hundreds of
-examples. Closed form, no tuning, no GPU.
+examples [uncertain: deployment details, not public]. Closed form,
+no tuning, no GPU.
+
+Sources (checked Oct 2026): scikit-learn ships LinearDiscriminantAnalysis and QuadraticDiscriminantAnalysis, closed-form, no hyperparameters to tune.
 
 ## Watch next
 
