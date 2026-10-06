@@ -62,7 +62,7 @@ energy, add a little noise so you explore.
 Z sums over all outcomes. For the 4-face toy that is 4 terms.
 For a 32x32 binary image it is 2^1024 terms, each needing an
 energy evaluation. At a billion evaluations per second, 2^1024
-evaluations take about 10^290 years. The partition function is
+evaluations take about 10^292 years. The partition function is
 the exploding table from L01 wearing a sum sign.
 
 The bill infects training too. Maximum likelihood wants the
@@ -96,7 +96,10 @@ and learning stops. At that point the energy surface's valleys
 coincide with the data, with Z never computed.
 
 The remaining problem is the model expectation: sampling from
-the model needs MCMC, and MCMC needs many steps to mix.
+the model needs **MCMC** (Markov chain Monte Carlo), algorithms
+that draw samples by walking a chain of small random steps whose
+long-run distribution is the target, and MCMC needs many steps to
+mix into that target.
 **Contrastive divergence** (Hinton, 2002) cuts the chain short:
 start the chain at a data point, run k steps (often just 1), and
 use the landing spot as the negative sample. The chain does not
@@ -126,11 +129,12 @@ One contrastive step moved mass from the fantasy (face 2: 0.25
 -> 0.2256) to the data (face 4: 0.25 -> 0.2756). Repeat over the
 dataset and the valleys migrate onto the data, one fantasy at a
 time. The full-batch gradient behind it, for the record: with
-theta = 0, the data term E_data[dE/dtheta] = -0.3 and the model
-term E_model[dE/dtheta] = -0.5, giving gradient -(-0.3 + 0.5) =
--0.2 on the shared slope parameter, pushing the model away from
-over-producing face 2's region. CD-1 approximates that model
-term with the one-step fantasy.
+theta = [0,0,0,0] the model is uniform, so the gradient on face j
+is data_prob(j) - 0.25. On the data face 4: 0.40 - 0.25 = +0.15,
+pushing theta_4 up (energy down). On the fantasy face 2:
+0.20 - 0.25 = -0.05, pushing theta_2 down (energy up). CD-1
+approximates that model term with the one-step fantasy: its
+single update ([0,-0.1,0,0.1]) matches both full-batch signs.
 
 Sampling uses the same downhill walk as L06's Langevin dynamics,
 because the score is minus the energy gradient: s(x) = -grad
@@ -256,9 +260,13 @@ answer "how likely is this image?" The warper (L04) keeps the
 exact-density crown. The critic trades it away.
 
 **Price 3: the sampler gets stuck, demonstrated.** The downhill
-walk explores one valley at a time. If the surface has two
-valleys separated by a high ridge, the chain sits in one valley
-for thousands of steps before crossing.
+walk explores one valley at a time. Work it on three faces with
+energies E = [0, 6, 0]: valleys at faces 1 and 3, a ridge of
+height 6 at face 2. Each step proposes a neighboring face and
+accepts an uphill climb of height h with probability exp(-h).
+Climbing the ridge: exp(-6) = 0.0025. The chain sits in valley 1
+for about 400 attempts on average before one crossing succeeds. A
+1,000-step run may never visit valley 3 at all.
 
 ![The chain gets stuck in one valley](assets/plate-l07-stuck.webp "Two valleys, one high ridge. The walk sits left for thousands of steps. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
 
@@ -276,7 +284,7 @@ research record, not a production map.
 
 | Work | What it showed | Evidence |
 |---|---|---|
-| Du & Mordatch (2019) | Deep EBMs generate ImageNet-scale images with Langevin sampling | Public: arxiv 1909.08750 |
+| Du & Mordatch (2019) | Deep EBMs generate ImageNet-scale images with Langevin sampling | Public: arxiv 1903.08689 |
 | JEM (Grathwohl et al., 2020) | Classifier logits are energies: one model classifies and generates | Public: arxiv 1912.03263 |
 | Product of experts (Hinton, 2002) | The CD algorithm. Energies compose by addition | Public: Neural Computation 14(8) |
 | Energy-based OOD detection | Energy scores flag out-of-distribution inputs | Public research: arxiv 2010.03759 |
@@ -291,7 +299,7 @@ one.
 
 > [!QA]
 > Q: What is the partition function, and why is it the whole problem?
-> A: Z = sum_x exp(-E(x)) normalizes energies into probabilities. On the 4-face toy it is 1.8711, computed exactly. On a 32x32 binary image it has 2^1024 terms: at a billion energy evaluations per second, about 10^290 years. Training needs Z through the negative phase of the gradient, so the naive maximum-likelihood critic cannot even start.
+> A: Z = sum_x exp(-E(x)) normalizes energies into probabilities. On the 4-face toy it is 1.8711, computed exactly. On a 32x32 binary image it has 2^1024 terms: at a billion energy evaluations per second, about 10^292 years. Training needs Z through the negative phase of the gradient, so the naive maximum-likelihood critic cannot even start.
 > Follow-up: If Z is intractable, how does anything about EBMs work at all?
 > A: The gradient splits into data term minus model term, and Z cancels in the difference. Contrastive divergence approximates the model term with short MCMC chains started at data points. You never need Z's value, only the direction in which data and fantasies disagree. The price is bias and variance, not impossibility.
 
@@ -337,7 +345,7 @@ one.
 
 1. **The question, for valleys.** Learn the rule. Draw fresh samples. Sculpt an energy surface: valleys for real, hills for noise.
 2. **Energies to probabilities, by hand.** E = [2,1,1,0], Z = 1.8711, p = [0.0723, 0.1966, 0.1966, 0.5345]. Face 4 wins.
-3. **The partition bill, demonstrated.** Z over 2^1024 image outcomes: ~10^290 years at a billion evals per second. Training's negative phase needs Z.
+3. **The partition bill, demonstrated.** Z over 2^1024 image outcomes: ~10^292 years at a billion evals per second. Training's negative phase needs Z.
 4. **The key question.** What if we train without Z, contrasting data against the model's fantasies?
 5. **Contrastive divergence, by hand.** CD-1: theta [0,0,0,0] -> [0,-0.1,0,0.1]. Mass moves fantasy face 2 -> data face 4 (0.2256 vs 0.2756).
 6. **Two Z-free trainers.** CD (contrast of fantasies) and score matching (differentiation kills Z). Persistent CD keeps chains alive in a replay buffer.
@@ -354,7 +362,7 @@ one.
 - LeCun et al. (2006), A Tutorial on Energy-Based Learning: https://web-wp.archive.org/web/20250902133800/http://yann.lecun.com/exdb/publis/pdf/lecun-06.pdf (the energy framing this chapter follows. Archived mirror: original link dead as of Oct 2026).
 
 **Further reading:**
-- Du & Mordatch, Implicit Generation and Generalization in EBMs (2019): https://arxiv.org/abs/1909.08750 (modern EBM image modeling with Langevin sampling).
+- Du & Mordatch, Implicit Generation and Generalization in EBMs (2019): https://arxiv.org/abs/1903.08689 (modern EBM image modeling with Langevin sampling).
 - Grathwohl et al., Your Classifier is Secretly an Energy Based Model (2020): https://arxiv.org/abs/1912.03263 (energies from classifiers).
 - Tieleman, Training RBMs with Persistent CD (2008): the replay-buffer idea behind persistent CD.
 
