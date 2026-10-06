@@ -520,6 +520,16 @@ gives the same IDs.</p>
 </div>
 </div>
 
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/zduSFxRajkE" title="Karpathy: Let's build the GPT Tokenizer" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- Karpathy, Let's build the GPT Tokenizer (the embed above): https://www.youtube.com/watch?v=zduSFxRajkE
+- Sennrich et al., Neural Machine Translation of Rare Words with Subword Units: https://arxiv.org/abs/1508.07909
+- tiktoken, OpenAI's production tokenizer: https://github.com/openai/tiktoken
+- Hugging Face tokenizers documentation: https://huggingface.co/docs/tokenizers/index
+
 ## Official sources and further reading
 
 **Official:**
