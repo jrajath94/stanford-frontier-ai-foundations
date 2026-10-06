@@ -5,12 +5,15 @@ course_name: "Mathematical Foundations of Generative Models"
 course_order: 12
 order: 4
 nav: "L04 · Normalizing Flows"
-title: "Lecture 4: Normalizing Flows — The Warper"
+title: "Lecture 4: Normalizing Flows: The Warper"
 summary: "The warper answers the one question by bending noise into data with an invertible map, giving exact densities through the change-of-variables formula. The Jacobian determinant worked on 1-D and 2-D toys, and the price: rigidity."
 date: "2026-10-05"
 instructor: "Prof. Prathosh A P"
 offering: "2025"
-concepts: [normalizing-flows, change-of-variables, jacobian-determinant, invertibility, coupling-layer, exact-likelihood]
+video_id: ""
+video_title: ""
+video_caption: ""
+concepts: [normalizing-flows, change-of-variables, jacobian-determinant, invertibility, coupling-layer, exact-likelihood, autoregressive-flow, glow, dequantization, neural-ode]
 sources:
   - tag: paper
     label: "Papamakarios et al., Normalizing Flows for Probabilistic Modeling and Inference (2021)"
@@ -62,6 +65,8 @@ The formula p_x(x) = p_z(z) |dz/dx| is the **change of variables**:
 density transforms by the inverse slope. Stretch by 2, density
 halves. This is exact, not a bound.
 
+![Stretch by 2, density halves](assets/plate-l04-stretch.webp "z in [0,1] maps to x in [1,3]. p_x = 1 x 1/2 = 0.5. Exact. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
 ## Where general warps break, part 1: folds
 
 The formula assumed one z per x. Drop that and watch it break.
@@ -83,6 +88,8 @@ density is a sum over pre-images, one term per fold. A deep neural
 warp folds thousands of times. The branch count explodes, and the
 exact formula becomes unusable. Invertibility is not a luxury. It
 is what keeps the density to a single term.
+
+![Folds break the one-term formula](assets/plate-l04-fold.webp "z = 0.5 and z = -0.5 both reach x = 0.25. The density sums both branches: 1.0. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
 
 ## Where general warps break, part 2: the determinant bill
 
@@ -158,6 +165,8 @@ log det J = log 2 = 0.693
 p_x([0.5, 3.0]) = p_z([0.5, 1.0]) / 2
 ```
 
+![Coupling: half frozen, half warped, determinant in O(d)](assets/plate-l04-coupling.webp "z = [0.5, 1.0] -> x = [0.5, 3.0]. det J = 2. log det = 0.693. Shell 3. Source: original toy (Dinh et al., 2014). Project: Stanford Frontier AI.")
+
 Sampling runs the warp forward: draw z from a standard bell
 curve, apply the layers, get x. Density runs it backward: map x
 to z, evaluate p_z(z), divide by the determinant. Both directions
@@ -165,13 +174,105 @@ are exact. Stack many coupling layers, alternating which half
 gets transformed, and the warp gains expressivity while every
 layer stays invertible with a cheap determinant.
 
+### Subchapter: autoregressive flows: triangular by ordering
+
+Coupling is not the only triangular design. **Autoregressive
+flows** order the variables and let each one depend only on the
+earlier ones:
+
+```ascii
+x_i = z_i x s(x_1..x_{i-1}) + t(x_1..x_{i-1})
+```
+
+The Jacobian is triangular by construction: x_i never sees
+z_j for j > i. Same O(d) determinant. But the direction of speed
+flips. **MAF** (masked autoregressive flow) evaluates densities
+fast (one parallel pass gives all s, t) and samples slowly (x_1
+first, then x_2, serial: the storyteller's bill). **IAF**
+(inverse autoregressive flow) is the mirror: sampling is fast,
+density evaluation is serial.
+
+This is the same tradeoff as L02, wearing flow clothes. The
+decision rule: pick MAF when you score data (anomaly detection:
+fast p(x) per point), IAF when you generate (fast sampling).
+RealNVP's coupling layers sit in the middle: both directions
+fast, less expressive per layer. The Papamakarios review maps the
+whole family. The determinant bill decides every entry.
+
+### Subchapter: Glow: 1x1 convolutions and ActNorm
+
+Coupling layers freeze half the channels per layer. **Glow**
+(Kingma and Dhariwal, 2018) adds two invertible ingredients so
+every channel mixes. An **invertible 1x1 convolution** is a
+learned matrix W applied at every pixel across channels:
+x = W z per pixel. Its log determinant is h x w x log|det W|:
+one small matrix determinant, broadcast over the image. An
+**ActNorm** layer is per-channel scale and shift, initialized so
+the first batch has zero mean and unit variance, then trained
+freely: its log determinant is the sum of log scales.
+
+Work the numbers on a 32x32 image with 64 channels. The 1x1
+convolution's determinant is a 64x64 matrix determinant: O(64^3)
+= 262,144 ops, computed once per layer, not per pixel. The
+broadcast multiplies by 1,024 pixels for the log-det sum: still
+O(d). Glow stacks actnorm, 1x1 conv, and coupling into one
+"flow step" and repeats it dozens of times. The result generated
+256x256 faces that rivaled GANs in 2018, with exact likelihoods
+attached. [uncertain]: whether the lecture covers Glow. It is
+included as the canonical image-flow architecture from the
+cited papers.
+
+### Subchapter: dequantization: flows need continuous data
+
+Pixels are integers: 0, 1, ..., 255. The change-of-variables
+formula needs continuous densities. An integer has no density.
+The fix is **dequantization**: add uniform noise u in [0,1) to
+each pixel. Pixel 123 becomes 123.4, living on the continuous
+interval [0, 256).
+
+![Dequantization: flows need continuous data](assets/plate-l04-dequant.webp "Pixel 123 becomes 123.4. Densities exist only on continuous ground. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
+Why uniform and not Gaussian? Uniform noise on [0,1) keeps the
+model honest: the dequantized density, rounded back down,
+reproduces a valid distribution over the original integers.
+Gaussian noise would smear across pixel boundaries. The
+decision rule: always dequantize discrete data before a flow,
+and report likelihoods in bits per dimension on the dequantized
+scale so models compare fairly. Skip this step and the "exact
+likelihood" is exact for the wrong object.
+
+### Subchapter: continuous flows: the ODE view
+
+Stack infinitely many infinitesimal coupling layers and the warp
+becomes a differential equation: dx/dt = f_theta(x, t), from
+t = 0 (noise) to t = 1 (data). This is a **neural ODE**
+(FFJORD: Grathwohl et al., 2018). The log determinant becomes an
+integral of the **trace** of the Jacobian:
+
+```ascii
+log p(x_1) = log p(x_0) - integral_0^1 Tr(d f / d x) dt
+```
+
+The trace costs O(d): one backward pass gives the diagonal sum
+via Hutchinson's estimator, no O(d^3) determinant anywhere.
+Sampling solves the ODE forward. Density solves it backward.
+The price moves: no architectural constraints at all (f can be
+any network), but every evaluation solves an ODE numerically,
+tens to hundreds of function evaluations per density. The
+discrete flows pay in rigidity. The continuous flow pays in
+compute. This ODE view is also the bridge to L06: flow matching
+trains the same velocity field without solving the ODE.
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/YPsIq_f_ihQ" title="Normalizing Flow (NFs) Generative AI Models Simply Explained" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: Normalizing Flows Simply Explained. Reversibility, the geometry of stretching probability, Jacobian bookkeeping, coupling layers, and continuous flows. Watch after the coupling-layers section.</p></div>
+
 ## Mapping back: what each property fixes
 
 | General-warp failure | Coupling-layer answer | How |
 |---|---|---|
-| Folds: density sums over exploding branches | Invertible by construction | One z per x, always; the inverse is arithmetic |
+| Folds: density sums over exploding branches | Invertible by construction | One z per x, always. The inverse is arithmetic |
 | Determinant costs O(d^3): 10^9 ops at d = 1,000 | Triangular Jacobian | det = product of diagonal entries, O(d) |
 | No sampling rule | Fixed base distribution N(0,I) | Draw z, warp forward |
+| Discrete pixels have no density | Dequantization | Add uniform noise and model the continuous relaxation |
 
 ## The honest price: rigidity, demonstrated
 
@@ -192,6 +293,23 @@ biases the function class: variables transformed early never see
 variables transformed late within one layer. Expressivity
 studies show flows need more depth than free-form networks for
 the same fit.
+
+## What is used where: the warper in production
+
+| System | How it uses the warper | Evidence |
+|---|---|---|
+| WaveGlow (NVIDIA, 2018) | Flow-based neural vocoder: mel-spectrogram to raw audio waveform | Public: Prenger et al., 2018, arxiv 1811.00002 |
+| Glow | 256x256 face generation with exact likelihoods, 1x1 convolutions | Public research: Kingma and Dhariwal, 2018, arxiv 1807.03039 |
+| RealNVP | The coupling-layer blueprint every later flow builds on | Public research: Dinh et al., 2016, arxiv 1605.08803 |
+| FFJORD | Continuous-time flows for density estimation | Public research: Grathwohl et al., 2018, arxiv 1810.01367 |
+| VITS (speech) | Flow-based priors inside the VAE latent | Public: Kim et al., 2021, arxiv 2106.06103 |
+
+The pattern: flows ship where exact density matters more than raw
+sample quality. Speech vocoders (WaveGlow), anomaly detection,
+lossless compression (bits-back coding needs exact
+probabilities), scientific simulators with calibrated
+uncertainties. The warper is the density instrument. The restorer
+is the sample artist.
 
 ## Tying to CS336: what flows cannot use
 
@@ -224,6 +342,30 @@ needs.
 > Follow-up: Where are flows still the right tool?
 > A: Wherever exact density matters more than raw sample quality: anomaly detection (exact p(x) flags outliers), lossless compression (bits-back coding needs exact probabilities), and scientific simulators that need calibrated uncertainties. The warper is the density instrument. The restorer is the sample artist.
 
+> [!QA]
+> Q: Walk me through one coupling layer, forward and inverse, on the toy.
+> A: z = [0.5, 1.0], s(z_a) = 2, t(z_a) = 1. Forward: x_a = z_a = 0.5 (frozen). x_b = z_b x s + t = 1.0 x 2 + 1 = 3.0. Log det = log 2 = 0.693. Density: p_x([0.5, 3.0]) = p_z([0.5, 1.0]) / 2. Inverse: z_a = x_a = 0.5, then z_b = (x_b - t) / s = (3.0 - 1) / 2 = 1.0. Round trip exact. The plate shows the triangular Jacobian behind it.
+> Follow-up: What breaks if s(z_a) = 0?
+> A: The inverse divides by s, so s = 0 destroys invertibility. In practice s is parameterized as exp(s-hat): always positive, never zero. The log det becomes a clean sum of s-hat values. One more quiet constraint the architecture carries.
+
+> [!QA]
+> Q: MAF vs IAF vs RealNVP: which direction is fast?
+> A: MAF (masked autoregressive flow): density evaluation is fast (one parallel pass), sampling is serial (x_1, then x_2, ...). IAF (inverse autoregressive flow): sampling is fast, density evaluation is serial. RealNVP coupling: both directions are fast arithmetic, but each layer is less expressive. Pick MAF for scoring data, IAF for generating, coupling for both-at-once with more layers.
+> Follow-up: Why does this mirror the storyteller's tradeoff?
+> A: Because autoregression is the same idea in both: each variable depends on earlier ones. The storyteller pays serial sampling for parallel training (L02). MAF pays serial sampling for parallel density evaluation. The chain rule's bill shows up wherever ordering appears.
+
+> [!QA]
+> Q: Why does a flow need dequantization for images?
+> A: Pixels are integers, and the change-of-variables formula needs continuous densities. Dequantization adds uniform noise u in [0,1) to each pixel: 123 becomes 123.4 on [0, 256). Uniform (not Gaussian) keeps the model honest: rounding the dequantized density reproduces a valid distribution over the original integers. Skip it and the "exact likelihood" is exact for the wrong object.
+> Follow-up: Does dequantization change the reported likelihood?
+> A: Yes, legitimately: the model now reports bits per dimension on the continuous relaxation, which upper-bounds the discrete likelihood. All flow papers report this way, so comparisons stay fair as long as everyone dequantizes identically.
+
+> [!QA]
+> Q: Applied: build an anomaly detector for factory sensor readings. Why a flow?
+> A: Because you need exact p(x) per reading, and only the storyteller and the warper give it. Sensor data has no natural order, so the storyteller's chain rule is awkward. The warper's p_x(x) = p_z(z) / |det J| scores each reading in one backward pass. Train on normal readings, flag anything with log-likelihood below a threshold picked on validation data. MAF is the pick: density evaluation is its fast direction.
+> Follow-up: Why not a VAE or diffusion model?
+> A: Both give bounds, not exact densities. A loose bound can rank anomalies wrong: a normal point with a loose bound looks anomalous. When the decision is a threshold on probability, exactness is not a luxury.
+
 ![Chapter plate: exact densities bought with architectural rigidity](assets/plate-l04.png "Chapter plate. Exact densities bought with architectural rigidity. Source: original plate for Stanford Frontier AI.")
 
 ## Recap: the whole lesson on one screen
@@ -234,18 +376,21 @@ needs.
 4. **The determinant bill, demonstrated.** 2-D toy det J = 2, p_x = 0.5. General d x d determinants cost O(d^3): 10^9 ops at d = 1,000.
 5. **The key question.** What if the warp is invertible by construction with an O(d) determinant?
 6. **Coupling layers.** x_b = z_b x s(z_a) + t(z_a), inverse by arithmetic, triangular Jacobian. Toy: [0.5, 1.0] -> [0.5, 3.0], log det = 0.693, round trip exact.
-7. **The price: rigidity.** Each layer freezes half the variables. Dimensions cannot shrink. The architecture family is a strict subset of free-form nets.
-8. **The CS336 tie.** Residual blocks x + f(x) fold, so flows cannot use transformer blocks as-is. Exactness buys discipline.
+7. **The family.** MAF/IAF: triangular by ordering, one fast direction each. Glow: 1x1 convolutions and ActNorm for images. Continuous flows: the ODE view, trace instead of determinant.
+8. **Dequantization.** Pixels are integers: add uniform noise, model the continuous relaxation, report bits per dimension.
+9. **The price: rigidity.** Each layer freezes half the variables. Dimensions cannot shrink. The architecture family is a strict subset of free-form nets.
+10. **In production.** WaveGlow speaks, anomaly detectors score, compressors count bits. Exact density is the product.
 
 ## Official sources and further reading
 
 **Official:**
-- Papamakarios et al., Normalizing Flows for Probabilistic Modeling and Inference (2021): https://arxiv.org/abs/1912.02762 — the review this chapter follows: coupling, autoregressive, and residual flow designs with their determinant costs.
-- Dinh, Krueger & Bengio, NICE (2014): https://arxiv.org/abs/1410.8516 — the coupling layer origin.
+- Papamakarios et al., Normalizing Flows for Probabilistic Modeling and Inference (2021): https://arxiv.org/abs/1912.02762 (the review this chapter follows: coupling, autoregressive, and residual flow designs with their determinant costs).
+- Dinh, Krueger & Bengio, NICE (2014): https://arxiv.org/abs/1410.8516 (the coupling layer origin).
 
 **Further reading:**
-- Dinh, Sohl-Dickstein & Bengio, RealNVP (2016): alternating masks and multi-scale stacking.
-- Kingma & Dhariwal, Glow (2018): invertible 1x1 convolutions for images.
+- Dinh, Sohl-Dickstein & Bengio, RealNVP (2016): https://arxiv.org/abs/1605.08803 (alternating masks and multi-scale stacking).
+- Kingma & Dhariwal, Glow (2018): https://arxiv.org/abs/1807.03039 (invertible 1x1 convolutions for images).
+- Grathwohl et al., FFJORD (2018): https://arxiv.org/abs/1810.01367 (the continuous-time flow).
 
 **Caveats from these sources.** [uncertain]: normalizing flows do not appear in the Prathosh playlist's topic sequence (weeks 1-12 cover GANs, VAE, DDPM, AR models, RL). This lesson is grounded in the Papamakarios review and the NICE/RealNVP papers instead. The universality claim for coupling stacks holds under smoothness conditions stated in the review, not unconditionally.
 
