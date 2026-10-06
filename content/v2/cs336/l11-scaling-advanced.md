@@ -356,6 +356,15 @@ The story in eight steps. Each step answers the one before it.
 8. **The frontier moved to MoE.** Sparsity 48, 96 tok/active param,
    architecture bake-offs. Post-training synergy still open.
 
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/a-7dtkQJHcs" title="What is muP (Maximal Update Parametrization)?" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- What is muP (the embed above): https://www.youtube.com/watch?v=a-7dtkQJHcs
+- Yang et al., Tensor Programs V / muTransfer: https://arxiv.org/abs/2203.03466
+- Hu et al., MiniCPM (WSD schedule): https://arxiv.org/abs/2404.06395
+
 ## Official sources and further reading
 
 **Official:**
