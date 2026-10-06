@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U09 · Unsupervised and latent models — Stanford Frontier AI</title>
+<meta name="description" content="K-means, distance and scaling, PCA, reconstruction, factor-model bridge, held-out evaluation.">
+<link rel="stylesheet" href="../../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-page="mathml-u09" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Mathematical Foundations of Machine Learning</h3><ul>
+<li><a href="../../index.html" data-page="mathml-index">Math-ML · Overview</a></li>
+<li><a href="../../lessons/u01/lesson-01-mathematical-language.html" data-page="mathml-u01">U01 · Math language</a></li>
+<li><a href="../../lessons/u01/keys.html" data-page="mathml-u01-keys">U01 · Keys</a></li>
+<li><a href="../../lessons/u02/lesson-02-linear-geometry-and-decompositions.html" data-page="mathml-u02">U02 · Linear geometry</a></li>
+<li><a href="../../lessons/u02/keys.html" data-page="mathml-u02-keys">U02 · Keys</a></li>
+<li><a href="../../lessons/u03/lesson-03-calculus-and-optimization.html" data-page="mathml-u03">U03 · Calculus</a></li>
+<li><a href="../../lessons/u03/keys.html" data-page="mathml-u03-keys">U03 · Keys</a></li>
+<li><a href="../../lessons/u04/lesson-04a-first-source-block.html" data-page="mathml-u04a">U04a · Sample space</a></li>
+<li><a href="../../lessons/u04/keys-04a.html" data-page="mathml-u04a-keys">U04a · Keys</a></li>
+<li><a href="../../lessons/u04/lesson-04b-second-source-block.html" data-page="mathml-u04b">U04b · Entropy and MLE</a></li>
+<li><a href="../../lessons/u04/keys-04b.html" data-page="mathml-u04b-keys">U04b · Keys</a></li>
+<li><a href="../../lessons/u04/lesson-04c-third-source-block.html" data-page="mathml-u04c">U04c · Risk and EM</a></li>
+<li><a href="../../lessons/u04/keys-04c.html" data-page="mathml-u04c-keys">U04c · Keys</a></li>
+<li><a href="../../lessons/u05/lesson-05-risk-regularization-generalization.html" data-page="mathml-u05">U05 · Risk</a></li>
+<li><a href="../../lessons/u05/keys.html" data-page="mathml-u05-keys">U05 · Keys</a></li>
+<li><a href="../../lessons/u06/lesson-06-linear-models-kernels-margins.html" data-page="mathml-u06">U06 · Kernels</a></li>
+<li><a href="../../lessons/u06/keys.html" data-page="mathml-u06-keys">U06 · Keys</a></li>
+<li><a href="../../lessons/u07/lesson-07-trees-ensembles.html" data-page="mathml-u07">U07 · Trees</a></li>
+<li><a href="../../lessons/u07/keys.html" data-page="mathml-u07-keys">U07 · Keys</a></li>
+<li><a href="../../lessons/u08/lesson-08-neural-sequence-architectures.html" data-page="mathml-u08">U08 · Neural nets</a></li>
+<li><a href="../../lessons/u08/keys.html" data-page="mathml-u08-keys">U08 · Keys</a></li>
+<li><a href="../../lessons/u09/lesson-09b-unsupervised-leaves.html" data-page="mathml-u09" class="active">U09 · Unsupervised</a></li>
+<li><a href="../../lessons/u09/keys-09b.html" data-page="mathml-u09-keys">U09 · Keys</a></li>
+<li><a href="../../lessons/u10/lesson-10-generative-bridge-synthesis.html" data-page="mathml-u10">U10 · Generative</a></li>
+<li><a href="../../lessons/u10/keys.html" data-page="mathml-u10-keys">U10 · Keys</a></li>
+<li><a href="../../labs/README.html" data-page="mathml-labs">Labs · Overview</a></li>
+<li><a href="../../labs/lab-01-linear-geometry.html" data-page="mathml-lab-01">Lab 01 · Linear geometry</a></li>
+<li><a href="../../labs/keys-lab-01.html" data-page="mathml-lab-01-keys">Lab 01 · Keys</a></li>
+<li><a href="../../labs/lab-02-sampling-estimation.html" data-page="mathml-lab-02">Lab 02 · Sampling</a></li>
+<li><a href="../../labs/keys-lab-02.html" data-page="mathml-lab-02-keys">Lab 02 · Keys</a></li>
+<li><a href="../../labs/lab-03-calculus-optimization.html" data-page="mathml-lab-03">Lab 03 · Calculus</a></li>
+<li><a href="../../labs/keys-lab-03.html" data-page="mathml-lab-03-keys">Lab 03 · Keys</a></li>
+<li><a href="../../labs/lab-04-entropy-mle.html" data-page="mathml-lab-04">Lab 04 · Entropy</a></li>
+<li><a href="../../labs/keys-lab-04.html" data-page="mathml-lab-04-keys">Lab 04 · Keys</a></li>
+<li><a href="../../labs/lab-05-risk-regularization.html" data-page="mathml-lab-05">Lab 05 · Risk</a></li>
+<li><a href="../../labs/keys-lab-05.html" data-page="mathml-lab-05-keys">Lab 05 · Keys</a></li>
+<li><a href="../../labs/lab-06-kernels-margins.html" data-page="mathml-lab-06">Lab 06 · Kernels</a></li>
+<li><a href="../../labs/keys-lab-06.html" data-page="mathml-lab-06-keys">Lab 06 · Keys</a></li>
+<li><a href="../../labs/lab-07-trees-ensembles.html" data-page="mathml-lab-07">Lab 07 · Trees</a></li>
+<li><a href="../../labs/keys-lab-07.html" data-page="mathml-lab-07-keys">Lab 07 · Keys</a></li>
+<li><a href="../../labs/lab-08-neural-sequence.html" data-page="mathml-lab-08">Lab 08 · Neural</a></li>
+<li><a href="../../labs/keys-lab-08.html" data-page="mathml-lab-08-keys">Lab 08 · Keys</a></li>
+<li><a href="../../labs/lab-10-generative-synthesis.html" data-page="mathml-lab-10">Lab 10 · Generative</a></li>
+<li><a href="../../labs/keys-lab-10.html" data-page="mathml-lab-10-keys">Lab 10 · Keys</a></li>
+<li><a href="../../diagnostics/diagnostic-01-math-language.html" data-page="mathml-diag-01">Diagnostic 01</a></li>
+<li><a href="../../diagnostics/keys-01.html" data-page="mathml-diag-01-keys">Diagnostic 01 · Keys</a></li>
+<li><a href="../../interview/README.html" data-page="mathml-interview">Interview · Overview</a></li>
+<li><a href="../../interview/interview-u02-questions.html" data-page="mathml-int-u02">Interview · U02</a></li>
+<li><a href="../../interview/keys-u02.html" data-page="mathml-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../../interview/interview-u03-questions.html" data-page="mathml-int-u03">Interview · U03</a></li>
+<li><a href="../../interview/keys-u03.html" data-page="mathml-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../../interview/interview-u04a-questions.html" data-page="mathml-int-u04a">Interview · U04a</a></li>
+<li><a href="../../interview/keys-u04a.html" data-page="mathml-int-u04a-keys">Interview · U04a keys</a></li>
+<li><a href="../../interview/interview-u05-questions.html" data-page="mathml-int-u05">Interview · U05</a></li>
+<li><a href="../../interview/keys-u05.html" data-page="mathml-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../../interview/interview-u06-questions.html" data-page="mathml-int-u06">Interview · U06</a></li>
+<li><a href="../../interview/keys-u06.html" data-page="mathml-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../../interview/interview-u07-questions.html" data-page="mathml-int-u07">Interview · U07</a></li>
+<li><a href="../../interview/keys-u07.html" data-page="mathml-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../../interview/interview-u08-questions.html" data-page="mathml-int-u08">Interview · U08</a></li>
+<li><a href="../../interview/keys-u08.html" data-page="mathml-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../../interview/interview-u10-questions.html" data-page="mathml-int-u10">Interview · U10</a></li>
+<li><a href="../../interview/keys-u10.html" data-page="mathml-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../../interview/transfer-sets.html" data-page="mathml-int-transfer">Interview · Transfer</a></li>
+<li><a href="../../interview/keys-transfer.html" data-page="mathml-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../../interview/oral-defenses.html" data-page="mathml-int-oral">Interview · Oral</a></li>
+<li><a href="../../interview/keys-oral.html" data-page="mathml-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../../capstones/README.html" data-page="mathml-capstones">Capstones · Overview</a></li>
+<li><a href="../../capstones/capstone-research-kernel-margins.html" data-page="mathml-cap-r1">Capstone R1 · Research</a></li>
+<li><a href="../../capstones/capstone-applied-fde.html" data-page="mathml-cap-f1">Capstone F1 · Applied</a></li>
+<li><a href="../../prerequisites.html" data-page="mathml-prereqs">Math-ML · Prerequisites</a></li>
+<li><a href="../../glossary.html" data-page="mathml-glossary">Math-ML · Glossary</a></li>
+<li><a href="../../notation_and_shapes.html" data-page="mathml-notation">Math-ML · Notation</a></li>
+<li><a href="../../crash-course.html" data-page="mathml-crash">Math-ML · Crash course</a></li>
+<li><a href="../../cheatsheet.html" data-page="mathml-cheatsheet">Math-ML · Cheatsheet</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../../index.html">Home</a> / <a href="#">Mathematical Foundations of Machine Learning</a> / U09 · Unsupervised and latent models</nav>
+      <h1>U09 · Unsupervised and latent models</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Prathosh A P</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="lesson-09b-unsupervised-leaves-clusters-directions-and-held-out-judgment">Lesson 09b, Unsupervised leaves: clusters, directions, and held-out judgment</h1>
+<p>Unit: math-ml-U09. Leaf concepts: math-ml-U09-C01, C02, C03, C04,
+C09, C12.
+Date: 2026-10-06. Baseline: October 6, 2026.</p>
+<h2 id="source-mapping">Source mapping</h2>
+<p>This lesson deepens the remaining U09 leaves only. The latent-model
+leaves C05 (mixture model), C06 (EM), C07 (Jensen), C08 (latent
+posterior), C10 (initialization), C11 (degeneracy) were taught in
+lesson-04c (source block Lec 20-27) and are not re-taught here.
+Cross references to them are pointers, not new teaching. Source
+attribution for all U09 leaves is PENDING: I inspected no playlist
+transcript (see source_manifest.md SRC-04, source_gaps.md G2). The
+playlist titles that name this unit&rsquo;s topics are &ldquo;Lec 60
+Un-Supervised Learning&rdquo;, &ldquo;Lec 61 K-Means Clustering&rdquo;, and &ldquo;Lec 62
+PCA - Principal Component Analysis&rdquo;. Titles name topics. They do
+not name leaf items, definitions, or numbers. All numbers below are
+computed 2026-10-06, numpy 1.26.4, float64, CPython. Random draws
+use numpy default_rng(7).</p>
+<h2 id="scope-and-objectives">Scope and objectives</h2>
+<p>Scope: k-means, distance and scaling, PCA, reconstruction error,
+the factor-model bridge, and held-out evaluation of unsupervised
+fits.</p>
+<p>Objectives: after this lesson the learner can run Lloyd iterations
+by hand on six points, show a scaling flip of a nearest neighbor,
+compute a 2-D PCA by hand, prove the reconstruction identity on
+the toy, explain when a factor model beats PCA, and pick k with
+held-out inertia.</p>
+<p>Dependencies: prerequisites.md. U02 eigendecomposition and SVD.
+U04 likelihood. U05 train/test splits and cross-validation. U09
+C05-C08, C10, C11 from lesson-04c (referenced, not re-taught).</p>
+<h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>Same chain as lesson 06: question, toy, rule, computed example,
+code, checks, costs, alternatives, failure case. Shell numbers
+mark the Russian-doll ladder. Figures carry one claim each.</p>
+<hr />
+<h2 id="c01-k-means">C01, k-means</h2>
+<p>Motivating question: six points, two groups, no labels. Where do
+the group centers go?</p>
+<p>Start from zero. Points: (0,0), (0.2,0.1), (-0.1,0.2) and (5,5),
+(5.2,4.9), (4.9,5.1). Start centers at point 0 and point 3.
+Shell 0: the question is the final objective value, and the
+observable result is 0.1333 after one real move.</p>
+<p>Mental model. Two steps repeat: assign each point to the nearest
+center, then move each center to its group&rsquo;s mean. Each step
+lowers or holds the within-cluster sum of squares. The process
+stops at a local minimum, not the global one. Shell 2.</p>
+<p>Variables. Assignment a_i in {0, 1}, shape (6,). Centers mu_k,
+shape (2, 2). Objective J = sum_i ||x_i - mu_{a_i}||^2, scalar.
+Assumptions: Euclidean distance, k = 2 fixed in advance.</p>
+<p>Why it exists. k-means is the hard-assignment limit of the
+mixture model (C05): responsibilities become 0/1. It is also the
+simplest vector quantization. Remove the alternating steps and
+no closed form exists. The problem is NP-hard in general.</p>
+<p>Computed example, same objects. Iteration 0: assignments
+[0,0,0,1,1,1], J = 0.1700. New centers: (0.0333, 0.1) and
+(5.0333, 5.0). Iteration 1: same assignments, J = 0.133333.
+Iteration 2: unchanged. Converged. Bad start: both centers near
+the left group. J goes 145.17, then 9.03625, then 0.133333.
+The start changed the path, not the destination, on this toy.
+Computed 2026-10-06. Shell 3 and shell 6.</p>
+<p>Figure f01 shows the points, the final centers, and the dashed
+center paths. One claim: Lloyd moves centers to cluster means.</p>
+<p>Implementation.</p>
+<pre><code class="language-python">import numpy as np
+Xk = np.array([[0.,0.],[0.2,0.1],[-0.1,0.2],[5.,5.],[5.2,4.9],[4.9,5.1]])
+mu = Xk[[0,3]].copy()
+for it in range(3):
+    d = ((Xk[:,None,:]-mu[None,:,:])**2).sum(-1)
+    a = d.argmin(1)
+    J = ((Xk-mu[a])**2).sum()
+    print(it, a.tolist(), round(J,6))
+    mu = np.array([Xk[a==k].mean(0) for k in range(2)])
+</code></pre>
+<p>Correctness check. Iteration 0 J = 0.17: verify one term, point
+(-0.1, 0.2) to center (0,0): 0.01 + 0.04 = 0.05. The six terms
+sum to 0.17. Expected output: 0.17, 0.133333, 0.133333.</p>
+<p>Costs. O(n k d) per iteration. Memory O(n d + k d). The number
+of iterations is small in practice but unbounded in theory.</p>
+<p>Alternatives. k-medoids for non-Euclidean distances. Gaussian
+mixtures (C05/C06) for soft assignments and shaped clusters.
+Spectral clustering for non-convex shapes. Selection boundary:
+k-means when clusters are round and k is known. Mixtures when
+shapes or overlaps matter.</p>
+<p>Failure case. Empty cluster: a center can lose all its points,
+and the mean of nothing is undefined. The guard keeps the old
+center (lesson code does this). Worse: with k larger than the
+true groups, k-means splits real clusters arbitrarily. The toy
+with k = 5 shows inertia falling while structure is invented.</p>
+<p>Research reading. Lloyd 1982. K-means++ seeding (Arthur and
+Vassilvitskii). Falsifiable extension: compare 20 random starts
+versus k-means++ starts on the bad-init toy, counting how often
+each reaches 0.133333. Predict first: k-means++ reaches it more
+often. Then measure.</p>
+<hr />
+<h2 id="c02-distance-and-scaling">C02, distance and scaling</h2>
+<p>Motivating question: the nearest neighbor of a point changes when
+you change the ruler. Which ruler is right?</p>
+<p>Start from zero. A = (0,0), B = (1,2), C = (2.2,1). Nearest to A
+by Euclidean distance: B at 2.236 versus C at 2.417. Shell 0: the
+question is the nearest neighbor after scaling the y axis by 5,
+and the observable result is the flip from B to C.</p>
+<p>Mental model. Euclidean distance adds squared coordinate
+differences. Scaling one axis by 5 multiplies its votes by 25.
+The neighbor is a function of the units, not just the points.
+Standardization (zero mean, unit variance per column) is the
+default honest ruler. Shell 2.</p>
+<p>Variables. Points have shape (3, 2). Scale factors are scalars
+per axis. Assumptions: none about distributions. The claim is
+purely geometric.</p>
+<p>Why it exists. k-means, nearest neighbors, and RBF kernels all
+read distances. Unscaled features let the largest-unit feature
+decide every assignment. This is C11 of lesson 06 wearing a
+distance costume.</p>
+<p>Computed example, same objects. Raw: nearest of A is B (index
+1). After y x 5: distances to B = 10.05, to C = 5.46. Nearest
+flips to C (index 2). After standardization: nearest returns to
+B (index 1). Computed 2026-10-06. Shell 3 and shell 6: the one
+changed factor is the y scale.</p>
+<p>Implementation.</p>
+<pre><code class="language-python">P = np.array([[0.,0.],[1.,2.],[2.2,1.]])
+def nn(i, Q):
+    d = ((Q-Q[i])**2).sum(-1)
+    d[i] = np.inf
+    return int(d.argmin())
+print(nn(0, P))                    # 1
+Ps = P*np.array([1.,5.])
+print(nn(0, Ps))  # 2
+Pz = (Ps-Ps.mean(0))/Ps.std(0)
+print(nn(0, Pz))  # 1
+</code></pre>
+<p>Correctness check. Raw: d(A,B)^2 = 1 + 4 = 5, d(A,C)^2 = 4.84 +
+1 = 5.84. B nearer. Scaled: d(A,B)^2 = 1 + 100 = 101,
+d(A,C)^2 = 4.84 + 25 = 29.84. C nearer. Expected output:
+1, 2, 1.</p>
+<p>Costs. Scaling costs O(n d). Distance matrices cost O(n^2 d).</p>
+<p>Alternatives. Mahalanobis distance with the sample covariance.
+Learned metrics. Selection boundary: standardize by default. 
+use domain units only when the domain says the raw scale is
+meaningful (meters versus seconds usually is not).</p>
+<p>Failure case. Standardizing a constant column divides by zero.
+Binary columns standardized become asymmetric (-a, b) pairs
+that distort distances. Check variances before scaling. Leave
+degenerate columns out.</p>
+<p>Research reading. This is folk practice with real teeth. The
+k-means++ paper assumes Euclidean distance throughout.
+Falsifiable extension: run k-means on the six-point toy after
+scaling x by 100 and compare assignments to the unscaled run.
+Predict first: assignments change. Then measure.</p>
+<hr />
+<h2 id="c03-pca">C03, PCA</h2>
+<p>Motivating question: five points nearly lie on a line. What is
+the line, and how much is lost by keeping only it?</p>
+<p>Start from zero. Points: (1,2), (2,3), (3,5), (4,6), (5,8).
+Center them. The covariance is [[2, 3], [3, 4.56]]. Shell 0: the
+question is the top direction and its variance share, and the
+observable result is 99.72 percent.</p>
+<p>Mental model. PCA finds the direction of maximum variance, then
+the next orthogonal one, and so on. The directions are the
+eigenvectors of the covariance. The variances are the
+eigenvalues. Keep the top k. Shell 2.</p>
+<p>Variables. Covariance C has shape (2, 2). Eigenvectors v_i shape
+(2,), eigenvalues lambda_i scalars. Assumptions: centered data. 
+variance is the quantity of interest (not always true).</p>
+<p>Why it exists. PCA is the optimal linear compressor under
+squared error (C04 proves it on the toy). It is also the SVD of
+the centered data (U02-C09). Remove centering and the first
+component chases the mean instead of the spread.</p>
+<p>Computed example, same objects. Eigenvalues 6.541656 and
+0.018344. PC1 = [0.551163, 0.834398]. Variance explained by
+PC1: 6.541656 / 6.56 = 0.997204. Computed 2026-10-06. Shell 3.</p>
+<p>Implementation.</p>
+<pre><code class="language-python">Xp = np.array([[1.,2.],[2.,3.],[3.,5.],[4.,6.],[5.,8.]])
+Xc = Xp - Xp.mean(0)
+C = Xc.T @ Xc / len(Xp)
+eigval, eigvec = np.linalg.eigh(C)
+o = np.argsort(eigval)[::-1]
+print(eigval[o])            # [6.541656 0.018344]
+print(eigvec[:, o[0]])      # [0.551163 0.834398]
+print(eigval[o[0]]/eigval.sum())  # 0.9972036617535656
+</code></pre>
+<p>Correctness check. Trace = 2 + 4.56 = 6.56 = sum of eigenvalues
+6.541656 + 0.018344. Determinant 2*4.56 - 9 = 0.12 = product
+6.541656 * 0.018344 = 0.12. Expected output: the two
+eigenvalues and 0.9972.</p>
+<p>Costs. Covariance O(n d^2), eigendecomposition O(d^3). For
+d &gt;&gt; n use the Gram trick (U02-C09).</p>
+<p>Alternatives. SVD on the centered matrix (same answer, better
+numerics). Randomized PCA for huge d. Kernel PCA for nonlinear
+structure. Selection boundary: PCA when variance means
+information. Not when rare directions matter (then see C09).</p>
+<p>Failure case. Two features with different units: the
+larger-unit feature dominates PC1 regardless of information.
+This is C02 again. Standardize first or the components are
+about units, not structure.</p>
+<p>Research reading. Pearson 1901. Hotelling 1933. Falsifiable
+extension: add a third feature of pure noise with variance 10
+to the toy and watch PC1 rotate toward it. Predict first:
+variance explained by PC1 falls. Then measure.</p>
+<hr />
+<h2 id="c04-reconstruction">C04, reconstruction</h2>
+<p>Motivating question: PCA kept one direction. What exactly did it
+throw away?</p>
+<p>Start from zero. Same five points, k = 1. Project onto PC1,
+reconstruct, measure the mean squared error over all entries.
+Shell 0: the question is the reconstruction MSE, and the
+observable result is 0.009172, equal to the dropped eigenvalue
+divided by 2.</p>
+<p>Mental model. Reconstruction error is the energy in the dropped
+directions. For PCA the identity is exact: per-entry MSE equals
+the sum of dropped eigenvalues divided by the dimension d.
+Keeping more directions can only lower the error. Shell 2.</p>
+<p>Variables. Projection z = Xc v_1, shape (5,). Reconstruction
+x_hat = z v_1^T + mean, shape (5, 2). Error scalar.
+Assumptions: same as PCA. Squared error.</p>
+<p>Why it exists. The identity turns PCA from a heuristic into an
+optimal compressor: no other rank-1 linear map has smaller
+squared error (Eckart-Young via U02-C09). Denoising is the
+practical child: drop the small directions, keep the signal.</p>
+<p>Computed example, same objects. Reconstruction MSE 0.009172.
+Dropped eigenvalue 0.018344 / d (d = 2) = 0.009172. Match to
+1e-12. Computed 2026-10-06. Shell 3 and shell 5: the identity is
+the invariant check.</p>
+<p>Figure f02 zooms on the first point: the pink segment is the
+dropped error between the point and its reconstruction on PC1.
+One claim: the error is the dropped direction&rsquo;s energy.</p>
+<p>Implementation.</p>
+<pre><code class="language-python">v1 = np.array([0.551163, 0.834398])
+Z = Xc @ v1
+Xr = np.outer(Z, v1) + Xp.mean(0)
+mse = ((Xp - Xr)**2).mean()
+print(mse)  # 0.009171989448304805
+print(0.018344/2)  # 0.009172
+</code></pre>
+<p>Correctness check. 0.018344/2 = 0.009172 matches mse to 4
+digits. Expected output: 0.009172, 0.009172.</p>
+<p>Costs. Projection O(n d k). Reconstruction O(n d k).</p>
+<p>Alternatives. Autoencoders for nonlinear reconstruction. Sparse
+PCA when loadings must be interpretable. Selection boundary:
+PCA reconstruction when the signal is linear and low rank. 
+nonlinear methods when it curves.</p>
+<p>Failure case. The identity holds for squared error only. Under
+absolute error the optimal rank-1 map is different and PCA is
+not optimal. Also: reconstructing with too few components on
+curved data (a circle) gives chords through empty space.</p>
+<p>Research reading. Eckart-Young-Mirsky theorem. Falsifiable
+extension: verify the identity for k = 0 (reconstruction is the
+mean) on the toy. Predict first: per-entry MSE = total variance
+/ d = 6.56 / 2 = 3.28. Then measure.</p>
+<hr />
+<h2 id="c09-factor-models-bridge">C09, factor models bridge</h2>
+<p>Motivating question: PCA treats every direction&rsquo;s leftover as
+equal noise. What if one sensor is just noisier?</p>
+<p>Start from zero. True signal z in R^1, 200 draws, seed 7.
+Loadings W = [2, 1, 0.5]^T. Noise std per dimension [0.1, 0.1,
+3.0]. The third sensor is 30x noisier. Shell 0: the question is
+what PCA&rsquo;s k = 1 reconstruction pays for the noisy sensor, and
+the observable result is MSE 1.2785.</p>
+<p>Mental model. The factor model writes x = W z + mu + eps with
+eps having per-dimension variance Psi. PCA is the special case
+Psi = sigma^2 I: equal noise everywhere. When noise differs by
+dimension, PCA&rsquo;s directions tilt toward the noisy sensor and the
+reconstruction pays. Shell 2.</p>
+<p>Variables. z shape (200, 1) latent. W shape (3, 1). Psi
+diagonal shape (3, 3). Assumptions: Gaussian z and eps,
+independent. Linear loadings.</p>
+<p>Why it exists. This is the bridge from PCA (taught) to factor
+analysis and probabilistic PCA (named, not derived): the same
+generative story with different noise. It explains a real PCA
+failure without new machinery.</p>
+<p>Computed example, same objects. PCA k = 1 reconstruction MSE
+(all 3 dims): 1.278512. Noise floor mean (0.01 + 0.01 + 9)/3 =
+3.006667. PCA eigenvalues: 7.330603, 3.826997, 0.008538. Note
+the second eigenvalue 3.83: PCA spends a whole direction on the
+noisy sensor. A factor model with per-dimension noise would
+spend its capacity on the signal direction instead. Computed
+2026-10-06. Shell 3 and shell 8: PCA versus the factor view
+under one data budget.</p>
+<p>Implementation.</p>
+<pre><code class="language-python">rng = np.random.default_rng(7)
+z = rng.normal(0, 1, 200)
+W = np.array([[2.],[1.],[0.5]])
+Xf = (W @ z[None,:]).T + rng.normal(0, [0.1,0.1,3.0], (200,3))
+Xfc = Xf - Xf.mean(0)
+ef, Vf = np.linalg.eigh(Xfc.T @ Xfc/200)
+o = np.argsort(ef)[::-1]
+ef = ef[o]
+Vf = Vf[:, o]
+Zp = Xfc @ Vf[:, :1]
+mse = ((Xf - (Zp @ Vf[:, :1].T + Xf.mean(0)))**2).mean()
+print(mse)  # 1.27851169346687
+print(ef)   # [7.330603 3.826997 0.008538]
+</code></pre>
+<p>Correctness check. The noisy sensor&rsquo;s variance ~9 dominates the
+total. PCA&rsquo;s second direction aligns with it (eigenvalue 3.83
+near the noise variance contribution). Expected output:
+1.2785 and the three eigenvalues.</p>
+<p>Costs. PCA costs as in C03. Full factor analysis needs EM
+(C06 of lesson 04c): O(n d k) per iteration.</p>
+<p>Alternatives. Probabilistic PCA (isotropic noise, closed form).
+Factor analysis (diagonal noise, EM). ICA for non-Gaussian
+sources. Selection boundary: PCA when sensors are comparable. 
+factor models when noise levels differ known-unknown.</p>
+<p>Failure case. Factor analysis with more factors than the data
+supports: degeneracy (C11 of lesson 04c, referenced). The
+bridge does not re-teach it. The pointer is the guard.</p>
+<p>Research reading. Tipping and Bishop 1999 (probabilistic PCA).
+Falsifiable extension: fit PCA k = 1 and k = 2 on the toy and
+compare held-out reconstruction MSE. Predict first: k = 2 wins
+on train but the second direction is noise, so held-out
+prefers k = 1. Then measure.</p>
+<hr />
+<h2 id="c12-held-out-evaluation">C12, held-out evaluation</h2>
+<p>Motivating question: k-means has no labels. How do we pick k
+without fooling ourselves?</p>
+<p>Start from zero. 80 points: 40 from N(0, 0.5^2), 40 from
+N(4, 0.5^2), seed 7. Train on 60, hold out 20. Fit k-means for
+k in {1, 2, 3, 5} on train. Measure inertia on train and on
+held-out. Shell 0: the question is where the elbow sits, and
+the observable result is the sharp flattening at k = 2.</p>
+<p>Mental model. Train inertia always falls with k: more centers,
+closer points. Held-out inertia measures whether the new
+centers describe new data or memorize old points. The elbow is
+where extra centers stop buying real structure. Shell 2.</p>
+<p>Variables. Inertia = mean squared distance to nearest center,
+scalar. k in {1, 2, 3, 5}. Assumptions: the held-out points
+come from the same distribution (U05-C12).</p>
+<p>Why it exists. This is U05-C08 (cross-validation) applied where
+no labels exist: the metric changes, the logic does not. Train
+inertia cannot pick k. It is monotone. Remove the held-out set
+and k = n &ldquo;wins&rdquo; with inertia zero.</p>
+<p>Computed example, same objects. Train inertia: 7.6417, 0.3698,
+0.3161, 0.1789. Held-out inertia: 14.1768, 0.4439, 0.3360,
+0.2939. The drop from k = 1 to k = 2 is 13.73 on held-out,
+while from k = 2 to k = 5 only 0.15 more. Elbow at k = 2. Honest
+note: held-out keeps falling slowly past 2 on this easy data.
+The elbow, not a U-turn, is the verdict. Computed 2026-10-06.
+Shell 3.</p>
+<p>Figure f03 shows both inertias by k. One claim: the elbow at
+k = 2. The footer records the four held-out numbers.</p>
+<p>Implementation.</p>
+<pre><code class="language-python">rng = np.random.default_rng(7)
+Xh = np.vstack([rng.normal(0,0.5,(40,2)), rng.normal(4,0.5,(40,2))])
+tr, te = Xh[:60], Xh[60:]
+def fit(X_, k):
+    r = np.random.default_rng(7)
+    mu = X_[r.choice(len(X_), k, replace=False)]
+    for _ in range(20):
+        a = ((X_[:,None,:]-mu[None,:,:])**2).sum(-1).argmin(1)
+        mu = np.array([X_[a==j].mean(0) for j in range(k)])
+    return mu
+for k in (1,2,3,5):
+    mu = fit(tr, k)
+    tri = ((tr[:,None,:]-mu[None,:,:])**2).sum(-1).min(1).mean()
+    tei = ((te[:,None,:]-mu[None,:,:])**2).sum(-1).min(1).mean()
+    print(k, round(tri,4), round(tei,4))
+</code></pre>
+<p>Correctness check. k = 1: one center near (2,2)-ish. Train
+inertia ~7.64 matches the two-cluster spread. k = 2 recovers
+the two blobs. Expected output: the four pairs above.</p>
+<p>Costs. Fitting per k costs O(iters * n k d). The scan over k
+multiplies by the grid size.</p>
+<p>Alternatives. Silhouette score, gap statistic, BIC for mixtures
+(C05). Selection boundary: held-out inertia for k-means. Gap
+statistic when a null reference matters. BIC when a likelihood
+exists.</p>
+<p>Failure case. Held-out inertia with distribution shift (U05-C12
+again): new blobs in new places make every k look bad. The
+metric judges the data match, not just the clustering. Also:
+tiny held-out sets make the elbow noisy. 20 points is the
+minimum honest size here.</p>
+<p>Research reading. The gap statistic (Tibshirani et al.).
+Falsifiable extension: rerun the scan with 10 different seeds
+and record how often the elbow lands at k = 2. Predict first:
+at least 8 of 10. Then measure.</p>
+<hr />
+<h2 id="rendered-figures">Rendered figures</h2>
+<p>Each figure below is an original PNG rendered with matplotlib 3.6.3
+(Agg) at dpi 150, opened and read on 2026-10-06. The caption names the
+source and the russian-doll shell. The alt text describes the image.</p>
+<h3 id="figure-f01-u09-c01">Figure f01 (u09-c01)</h3>
+<p><img alt="Six points with final centers and dashed paths from the start" src="../../assets/u09/f01_kmeans.png" /></p>
+<p>Caption: Six points with final centers and dashed paths from the start. Source: original. Shell: 3 (computed before/after).</p>
+<h3 id="figure-f02-u09-c04">Figure f02 (u09-c04)</h3>
+<p><img alt="Zoomed first point with the pink segment marking the dropped error" src="../../assets/u09/f02_pca.png" /></p>
+<p>Caption: Zoomed first point with the pink segment marking the dropped error. Source: original. Shell: 3 (computed before/after).</p>
+<h3 id="figure-f03-u09-c12">Figure f03 (u09-c12)</h3>
+<p><img alt="Held-out inertia across k with the elbow at k 2" src="../../assets/u09/f03_heldout.png" /></p>
+<p>Caption: Held-out inertia across k with the elbow at k 2. Source: original. Shell: 3 (computed before/after).</p>
+<h2 id="not-yet-understood-dependency-list">Not yet understood, dependency list</h2>
+<ol>
+<li>k-means++ proof of the O(log k) bound: stated, not proved.</li>
+<li>Factor analysis EM: referenced from lesson 04c, not derived
+   here.</li>
+<li>Gap statistic: named as an alternative, not implemented.</li>
+</ol>
+<hr />
+<h2 id="exercises-e01-e18">Exercises E01-E18</h2>
+<p>E01. Run two Lloyd iterations by hand on the six-point toy.
+Give assignments and J each time.
+E02. From the bad start, compute the iteration-0 assignments by
+hand for the first three points.
+E03. Explain why each Lloyd step cannot increase J, in two
+sentences.
+E04. Name the guard for an empty cluster and state what the
+lesson code does.
+E05. Compute d(A,B)^2 and d(A,C)^2 raw and with y scaled by 5.
+State the nearest neighbor each time.
+E06. Standardize the scaled toy by hand (means and stds) and
+verify the nearest neighbor returns to B.
+E07. Explain in two sentences why k-means without scaling lets
+the largest-unit feature decide.
+E08. Compute the covariance of the five-point toy by hand and
+verify [[2, 3], [3, 4.56]].
+E09. Verify the eigenvalue product equals the determinant 0.12
+and the sum equals the trace 6.56.
+E10. Project the point (1,2) onto PC1 by hand: center it, dot
+with [0.551163, 0.834398], reconstruct, give the error.
+E11. Prove the reconstruction identity on the toy: show MSE =
+dropped eigenvalue / d with the measured numbers.
+E12. State the Eckart-Young claim in one sentence and name the
+U02 concept it rests on.
+E13. Explain why PCA with unstandardized mixed-unit features
+reports units, not structure.
+E14. In the factor toy, explain why the second PCA eigenvalue
+3.83 exists, in two sentences.
+E15. State the factor model equation and name the difference
+from PCA in one sentence.
+E16. Predict which of PCA k=1/k=2 wins on held-out data for the
+factor toy, and why.
+E17. Compute the held-out inertia drop from k=1 to k=2 and from
+k=2 to k=5. State the elbow verdict.
+E18. Explain why train inertia alone cannot pick k, using the
+measured numbers.</p>
+<hr />
+<h2 id="deep-ladders-l01-l06">Deep ladders L01-L06</h2>
+<p>L01. k-means mechanics. (a) Define the k-means objective in one
+sentence. (b) Toy: reproduce the 0.1700 to 0.133333 path. (c)
+Justify: why does each step lower J? (d) Implement Lloyd with
+the empty-cluster guard. (e) Changed constraint: k = 5 on the
+six-point toy. Predict the outcome. (f) Debug: J rises between
+iterations. Name the bug. (g) Critique: &ldquo;k-means finds the true
+clusters.&rdquo; Attack with the bad-start path. (h) Design: the
+k-means++ vs random start experiment.</p>
+<p>L02. Distance and scaling. (a) Define the scaling problem in one
+sentence. (b) Toy: reproduce the 1, 2, 1 flip sequence. (c)
+Justify the factor-25 vote change from the squared distance.
+(d) Implement standardization with a zero-variance guard. (e)
+Changed constraint: scale x by 100 instead of y by 5. Predict
+the nearest neighbor. (f) Debug: after scaling, all distances
+are NaN. Name the cause. (g) Critique: &ldquo;standardize always.&rdquo;
+Attack with the binary-column case. (h) Transfer: where does
+scaling bite in lesson 06? (C11.)</p>
+<p>L03. PCA. (a) Define PCA in one sentence. (b) Toy: reproduce
+the eigenvalues and 99.72 percent. (c) Derive: Lagrange on the
+variance gives the eigen equation. (d) Implement PCA via SVD
+and compare to the eigendecomposition. (e) Changed constraint:
+add pure noise variance 10 as a third feature. Predict PC1.
+(f) Debug: PC1 points at the mean. Name the cause (forgotten
+centering). (g) Critique: &ldquo;PCA finds the meaningful
+directions.&rdquo; Attack with the noise-feature case. (h) Transfer:
+SVD link to U02-C09.</p>
+<p>L04. Reconstruction. (a) State the identity in one sentence.
+(b) Toy: verify 0.009172 = 0.018344/2. (c) Justify: dropped
+directions carry exactly the dropped eigenvalues. (d)
+Implement reconstruction for k = 0, 1, 2 and check the
+identity each time. (e) Changed constraint: absolute error.
+Predict whether PCA stays optimal. (f) Debug: reconstruction
+worse than the mean. Name the cause. (g) Critique: &ldquo;low error
+means good features.&rdquo; Attack with the circle/chords case. (h)
+Design: the k = 0 identity check experiment.</p>
+<p>L05. Factor bridge. (a) State the factor model in one sentence.
+(b) Toy: reproduce the 1.2785 MSE and the three eigenvalues.
+(c) Justify: why does eigenvalue 3.83 exist? (d) Implement the
+data generator and the PCA comparison. (e) Changed constraint:
+noise std [0.1, 0.1, 0.1]. Predict the eigenvalues. (f) Debug:
+factor analysis returns degenerate loadings. Name the pointer
+(C11 of lesson 04c). (g) Critique: &ldquo;PCA is always enough.&rdquo;
+Attack with the noisy-sensor toy. (h) Transfer: EM link to
+lesson 04c C06.</p>
+<p>L06. Held-out evaluation. (a) Define held-out inertia in one
+sentence. (b) Toy: reproduce the four pairs. (c) Justify the
+elbow logic. (d) Implement the k scan with 10 seeds. (e)
+Changed constraint: 6 held-out points. Predict the noise. (f)
+Debug: held-out inertia is zero. Name the cause (leak: fit on
+all data). (g) Critique: &ldquo;elbow at 2 proves two clusters.&rdquo;
+Attack: it proves diminishing returns, not truth. (h)
+Transfer: map onto U05-C08 fold logic.</p>
+      
+      <nav class="pager"><a href="../../lessons/u08/keys.html"><span class="lbl">← Previous</span>U08 · Keys</a><a href="../../lessons/u09/keys-09b.html"><span class="lbl">Next →</span>U09 · Keys</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../../assets/vendor/katex.min.js"></script>
+<script src="../../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../../";</script>
+<script src="../../assets/app.js"></script>
+</body>
+</html>
