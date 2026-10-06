@@ -150,8 +150,7 @@ the optimizer step.
 The standard schedule computes B then W together, so W blocks the
 next stage's B. Zero-bubble splits them: compute B immediately, ship
 it down the pipe, and do W in the idle gaps that the schedule leaves
-behind. The plate shows the interleaving: the B chain stays
-continuous while W fills the holes.
+behind: the B chain stays continuous while W fills the holes.
 
 The price: W needs the activations, so holding W for later means
 holding activations longer. Memory rises slightly. DualPipe is the
@@ -334,9 +333,9 @@ FSDP, spend the rest on data parallel.
 
 > [!QA]
 > Q: Design the parallelism for a 70B dense model on 256 GPUs.
-> A: Memory first: 70B x 16 bytes = 1.1TB per full copy. An 80GB GPU cannot hold it. Tensor parallel 8 inside each node: the layers split and the per-layer traffic stays on NVLink. 256 / 8 = 32 groups: data parallel 32 with FSDP (ZeRO-3) across the nodes for the rest. Activations: check the 34sbh/t floor against your sequence length; if it overflows, add context parallel for long sequences or pipeline stages for depth. Follow the prescription: minimize model parallel, maximize data parallel. The recipe is TP-8, FSDP-32, CP as needed.
+> A: Memory first: 70B x 16 bytes = 1.1TB per full copy. An 80GB GPU cannot hold it. Tensor parallel 8 inside each node: the layers split and the per-layer traffic stays on NVLink. 256 / 8 = 32 groups: data parallel 32 with FSDP (ZeRO-3) across the nodes for the rest. Activations: check the 34sbh/t floor against your sequence length. If it overflows, add context parallel for long sequences or pipeline stages for depth. Follow the prescription: minimize model parallel, maximize data parallel. The recipe is TP-8, FSDP-32, CP as needed.
 > Follow-up: Why FSDP and not pipeline across the nodes?
-> A: FSDP's extra all-gather hides under compute when layers are big; pipeline's bubbles never fully hide. Pipeline wins when memory binds harder than communication: activations at very long sequences, or optimizer state that ZeRO cannot shrink. Start with FSDP, add pipeline when the floor says so.
+> A: FSDP's extra all-gather hides under compute when layers are big. Pipeline's bubbles never fully hide. Pipeline wins when memory binds harder than communication: activations at very long sequences, or optimizer state that ZeRO cannot shrink. Start with FSDP, add pipeline when the floor says so.
 
 ## Mapping back: what each tool fixes
 
@@ -386,6 +385,16 @@ The story in eight steps. Each step answers the one before it.
 8. **The prescription.** Fit with TP/EP in the node, PP/FSDP across,
    DP for the rest. Minimize model parallel, maximize data parallel.
    Recompute buys batch size buys utilization.
+
+## Go deeper
+
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/G4hPCbS71P4" title="ZeRO and FSDP explained: sharding optimizer state, gradients and parameters" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+- ZeRO and FSDP explained (the embed above): https://www.youtube.com/watch?v=G4hPCbS71P4
+- Rajbhandari et al., ZeRO: https://arxiv.org/abs/1910.02054
+- Zhao et al., PyTorch FSDP: https://arxiv.org/abs/2304.11277
+- DeepSpeed ZeRO tutorial: https://www.deepspeed.ai/tutorials/zero/
 
 ## Official sources and further reading
 
