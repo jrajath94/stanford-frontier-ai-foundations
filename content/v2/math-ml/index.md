@@ -13,11 +13,11 @@ offering: "NPTEL (IIT Roorkee)"
 concepts: [linear-algebra, probability, calculus, optimization, information-theory]
 sources:
   - tag: video
-    label: "Essential Mathematics for Machine Learning — full playlist (60 lectures)"
+    label: "Essential Mathematics for Machine Learning: full playlist (60 lectures)"
     url: https://www.youtube.com/playlist?list=PLLy_2iUCG87D1CXFxE-SxCFZUiJzQ3IvE
   - tag: supplement
     label: "NPTEL course page (111107137)"
-    url: https://archive.nptel.ac.in/courses/111/107/111107137/
+    url: https://nptel.ac.in/courses/111107137
 ---
 
 ## The math that makes the ML courses work
@@ -30,7 +30,7 @@ ML use that needs it.
 
 The backbone is the NPTEL course "Essential Mathematics for
 Machine Learning" (Prof. Sanjeev Kumar, lectures 1-20: linear
-algebra; Prof. S. K. Gupta, lectures 21-60: calculus,
+algebra. Prof. S. K. Gupta, lectures 21-60: calculus,
 optimization, probability), 60 lectures on
 [YouTube](https://www.youtube.com/playlist?list=PLLy_2iUCG87D1CXFxE-SxCFZUiJzQ3IvE).
 Each lesson below maps to its lectures and to the ML course that
