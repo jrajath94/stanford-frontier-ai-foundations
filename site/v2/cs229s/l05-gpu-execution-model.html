@@ -81,6 +81,7 @@
 <li><a href="../cs229s/l10-parallelism.html" data-page="cs229s-l10">L10 · Parallelism</a></li>
 <li><a href="../cs229s/cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
 <li><a href="../cs229s/crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../cs229s/crash-course-02.html" data-page="cs229s-crash-02">CS229S · Crash course 2</a></li>
 </ul>
 <h3>CS224N: NLP with Deep Learning</h3><ul>
 <li><a href="../cs224n/index.html" data-page="cs224n-index">CS224N · Overview</a></li>
@@ -146,18 +147,14 @@
 </ul>
 <h3>CS329A: Self-Improving AI Agents</h3><ul>
 <li><a href="../cs329a/index.html" data-page="cs329a-index">CS329A · Overview</a></li>
-<li><a href="../cs329a/l01-self-improving-agents.html" data-page="cs329a-l01">L01 · The Self-Improving Agent</a></li>
-<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Scaling</a></li>
-<li><a href="../cs329a/l03-agents-that-act.html" data-page="cs329a-l03">L03 · Agents That Act</a></li>
-<li><a href="../cs329a/l04-learning-from-execution.html" data-page="cs329a-l04">L04 · Learning from Execution</a></li>
-<li><a href="../cs329a/l05-planning-with-search.html" data-page="cs329a-l05">L05 · Planning with Search</a></li>
-<li><a href="../cs329a/l06-sampling-at-scale.html" data-page="cs329a-l06">L06 · Sampling at Scale</a></li>
-<li><a href="../cs329a/l07-search-that-reads.html" data-page="cs329a-l07">L07 · Search That Reads</a></li>
-<li><a href="../cs329a/l08-teaching-reason.html" data-page="cs329a-l08">L08 · Teaching Reason</a></li>
-<li><a href="../cs329a/l09-verifier-bottleneck.html" data-page="cs329a-l09">L09 · The Verifier Bottleneck</a></li>
-<li><a href="../cs329a/l10-measuring-agents.html" data-page="cs329a-l10">L10 · Measuring Agents</a></li>
-<li><a href="../cs329a/cheatsheet.html" data-page="cs329a-cheatsheet">CS329A · Cheatsheet</a></li>
-<li><a href="../cs329a/crash-course.html" data-page="cs329a-crash">CS329A · Crash course</a></li>
+<li><a href="../cs329a/l01-course-overview.html" data-page="cs329a-l01">L01 · Course Overview</a></li>
+<li><a href="../cs329a/l02-test-time-scaling.html" data-page="cs329a-l02">L02 · Test-Time Compute Scaling</a></li>
+<li><a href="../cs329a/l03-feedback-tools-code.html" data-page="cs329a-l03">L03 · Feedback, Tools, Code</a></li>
+<li><a href="../cs329a/l04-planning-multistep-reasoning.html" data-page="cs329a-l04">L04 · Planning and Multi-Step Reasoning</a></li>
+<li><a href="../cs329a/l05-search-at-scale.html" data-page="cs329a-l05">L05 · Sampling at Scale</a></li>
+<li><a href="../cs329a/l06-train-time-scaling.html" data-page="cs329a-l06">L06 · Train-Time Scaling</a></li>
+<li><a href="../cs329a/l07-agentic-evaluations.html" data-page="cs329a-l07">L07 · Agentic Evaluations</a></li>
+<li><a href="../cs329a/l08-future-directions.html" data-page="cs329a-l08">L08 · Future Directions</a></li>
 </ul>
 <h3>MS&amp;E 435: Economics of the AI Supercycle</h3><ul>
 <li><a href="../mse435/index.html" data-page="mse435-index">MS&amp;E 435 · Overview</a></li>
@@ -259,7 +256,7 @@ split vote.</p>
 threads in one warp decide the same way. Attention masks are
 fine. Data-dependent early exits per token are not.</p>
 <figure><img alt="Warp divergence" src="assets/plate-l05-warp-divergence.webp"><figcaption>Split votes serialize: both branches run, half the lanes masked each time. Shell 2. Source: original toy for warp divergence. Project: Stanford Frontier AI.</figcaption></figure>
-<figure><img alt="GPU execution model" src="assets/slide-l05-gpu-execution-model.png"><figcaption>Shell 1. Grids of blocks map to SMs. Warps of 32 threads execute in lockstep. Source: Stanford slides.</figcaption></figure>
+<figure><img alt="GPU execution model" src="assets/slide-l05-gpu-execution-model.png"><figcaption>Shell 1. Grids of blocks map to SMs. Warps of 32 threads execute in lockstep. Source: Stanford slides. Project: Stanford Frontier AI.</figcaption></figure>
 <p>The capacity formula follows. Maximum active threads = (number
 of SMs) x (max blocks per SM) x (max threads per block).
 Expose at least this much work or SMs sit idle. This is the
@@ -330,8 +327,12 @@ threads load independently, the overlapping elements are
 fetched four times. If they collaborate through shared
 memory, one load serves all four: half the memory accesses
 disappear. Tiling is Lecture 3&rsquo;s matmul tiling, now stated as
-a programming pattern: share inputs across outputs on-chip.</p>
-<figure><img alt="Tiling" src="assets/slide-l05-tiling.png"><figcaption>Shell 2. Threads collaborate through shared memory instead of loading independently. Half the accesses disappear. Source: Stanford slides.</figcaption></figure>
+a programming pattern: share inputs across outputs on-chip.
+Shared memory has one trap: it is split into banks, and threads
+in a warp that hit the same bank at once serialize instead of
+running in parallel, a bank conflict. Spread each warp&rsquo;s
+accesses across banks.</p>
+<figure><img alt="Tiling" src="assets/slide-l05-tiling.png"><figcaption>Shell 2. Threads collaborate through shared memory instead of loading independently. Half the accesses disappear. Source: Stanford slides. Project: Stanford Frontier AI.</figcaption></figure>
 <h3 id="subchapter-the-coalescing-math">Subchapter: the coalescing math</h3>
 <p>The hardware moves memory in 128-byte transactions. 32
 threads in a warp each wanting 4 bytes (one FP32) touch 128
@@ -365,7 +366,7 @@ it. This is the hardware-specific optimization principle from
 Lecture 3, and it explains a FlashAttention design choice in
 the next lecture: tile sizes are chosen for the hardware&rsquo;s
 fast path, not for the algorithm&rsquo;s elegance.</p>
-<figure><img alt="Tensor cores" src="assets/slide-l05-tensor-cores.png"><figcaption>Shell 3. Tensor cores multiply 16x16 tiles. Keep them busy with large tiles. Source: Stanford slides, credit Dan Fu and Chris Re.</figcaption></figure>
+<figure><img alt="Tensor cores" src="assets/slide-l05-tensor-cores.png"><figcaption>Shell 3. Tensor cores multiply 16x16 tiles. Keep them busy with large tiles. Source: Stanford slides, credit Dan Fu and Chris Re. Project: Stanford Frontier AI.</figcaption></figure>
 <h3 id="subchapter-the-16x-gap-worked">Subchapter: the 16x gap, worked</h3>
 <p>On H100, FP16 tensor throughput is 989 TFLOPS. The plain CUDA
 cores do about 67 TFLOPS of FP32. The ratio is 14.8x, the
@@ -383,7 +384,7 @@ shells of memory hierarchy.</p>
 <p><strong>One GPU (device).</strong> Streaming multiprocessors do the math:
 108 SMs on an A100. Next to them the four pools from Lecture
 3: registers (256 KB per SM), shared memory (192 KB per SM),
-L2 cache (40 MB), HBM device memory (40 GB at about 2 TB/s).
+L2 cache (40 MB), HBM device memory (40 GB at about 1.6 TB/s).
 A kernel loads from HBM, computes on-chip, writes back.</p>
 <p><strong>One node.</strong> Eight GPUs connected by NVLink, a very high
 bandwidth link inside the server. Communication within the
@@ -391,7 +392,7 @@ node is fast.</p>
 <p><strong>One cluster.</strong> Many nodes connected by InfiniBand, which is
 much slower than NVLink. Communication across nodes is the
 expensive move.</p>
-<figure><img alt="Device block" src="assets/plate-device-block.svg"><figcaption>Shell 4. One GPU, one node of 8 GPUs on NVLink, many nodes on InfiniBand. Source: original plate. Defined here, reused by MS&amp;E435.</figcaption></figure>
+<figure><img alt="Device block" src="assets/plate-device-block.svg"><figcaption>Shell 4. One GPU, one node of 8 GPUs on NVLink, many nodes on InfiniBand. Source: original plate. Defined here, reused by MS&amp;E435. Project: Stanford Frontier AI.</figcaption></figure>
 <h3 id="subchapter-nvlink-versus-infiniband-in-numbers">Subchapter: NVLink versus InfiniBand, in numbers</h3>
 <p>H100 NVLink 4.0 gives about 900 GB/s bidirectional per GPU.
 Eight GPUs in a node share this fabric: all-reduce across
@@ -501,8 +502,10 @@ ideas recur everywhere else with different names.</p>
 </tbody>
 </table>
 <p>Frontier training (GPT, Gemini, Llama, DeepSeek) runs on
-NVIDIA GPUs with CUDA, NCCL collectives, and kernels written
-in CUDA, Triton, or CUTLASS. Inference stacks add their own:
+NVIDIA GPUs with CUDA, NCCL collectives (NVIDIA&rsquo;s library for
+GPU-to-GPU collective communication), and kernels written
+in CUDA, Triton, or CUTLASS (NVIDIA&rsquo;s open template library
+for fast matrix-multiply kernels). Inference stacks add their own:
 vLLM and SGLang ship hand-tuned kernels for attention and
 quantization. The warp size and the link speeds change across
 vendors. The hierarchy (fast small memories near the math,
@@ -550,14 +553,15 @@ memories near the math, slow big memory far away, fast links
 inside the box and slow links between boxes. The numbers are
 A100/H100 generation (108 SMs, 40 GB HBM, up to 16x
 tensor-core speedup). Newer GPUs differ. The 8-GPUs-per-node
-layout is the standard NVIDIA DGX/HGX server configuration the course
+layout is the standard NVIDIA DGX/HGX server configuration
+(NVIDIA&rsquo;s reference 8-GPU server designs) the course
 assumes.</p>
 <div class="qa"><div class="q">What is the device block?</div><div class="a"><p>The three-shell symbol for the machine: one GPU (108 SMs, registers, shared memory, L2, 40 GB HBM), one node (8 GPUs on NVLink), and one cluster (nodes on InfiniBand). A kernel is one GPU operation that loads from HBM, computes on-chip, and writes back. The symbol is defined in this lecture and reused by MS&amp;E435.
 Because communication cost follows the hierarchy. Tensor parallelism all-reduces after every attention and MLP block, so it needs NVLink speed and stays inside one node. Data parallelism synchronizes once per step, so it can afford InfiniBand across nodes.</p><div class="followup"><strong>Follow-up:</strong> Why does the hierarchy decide the parallelism strategy?</div></div></div>
 <div class="qa"><div class="q">What is tiling and why does it cut memory traffic?</div><div class="a"><p>Tiling partitions data into subsets that fit in shared memory, then computes on each tile independently. Threads in a block collaborate: one thread&rsquo;s load serves many threads&rsquo; compute, instead of every thread loading its own copy. The slides&rsquo; matmul example saves half the memory accesses this way.
 Coalescing breaks. The hardware fetches memory in contiguous chunks, so scattered accesses waste most of each fetched chunk. Adjacent threads must touch adjacent elements or effective bandwidth collapses.</p><div class="followup"><strong>Follow-up:</strong> What breaks if threads in a warp access scattered addresses?</div></div></div>
-<div class="qa"><div class="q">Why do tensor cores want large tiles?</div><div class="a"><p>They natively multiply 16 by 16 tiles, and launching them costs time: a 64 by 64 multiply has roughly the same latency as a 16 by 16 one. Large tiles amortize the fixed launch cost over more work. Small tiles pay the launch and leave the fast path underused.</p><div class="followup"><strong>Follow-up:</strong> What should an algorithm designer do about this?</div></div></div>
-<p>express the work as large matrix multiplications so tensor cores can take it, and size tiles for the hardware&rsquo;s fast path rather than the algorithm&rsquo;s elegance. This is the hardware-specific optimization principle from Lecture 3.</p>
+<div class="qa"><div class="q">Why do tensor cores want large tiles?</div><div class="a"><p>They natively multiply 16 by 16 tiles, and launching them costs time: a 64 by 64 multiply has roughly the same latency as a 16 by 16 one. Large tiles amortize the fixed launch cost over more work. Small tiles pay the launch and leave the fast path underused.
+Express the work as large matrix multiplications so tensor cores can take it, and size tiles for the hardware&rsquo;s fast path rather than the algorithm&rsquo;s elegance. This is the hardware-specific optimization principle from Lecture 3.</p><div class="followup"><strong>Follow-up:</strong> What should an algorithm designer do about this?</div></div></div>
 <div class="qa"><div class="q">Walk me through a kernel launch, from the CPU call to threads running.</div><div class="a"><p>The CPU launches a kernel with a grid size: say 1,000 blocks of 256 threads. The hardware enumerates the 1,000 blocks and assigns them to SMs with free capacity. On an A100 with 108 SMs, each SM takes several blocks. Inside one SM, the 256 threads of a block are grouped into 8 warps of 32. Each warp executes in lockstep under SIMT: one instruction, 32 data items. Threads load from HBM into registers and shared memory, compute, and write back. When a block finishes, its SM picks up the next waiting block. The program never names an SM. The hardware schedules.
 Four SMs get one block each. The other 104 SMs sit idle. You used 1,024 threads against a 221,184-thread ceiling. Throughput is roughly 100x below the machine&rsquo;s capacity, no matter how good the kernel code is.</p><div class="followup"><strong>Follow-up:</strong> What happens if you launch only 4 blocks of 256 threads?</div></div></div>
 <div class="qa"><div class="q">32 threads in a warp each read one FP32 from scattered addresses. How much bandwidth is wasted?</div><div class="a"><p>Each thread&rsquo;s 4-byte read falls in a different 128-byte segment, so the hardware issues 32 transactions of 128 bytes: 4,096 bytes fetched for 128 useful. 97 percent is waste. Rearrange the data so adjacent threads touch adjacent elements and the same 32 reads become one 128-byte transaction: zero waste. This is the coalescing rule as arithmetic.
@@ -637,6 +641,90 @@ in detail but not in spirit.</p>
 <li><strong>CS229S L06:</strong> FlashAttention uses every pattern on this
   page.</li>
 </ul>
+<h2 id="coverage-map">Coverage map</h2>
+<p>Every lecture concept mapped to the line that teaches it. File:
+l05-gpu-execution-model.md.</p>
+<table>
+<thead>
+<tr>
+<th>Lecture concept</th>
+<th>Anchor</th>
+<th>Line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kernel (one GPU operation)</td>
+<td>&ldquo;A <strong>kernel</strong> is one&rdquo;</td>
+<td>32</td>
+</tr>
+<tr>
+<td>Grid of blocks, blocks to SMs</td>
+<td>&ldquo;grid&rdquo; / &ldquo;blocks&rdquo;</td>
+<td>43</td>
+</tr>
+<tr>
+<td>Warps of 32, SIMT</td>
+<td>&ldquo;groups of 32&rdquo;</td>
+<td>51</td>
+</tr>
+<tr>
+<td>Warp divergence (split vote)</td>
+<td>&ldquo;warp divergence&rdquo;</td>
+<td>65</td>
+</tr>
+<tr>
+<td>Capacity formula (221,184 threads)</td>
+<td>&ldquo;capacity formula&rdquo;</td>
+<td>76</td>
+</tr>
+<tr>
+<td>Three memories (global/shared/registers)</td>
+<td>&ldquo;three memories&rdquo;</td>
+<td>103</td>
+</tr>
+<tr>
+<td>Coalesced access (128-byte transactions)</td>
+<td>&ldquo;Coalesced access&rdquo;</td>
+<td>122</td>
+</tr>
+<tr>
+<td>Tiling (shared-memory collaboration)</td>
+<td>&ldquo;Partition the data&rdquo;</td>
+<td>126</td>
+</tr>
+<tr>
+<td>Tensor cores (16x16 GEMM, 16x gap)</td>
+<td>&ldquo;specialized units for generalized&rdquo;</td>
+<td>166</td>
+</tr>
+<tr>
+<td>Device block (GPU/node/cluster)</td>
+<td>&rdquo;## The device block&rdquo;</td>
+<td>200</td>
+</tr>
+<tr>
+<td>NVLink (900 GB/s intra-node)</td>
+<td>&ldquo;NVLink&rdquo;</td>
+<td>212</td>
+</tr>
+<tr>
+<td>InfiniBand (50 GB/s per port)</td>
+<td>&ldquo;much slower than NVLink&rdquo;</td>
+<td>217</td>
+</tr>
+<tr>
+<td>Caching vs recompute in backward pass</td>
+<td>&ldquo;backward pass&rdquo; / &ldquo;recompute&rdquo;</td>
+<td>247</td>
+</tr>
+<tr>
+<td>Honest price (NVIDIA specifics)</td>
+<td>&ldquo;honest price&rdquo;</td>
+<td>315</td>
+</tr>
+</tbody>
+</table>
       <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">SLIDES</span>Hardware Aware Algorithm Design slide deck, GPU execution model sections (Fall 2023 headers)</li><li><span class="src-tag">SUPPLEMENT</span><a href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html" target="_blank" rel="noopener">NVIDIA CUDA C++ Programming Guide</a></li><li><span class="src-tag">SUPPLEMENT</span>Dan Fu, Chris Re, NeurIPS MLSys Keynote 2023 (tensor cores)</li></ul></section>
       <nav class="pager"><a href="../cs229s/l04-transformer-performance.html"><span class="lbl">← Previous</span>Lecture 4: Analyzing the Performance of Transformers</a><a href="../cs229s/l06-flash-attention.html"><span class="lbl">Next →</span>Lecture 6: Efficient Attention and FlashAttention</a></nav>
     </article>
