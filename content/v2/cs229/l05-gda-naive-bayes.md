@@ -25,248 +25,241 @@ sources:
     label: "CS229 Spring 2026 official course notes (local PDF)"
 ---
 
-## How to read this lesson
+## The job: a cat or a small elephant
 
-This lesson has two levels. **Level 1 (Core)** contains what you need to
-understand everything that follows in CS229 and the courses that build on
-it. **Level 2 (Deep)** contains what you need for correct, interview-grade
-understanding. Read Level 1 straight through. Return to Level 2 when you
-want depth.
+A new animal arrives at the shelter. It weighs 40 kilograms. Is it
+a very large cat or a very small elephant? You have records: 100
+cats with their weights, 100 elephants with theirs. The lecture's
+running toy uses exactly this: two species, one feature, weight.
 
-No prerequisites are assumed. Every term is defined at first use. GLMs
-and MLE were defined in [lectures 3](l03-logistic-regression.html) and
-[4](l04-glms-softmax.html); they are reused, not re-explained.
+Logistic regression would draw a boundary directly: find the line
+that best separates cats from elephants. That is the
+**discriminative** approach: model p(y|x), the probability of the
+class given the features, and learn the boundary. Every model so far
+in this course was discriminative.
 
-## Level 1: Generative versus discriminative
+But there is another way to use the records. Model each species on
+its own: the distribution of cat weights, and the distribution of
+elephant weights. A 40 kg animal is a plausible small elephant and
+an implausible giant cat, so call it an elephant. This is the
+**generative** approach: model p(x|y), the distribution of features
+inside each class, plus p(y), how common each class is. Then use
+Bayes' rule to flip it around:
 
-So far every model learned p(y | x): given the input, predict the label.
-That is a **discriminative** model. It draws the boundary and ignores how
-the data was generated [00:53](ts:00:53).
+```ascii
+p(y | x) = p(x | y) * p(y) / p(x)
+```
 
-A **generative** model learns p(x | y) and p(y): how each class generates
-its data, and how common each class is. Then Bayes' rule flips it into
-p(y | x) for decisions. This is the first generative model of the course
-[00:12](ts:00:12), and the G in GPT names this family. Generative models
-can do something discriminative ones cannot: sample new data. To classify
-you only need the boundary. To generate, you need the full story of each
-class.
+Read it: the probability it is an elephant given 40 kg equals how
+likely 40 kg is for elephants, times how common elephants are,
+divided by how likely 40 kg is overall. The denominator p(x) is the
+same for both species, so the decision is: pick the class with the
+bigger p(x|y) * p(y).
 
-The tradeoff: generative models make stronger assumptions. Stronger
-assumptions mean less data needed when the assumptions hold, and
-confident wrongness when they fail. Discriminative models assume less and
-usually win on pure classification accuracy with enough data. That
-sentence is the punchline of the lecture. Details below.
+## First attempt: compare the averages
+
+The naive idea: compute the average cat weight and the average
+elephant weight, and pick whichever average the new animal is
+closest to. Toy numbers: cats average 4 kg, elephants average 4,000
+kg. A 40 kg animal is closer to 4 than to 4,000, so call it a cat.
+Wrong, and obviously wrong: 40 kg is 10 times the cat average but a
+perfectly ordinary small elephant.
+
+The failure: averages throw away spread. Cat weights cluster
+tightly around 4 kg. Elephant weights spread widely. Averages-only
+comparison cannot see that 40 kg sits 9 standard deviations above
+the cat mean but well inside the elephant range. The fix is to model
+the full distribution of each class, spread included. That is what
+generative models do.
+
+## Gaussian discriminant analysis
+
+Model each class's features as a **Gaussian** (bell curve). For the
+toy, one feature: cat weights ~ Gaussian(mean 4, variance 1),
+elephant weights ~ Gaussian(mean 4000, variance 40000). A new animal
+weighing x gets two scores: the bell-curve height at x for cats, and
+for elephants. Multiply each by the class frequency p(y). Pick the
+bigger.
+
+Fit by MLE, and the estimates are embarrassingly simple: the mean is
+the average of the class's examples, the variance is the average
+squared deviation, and p(y) is the class fraction. Closed form, one
+pass over the data. The lecture stresses this: GDA is dirt cheap to
+train.
+
+In two dimensions the Gaussian needs a **covariance matrix** Sigma:
+it describes spread in each direction and how features vary together.
+**GDA** (Gaussian discriminant analysis) models p(x|y=0) and
+p(x|y=1) as Gaussians with different means mu_0, mu_1 but a shared
+covariance Sigma. Why shared? With one shared Sigma, the quadratic
+terms in the two bell curves cancel when you compare them, and the
+decision boundary becomes a straight line. The lecture's demo shows
+two elliptical clouds and the line between them: classify by which
+side of the line a point falls on.
+
+Work the boundary on a toy. One feature, cats ~ Gaussian(4, 1),
+elephants ~ Gaussian(40, 1), equal class frequencies. A new animal
+weighs x. Compare the two densities: the decision flips where they
+are equal. With equal variances, that is the midpoint: x = 22. Below
+22, the cat bell is taller. Above, the elephant bell. The boundary
+is one number. In d dimensions with shared Sigma, the same algebra
+gives a linear boundary: w^T x + b = 0, with w = Sigma^-1 (mu_1 -
+mu_0). GDA, the generative model, produces a linear classifier, the
+same shape as logistic regression's. Different road, same destination.
+
+![GDA](assets/svg/l05-gda.svg "Gaussian discriminant analysis. Each class is a Gaussian bell. The decision boundary is where the bells cross: x = 22 in the toy. Shared covariance makes it linear. Source: original plate for Stanford Frontier AI.")
+
+## The key question
+
+GDA needs real-valued features and bell curves. What about the spam
+filter from lecture 1, where the features are words: does the email
+contain "free"? does it contain "meeting"? Words are not bell
+curves. Can the generative idea survive discrete features?
+
+## Naive Bayes: the generative spam filter
+
+Yes. Keep the generative frame, change the distribution. Represent
+each email as a vector of word indicators: x_j = 1 if word j appears.
+Model p(x|y) with the **naive** assumption: given the class, each
+word appears independently of the others. "Naive" because it is
+false: "free" and "money" travel together in spam. The model ignores
+that.
+
+Under independence, p(x|y) factors into a product over words:
+p(x_1|y) * p(x_2|y) * ... . Each factor is one coin flip: how often
+word j appears in class y's mail. Fit by MLE: count. The probability
+that "free" appears in spam is (spam emails containing "free") /
+(all spam emails). One pass over the corpus. The lecture's verdict:
+dirt cheap to train, surprisingly accurate, dirt cheap at inference
+too: look up the word probabilities, multiply (or add the logs),
+pick the bigger class.
+
+Work a toy. Vocabulary: {free, meeting}. Training: 10 spam, 10 real.
+"free" appears in 8 spam, 1 real. "meeting" appears in 2 spam, 9
+real. New email contains "free" but not "meeting". Score spam:
+p(free|spam) * p(no meeting|spam) * p(spam) = 0.8 * 0.8 * 0.5 =
+0.32. Score real: 0.1 * 0.1 * 0.5 = 0.005. Spam wins by 64 to 1.
+The logs make it addition: log scores add per word, which is how
+implementations do it.
+
+## Where it breaks: the zero that kills
+
+Now the failure the lecture spotlights. A new email contains the
+word "congratulations". It never appeared in the 20 training emails.
+MLE says p(congratulations|spam) = 0/10 = 0 and
+p(congratulations|real) = 0/10 = 0. The product for both classes is
+zero. Every email containing any unseen word scores zero for both
+classes, and the classifier goes blind. One unseen word vetoes
+everything else the email says.
+
+The fix is **Laplace smoothing**: pretend you saw each word once
+more than you did. Add 1 to every count:
+
+```ascii
+p(word j | class y) = (count of j in y + 1) / (total words in y + vocabulary size)
+```
+
+The toy: p(congratulations|spam) = (0+1)/(10+2) = 1/12 instead of 0.
+The unseen word now contributes a small, honest probability instead
+of a veto. The lecture calls this "the magic": it prevents zero
+probabilities and shrinks confidence in all estimates, pulling wild
+fractions like 1/1 back toward uniform. It is the simplest form of
+**regularization**, the theme of lecture 6.
+
+![Naive Bayes spam filter](assets/svg/l05-naivebayes.svg "Naive Bayes. Words vote independently by their class probabilities. Laplace smoothing adds 1 to every count so unseen words cannot veto. Source: original plate for Stanford Frontier AI.")
+
+## The honest price
+
+Generative models buy cheap training and pay in assumptions. GDA
+assumes each class is Gaussian with shared covariance. Real classes
+are lumpy, skewed, multimodal. The bell curve is wrong and the line
+it draws is wrong with it. Naive Bayes assumes words are
+independent given the class. "Free" and "money" are not independent.
+The model double-counts correlated evidence and grows overconfident.
+The lecture is candid: these models are "ad hoc" in their
+assumptions, and discriminative models usually win on pure accuracy
+when data is plentiful, because they model the boundary directly
+instead of modeling each class and hoping the boundary comes out
+right. What generative models keep: one-pass training, tiny
+inference cost, and they work when data is scarce, because the
+strong assumptions squeeze more from fewer examples.
+
+## Mapping back
+
+| Idea | Pain it answers | How |
+|---|---|---|
+| Generative framing | Discriminative models learn only the boundary | Model p(x\|y) and p(y); Bayes' rule gives p(y\|x); full class distributions, not just the dividing line |
+| GDA | Averages-only comparison ignores spread | Bell curves per class with shared Sigma; MLE is class averages; boundary is linear: w = Sigma^-1(mu_1 - mu_0) |
+| Naive Bayes | GDA needs bell curves; words are discrete | Word indicators with the independence assumption; fit by counting; toy: spam wins 0.32 to 0.005 |
+| Laplace smoothing | One unseen word zeroes every score | Add 1 to every count: (0+1)/(10+2) = 1/12; no vetoes, shrunk confidence |
 
 > [!QA]
-> Q: Generative or discriminative: which should I use?
-> A: For pure classification with plenty of data, discriminative models usually win because they assume less. For small data, missing features, or when you need to generate new examples, generative models win because their stronger assumptions do more work per example. The interview answer is the tradeoff, not a winner.
-> Follow-up: Why is it called generative if we only classify with it?
-> A: Because the model learns the full distribution of each class, which in principle lets you sample new members. GDA is rarely used to generate images, but the same mathematics with neural networks becomes the diffusion models of lecture 11.
-
-## Level 1: Gaussian discriminant analysis
-
-**Gaussian discriminant analysis** (GDA) models each class as a Gaussian.
-Class 0: x drawn from N(mu_0, Sigma). Class 1: x drawn from N(mu_1,
-Sigma). Same covariance, different means [23:55](ts:23:55). Plus a class
-prior p(y): how common each class is.
-
-Fitting is closed form [37:00](ts:37:00). The MLE of each mean is the
-average of its class's points. The MLE of the shared covariance is the
-average scatter around the class means. The prior is the class fraction.
-No iterations. Count, average, done.
-
-![GDA](assets/svg/l05-gda.svg "Each class is a Gaussian. Shared covariance gives a linear boundary. Original plate.")
-
-To classify a new point, compare p(x | y=0) p(y=0) against p(x | y=1)
-p(y=1). Bigger wins. With shared covariance, the quadratic terms cancel
-and the **decision boundary** is a straight line: the set of points
-equally well explained by both classes. Give each class its own
-covariance and the boundary becomes quadratic [02:49](ts:02:49): curves
-instead of lines, at the cost of more parameters.
+> Q: What is the difference between generative and discriminative models?
+> A: A discriminative model learns p(y|x) directly: given the features, which class? Logistic regression draws the boundary. A generative model learns p(x|y) and p(y): what each class looks like, and how common it is. Then Bayes' rule flips it into p(y|x) for decisions. GDA models each class as a Gaussian; Naive Bayes models each class as word probabilities. Generative training is usually closed-form counting. Discriminative training is usually iterative optimization.
+> Follow-up: When does the generative approach win?
+> A: When data is scarce. The strong assumptions (Gaussian classes, independent words) squeeze more signal from few examples. With plentiful data, discriminative models usually win on accuracy because they optimize the boundary directly instead of hoping it falls out of the class models. The lecture notes the discriminative versions "dwarf" the generative ones in modern use, but GDA and Naive Bayes remain the cheap, fast baseline.
 
 > [!QA]
-> Q: Why does sharing the covariance linearize the boundary?
-> A: The Gaussian density has a quadratic term x^T Sigma^-1 x. With one shared Sigma, that term is identical for both classes and cancels in the comparison. What remains is linear in x. Separate covariances keep two different quadratics, and their difference is quadratic. Shared structure cancels; unshared structure curves.
-> Follow-up: When would you let each class have its own covariance?
-> A: When the classes genuinely spread differently: one tight cluster, one diffuse cloud. You pay with parameters: a full covariance per class in d dimensions costs O(d^2) each. Small data cannot afford it. The shared version is the regularized choice.
-
-## Level 1: The punchline about logistic regression
-
-GDA with shared covariance produces a posterior p(y | x) that has exactly
-the logistic sigmoid form. Same sigmoid as lecture 3. Different route to
-the same function.
-
-Here is the punchline the lecture builds toward. Logistic regression is
-more powerful than you think. Reason: logistic regression learns the
-sigmoid's parameters directly, without assuming the classes are Gaussian.
-GDA assumes Gaussian classes and derives the sigmoid. If the Gaussian
-assumption is wrong, GDA suffers and logistic regression does not. Both
-can only draw the same linear boundary, but logistic regression gets
-there with weaker assumptions.
-
-The general lesson: a discriminative model with the same functional form
-as a generative model's posterior is at least as flexible. The
-generative assumptions buy data efficiency. They cost robustness.
-
-## Level 1: Naive Bayes and the spam filter
-
-**Naive Bayes** is the generative model for discrete features
-[03:16](ts:03:16). The demo is a spam filter [03:20](ts:03:20). Features:
-which words appear in the email. Model: p(word | spam) and p(word | not
-spam) for every word, plus the spam prior.
-
-![Naive Bayes spam filter](assets/svg/l05-naivebayes.svg "P(spam|words) proportional to prior times product of word likelihoods. Laplace smoothing fixes zero counts. Original plate.")
-
-The naive part is the independence assumption: given the class, words
-occur independently. P("free", "money" | spam) = P("free" | spam) times
-P("money" | spam). This is false. Words correlate. The model works
-anyway, because classification only needs the right winner, not correct
-probabilities.
-
-Fitting is counting. P(word | spam) = (spam emails containing the word) /
-(spam emails). The trap: a word never seen in training gets probability
-zero, and one zero kills the whole product. The fix is **Laplace
-smoothing**: add one fake count to every word [37:51](ts:37:51). No event
-is ever truly impossible. Smoothing is the admission that the training
-set is finite.
+> Q: Why does GDA with shared covariance give a linear boundary?
+> A: Compare the two Gaussian densities at a point x. Each has a quadratic term x^T Sigma^-1 x in the exponent. With one shared Sigma, that term is identical for both classes and cancels in the comparison. What remains is linear in x: w^T x + b with w = Sigma^-1(mu_1 - mu_0). The decision "which bell is taller" becomes "which side of a line". Give each class its own covariance and the quadratics survive: the boundary becomes quadratic (that model is called QDA).
+> Follow-up: What are the MLE estimates for GDA?
+> A: mu_0 is the average of class 0's examples, mu_1 the average of class 1's, Sigma the average squared deviation pooled across classes, and p(y=1) the fraction of class-1 examples. All closed form, one pass. No iterations, no learning rate.
 
 > [!QA]
-> Q: Why does Naive Bayes work if its assumption is obviously false?
-> A: Classification needs the correct argmax, not correct probabilities. Correlated words push the scores up or down together, and the winner often survives the distortion. The independence assumption damages the probability values but usually preserves their order. When you need calibrated probabilities, not just the winner, the naivety hurts.
-> Follow-up: What breaks if you skip Laplace smoothing?
-> A: Any unseen word zeroes the entire product for its class, no matter how strong the other evidence. One unknown word vetoes everything. In production this happens constantly: new slang, new product names. Smoothing is not optional polish. It is load-bearing.
-
-## Level 2: GDA versus logistic regression, formally
-
-Both models end at p(y=1 | x) = sigmoid(theta^T x + b) under shared
-covariance. Count parameters. GDA estimates two means (2d numbers), one
-covariance (d^2/2 numbers), one prior. Logistic regression estimates
-theta (d numbers) plus bias. GDA estimates O(d^2) quantities to draw the
-same line logistic regression draws with O(d). When d is large and data
-is scarce, those extra parameters are noise. This is the formal version
-of "stronger assumptions."
-
-There is a converse. If the Gaussian assumption is exactly true, GDA
-needs fewer examples to reach a given accuracy: it uses the data more
-efficiently because it knows the shape. The lecture's ranking for
-classification accuracy with big data: logistic regression first, GDA
-second. With tiny data and near-Gaussian classes, the order can flip.
-
-## Level 2: Generative models as the course thread
-
-This lecture opens a thread that runs to the end of the course. GDA
-generates continuous vectors. Naive Bayes generates word counts.
-Lecture 9's mixture models generate clusters. Lecture 11's diffusion
-models generate images. The mathematics escalates, but the question stays
-the same: what story about p(x) makes the observed data probable? Learn
-to hear that question and the second half of the course unlocks.
+> Q: What breaks in Naive Bayes without Laplace smoothing, and what does smoothing do?
+> A: Any word unseen in training gets probability 0 in both classes by raw counting. One such word in a new email zeroes the whole product, and classification collapses. Laplace smoothing adds 1 to every word count: p = (count + 1)/(total + V). The unseen word gets 1/(total+V) instead of 0: small, honest, non-vetoing. It also shrinks every estimate toward uniform, taming wild fractions from tiny samples. The lecture calls it the simplest regularization.
+> Follow-up: Is the independence assumption ever true?
+> A: Almost never, and the model works anyway. Correlated words get double-counted, which inflates confidence but usually preserves the ranking of the classes. When ranking is all you need, the wrong assumption is cheap and fast. When you need calibrated probabilities, it is a real problem.
 
 ## Recap: the whole lesson on one screen
 
-Eight ideas carry this lecture. Read each card. Say the core sentence out
-loud. If you can, you own the lesson.
-
-<div class="recap-grid">
-<div class="recap-card">
-<img src="assets/svg/l05-gda.svg" alt="Generative vs discriminative">
-<div class="rc-body">
-<strong>1. Generative models learn p(x|y)</strong>
-<p>Model how each class generates data, then flip with Bayes' rule.
-Discriminative models learn p(y|x) directly. Generative can sample.
-Discriminative assumes less.</p>
-<p class="rc-num">Key: p(x|y) plus p(y), then Bayes</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l05-gda.svg" alt="GDA">
-<div class="rc-body">
-<strong>2. GDA: each class is a Gaussian</strong>
-<p>Class k: N(mu_k, Sigma). Shared covariance, different means. Fit by
-averaging: closed form, no iterations.</p>
-<p class="rc-num">Key: means are class averages</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l05-gda.svg" alt="Linear boundary">
-<div class="rc-body">
-<strong>3. Shared covariance gives a linear boundary</strong>
-<p>The quadratic terms cancel in the comparison. Separate covariances
-keep them: quadratic boundary, more parameters, more risk.</p>
-<p class="rc-num">Key: shared cancels, unshared curves</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l05-gda.svg" alt="GDA vs logistic">
-<div class="rc-body">
-<strong>4. Logistic regression is more powerful than you think</strong>
-<p>Same sigmoid, weaker assumptions. GDA's Gaussian story can be wrong.
-Direct fit of the boundary cannot. Less data needed if the story is
-true.</p>
-<p class="rc-num">Key: same form, fewer assumptions</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l05-naivebayes.svg" alt="Naive Bayes">
-<div class="rc-body">
-<strong>5. Naive Bayes: independence given the class</strong>
-<p>Multiply per-word likelihoods. False but useful: the winner usually
-survives the distortion. Fitting is counting.</p>
-<p class="rc-num">Key: product of P(word|class)</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l05-naivebayes.svg" alt="Spam filter">
-<div class="rc-body">
-<strong>6. The spam filter demo</strong>
-<p>Words are features. P(spam|words) proportional to prior times product
-of word likelihoods. A real, deployed idea, not a toy.</p>
-<p class="rc-num">Key: count words per class</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l05-naivebayes.svg" alt="Laplace smoothing">
-<div class="rc-body">
-<strong>7. Laplace smoothing: add one</strong>
-<p>Unseen words get zero without it, and one zero vetoes everything.
-Add a fake count everywhere. No event is impossible.</p>
-<p class="rc-num">Key: never multiply by zero</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l05-gda.svg" alt="Generative thread">
-<div class="rc-body">
-<strong>8. The generative thread starts here</strong>
-<p>GDA, Naive Bayes, mixtures, diffusion: one question throughout. What
-story about p(x) makes the data probable? The G in GPT.</p>
-<p class="rc-num">Key: model the data, not just the boundary</p>
-</div>
-</div>
-</div>
+1. **The job.** 40 kg animal: giant cat or small elephant? Model
+   each species, not just the boundary.
+2. **First attempt.** Compare averages: 40 is closer to 4 than
+   4,000, so "cat". Wrong: averages discard spread.
+3. **The generative turn.** Model p(x|y) per class plus p(y).
+   Bayes' rule decides: pick max p(x|y)p(y).
+4. **GDA.** Each class a Gaussian, shared Sigma. MLE = class
+   averages. Boundary where bells cross: linear,
+   w = Sigma^-1(mu_1 - mu_0). Toy: x = 22.
+5. **The key question.** Words are not bell curves. Can the idea
+   survive discrete features?
+6. **Naive Bayes.** Words independent given the class. Fit by
+   counting. Toy email: spam 0.32 vs real 0.005. Dirt cheap.
+7. **The zero that kills.** Unseen word -> probability 0 -> every
+   score zero. Laplace smoothing: add 1 to every count.
+8. **The honest price.** Gaussian and independence assumptions are
+   usually false. Discriminative models win on big data. Generative
+   wins on small data and on speed.
 
 ## Official sources and further reading
 
 **Official:**
-- Lecture 5 video: generative versus discriminative [00:53](ts:00:53), shared covariance [23:55](ts:23:55), closed form [37:00](ts:37:00), Naive Bayes [03:16](ts:03:16), Laplace [37:51](ts:37:51).
-- CS229 Spring 2026 official course notes: GDA and Naive Bayes chapters.
+- Lecture 5 video, Stanford Online YouTube:
+  https://www.youtube.com/watch?v=zRdE8A4UZes — Chris Ré derives
+  GDA from the Gaussian, shows the linear boundary, and builds the
+  Naive Bayes spam filter with Laplace smoothing.
+- Official subtitle transcript (en-US): the lecture's spoken text.
+- CS229 Spring 2026 official course notes (local PDF): the full
+  GDA and Naive Bayes derivations.
 
-**Further reading:**
-- Ng and Jordan (2002), "On Discriminative vs. Generative Classifiers": the formal comparison this lecture follows.
-- Manning, Raghavan, and Schütze, Introduction to Information Retrieval, Chapter 13: Naive Bayes text classification in full.
-
-**Caveats from these sources.** The "discriminative usually wins" ranking
-assumes enough data; with tiny datasets the order flips. Gaussian
-assumptions on real features are routinely violated; check with a plot
-before trusting GDA's probabilities. Laplace smoothing's add-one is the
-simplest choice, not the optimal one; tuned smoothing exists.
+**Caveats from these sources.** The lecture's cats-and-elephants
+toy uses whimsical units ("very large cats or very small
+elephants"). The mechanism is what matters. The Naive Bayes MLE
+derivation is stated, not derived live ("the proof is identically
+the same" as GDA's). The counting formulas are in the notes. The
+"dirt cheap" claims are about training and inference cost versus
+iterative methods, not a formal complexity statement.
 
 ## Connections to the other courses
 
-- **CS336:** the G in GPT is this lecture's generative idea scaled up; language models learn p(x) over token sequences.
-- **CS224N:** Naive Bayes was the baseline text classifier before neural methods; Laplace smoothing reappears in n-gram language models.
-- **CS329H:** generative classifiers are the simplest decision-theoretic agents: decide by comparing expected outcomes under each class story.
-
-> [!CHEAT]
-> **GDA and Naive Bayes cheatsheet.** Generative: learn p(x|y), p(y); Bayes flips to p(y|x); can sample. Discriminative: learn p(y|x) directly; assumes less. GDA: class k ~ N(mu_k, Sigma); MLE = class averages; shared Sigma gives linear boundary; separate gives quadratic. Punchline: logistic regression reaches the same sigmoid with weaker assumptions. Naive Bayes: words independent given class; fit by counting; Laplace smoothing adds one to kill zero counts.
-
-> [!MEMORY]
-> **Stronger story, cheaper data.** Generative assumptions do more work per example. When the story is true, you need less data. When it is false, you are confidently wrong. Every generative model in this course trades on that deal.
+- **CS229 L03:** the discriminative route to the same job:
+  logistic regression models p(y|x) directly.
+- **CS229 L04:** GDA's linear boundary as a GLM-style result. The
+  Gaussian is in the exponential family.
+- **CS229 L09-L10:** the generative idea grown up: Gaussian
+  mixtures and EM, where the class labels are hidden.
+- **CS229 L11:** diffusion models: the modern generative program,
+  modeling p(x) directly with neural networks.
+- **CS224N:** Naive Bayes as the classical text classifier before
+  neural methods.
