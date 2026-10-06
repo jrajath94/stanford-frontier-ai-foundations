@@ -219,7 +219,7 @@
       <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative AI</a> / Lecture 10: Scores, Shortcuts, and the Autoregressive Family</nav>
       <h1>Lecture 10: Scores, Shortcuts, and the Autoregressive Family</h1>
       <p class="meta-line">2026-10-05 · Instructor: Prof. Prathosh A P · 2025</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="2Sp0BqAWWXY"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/2Sp0BqAWWXY" title="Lecture 10: Scores, Shortcuts, and the Autoregressive Family" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original Stanford lecture. Timestamps in the text link to the exact moment.</p></div><h2 id="the-task-what-did-the-denoiser-really-learn">The task: what did the denoiser really learn?</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="2Sp0BqAWWXY"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/2Sp0BqAWWXY" title="W9L35: DDPMs as score-predictors" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">The lecture video for this lesson: the denoiser as a score predictor. Timestamps in the text link to the exact moment.</p></div><h2 id="the-task-what-did-the-denoiser-really-learn">The task: what did the denoiser really learn?</h2>
 <p>Lesson 9 trained ε_θ to predict added noise. The W9
 lectures step back and ask what that means. Recall the
 equivalence: predicting ε is predicting the <strong>score</strong>,
@@ -233,13 +233,16 @@ left with strength 1.578: probability increases toward
 smaller x. The denoiser learned a map of arrows covering
 the whole noisy space. That reframes everything:
 generation is hill-climbing on probability.</p>
+<figure><img alt="The score is an arrow field pointing uphill on probability" src="assets/l10-score-field.webp"><figcaption>At x = 3.9 the arrow points left with strength 1.578. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="first-attempt-follow-the-arrows-naively">First attempt: follow the arrows naively</h2>
+<h3 id="langevin-dynamics">Langevin dynamics</h3>
 <p>If the score points uphill, sample by walking uphill:
 start anywhere, take small steps along the score, add a
 little noise so you explore instead of collapsing to the
 peak. This is <strong>Langevin dynamics</strong>:</p>
 <pre class="ascii">x &lt;- x + (delta/2) * score(x) + sqrt(delta) * z,   z ~ N(0,1)
 </pre>
+<h3 id="worked-39-3947">Worked: 3.9 → 3.947</h3>
 <p>Try it on the toy. x = 3.9, score = −1.578, δ = 0.1,
 draw z = 0.4:</p>
 <pre class="ascii">x &lt;- 3.9 + 0.05 * (-1.578) + 0.316 * 0.4
@@ -252,15 +255,19 @@ older <strong>score matching</strong> literature&rsquo;s sampler, and the
 lecture&rsquo;s point is that DDPM training already learns
 exactly the object it needs. Two communities, one
 arrow field.</p>
+<h3 id="where-naive-langevin-breaks">Where naive Langevin breaks</h3>
 <p>Where naive Langevin breaks: it needs tiny steps and
 thousands of them, and the step size δ is fiddly. Too
 large: the walk diverges. Too small: it never arrives.
 DDPM&rsquo;s ancestral sampler (Lesson 9) is the stabilized,
-scheduled version of this walk.</p>
+scheduled version of this walk. The schedule is the fix
+for the fiddliness: instead of one δ, a planned sequence
+of noise levels that anneals the walk to the answer.</p>
 <h2 id="the-key-question">The key question</h2>
 <p>The sampler still costs T steps. Can we take bigger
 strides without retraining?</p>
 <h2 id="the-new-idea-ddim-strides">The new idea: DDIM strides</h2>
+<h3 id="the-marginals-are-all-training-used">The marginals are all training used</h3>
 <p><strong>DDIM</strong> (Denoising Diffusion Implicit Models) observes
 that training only ever used the marginals q(x_t|x_0):
 the closed-form jump from Lesson 8. The Markov
@@ -269,11 +276,13 @@ marginals. A non-Markovian process with the same
 marginals trains the identical ε_θ. And with the
 non-Markovian form, the reverse can skip steps: jump
 from t = 100 to t = 50 in one stride, deterministically.</p>
+<h3 id="the-stride-formula">The stride formula</h3>
 <p>The stride formula: predict the clean x_0 from x_t via
 ε_θ, then re-noise it to the target step s:</p>
 <pre class="ascii">x_hat_0 = ( x_t - sqrt(1 - a_bar_t) * e_theta ) / sqrt(a_bar_t)
 x_s     = sqrt(a_bar_s) * x_hat_0 + sqrt(1 - a_bar_s) * e_theta
 </pre>
+<h3 id="worked-15-2844-in-one-stride">Worked: 1.5 → 2.844 in one stride</h3>
 <p>Work it. t = 100, s = 50, ᾱ_100 = 0.05, ᾱ_50 = 0.5,
 x_100 = 1.5, ε_θ = 0.8:</p>
 <pre class="ascii">x_hat_0 = (1.5 - sqrt(0.95)*0.8) / sqrt(0.05)
@@ -283,12 +292,20 @@ x_50 = sqrt(0.5)*3.221 + sqrt(0.5)*0.8
 </pre>
 <p>One stride: 1.5 → 2.844, landing where 50 DDPM steps
 would have gone. Fifty strides replace a thousand
-steps. The price: the deterministic stride (no z
+steps.</p>
+<h3 id="the-price-less-diversity">The price: less diversity</h3>
+<p>The price: the deterministic stride (no z
 wobble) explores less, so diversity drops slightly.
-re-adding controlled noise per stride recovers most of
-it. Same network, faster sampler, no retraining.</p>
+Re-adding controlled noise per stride recovers most of
+it. Same network, faster sampler, no retraining. The
+decision rule: use DDIM strides when latency matters
+(interactive generation), DDPM steps when diversity
+matters most. The network never changes. Only the walk
+does.</p>
+<figure><img alt="DDIM: predict clean, re-noise to the target step" src="assets/l10-ddim-stride.webp"><figcaption>One stride from t = 100 to s = 50. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="steering-and-shrinking-guided-and-latent-diffusion">Steering and shrinking: guided and latent diffusion</h2>
 <p>Two more W9 ideas, each one mechanism.</p>
+<h3 id="guided-diffusion-steer-with-a-classifier">Guided diffusion: steer with a classifier</h3>
 <p><strong>Guided diffusion</strong> steers generation toward a target,
 like &ldquo;a cat&rdquo;. Train a classifier p(y|x_t) on noisy
 images. Then sample with the conditional score:</p>
@@ -300,7 +317,11 @@ gradient +0.5, guidance scale s = 2: guided score =
 −1.578 + 1.0 = −0.578. The walk still climbs the data
 probability but bends toward the requested class.
 Larger s: stronger steering, weirder images. The
-scale is the dial.</p>
+scale is the dial. Too much guidance and the walk
+leaves the data manifold chasing the classifier&rsquo;s
+whims: the classic failure is oversaturated,
+caricatured images.</p>
+<h3 id="latent-diffusion-shrink-the-space">Latent diffusion: shrink the space</h3>
 <p><strong>Latent diffusion</strong> shrinks the problem. Lesson 8&rsquo;s
 price was full-size latents at every step. Instead,
 compress the image with a VAE encoder (Lesson 7&rsquo;s
@@ -311,7 +332,9 @@ smaller, so every diffusion step costs 48 times less.
 This is the architecture behind Stable Diffusion.
 The price is the VAE&rsquo;s bottleneck: compression
 artifacts the diffusion cannot fix.</p>
+<figure><img alt="Latent diffusion: shrink the space, keep the process" src="assets/l10-latent-diffusion.webp"><figcaption>786,432 numbers become 16,384: 48x cheaper per step. Shell 2. Source: original computation. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-fourth-family-autoregressive-models">The fourth family: autoregressive models</h2>
+<h3 id="the-chain-rule-factorization">The chain-rule factorization</h3>
 <p>The course closes (W10) with the family that needs no
 latent variables and no adversary: factor the joint
 distribution with the chain rule and predict one piece
@@ -323,6 +346,7 @@ the past, what comes next? Train by maximum likelihood
 (Lesson 2&rsquo;s identity): maximize the log-probability of
 the true next piece. Generate left to right: sample
 x_1, feed it in, sample x_2, and so on.</p>
+<h3 id="worked-paba-0036">Worked: p(a,b,a) = 0.036</h3>
 <p>Work it on three tokens from {a, b}. Model says:
 p(a) = 0.6. p(a|a) = 0.7, p(b|a) = 0.3.
 p(a|a,b) = 0.2, p(b|a,b) = 0.8.</p>
@@ -332,24 +356,32 @@ p(a|a,b) = 0.2, p(b|a,b) = 0.8.</p>
 <p>The sequence &ldquo;aba&rdquo; gets probability 0.036 under the
 model. Training on real text pushes these factors
 toward the true continuations. Generation samples
-each factor in turn. This is next-token prediction,
-the engine of every large language model. The
-transformer architecture that makes it scale is
-CS336/CS229S territory. This course contributes the
-probabilistic frame: AR models are the chain-rule
-family, trained by plain MLE, with exact likelihoods
-and slow sequential sampling.</p>
+each factor in turn.</p>
+<h3 id="the-engine-of-language-models">The engine of language models</h3>
+<p>This is next-token prediction, the engine of every
+large language model. The transformer architecture
+that makes it scale is CS336/CS229S territory. This
+course contributes the probabilistic frame: AR models
+are the chain-rule family, trained by plain MLE, with
+exact likelihoods and slow sequential sampling. The
+price is strict: token 1000 waits for 999 before it.
+No parallelism across positions at generation time.</p>
 <h2 id="the-honest-price-per-shortcut">The honest price, per shortcut</h2>
-<p>Langevin: principled but fiddly. Step size can
-diverge the walk. DDPM&rsquo;s scheduled sampler is the
-practical form. DDIM: 20 times fewer steps, slightly
-less diversity, and the strides assume the marginals
-match (they do, by construction). Guidance: needs a
-classifier on noisy inputs and a hand-tuned scale.
-too much guidance degrades quality. Latent
-diffusion: 48 times cheaper per step, bottlenecked by
-the autoencoder&rsquo;s fidelity. Autoregressive: exact
-likelihood and simple training, but generation is
+<h3 id="langevin">Langevin</h3>
+<p>Principled but fiddly. Step size can diverge the walk.
+DDPM&rsquo;s scheduled sampler is the practical form.</p>
+<h3 id="ddim">DDIM</h3>
+<p>20 times fewer steps, slightly less diversity, and the
+strides assume the marginals match (they do, by
+construction).</p>
+<h3 id="guidance">Guidance</h3>
+<p>Needs a classifier on noisy inputs and a hand-tuned
+scale. Too much guidance degrades quality.</p>
+<h3 id="latent-diffusion">Latent diffusion</h3>
+<p>48 times cheaper per step, bottlenecked by the
+autoencoder&rsquo;s fidelity.</p>
+<h3 id="autoregressive">Autoregressive</h3>
+<p>Exact likelihood and simple training, but generation is
 strictly sequential: token 1000 waits for 999 before
 it. Every family pays somewhere.</p>
 <h2 id="the-course-in-one-table">The course in one table</h2>
@@ -404,14 +436,41 @@ Diffusion learns to clean noise, one small step at a
 time. Autoregressive models learn what comes next.
 Four answers to &ldquo;how do you teach a machine to
 create?&rdquo;, each with its bill attached.</p>
+<figure><img alt="Four families, one recipe, four prices" src="assets/l10-four-families.webp"><figcaption>The course arc: from counting what exists to making what does not. Chapter plate. Source: original. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="where-these-ideas-run-in-real-systems">Where these ideas run in real systems</h3>
+<p>The score view is the bridge between DDPM training and
+the sampling literature: any sampler that needs scores
+can use a trained ε_θ. DDIM strides are the standard
+fast sampler for diffusion models when latency matters.
+Latent diffusion is the architecture of Stable
+Diffusion-class models: VAE codec plus diffusion in
+latent space. Autoregressive next-token prediction is
+the training objective of every large language model.
+[uncertain] Exact sampler choices and guidance scales in
+production systems are not public.</p>
+<h2 id="videos-for-this-lesson">Videos for this lesson</h2>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/qiMJBB8chzI" title="W9L38: Denoising Difusion Implicit Models (DDIMs)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: DDIMs and inference, the strides that skip steps. If the embed is blocked: <a href="https://www.youtube.com/watch?v=qiMJBB8chzI" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/PtDFqdTbQUY" title="W10L40: Auto-Regressive Models" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: autoregressive models, the chain-rule family that closes the course. If the embed is blocked: <a href="https://www.youtube.com/watch?v=PtDFqdTbQUY" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/vLAWqDk4HEU" title="Denoising diffusion models from physics first principles" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">External explainer: diffusion from physics first principles, Langevin, Fokker-Planck, and the score killing the normalizing constant. If the embed is blocked: <a href="https://www.youtube.com/watch?v=vLAWqDk4HEU" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
 <div class="qa"><div class="q">What is the score, and why does it matter?</div><div class="a"><p>The score is ∇log p(x): an arrow at each point toward higher probability. DDPM&rsquo;s noise prediction is a scaled score: −ε/√(1−ᾱ_t) = −1.578 in the toy. It matters because it unifies two literatures: DDPM training learns the object score matching always wanted, so score-based samplers like Langevin dynamics apply directly.
 x ← x + (δ/2)·score + √δ·z. In the toy: 3.9 + 0.05·(−1.578) + 0.316·0.4 = 3.947. Uphill toward the clean 4.0 plus exploration noise. DDPM&rsquo;s sampler is this walk with a stabilizing schedule.</p><div class="followup"><strong>Follow-up:</strong> What does one Langevin step look like?</div></div></div>
+<div class="qa"><div class="q">Walk me through a Langevin step on fresh numbers.</div><div class="a"><p>x = 5.0, score = +2.0 (probability rises to the right), δ = 0.04, z = −0.5. Step: 5.0 + 0.02·2.0 + 0.2·(−0.5) = 5.0 + 0.04 − 0.10 = 4.94. The score pulled right (+0.04) but the noise draw pulled left harder (−0.10). That is the exploration-exploitation trade in one step: the score climbs, the noise wanders. Over thousands of steps the positions follow p(x).
+When δ is too large for the score&rsquo;s curvature. Near a sharp peak the score changes fast. A big step overshoots to a region with an even bigger opposing score, and the walk ping-pongs outward. The diagnostic is the step sizes growing instead of settling. DDPM&rsquo;s schedule avoids this by shrinking the effective step as noise falls.</p><div class="followup"><strong>Follow-up:</strong> When does this walk diverge?</div></div></div>
 <div class="qa"><div class="q">How does DDIM sample faster without retraining?</div><div class="a"><p>Training only used the marginals q(x_t|x_0), which a non-Markovian process shares. DDIM exploits that: predict x̂_0 from x_t, then jump straight to step s. In the toy, one stride took x_100 = 1.5 to x_50 = 2.844 via x̂_0 = 3.221. Fifty strides replace a thousand steps. The cost is slightly reduced diversity.
 DDPM&rsquo;s sampler adds fresh noise z at every step, exploring around the mean path. DDIM&rsquo;s basic stride has no z term: same x_T always gives the same x_0. Re-adding partial noise per stride recovers most of the variety.</p><div class="followup"><strong>Follow-up:</strong> Why does the deterministic stride lose diversity?</div></div></div>
 <div class="qa"><div class="q">How does guided diffusion steer generation?</div><div class="a"><p>Add a classifier&rsquo;s gradient to the score: score + s·∇log p(y|x_t). The extra arrow points toward the requested class y. In the toy, −1.578 + 2·0.5 = −0.578: still climbing data probability, bent toward the class. The scale s trades steering strength against image quality.
 Speed. Diffuse in a VAE&rsquo;s compressed latent space instead of pixels: 786,432 numbers become 16,384 (48× smaller), so each step costs 48× less. The autoencoder&rsquo;s compression artifacts are the price.</p><div class="followup"><strong>Follow-up:</strong> What is latent diffusion buying?</div></div></div>
 <div class="qa"><div class="q">What is an autoregressive model?</div><div class="a"><p>A model that factors the joint distribution with the chain rule and predicts one piece at a time: p(x_1,x_2,x_3) = p(x_1)·p(x_2|x_1)·p(x_3|x_1,x_2). In the toy, p(a,b,a) = 0.6·0.3·0.2 = 0.036. Train each factor by MLE, generate left to right. Exact likelihoods, simple training, strictly sequential sampling.
 Because it completes the four-family map: adversarial (GAN), learned-latent (VAE), fixed-latent (diffusion), no-latent (autoregressive). The transformer architecture that scales AR models belongs to CS336/CS229S. This course&rsquo;s contribution is the probabilistic frame all four share.</p><div class="followup"><strong>Follow-up:</strong> Why does the course end here?</div></div></div>
+<div class="qa"><div class="q">DDIM with 50 strides gives worse samples than DDPM with 1000 steps on your data. Diagnose it.</div><div class="a"><p>Two suspects. First, the strides may be too long for your schedule: each stride assumes the marginals match, which holds by construction, but the deterministic jump accumulates prediction error without the stochastic correction. Second, diversity loss: the deterministic path may collapse near modes. Try: shorter strides (100 instead of 50), re-added noise per stride, or check whether the failure is quality (strides too long) versus variety (determinism). The network is innocent until proven guilty: it never changed.
+When maximum diversity and quality matter more than latency: final production renders, evaluation benchmarks. DDIM is for interaction. The 20× speedup is real, but it is a trade, not a free lunch.</p><div class="followup"><strong>Follow-up:</strong> When do you keep DDPM sampling despite the cost?</div></div></div>
+<div class="qa"><div class="q">Your guided samples look like caricatures: oversaturated, exaggerated features. What happened?</div><div class="a"><p>The guidance scale s is too high. The classifier gradient overwhelms the data score, and the walk leaves the data manifold chasing &ldquo;more cat-like&rdquo; past the point of realism. The toy shows the mechanism: at s = 2 the guided score was −0.578, still sane. At s = 10 it would be −1.578 + 5.0 = +3.422, pointing away from the data entirely. Lower s until the steering bends the walk without breaking it.
+Small s tilts the probability landscape toward the class while the data score still dominates, so you sample the class-conditional region. Large s rewrites the landscape: the classifier&rsquo;s idea of the class (often a caricature) becomes the peak. The classifier was trained to discriminate, not to generate. Its gradients are trustworthy only near the manifold.</p><div class="followup"><strong>Follow-up:</strong> Why does a little guidance help but a lot hurts?</div></div></div>
+<div class="qa"><div class="q">You must pick one family for a new product: real-time avatar generation on a phone. Decide.</div><div class="a"><p>Latent diffusion with DDIM strides, or a distilled variant. The constraints: phone compute (needs the 48× latent saving), real-time (needs the 20× stride saving), quality (diffusion beats GAN/VAE on stability). AR is out (sequential, and the modality is images). Pure GAN is out (training instability risk). The bill: some diversity loss from strides, VAE artifacts from the bottleneck. If latency is extreme, distill the strided model further.
+VAE or diffusion with an encoder. GANs have no encoder. Inversion is a separate hard problem. VAEs give the cleanest latent handles. Diffusion gives better quality with noisier handles. Pick by whether editing or quality matters more.</p><div class="followup"><strong>Follow-up:</strong> And for a research tool that must edit photos by latent manipulation?</div></div></div>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
 <li><strong>The reframe.</strong> ε_θ learns the score ∇log p(x_t): an arrow field pointing uphill on probability (−1.578 in the toy).</li>
@@ -425,27 +484,23 @@ Because it completes the four-family map: adversarial (GAN), learned-latent (VAE
 </ol>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
-- W9L35: DDPMs as score-predictors:
-  https://www.youtube.com/watch?v=2Sp0BqAWWXY
-- W9L36/L37: Guided diffusion, latent diffusion models.
-- W9L38/L39: DDIMs and inference:
-  https://www.youtube.com/watch?v=qiMJBB8chzI
-- W10L40: Auto-regressive models:
-  https://www.youtube.com/watch?v=PtDFqdTbQUY</p>
+- W9L35: DDPMs as score-predictors: <a href="https://www.youtube.com/watch?v=2Sp0BqAWWXY">paper</a>
+- W9L38: DDIMs and inference: <a href="https://www.youtube.com/watch?v=qiMJBB8chzI">paper</a>
+- W10L40: Auto-regressive models: <a href="https://www.youtube.com/watch?v=PtDFqdTbQUY">paper</a></p>
 <p><strong>Further reading:</strong>
 - Song and Ermon, &ldquo;Generative Modeling by Estimating Gradients of the Data Distribution&rdquo; (2019):
-  https://arxiv.org/abs/1907.05600: the score view.
-- Song, Meng, Ermon, &ldquo;DDIM&rdquo; (2020):
-  https://arxiv.org/abs/2010.02502: the strides.
+  - <a href="https://arxiv.org/abs/1907.05600">the score view.</a>
+- Song, Meng, Ermon, &ldquo;Denoising Diffusion Implicit Models&rdquo; (2020):
+  - <a href="https://arxiv.org/abs/2010.02502">the strides.</a>
 - Rombach et al., &ldquo;High-Resolution Image Synthesis with Latent Diffusion Models&rdquo; (2021):
-  https://arxiv.org/abs/2112.10752: latent diffusion (Stable Diffusion).</p>
+  - <a href="https://arxiv.org/abs/2112.10752">latent diffusion (Stable Diffusion).</a></p>
 <p><strong>Caveats.</strong> The W9L35 and W9L38 transcripts were not recovered (IDs from the playlist). This lesson follows the standard Song/Ermon and Rombach presentations, consistent with the lecture titles. [uncertain] The lecture&rsquo;s exact treatment and examples are unknown.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
 <li><strong>CS229 L11 (diffusion models):</strong> that course&rsquo;s sampler is this lesson&rsquo;s DDIM with the same ε_θ. A worked tie: 50 DDIM strides on a 1000-step schedule evaluate the network 50 times instead of 1000, a 20× speedup, while the training loss never changes. Same weights, different walk.</li>
 <li><strong>CS336:</strong> the autoregressive family is that course&rsquo;s home ground. The chain-rule factorization here is its next-token objective: p(token_t | tokens_&lt;t). This lesson&rsquo;s 0.036 toy is the smallest possible language model.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">W9L35: DDPMs as score-predictors (video 2Sp0BqAWWXY)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=qiMJBB8chzI" target="_blank" rel="noopener">W9L38/L39: DDIMs and inference (video qiMJBB8chzI)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=PtDFqdTbQUY" target="_blank" rel="noopener">W10L40: Auto-regressive models (video PtDFqdTbQUY)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2010.02502" target="_blank" rel="noopener">Song, Meng, Ermon, Denoising Diffusion Implicit Models (2020)</a></li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=2Sp0BqAWWXY" target="_blank" rel="noopener">W9L35: DDPMs as score-predictors (video 2Sp0BqAWWXY)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=qiMJBB8chzI" target="_blank" rel="noopener">W9L38: DDIMs and inference (video qiMJBB8chzI)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=PtDFqdTbQUY" target="_blank" rel="noopener">W10L40: Auto-regressive models (video PtDFqdTbQUY)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2010.02502" target="_blank" rel="noopener">Song, Meng, Ermon, Denoising Diffusion Implicit Models (2020)</a></li></ul></section>
       <nav class="pager"><a href="../math-genai/l09-ddpm-loss.html"><span class="lbl">← Previous</span>Lecture 9: From ELBO to Predicting Noise</a><a href="../math-genai/cheatsheet.html"><span class="lbl">Next →</span>MATH-GENAI Cheatsheet</a></nav>
     </article>
     <footer class="pagefoot">
