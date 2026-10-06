@@ -31,6 +31,20 @@ sources:
     label: "CS229 Spring 2026 official course notes (local PDF)"
 ---
 
+### Coverage and sourcing
+
+This lesson follows Lecture 11 of Stanford CS229 (Machine Learning,
+Spring 2026, instructor Tengyu Ma): "Diffusion Models". The lecture
+builds diffusion models from zero: the fixed forward noising
+process, the learned reverse denoiser, ELBO training, sampling
+from pure noise, and the contrast with GANs and VAEs. A VAE
+(variational autoencoder) is an encoder-decoder pair that compresses
+data to a compact latent code, trained once and frozen. It draws on
+the official subtitle transcript and the course notes. The coverage
+map at the end of the chapter maps every major lecture claim to
+the section that covers it. Figures and claims marked "October
+2026" are updates added after the lecture, each with its source.
+
 ## The job: draw a cat that does not exist
 
 Type "a cat astronaut on the moon" and get a photograph of one. No
@@ -86,7 +100,7 @@ epsilon_1 = 0.5. x_1 = sqrt(0.99)*0.8 + sqrt(0.01)*0.5 = 0.796 +
 wandered far. After 1,000 it is standard Gaussian noise,
 independent of the 0.8 it started from.
 
-![Diffusion forward process](assets/svg/l11-diffusion.svg "The diffusion forward process. A clean image is destroyed step by step into pure noise. No learning: the destruction is fixed. Source: original plate for Stanford Frontier AI.")
+![Diffusion forward process](assets/svg/l11-diffusion.svg "Shell 1. The forward process destroys images on a fixed schedule. The diffusion forward process. A clean image is destroyed step by step into pure noise. No learning: the destruction is fixed. Source: original plate for Stanford Frontier AI.")
 
 ### Subchapter: the pixel toy, audited
 
@@ -100,7 +114,7 @@ left: sqrt(0.366) * 0.8 = 0.484. Noise std: sqrt(1 - 0.366) =
 0.48 of signal inside 0.80 of noise. "Wandered far" is now a
 number. After 1,000 steps alpha_bar = 0.99^1000 ~ 0: pure static.
 
-![Pixel audit](assets/plate-l11-pixel-audit.webp "The pixel toy, audited. x_0 = 0.8, one step: 0.796 plus 0.05 = 0.846. After 100 steps: 0.48 of signal inside 0.80 of noise. Source: original audit for the forward toy. Project: Stanford Frontier AI.")
+![Pixel audit](assets/plate-l11-pixel-audit.webp "Shell 2. One noise step, audited: 0.8 becomes 0.846. The pixel toy, audited. x_0 = 0.8, one step: 0.796 plus 0.05 = 0.846. After 100 steps: 0.48 of signal inside 0.80 of noise. Source: original audit for the forward toy. Project: Stanford Frontier AI.")
 
 ### Subchapter: the closed-form shortcut
 
@@ -115,7 +129,34 @@ training loop in production samples t uniformly and uses this
 formula. Without it, training would cost O(T) per example and the
 method would be dead.
 
-![Closed form](assets/plate-l11-closed-form.webp "Skip the chain. Simulate t steps: O(t). Closed form: x_t from x_0 in one formula, O(1). Source: original plate for the Gaussian composition. Project: Stanford Frontier AI.")
+![Closed form](assets/plate-l11-closed-form.webp "Shell 3. Closed form skips the chain in O(1). Skip the chain. Simulate t steps: O(t). Closed form: x_t from x_0 in one formula, O(1). Source: original plate for the Gaussian composition. Project: Stanford Frontier AI.")
+
+## The noise schedule
+
+Beta_t is a design choice, not a law. The **noise schedule** sets
+how fast the image dies. Two standards.
+
+### Subchapter: linear vs cosine, worked
+
+**Linear** (the DDPM original): beta runs from 1e-4 to 0.02 over
+T = 1,000. Early steps add almost nothing. Late steps add a lot.
+**Cosine**: alpha_bar_t follows a cosine curve from 1 to 0. The
+noise grows slowly at both ends and fast in the middle. Work the
+signal fraction at t = 500. Linear: alpha_bar_500 is roughly
+0.079 (most betas were large by then). Signal: sqrt(0.079) =
+0.28. Cosine: alpha_bar_500 = 0.5 by construction (the cosine
+hits its midpoint). Signal: sqrt(0.5) = 0.71. The cosine schedule
+keeps the image recognizable halfway through. The linear schedule
+has nearly killed it. Why it matters: the denoiser trains on all
+t, and a schedule that rushes through the mid-noise levels starves
+the most informative regime. Cosine won the rematch. The interview
+line: the schedule shapes the curriculum. Linear front-loads the
+easy (near-clean) and back-loads the dead (near-noise). Cosine
+spends the budget where learning happens.
+
+![Schedule](assets/plate-l11-schedule.webp "Shell 4. Cosine schedule spends noise in the middle. The noise schedule, worked. At t = 500: linear keeps 0.28 of signal, cosine keeps 0.71. Cosine spends the budget in the informative middle. Source: original plate for the schedule arithmetic. Project: Stanford Frontier AI.")
+
+![Chapter plate: the fixed destruction](assets/plate-l11-chap-forward.svg "Chapter plate L11-C1. Left: one-shot generation with unstable GAN training and mode collapse. Center: the fixed forward process: x_t from x_{t-1} with small betas, jumpable in O(1). Right: 0.8 to 0.846 in one step, pure static at 1,000, and cosine keeping 0.71 at t=500. Bottom: destruction needs no intelligence, and the schedule is the curriculum. Dense chapter plate. Source: Ho et al. 2020. Project: Stanford Frontier AI.")
 
 ## The reverse process: the learned denoiser
 
@@ -140,16 +181,19 @@ level. Stable, no adversary, no mode collapse games.
 Count the evaluations. T = 1,000 steps means 1,000 neural network
 evaluations per image. A GAN needs 1. The ratio is 1,000 to 1:
 diffusion's quality costs three orders of magnitude in sampling
-compute. The discounts, priced the same way: DDIM-style samplers
-take larger principled steps, cutting T from 1,000 to 50: 20x
-cheaper. Distillation trains a student to mimic the teacher in 4
-steps: 250x cheaper. Each discount trades a little sample quality
+compute. The discounts, priced the same way: **DDIM** (Denoising
+Diffusion Implicit Models) samplers take larger principled steps,
+cutting T from 1,000 to 50: 20x cheaper. DDIM drops the random
+noise DDPM injects at every reverse step and walks a deterministic
+path instead: no dice rolls between the start and the end, so
+fewer, larger steps stay on track. Distillation trains a student
+to mimic the teacher in 4 steps: 250x cheaper. Each discount trades a little sample quality
 for speed, and the trade is measured in FID points per step
 removed. The bill is why image APIs charge per image and why video
 models distill aggressively: the method is correct, the meter is
 running.
 
-![Sampling bill](assets/plate-l11-sampling-bill.webp "The sampling bill. GAN: 1 network eval per image. Diffusion: 1,000. DDIM: 50. Distilled: 4. Source: original plate for the sampling cost. Project: Stanford Frontier AI.")
+![Sampling bill](assets/plate-l11-sampling-bill.webp "Shell 5. Diffusion pays 1,000 evals per image. The sampling bill. GAN: 1 network eval per image. Diffusion: 1,000. DDIM: 50. Distilled: 4. Source: original plate for the sampling cost. Project: Stanford Frontier AI.")
 
 ### Subchapter: noise points uphill
 
@@ -160,12 +204,14 @@ that the noise added at step t points, in expectation, downhill
 away from the clean image: so predicting the noise is estimating
 the downhill direction, and subtracting the predicted noise steps
 uphill toward likely images. Each denoising step is a small uphill
-step on the landscape of natural images. The U-Net is a learned
+step on the terrain of natural images. The U-Net is a learned
 compass: at every noise level, it points toward "more like a real
 image". Sampling is hill-climbing from pure noise, guided by T
 compass readings. Same method, geometric name.
 
-![Score](assets/plate-l11-score.webp "Noise points uphill. Predicting the noise estimates the downhill direction. Subtracting it steps toward likely images. Source: original plate for the score view. Project: Stanford Frontier AI.")
+![Score](assets/plate-l11-score.webp "Shell 6. Predicted noise points toward likely images. Noise points uphill. Predicting the noise estimates the downhill direction. Subtracting it steps toward likely images. Source: original plate for the score view. Project: Stanford Frontier AI.")
+
+![Chapter plate: the learned reversal](assets/plate-l11-chap-reverse.svg "Chapter plate L11-C2. Left: one giant reversal with a multimodal posterior the network cannot fit. Center: the network predicts each step's noise: one regression problem per level. Right: stable training with no adversary, and noise prediction as score estimation. Bottom: the method is correct, and the meter is running. Dense chapter plate. Source: Ho et al. 2020. Project: Stanford Frontier AI.")
 
 ## Sampling: noise to image
 
@@ -187,6 +233,148 @@ speed: generating one image needs T network evaluations. T = 1,000
 means 1,000 forward passes per image. The field's whole
 distillation and few-step sampler industry exists to pay this price
 down.
+
+## Classifier-free guidance: the steering dial
+
+Text conditioning steers each denoising step. **Classifier-free
+guidance** sets how hard it steers. Train the denoiser twice in
+one: usually with the prompt, sometimes with the prompt dropped
+(unconditional). At sampling, combine:
+
+```ascii
+guided_noise = uncond_noise + w * (cond_noise - uncond_noise)
+```
+
+### Subchapter: the dial, worked
+
+w = 1: pure conditional (no extra push). w = 7.5 (the Stable
+Diffusion default): push 7.5x away from the unconditional
+prediction toward the conditional one. Work the direction: at one
+step, uncond predicts noise (0.1, 0.2), cond predicts (0.3, 0.1).
+Difference: (0.2, -0.1). Guided: (0.1, 0.2) + 7.5*(0.2, -0.1) =
+(1.6, -0.55). The prompt's direction is amplified 7.5x. Effects:
+higher w means stronger prompt adherence and more vivid images,
+but past ~15 the images saturate and distort (the push
+overshoots). w = 0 ignores the prompt entirely. The interview
+line: guidance is a dial, not a switch. 7.5 is the default. Turn
+it down for diversity, up for adherence, past 15 for artifacts.
+
+![Guidance](assets/plate-l11-guidance.webp "Shell 7. Guidance amplifies the prompt direction 7.5x. Classifier-free guidance, worked. Uncond (0.1,0.2), cond (0.3,0.1), w = 7.5: guided (1.6,-0.55). The prompt's direction amplified 7.5x. Source: original plate for the guidance arithmetic. Project: Stanford Frontier AI.")
+
+## Latent diffusion: compress first
+
+Diffusing in pixel space wastes compute: a 512x512 image is
+786,432 numbers, most of them redundant (neighboring pixels
+correlate). **Latent diffusion** compresses first with a VAE
+encoder (8x downsample: 512x512x3 becomes 64x64x4 = 16,384
+numbers, 48x smaller), diffuses in the latent space, then decodes.
+
+### Subchapter: the 48x saving
+
+The denoiser's cost scales with the tensor size. Pixel U-Net on
+786K numbers per step vs latent U-Net on 16K: roughly 48x less
+compute per evaluation, 48x less memory. The VAE encode/decode
+runs once each (negligible against 1,000 steps). Quality holds
+because the VAE's latent space keeps the perceptual content and
+drops the pixel noise the eye ignores. Stable Diffusion is latent
+diffusion: the lesson's forward-reverse loop runs on 64x64x4
+latents, not pixels. The interview line: pixel diffusion is the
+textbook. Latent diffusion is the product. The VAE is a fixed
+compressor, not learned jointly: train it once, freeze it, diffuse
+in its world.
+
+![Chapter plate: steer and compress](assets/plate-l11-chap-steer.svg "Chapter plate L11-C3. Left: unconditional samples that ignore the prompt, on 786,432 pixel numbers. Center: guided noise = uncond + w(cond - uncond), with a VAE compressing once. Right: w = 7.5 giving (1.6, -0.55), and 64x64x4 latents 48x smaller. Bottom: guidance is a dial not a switch, and latent diffusion is the product. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
+
+## The U-Net: the denoiser's shape
+
+The denoiser needs a shape that sees both fine detail and global
+structure. The **U-Net** is an encoder-decoder with skip
+connections: downsample the noisy image through shrinking,
+deepening layers (capturing global structure), then upsample back
+(the decoder), with **skip connections** copying each encoder
+level's feature map to the matching decoder level.
+
+### Subchapter: why the U shape works
+
+Denoising needs two views at once. The bottleneck (smallest,
+deepest layer) sees the whole image coarsely: it knows "this is a
+cat shape". The skip connections hand the decoder the fine detail
+it lost in downsampling: edges, textures. Without skips, the
+decoder must reconstruct detail from the bottleneck alone (blurry).
+With skips, each decoder level fuses "what" (from below) with
+"where exactly" (from the skip). Time enters via a **time
+embedding**: t is encoded as a vector and added at every block, so
+one network serves all noise levels. Text enters via
+**cross-attention**: each block attends to the prompt's embedding.
+The interview line: the U-Net is an hourglass with shortcuts. The
+hourglass sees the gist. The shortcuts keep the detail.
+
+![U-Net](assets/svg/l11-unet.svg "Shell 8. The hourglass bottlenecks gist; skips keep detail. The U-Net denoiser. Encoder downsamples to the bottleneck (the gist). Decoder upsamples. Skip connections carry fine detail across. Time embedding and cross-attention enter every block. Source: original plate for Stanford Frontier AI.")
+
+## From U-Net to DiT: transformer denoisers
+
+The U-Net is convolutional. **DiT** (Diffusion Transformer)
+replaces it with a transformer: patchify the latent (16x16
+patches), run transformer blocks, unpatchify. Same forward-reverse
+loop, different denoiser.
+
+### Subchapter: why transformers won again
+
+Convolutions bake in locality (each filter sees a small window).
+Transformers learn the receptive field via attention: any patch
+can attend to any other from layer one. At scale, the learned
+beats the baked-in: DiT-XL/2 set the ImageNet generation records
+the convolutional U-Nets held ([DiT repo, fork of the official implementation](https://github.com/a-gn/dit), quoting Peebles and Xie 2022: DiT-XL/2 outperform all prior diffusion models on the class-conditional ImageNet 512x512 and 256x256 benchmarks, SOTA FID 2.27 on 256x256, checked Oct 2026). The patchify step is the price:
+16x16 patches on 64x64 latents give 4 tokens per side, 16
+tokens: attention over 16 tokens is cheap. Sora and the video
+diffusion models are DiTs: space-time patches through transformer
+blocks ([Sora technical report via](https://scientyficworld.org/openai-sora-workflow-technical-architecture/): Sora is a diffusion transformer operating on spacetime patches, checked Oct 2026). The interview line: diffusion is the training recipe.
+The denoiser is the architecture. U-Net was the first. DiT is the
+scaling answer.
+
+## The SDE view: continuous time
+
+The lecture presents discrete steps. The continuous view: the
+forward process is a **stochastic differential equation** (SDE)
+that injects noise over continuous time t. The reverse is another
+SDE running backward, driven by the **score** (gradient of the log
+density) at each noise level.
+
+### Subchapter: Langevin dynamics, the sampler
+
+Given the score, **Langevin dynamics** samples: x <- x + (step/2)
+* score(x) + sqrt(step) * noise. Uphill half-step toward likely
+images, plus fresh noise to explore. Repeat: the chain converges
+to the distribution. The discrete DDPM sampler is a
+discretization of the reverse SDE. The probability-flow ODE drops
+the noise term: a deterministic path from noise to image (this is
+what DDIM approximates). Why the view matters: it unifies DDPM,
+score matching, and DDIM as one SDE with different solvers, and it
+is where the fast samplers are derived. The interview line: DDPM
+is the discrete algorithm. The SDE is the theory it
+discretizes. Name both.
+
+## Consistency models: the few-step frontier
+
+Distillation trains a student on the teacher's outputs. A
+**consistency model** trains a bolder student: map ANY point on
+the noise trajectory directly to the clean image. One evaluation,
+one image.
+
+### Subchapter: the consistency trick
+
+The teacher defines a trajectory: noise x_T -> ... -> x_0. The
+student f(x_t, t) learns to output x_0 for every t. Loss: the
+student's outputs at adjacent t must agree (consistency), anchored
+by f(x_0, 0) = x_0. Train it by distillation (match the teacher's
+trajectory) or from scratch (consistency training). Result: 1-4
+step generation at quality near the 1,000-step teacher. The price:
+some fine detail still lags the full sampler, and training is
+fiddly. The interview line: DDIM takes bigger steps along the
+trajectory. Consistency models jump off it. Both pay the sampling
+bill down. Neither repeals it.
+
+![Chapter plate: the sampling bill](assets/plate-l11-chap-bill.svg "Chapter plate L11-C4. Left: GAN sampling at 1 network eval per image. Center: T tiny reversals, each near-Gaussian and learnable. Right: 1,000 evals per image, DDIM at 50, distilled at 4: 27.8 GPU-hours to 7 minutes. Bottom: price the quality tier, not the method. Dense chapter plate. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 ## The honest price
 
@@ -210,6 +398,13 @@ most elegant.
 | ELBO training | GAN training fights; no clean objective | ELBO over the chain simplifies to noise-prediction MSE per level; stable regression |
 | Large T | Big jumps have unlearnable reversals | Hundreds-thousands of tiny steps keep each reversal near-Gaussian and the bound tight |
 | Text conditioning | Unconditional samples ignore the prompt | Feed text embedding into the denoiser every step; each correction steers toward the prompt |
+| Noise schedule | The curriculum shapes what the denoiser learns | Linear: 0.28 signal at t=500. Cosine: 0.71. Cosine spends the budget in the middle |
+| Classifier-free guidance | The prompt steers too weakly or too hard | w=7.5 amplifies the cond direction; (0.1,0.2) and (0.3,0.1) give (1.6,-0.55) |
+| Latent diffusion | Pixel space wastes 48x compute | VAE to 64x64x4, diffuse there, decode once; Stable Diffusion's design |
+| U-Net | Denoising needs gist and detail at once | Hourglass plus skips; time embedding and cross-attention per block |
+| DiT | Convolutions bake in locality | Patchify, transformer blocks, unpatchify; the scaling answer |
+| SDE view | DDPM, DDIM, score matching looked separate | One SDE, different solvers; Langevin samples via the score |
+| Consistency models | Even DDIM costs 50 steps | Map any x_t to x_0 directly; 1-4 steps near teacher quality |
 
 > [!QA]
 > Q: What is the forward process in a diffusion model?
@@ -269,6 +464,12 @@ most elegant.
 > Follow-up: The seed test shows variation but the prompt test shows none. The text encoder works fine standalone. Where is the break?
 > A: Between the encoder and the denoiser: the cross-attention layers that inject the text embedding into each denoising step. Check that the conditioning tensors have the right shape and are not zeroed or detached. A common bug: the text embedding is computed but never passed, so the model trains and samples unconditionally while the prompt pipeline looks healthy.
 
+> [!QA]
+> Q: Walk me through the mechanism: why does the cosine schedule beat the linear schedule, in numbers?
+> A: The denoiser trains on all t uniformly, so the schedule decides how much training budget each noise regime gets. Linear (beta 1e-4 to 0.02): at t = 500 the signal fraction alpha_bar is about 0.079, signal 0.28: the image is nearly dead halfway, so half the training pairs are near-noise (uninformative) or near-clean (trivial). Cosine: alpha_bar_500 = 0.5, signal 0.71: the mid-noise regime, where the denoising job is hardest and most informative, gets its fair share of training pairs. The schedule is the curriculum: cosine spends the budget where the learning happens.
+> Follow-up: Could you learn the schedule instead of fixing it?
+> A: In principle yes, and some work tries. In practice the schedule interacts with the ELBO weighting per t, and joint optimization is unstable: the model games the schedule to weight easy timesteps. Fixed schedules (linear, cosine) are the stable choice. The learned part is the denoiser, not the curriculum.
+
 9. **The audit.** 0.796 + 0.05 = 0.846. 100 steps: 0.48 signal
    in 0.80 noise. Numbers, not adjectives.
 10. **The shortcut.** Closed form makes training O(1) per pair.
@@ -277,12 +478,26 @@ most elegant.
     the quality tier.
 12. **The compass.** Noise prediction is score estimation.
     Sampling is hill-climbing from static.
+13. **Schedule.** Linear: 0.28 signal at t=500. Cosine: 0.71.
+    The curriculum decides where learning happens.
+14. **Guidance.** w=7.5: (1.6,-0.55) from (0.1,0.2) and
+    (0.3,0.1). Dial, not switch. Past 15: artifacts.
+15. **Latent.** 512x512x3 to 64x64x4: 48x smaller. Diffuse
+    there. Stable Diffusion's design.
+16. **U-Net.** Hourglass plus skips. Time embedding and
+    cross-attention per block. Gist plus detail.
+17. **DiT.** Patchify, transformer, unpatchify. The scaling
+    answer. Sora is a DiT (OpenAI Sora technical report, checked Oct 2026).
+18. **SDE.** One equation, many solvers. Langevin samples via
+    the score. DDIM is the probability-flow ODE.
+19. **Consistency.** Any x_t maps to x_0. 1-4 steps near teacher
+    quality. The few-step frontier.
 
 ## What is used where
 
 **Diffusion runs production image and video generation.**
 Stable Diffusion (open weights), DALL-E 3, Midjourney, and the
-video models (Sora and its peers) are diffusion-based: the lesson's
+video models (Sora and its peers) are diffusion-based ([Stable Diffusion](https://arxiv.org/abs/2112.10752): latent diffusion, Rombach et al. 2021. [Midjourney](https://www.cometapi.com/how-does-midjourney-ai-work/): denoising-diffusion U-Net backbone per third-party technical write-ups. [Sora](https://scientyficworld.org/openai-sora-workflow-technical-architecture/): diffusion transformer per OpenAI's technical report. DALL-E 3: [uncertain], OpenAI has not publicly disclosed its architecture. All checked Oct 2026): the lesson's
 forward-reverse-ELBO loop is the deployed architecture. GANs
 survive in niche real-time jobs where one-eval sampling matters.
 The distillation and few-step sampler industry (DDIM, DPM-Solver,
@@ -292,6 +507,17 @@ lesson prices.
 ## Watch next
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/iv-5mZ_9CPY" title="Explainer: how diffusion models work" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: how diffusion models work. A visual walkthrough of the forward destruction and the learned reversal. Watch after the pixel toy.</p></div>
+
+## Go deeper
+
+- [Denoising Diffusion Probabilistic Models (Ho et al., 2020)](https://arxiv.org/abs/2006.11239)
+- The DDPM paper the lecture builds on: the forward process, the simplified noise-prediction objective, the sampling loop. Read sections 2-3 for the ELBO simplification.
+- [Generative Modeling by Estimating Gradients of the Data Distribution (Song and Ermon, 2019)](https://arxiv.org/abs/1911.07072)
+- The score-based view: noise-conditional score networks, the geometric "noise points uphill" story. Matches the score subchapter.
+- [High-Resolution Image Synthesis with Latent Diffusion Models (Rombach et al., 2021)](https://arxiv.org/abs/2112.10752)
+- Latent diffusion: the VAE bottleneck, cross-attention conditioning, the 48x saving. Matches the latent section.
+- [The Annotated Diffusion Model (HuggingFace blog)](https://huggingface.co/blog/annotated-diffusion)
+- A line-by-line code walkthrough of the DDPM training and sampling loops. Matches the pixel toy and the closed-form sections.
 
 ## Official sources and further reading
 
@@ -323,3 +549,30 @@ sampling price, surveyed but not derived in the lecture.
   denoisers (DiT).
 - **CS336:** training diffusion models at scale: the compute
   behind the samples.
+
+## Coverage map: every lecture claim and where it lives
+
+| Lecture claim | Covered in | File line |
+|---|---|---|
+| Generative modeling of images: learn p(x), sample new x | The job | L48 |
+| One-shot generation (GAN-style): unstable, mode collapse | First attempt | L57 |
+| Generation as destruction in reverse | The key question | L67 |
+| Forward: x_t = sqrt(1-beta_t) x_{t-1} + sqrt(beta_t) eps | The forward process | L76 |
+| Betas 1e-4 to 1e-2; T in hundreds to thousands | The forward process | L76 |
+| Pixel toy: 0.8 to 0.846 in one step, audited | the pixel toy, audited | L105 |
+| Closed form: x_t from x_0 in O(1); training is cheap | the closed-form shortcut | L119 |
+| Linear vs cosine schedule: 0.28 vs 0.71 signal at t=500 | The noise schedule | L134 |
+| Reverse: network predicts each step's noise | The reverse process | L159 |
+| ELBO simplifies to noise-prediction MSE per level | The reverse process | L159 |
+| Sampling bill: 1,000 evals vs 1; DDIM 50; distilled 4 | the sampling bill, priced | L177 |
+| Score view: noise points uphill; sampling is hill-climbing | noise points uphill | L196 |
+| Sampling: x_T noise, T reversals, text steering | Sampling: noise to image | L212 |
+| Large T: tiny steps keep reversals learnable, bound tight | Why T is large | L220 |
+| Classifier-free guidance: w=7.5 gives (1.6,-0.55) | Classifier-free guidance | L233 |
+| Latent diffusion: 64x64x4, 48x saving | Latent diffusion: compress first | L260 |
+| U-Net: hourglass plus skips; time and text per block | The U-Net | L282 |
+| DiT: patchify, transformer, unpatchify; scaling answer | From U-Net to DiT | L308 |
+| SDE view: reverse SDE, Langevin, probability-flow ODE | The SDE view | L329 |
+| Consistency models: any x_t to x_0; 1-4 steps | Consistency models | L351 |
+| Honest price: sampling cost, ELBO bounds, data hunger | The honest price | L371 |
+| GAN/VAE/diffusion contrast: trainability won | Why T is large; the sampling bill | L220, L177 |
