@@ -6,7 +6,7 @@ course_order: 12
 order: 0
 nav: "Math · Generative Models · Overview"
 title: "Mathematical Foundations of Generative Models"
-summary: "One question, five machines: the mathematics of the generative model families — autoregressive, VAE, flows, diffusion, score-based, energy-based — and how to judge them."
+summary: "One question, five machines: the mathematics of the generative model families (autoregressive, VAE, flows, diffusion, score-based, energy-based) and how to judge them."
 instructor: "Prof. Prathosh A P"
 offering: "2025"
 ---
