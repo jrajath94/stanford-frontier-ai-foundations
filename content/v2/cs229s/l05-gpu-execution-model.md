@@ -16,7 +16,7 @@ sources:
     label: "Hardware Aware Algorithm Design slide deck, GPU execution model sections (Fall 2023 headers)"
   - tag: supplement
     label: "NVIDIA CUDA C++ Programming Guide"
-    url: https://docs.nvidia.com/cuda/cuda-c-programming-guide/
+    url: https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
   - tag: supplement
     label: "Dan Fu, Chris Re, NeurIPS MLSys Keynote 2023 (tensor cores)"
 ---
@@ -61,17 +61,17 @@ One instruction drives 32 threads. If all 32 take the same
 branch, the warp runs at full speed. If 16 take branch A and
 16 take branch B, the warp runs branch A with half its lanes
 masked off, then branch B with the other half masked off.
-Both paths cost time; only one lane's work is real at any
+Both paths cost time. Only one lane's work is real at any
 moment. This is **warp divergence**: the 2x penalty for a
 split vote.
 
 The rule: keep branches uniform inside a warp. Sort work so
 threads in one warp decide the same way. Attention masks are
-fine; data-dependent early exits per token are not.
+fine. Data-dependent early exits per token are not.
 
 ![Warp divergence](assets/plate-l05-warp-divergence.webp "Split votes serialize: both branches run, half the lanes masked each time. Shell 2. Source: original toy for warp divergence. Project: Stanford Frontier AI.")
 
-![GPU execution model](assets/slide-l05-gpu-execution-model.png "Shell 1. Grids of blocks map to SMs; warps of 32 threads execute in lockstep. Source: Stanford slides.")
+![GPU execution model](assets/slide-l05-gpu-execution-model.png "Shell 1. Grids of blocks map to SMs. Warps of 32 threads execute in lockstep. Source: Stanford slides.")
 
 The capacity formula follows. Maximum active threads = (number
 of SMs) x (max blocks per SM) x (max threads per block).
@@ -83,7 +83,7 @@ terms.
 
 On an A100: 108 SMs, up to 2,048 resident threads per SM.
 Maximum active threads = 108 x 2,048 = 221,184. A kernel that
-launches 10,000 threads uses 5 percent of the machine; the
+launches 10,000 threads uses 5 percent of the machine. The
 other 95 percent of the SMs sit idle while one finishes.
 
 The number to remember is not 221,184. It is the habit:
@@ -134,7 +134,7 @@ memory, one load serves all four: half the memory accesses
 disappear. Tiling is Lecture 3's matmul tiling, now stated as
 a programming pattern: share inputs across outputs on-chip.
 
-![Tiling](assets/slide-l05-tiling.png "Shell 2. Threads collaborate through shared memory instead of loading independently; half the accesses disappear. Source: Stanford slides.")
+![Tiling](assets/slide-l05-tiling.png "Shell 2. Threads collaborate through shared memory instead of loading independently. Half the accesses disappear. Source: Stanford slides.")
 
 ### Subchapter: the coalescing math
 
@@ -178,17 +178,17 @@ Lecture 3, and it explains a FlashAttention design choice in
 the next lecture: tile sizes are chosen for the hardware's
 fast path, not for the algorithm's elegance.
 
-![Tensor cores](assets/slide-l05-tensor-cores.png "Shell 3. Tensor cores multiply 16x16 tiles; keep them busy with large tiles. Source: Stanford slides, credit Dan Fu and Chris Re.")
+![Tensor cores](assets/slide-l05-tensor-cores.png "Shell 3. Tensor cores multiply 16x16 tiles. Keep them busy with large tiles. Source: Stanford slides, credit Dan Fu and Chris Re.")
 
 ### Subchapter: the 16x gap, worked
 
-On H100, FP16 tensor throughput is 989 TFLOPS; the plain CUDA
+On H100, FP16 tensor throughput is 989 TFLOPS. The plain CUDA
 cores do about 67 TFLOPS of FP32. The ratio is 14.8x, the
 slides' "up to 16x". A kernel written as elementwise ops sees
 67 TFLOPS of a 989-TFLOPS chip: 7 percent of the machine.
 
 The gap is not free. Tensor cores need 16 by 16 aligned
-tiles and large batches to stay fed; small tiles pay the
+tiles and large batches to stay fed. Small tiles pay the
 launch cost for little work. The hardware-specific principle
 is a budget: express the work as big matmuls, or accept that
 you bought 7 percent of your GPU.
@@ -213,14 +213,14 @@ node is fast.
 much slower than NVLink. Communication across nodes is the
 expensive move.
 
-![Device block](assets/plate-device-block.svg "Shell 4. One GPU, one node of 8 GPUs on NVLink, many nodes on InfiniBand. Source: original plate; defined here, reused by MS&E435.")
+![Device block](assets/plate-device-block.svg "Shell 4. One GPU, one node of 8 GPUs on NVLink, many nodes on InfiniBand. Source: original plate. Defined here, reused by MS&E435.")
 
 ### Subchapter: NVLink versus InfiniBand, in numbers
 
 H100 NVLink 4.0 gives about 900 GB/s bidirectional per GPU.
 Eight GPUs in a node share this fabric: all-reduce across
 the node moves gigabytes in milliseconds. InfiniBand NDR
-gives 400 Gb/s, or 50 GB/s, per port; a node with 8 rails
+gives 400 Gb/s, or 50 GB/s, per port. A node with 8 rails
 reaches about 400 GB/s aggregate, and that bandwidth is
 shared, contended, and higher latency.
 
@@ -292,7 +292,7 @@ NVIDIA GPUs with CUDA, NCCL collectives, and kernels written
 in CUDA, Triton, or CUTLASS. Inference stacks add their own:
 vLLM and SGLang ship hand-tuned kernels for attention and
 quantization. The warp size and the link speeds change across
-vendors; the hierarchy (fast small memories near the math,
+vendors. The hierarchy (fast small memories near the math,
 slow big memory far away) does not.
 
 ## Mapping back: every principle has an address
@@ -338,9 +338,9 @@ express the work as large matrix multiplications so tensor cores can take it, an
 
 > [!QA]
 > Q: Walk me through a kernel launch, from the CPU call to threads running.
-> A: The CPU launches a kernel with a grid size: say 1,000 blocks of 256 threads. The hardware enumerates the 1,000 blocks and assigns them to SMs with free capacity; on an A100 with 108 SMs, each SM takes several blocks. Inside one SM, the 256 threads of a block are grouped into 8 warps of 32. Each warp executes in lockstep under SIMT: one instruction, 32 data items. Threads load from HBM into registers and shared memory, compute, and write back. When a block finishes, its SM picks up the next waiting block. The program never names an SM; the hardware schedules.
+> A: The CPU launches a kernel with a grid size: say 1,000 blocks of 256 threads. The hardware enumerates the 1,000 blocks and assigns them to SMs with free capacity. On an A100 with 108 SMs, each SM takes several blocks. Inside one SM, the 256 threads of a block are grouped into 8 warps of 32. Each warp executes in lockstep under SIMT: one instruction, 32 data items. Threads load from HBM into registers and shared memory, compute, and write back. When a block finishes, its SM picks up the next waiting block. The program never names an SM. The hardware schedules.
 > Follow-up: What happens if you launch only 4 blocks of 256 threads?
-> A: Four SMs get one block each; the other 104 SMs sit idle. You used 1,024 threads against a 221,184-thread ceiling. Throughput is roughly 100x below the machine's capacity, no matter how good the kernel code is.
+> A: Four SMs get one block each. The other 104 SMs sit idle. You used 1,024 threads against a 221,184-thread ceiling. Throughput is roughly 100x below the machine's capacity, no matter how good the kernel code is.
 
 > [!QA]
 > Q: 32 threads in a warp each read one FP32 from scattered addresses. How much bandwidth is wasted?
@@ -350,13 +350,13 @@ express the work as large matrix multiplications so tensor cores can take it, an
 
 > [!QA]
 > Q: What is warp divergence, and what does it cost?
-> A: Under SIMT one instruction drives 32 threads. If 16 threads take branch A and 16 take branch B, the warp executes A with half its lanes masked, then B with the other half masked. Both paths cost full time; each lane is productive only half the time. Cost: up to 2x for a two-way split, more for deeper nesting. Fix it by keeping branches uniform inside a warp: sort or bucket work so each warp votes the same way.
+> A: Under SIMT one instruction drives 32 threads. If 16 threads take branch A and 16 take branch B, the warp executes A with half its lanes masked, then B with the other half masked. Both paths cost full time. Each lane is productive only half the time. Cost: up to 2x for a two-way split, more for deeper nesting. Fix it by keeping branches uniform inside a warp: sort or bucket work so each warp votes the same way.
 > Follow-up: Why are attention masks fine but per-token early exits not?
-> A: An attention mask is the same branch decision for every thread in the warp: no divergence. A per-token early exit makes each thread decide differently from its data: the warp splits and pays both paths. Uniform control flow is free; data-dependent control flow is not.
+> A: An attention mask is the same branch decision for every thread in the warp: no divergence. A per-token early exit makes each thread decide differently from its data: the warp splits and pays both paths. Uniform control flow is free. Data-dependent control flow is not.
 
 > [!QA]
 > Q: Applied design: your kernel reaches 10 percent of peak memory bandwidth. Diagnose it.
-> A: Check three suspects in order. First, coalescing: profile the achieved versus requested bytes; scattered access shows up as a large gap. Second, occupancy: count launched threads against the 221,184-thread ceiling on A100; too few threads starves the memory system. Third, the access pattern: strided or unaligned reads waste transactions even when coalesced in spirit. The interview signal: quote the 128-byte transaction and the capacity formula, then name which one the profiler implicates.
+> A: Check three suspects in order. First, coalescing: profile the achieved versus requested bytes. Scattered access shows up as a large gap. Second, occupancy: count launched threads against the 221,184-thread ceiling on A100. Too few threads starves the memory system. Third, the access pattern: strided or unaligned reads waste transactions even when coalesced in spirit. The interview signal: quote the 128-byte transaction and the capacity formula, then name which one the profiler implicates.
 > Follow-up: Coalescing is clean and occupancy is full, but bandwidth is still 30 percent. What next?
 > A: Then the pattern is the problem: bank conflicts in shared memory, or reads too small to fill transactions. Widen the per-thread access (vectorized loads of 4 or 8 elements) and check shared-memory bank conflicts with the profiler's counters.
 
@@ -369,7 +369,7 @@ The story in eight steps. Each step answers the one before it.
    write back. Memory bound or compute bound is now a fact
    about these three steps.
 2. **Blocks map to SMs.** Grids of blocks land on SMs with
-   free capacity. Multiple blocks per SM; threads of a
+   free capacity. Multiple blocks per SM. Threads of a
    block run concurrently on one SM.
 3. **Warps execute in lockstep.** 32 threads, one
    instruction, many data: SIMT. Expose enough threads or
@@ -378,7 +378,7 @@ The story in eight steps. Each step answers the one before it.
    slow), shared (one block, collaborative), registers (one
    thread, fastest). Place data by sharing pattern.
 5. **Coalesce, then tile.** Adjacent threads touch adjacent
-   elements. Partition into shared-memory tiles; threads
+   elements. Partition into shared-memory tiles. Threads
    collaborate on overlapping inputs. Half the loads
    disappear.
 6. **Tensor cores want big tiles.** 16 by 16 native GEMM
@@ -388,7 +388,7 @@ The story in eight steps. Each step answers the one before it.
    four pools), one node (8 GPUs, NVLink), one cluster
    (nodes, InfiniBand). Defined here, reused by MS&E435.
 8. **Recompute when memory bound.** Skip storing forward
-   intermediates; recompute them backward. More FLOPs,
+   intermediates. Recompute them backward. More FLOPs,
    less HBM traffic: the winning trade under a memory
    roof.
 
@@ -406,10 +406,10 @@ The story in eight steps. Each step answers the one before it.
 
 **Caveats from these sources.** SM counts, memory sizes,
 and the 16x tensor-core figure are A100/H100 generation
-numbers from the slides; newer GPUs differ. The
+numbers from the slides. Newer GPUs differ. The
 8-GPUs-per-node layout is the standard DGX/HGX
 configuration the course assumes. Coalescing and tiling
-rules are NVIDIA CUDA specifics; other accelerators differ
+rules are NVIDIA CUDA specifics. Other accelerators differ
 in detail but not in spirit.
 
 ## Go deeper
@@ -421,17 +421,17 @@ in detail but not in spirit.
 - CUDA Explained - Why are GPUs so powerful: https://www.youtube.com/watch?v=LSy37D8-8KA
 - CUDA Crash Course: warps, blocks, and memory: https://www.youtube.com/watch?v=XAX_z5zZJ7s
 - GPU MODE: the lecture series that teaches GPU programming from zero: https://www.youtube.com/@GPUMODE
-- NVIDIA CUDA C++ Programming Guide: https://docs.nvidia.com/cuda/cuda-c-programming-guide/
+- NVIDIA CUDA C++ Programming Guide: https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
 - OpenAI Triton: tile-based GPU kernels in Python: https://triton-lang.org/
 
 ## Connections to the other courses
 
 - **MS&E435:** reuses the device block defined here. Do not
-  redefine it; link here.
+  redefine it. Link here.
 - **CS336 L06:** kernel programming: this lecture's
   patterns in code.
 - **CS336 L07:** interconnects and collectives in full.
-- **CS229S L03:** the six principles; this lecture is their
+- **CS229S L03:** the six principles. This lecture is their
   hardware substrate.
 - **CS229S L06:** FlashAttention uses every pattern on this
   page.
