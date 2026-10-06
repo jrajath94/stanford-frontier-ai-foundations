@@ -237,24 +237,43 @@ model honest: the dequantized density, rounded back down,
 reproduces a valid distribution over the original integers.
 Gaussian noise would smear across pixel boundaries. The
 decision rule: always dequantize discrete data before a flow,
-and report likelihoods in bits per dimension on the dequantized
-scale so models compare fairly. Skip this step and the "exact
+and report likelihoods in **bits per dimension** (bpd) on the
+dequantized scale so models compare fairly. Bits per dimension is
+the average surprise per pixel per channel: minus log2 p(x),
+divided by the number of dimensions. Lower is better. Skip this
+step and the "exact
 likelihood" is exact for the wrong object.
 
-### Subchapter: continuous flows: the ODE view
+### Subchapter: continuous flows: layers become an ODE
 
 Stack infinitely many infinitesimal coupling layers and the warp
 becomes a differential equation: dx/dt = f_theta(x, t), from
 t = 0 (noise) to t = 1 (data). This is a **neural ODE**
-(FFJORD: Grathwohl et al., 2018). The log determinant becomes an
-integral of the **trace** of the Jacobian:
+(FFJORD: Grathwohl et al., 2018): the network f_theta is the
+velocity field, and integrating it moves noise to data.
+
+### Subchapter: the trace replaces the determinant
+
+The log determinant becomes an integral of the **trace** of the
+Jacobian:
 
 ```ascii
 log p(x_1) = log p(x_0) - integral_0^1 Tr(d f / d x) dt
 ```
 
-The trace costs O(d): one backward pass gives the diagonal sum
-via Hutchinson's estimator, no O(d^3) determinant anywhere.
+The trace is the sum of the diagonal entries: how much the
+velocity field stretches each coordinate, added up. The integral
+accumulates that stretch along the path. No determinant, no
+triangular restriction: any f_theta works.
+
+### Subchapter: Hutchinson's estimator: the trace on a budget
+
+The trace still needs the Jacobian's diagonal. **Hutchinson's
+estimator** approximates the trace with random probes: average
+z^T J z over random vectors z, and the average converges to the
+trace. One backward pass per probe, O(d) work, no O(d^3)
+determinant anywhere.
+
 Sampling solves the ODE forward. Density solves it backward.
 The price moves: no architectural constraints at all (f can be
 any network), but every evaluation solves an ODE numerically,
@@ -308,7 +327,11 @@ The pattern: flows ship where exact density matters more than raw
 sample quality. Speech vocoders (WaveGlow), anomaly detection,
 lossless compression (bits-back coding needs exact
 probabilities), scientific simulators with calibrated
-uncertainties. The warper is the density instrument. The restorer
+uncertainties. **Bits-back coding** turns a latent-variable model
+into a lossless compressor: the sender's net bit cost is the
+model's negative ELBO, because the receiver recovers bits from the
+transmitted latents. It needs honest probabilities, which is why
+flows qualify. The warper is the density instrument. The restorer
 is the sample artist.
 
 ## Tying to CS336: what flows cannot use
