@@ -65,6 +65,20 @@ is the model's imagination. A model without latents can only
 push noise forward. A model with latents can reason backward
 from data to causes.
 
+Count the payoff on a toy. Two photo clusters, cats and dogs,
+mixed in one dataset. A latent-free model must learn the full
+mixture: every parameter fights both clusters at once. Name
+one latent bit (cat/dog) and the decoder's job factors: learn
+the cat conditional and the dog conditional separately. One
+bit of latent structure turns one hard mixture into two easy
+pieces. The decision rule: reach for latents when the data
+varies along axes you can name (breed, lighting, pose). Skip
+them when the variation is pure unstructured noise: there the
+latent buys nothing and the inference machinery is pure
+overhead. The failure mode of skipping latents on structured
+data is entanglement: one knob changes breed and lighting at
+once, and no edit is clean.
+
 ## Where direct likelihood breaks
 
 ### The wall: a log of an integral
@@ -100,6 +114,21 @@ Monte Carlo estimate inside a nonlinear function and trust
 the result. Move the nonlinearity inside the expectation
 first. That is what Jensen does.
 
+### Jensen, on numbers: 1.609 ≥ 1.099
+
+See the inequality on two values, 1 and 9, averaged
+50/50. Log of the average: log(0.5·1 + 0.5·9) = log 5 =
+1.609. Average of the logs: 0.5·log 1 + 0.5·log 9 = 0 +
+1.099 = 1.099. So log E = 1.609 ≥ 1.099 = E log. The
+concave log always bends this way: the chord between two
+points on the curve sits below the curve. That gap,
+1.609 − 1.099 = 0.510, is exactly the slack Jensen
+exploits. The ELBO derivation runs the same move on an
+integral instead of two numbers: pull the log inside the
+expectation and the intractable log-of-integral becomes
+a tractable expectation-of-log, at the price of that
+slack. The slack has a name: the gap, a KL.
+
 ## The key question
 
 How do you maximize a log of an integral you cannot compute,
@@ -119,26 +148,32 @@ expectation is linear).
 L(theta) = log p_theta(x) = log integral p_theta(x, z) dz
 ```
 
-**Step 2.** Introduce any distribution q(z | x) over the
-latent variable. Multiply and divide the integrand by it
+### Step 2: smuggle in the variational guess q
+
+Introduce any distribution q(z | x) over the latent
+variable. Multiply and divide the integrand by it
 (legal: q is non-negative, so the integral is unchanged):
 
 ```ascii
 L = log integral  q(z|x) * [ p_theta(x, z) / q(z|x) ] dz
 ```
 
-**Step 3.** Read the integral as an expectation. The
-integral of q times a function of z is the expectation of
-that function under q:
+### Step 3: read the integral as an expectation
+
+Read the integral as an expectation. The integral of q
+times a function of z is the expectation of that function
+under q:
 
 ```ascii
 L = log  E_q[ p_theta(x, z) / q(z|x) ]
 ```
 
-**Step 4.** Now the enemy is visible: log of an
-expectation. **Jensen's inequality** says for the concave
-log function, log of an expectation is at least the
-expectation of the log:
+### Step 4: Jensen builds the floor
+
+Now the enemy is visible: log of an expectation.
+**Jensen's inequality** says for the concave log function,
+log of an expectation is at least the expectation of the
+log:
 
 ```ascii
 log E_q[ . ]  >=  E_q[ log( . ) ]
@@ -151,7 +186,8 @@ L(theta)  >=  E_q[ log p_theta(x, z) - log q(z|x) ]  =:  ELBO
 ```
 
 This lower bound is the **Evidence Lower Bound**, ELBO
-(the likelihood is also called the evidence). Instead of
+(the likelihood is also called the evidence). All logs
+in this lesson are natural logs (base e). Instead of
 the uncomputable log-likelihood, maximize this computable
 expectation. The bound depends on θ (the model) and on q
 (the **variational posterior**, our guess at the hidden
@@ -170,6 +206,39 @@ organizes the next four lessons: EM sets q to the exact
 posterior (gap zero, this lesson's end). VAEs learn q with a
 network (small gap, Lesson 7). Diffusion fixes q to a
 known noising process (gap irrelevant, Lessons 8-9).
+
+This is not a new fact. It is the same multiply-and-divide
+algebra rearranged. Start with the gap, likelihood minus
+ELBO:
+
+```ascii
+gap = log p_theta(x) - E_q[ log p_theta(x, z) / q(z|x) ]
+```
+
+The likelihood does not depend on z, so push it inside the
+expectation:
+
+```ascii
+gap = E_q[ log p_theta(x) ] - E_q[ log p_theta(x, z) / q(z|x) ]
+```
+
+Combine the two expectations. Expand the log of the ratio:
+
+```ascii
+gap = E_q[ log p_theta(x) - log p_theta(x, z) + log q(z|x) ]
+```
+
+Write p_θ(x,z) = p_θ(z|x) p_θ(x) and split the log of the
+product. The log p_θ(x) terms cancel:
+
+```ascii
+gap = E_q[ log q(z|x) - log p_theta(z|x) ]
+```
+
+That is exactly the KL, in expectation form. KL(q(z|x) ||
+p_θ(z|x)) = E_q[log q(z|x) − log p_θ(z|x)], the expectation
+over q of the log-ratio of guess to truth. The two-coin toy
+later computes this same form and gets 0.063.
 
 ![The ELBO floor](assets/l06-elbo-gap.webp "Jensen builds a computable floor under the true objective. The gap is the KL to the true posterior. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
 
@@ -264,6 +333,54 @@ posterior (gap zero: the bound touches). On the two-coin
 toy, one E-step moves q from {0.3, 0.7} to {0.158, 0.842}
 and the ELBO jumps from −1.031 to −0.968.
 
+### Worked: one EM step on {0, 10}
+
+Data: two points, 0 and 10. Model: two Gaussians with
+spread σ = 1, means μ_1 = 2, μ_2 = 8, equal weights.
+E-step: compute each point's responsibility (posterior
+probability) per cluster. The Gaussian density at
+distance d is proportional to exp(−d²/2).
+
+```ascii
+x = 0:   p(0|mu_1=2) propto exp(-2)   = 0.1353
+         p(0|mu_2=8) propto exp(-32)  = 0.0000 (about 1e-14)
+         responsibilities: gamma_1 = 1.000, gamma_2 = 0.000
+x = 10:  p(10|mu_1=2) propto exp(-32) = 0.0000
+         p(10|mu_2=8) propto exp(-2)  = 0.1353
+         responsibilities: gamma_1 = 0.000, gamma_2 = 1.000
+```
+
+The clusters are well separated, so the posteriors are
+essentially hard: point 0 belongs to cluster 1, point
+10 to cluster 2. M-step: refit each mean to its
+responsibility-weighted points. μ_1 = (1.0·0)/1.0 = 0.
+μ_2 = (1.0·10)/1.0 = 10. One EM iteration moved the
+means from {2, 8} to {0, 10}: converged. The ELBO rose
+at both steps, and with it the true likelihood. This
+is the clean special case: exact posterior, gap zero,
+monotone progress, no adversary.
+
+### k-means: EM with the temperature at zero
+
+**k-means** is EM's hard limit. Shrink the cluster
+spread σ toward 0. The responsibilities sharpen: at
+σ = 1 the toy gave 1.000 vs 0.000 already, but for
+overlapping clusters, say a point at distance 1 from
+μ_1 and 2 from μ_2, σ = 1 gives responsibilities
+proportional to exp(−0.5) = 0.607 vs exp(−2) = 0.135,
+i.e. 0.818 vs 0.182: soft. As σ → 0, the ratio
+exp(−(d_1²−d_2²)/(2σ²)) goes to 0 or infinity: the
+closer cluster takes everything. Soft assignments
+become hard 0/1 assignments. The M-step then sets each
+mean to the plain average of its assigned points. That
+is exactly k-means: assign each point to the nearest
+center, move centers to the averages, repeat. Same
+ELBO, same coordinate ascent, with the posterior
+frozen into a hard choice. The decision rule: use
+k-means when clusters are well separated and speed
+matters. Use EM when overlap is real and you need the
+uncertainty.
+
 ### M-step: push the floor up
 
 The M-step maximizes the ELBO over θ with q fixed. With
@@ -320,23 +437,60 @@ including the valleys between modes.
 | Learned network q_φ | Small if the family is rich | VAE (Lesson 7) |
 | Fixed process | Gap irrelevant. Bound still trains θ | Diffusion (Lessons 8-9) |
 
+### Amortized inference: one q for all x
+
+EM fits a separate q per data point: n points, n
+posteriors. The VAE **amortizes**: one encoder
+network q_φ(z|x) serves every x. The cost of
+inference is paid once (training the encoder),
+then each new x gets its q in one forward pass.
+
+The price is the **amortization gap**: the shared
+network may not reach each point's best q, so the
+bound is looser than per-point optimization would
+give. On the two-coin toy, per-point q reaches the
+exact posterior {0.158, 0.842} and gap 0. A tiny
+encoder that outputs q = {0.3, 0.7} for every x
+keeps gap 0.063 forever. The decision rule:
+amortize when n is large and x's share structure
+(images do). Optimize per-point when n is small
+and each posterior matters.
+
+### The ELBO as free energy
+
+Physicists read the ELBO as negative free energy.
+Write it as E_q[log p_θ(x,z)] + H(q), where H(q) is
+q's entropy. The first term is minus the expected
+energy (−log p is the energy of the configuration).
+The second is entropy. Free energy = energy −
+temperature·entropy, at temperature 1. Maximizing
+the ELBO minimizes the free energy: find low-energy
+configurations (explain the data) without freezing
+into one (keep entropy). The KL gap is the
+dissipation: how far the system sits from
+equilibrium. Same math, older words.
+
+![Amortized: one encoder for every x, with a gap](assets/l06-amortized.webp "Per-point q reaches gap 0. Shared q keeps gap 0.063. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
 ### Where the ELBO runs in real systems
 
-The ELBO is the training objective everywhere a neural
-latent-variable model is fit by likelihood. The VAE
-(Lesson 7) maximizes it with a learned encoder as q.
-Diffusion models (Lessons 8-9) start from it and simplify
-until only the denoising term survives: the ELBO is the
-ancestor of the diffusion loss. [uncertain] Beyond VAEs
-and diffusion, ELBO-style bounds appear in many
-variational-inference settings, but the exact forms are
-beyond this course's sources.
+Verified October 2026: the ELBO is the training objective
+of the VAE (Kingma and Welling 2013, Lesson 7), which
+maximizes it with a learned encoder as q, and the ancestor
+of the DDPM loss (Ho et al. 2020, Lessons 8-9), which
+starts from it and simplifies until only the denoising
+term survives. [uncertain] Beyond VAEs and diffusion,
+ELBO-style bounds appear in many variational-inference
+settings, but the exact forms are beyond this course's
+sources.
 
 ## Videos for this lesson
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/zUJNypPc-Vo" title="W5L19: Gaussian Mixture Models: Expectation-Maximization Algorithm" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: EM for Gaussian mixtures, the exact-posterior special case of the ELBO. If the embed is blocked: <a href="https://www.youtube.com/watch?v=zUJNypPc-Vo" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/9MbC6oQvh2g" title="Session 2: Variational Inference, Autoencoders, Variational Autoencoders" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">External explainer: variational inference and the ELBO derived in full, through to the VAE and the reparameterization trick. If the embed is blocked: <a href="https://www.youtube.com/watch?v=9MbC6oQvh2g" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
+![Chapter plate: the ELBO floor](assets/plate-l06-chap-elbo.webp "A computable floor under the intractable log, with the gap measured to the digit. Chapter plate. Shell 5. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 > [!QA]
 > Q: What is the ELBO, and why do we need it?
@@ -348,7 +502,7 @@ beyond this course's sources.
 > Q: Walk me through the Jensen step. Why is it legal, and why does it help?
 > A: Legal: q(z|x) is a distribution, so multiplying and dividing by it inside the integral changes nothing, and reading the integral as E_q is just notation. The inequality step uses Jensen: log is concave, so log E[·] ≥ E[log(·)]. It helps because E_q[log(·)] is an expectation of a computable quantity: sample z from q, evaluate, average. The log-of-expectation it replaced could not be estimated without bias.
 > Follow-up: Could you apply Jensen the other way and get an upper bound?
-> A: For a concave function the inequality goes one way only. Log E ≥ E log. A convex function would give the reverse. Since we need a lower bound to maximize safely, concavity of the log is exactly what the derivation needs. The log has that shape; no choice is involved.
+> A: For a concave function the inequality goes one way only. Log E ≥ E log. A convex function would give the reverse. Since we need a lower bound to maximize safely, concavity of the log is exactly what the derivation needs. The log has that shape. No choice is involved.
 
 > [!QA]
 > Q: What are the two terms of the ELBO doing?
