@@ -310,8 +310,7 @@ the optimizer step.</p>
 <p>The standard schedule computes B then W together, so W blocks the
 next stage&rsquo;s B. Zero-bubble splits them: compute B immediately, ship
 it down the pipe, and do W in the idle gaps that the schedule leaves
-behind. The plate shows the interleaving: the B chain stays
-continuous while W fills the holes.</p>
+behind: the B chain stays continuous while W fills the holes.</p>
 <p>The price: W needs the activations, so holding W for later means
 holding activations longer. Memory rises slightly. DualPipe is the
 same idea taken further: it splits each chunk into attention,
@@ -440,8 +439,8 @@ internal configs may differ. The pattern holds regardless: fit with
 TP or EP inside the fast node, cross slow links with pipeline or
 FSDP, spend the rest on data parallel.</p>
 <figure><img alt="Verified frontier recipes" src="assets/media-generation-cs336-l08-recipe-cards-0-7f68a2d7-4d37-4761-9d64-8803ab077645.webp"><figcaption>DeepSeek-V3: EP64, PP16 DualPipe, ZeRO-1, no training TP. Llama 3 405B: TP8, PP16, CP1, FSDP-128. Source: paper. Project: Stanford Frontier AI.</figcaption></figure>
-<div class="qa"><div class="q">Design the parallelism for a 70B dense model on 256 GPUs.</div><div class="a"><p>Memory first: 70B x 16 bytes = 1.1TB per full copy. An 80GB GPU cannot hold it. Tensor parallel 8 inside each node: the layers split and the per-layer traffic stays on NVLink. 256 / 8 = 32 groups: data parallel 32 with FSDP (ZeRO-3) across the nodes for the rest. Activations: check the 34sbh/t floor against your sequence length; if it overflows, add context parallel for long sequences or pipeline stages for depth. Follow the prescription: minimize model parallel, maximize data parallel. The recipe is TP-8, FSDP-32, CP as needed.
-FSDP&rsquo;s extra all-gather hides under compute when layers are big; pipeline&rsquo;s bubbles never fully hide. Pipeline wins when memory binds harder than communication: activations at very long sequences, or optimizer state that ZeRO cannot shrink. Start with FSDP, add pipeline when the floor says so.</p><div class="followup"><strong>Follow-up:</strong> Why FSDP and not pipeline across the nodes?</div></div></div>
+<div class="qa"><div class="q">Design the parallelism for a 70B dense model on 256 GPUs.</div><div class="a"><p>Memory first: 70B x 16 bytes = 1.1TB per full copy. An 80GB GPU cannot hold it. Tensor parallel 8 inside each node: the layers split and the per-layer traffic stays on NVLink. 256 / 8 = 32 groups: data parallel 32 with FSDP (ZeRO-3) across the nodes for the rest. Activations: check the 34sbh/t floor against your sequence length. If it overflows, add context parallel for long sequences or pipeline stages for depth. Follow the prescription: minimize model parallel, maximize data parallel. The recipe is TP-8, FSDP-32, CP as needed.
+FSDP&rsquo;s extra all-gather hides under compute when layers are big. Pipeline&rsquo;s bubbles never fully hide. Pipeline wins when memory binds harder than communication: activations at very long sequences, or optimizer state that ZeRO cannot shrink. Start with FSDP, add pipeline when the floor says so.</p><div class="followup"><strong>Follow-up:</strong> Why FSDP and not pipeline across the nodes?</div></div></div>
 <h2 id="mapping-back-what-each-tool-fixes">Mapping back: what each tool fixes</h2>
 <table>
 <thead>
@@ -527,6 +526,16 @@ too. The prescription is a starting point, not a proof.</p>
    DP for the rest. Minimize model parallel, maximize data parallel.
    Recompute buys batch size buys utilization.</li>
 </ol>
+<h2 id="go-deeper">Go deeper</h2>
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:16px 0;">
+<iframe style="position:absolute;top:0;left:0;width:100%;height:100%;" src="https://www.youtube-nocookie.com/embed/G4hPCbS71P4" title="ZeRO and FSDP explained: sharding optimizer state, gradients and parameters" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+<ul>
+<li>ZeRO and FSDP explained (the embed above): https://www.youtube.com/watch?v=G4hPCbS71P4</li>
+<li>Rajbhandari et al., ZeRO: https://arxiv.org/abs/1910.02054</li>
+<li>Zhao et al., PyTorch FSDP: https://arxiv.org/abs/2304.11277</li>
+<li>DeepSpeed ZeRO tutorial: https://www.deepspeed.ai/tutorials/zero/</li>
+</ul>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Lecture 8 video and slides (lecture_8.pdf).
