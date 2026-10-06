@@ -12,9 +12,11 @@ p = Plate("KL = 0.51 nats, counted term by term",
 p.text(32, p.top, "truth {0.5, 0.5} vs model {0.9, 0.1}", size=14, bold=True, color=MUTED)
 p.bars(64, p.top + 300, [("heads", -0.294, PINK), ("tails", 0.805, TEAL), ("total KL", 0.511, FOCUS)],
        1.0, bar_w=120, gap=64, height=200, size=14)
-p.text(64, p.top + 336, "heads term: 0.5 x log(0.556) = -0.294", size=14)
-p.text(64, p.top + 364, "tails term: 0.5 x log(5.0) = +0.805", size=14)
-p.text(64, p.top + 392, "match would score log(1) = 0 on both terms", size=13, color=MUTED)
+# Term legend moved right of the bars: the old under-bar position collided
+# with the heads bar (hangs below baseline) and its value label.
+p.text(600, p.top + 320, "heads term: 0.5 x log(0.556) = -0.294", size=14)
+p.text(600, p.top + 348, "tails term: 0.5 x log(5.0) = +0.805", size=14)
+p.text(600, p.top + 376, "match would score log(1) = 0 on both terms", size=13, color=MUTED)
 p.save("l02-kl-toy.webp")
 
 # 2. Forward vs reverse: mode-covering vs mode-seeking
@@ -68,14 +70,15 @@ p.text(64, y + 280, "the MLE objective: a sample average, no P_X formula needed"
 p.save("l02-kl-split.webp")
 
 # 4. MLE toy: H, H, T
+# 2*ln(0.7)+ln(0.3) = -1.9173227 -> -1.917 (precise intermediates, not rounded).
 p = Plate("MLE listens to the data: H, H, T picks the 0.7 coin",
           "Less negative wins. Two heads out of three favor the heads-biased model.",
-          "Shell 2. -1.918 beats -2.079.",
-          source="original toy", inner_h=360)
-p.bars(64, p.top + 280, [("fair 0.5", 2.079, TEAL), ("biased 0.7", 1.917, FOCUS)],
+          "Shell 2. -1.917 beats -2.079.",
+          source="original toy", inner_h=400)
+p.bars(64, p.top + 280, [("fair 0.5", 2.079, TEAL, "-2.079"), ("biased 0.7", 1.917, FOCUS, "-1.917")],
        2.2, bar_w=140, gap=80, height=180, size=14)
 p.text(64, p.top + 320, "log-likelihood = sum of log P(x_i), less negative is better", size=14)
 p.text(64, p.top + 348, "fair: 3 x log 0.5 = -2.079", size=14)
-p.text(64, p.top + 376, "biased: 2 x log 0.7 + log 0.3 = -1.918", size=14)
+p.text(64, p.top + 376, "biased: 2 x log 0.7 + log 0.3 = -1.917", size=14)
 p.chip(560, p.top + 320, "winner: biased 0.7", fill=NEW)
 p.save("l02-mle-toy.webp")
