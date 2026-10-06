@@ -33,12 +33,13 @@ p.save("l04-saturation.webp")
 p = Plate("Mode collapse: half the world missing, JS = 0.216",
           "Truth {0: 0.5, 10: 0.5}. Model {0: 1.0}. The divergence shrugs.",
           "Shell 2. 0.5*0.144 + 0.5*0.288 = 0.216. Generator loss stuck at 0.693. Source: original toy.",
-          source="original toy", inner_h=460)
+          source="original toy", inner_h=520)
 p.text(32, p.top, "truth P_X", size=14, bold=True, color=MUTED)
 p.bars(32, p.top + 240, [("0", 0.5, TEAL), ("10", 0.5, TEAL)], 1.0,
        bar_w=100, gap=60, height=170, size=14)
 p.text(32, p.top + 276, "collapsed model P_theta", size=14, bold=True, color=MUTED)
-p.bars(32, p.top + 470, [("0", 1.0, ORANGE), ("10", 0.0, PINK)], 1.0,
+# Second bar row pushed down: the "1.0" value label sat on the heading above.
+p.bars(32, p.top + 510, [("0", 1.0, ORANGE), ("10", 0.0, PINK)], 1.0,
        bar_w=100, gap=60, height=170, size=14)
 p.panel(560, p.top + 40, 368, 400, label="the bill", fill=YELLOW)
 p.text(584, p.top + 96, "JS = 0.216", size=20, bold=True)
