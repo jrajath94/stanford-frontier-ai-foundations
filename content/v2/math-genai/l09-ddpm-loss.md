@@ -44,12 +44,36 @@ ELBO = E_q[ log p(x_T) + sum over t of log p_theta(x_{t-1}|x_t)
             - sum over t of log q(x_t|x_{t-1}) ]
 ```
 
+All logs in this lesson are natural logs (base e).
+
 Regrouped, it becomes a sum of KL divergences, one per
 step, plus boundary terms: at each t, the model's reverse
 Gaussian must match the true reverse behavior. Two
 Gaussians per step, T steps. The naive approach optimizes
 this directly: learn both μ_θ and Σ_θ per step by
 gradient ascent on the bound.
+
+### The ELBO, term by term
+
+The regrouped form, with each term named:
+
+```ascii
+L_T      = KL( q(x_T | x_0) || p(x_T) )          (prior matching)
+L_{t-1}  = KL( q(x_{t-1} | x_t, x_0) || p_theta(x_{t-1} | x_t) )
+                                                     (denoising matching)
+L_0      = -log p_theta(x_0 | x_1)                (reconstruction)
+ELBO     = -L_T - sum_{t=2..T} L_{t-1} - L_0      (up to constants)
+```
+
+L_T is nearly zero by construction: q(x_T|x_0) ≈ N(0,1)
+and p(x_T) = N(0,1). L_0 is one final decoding step.
+The bulk of training is the T−1 denoising terms: at
+each step, the learned reverse Gaussian must match the
+true reverse Gaussian. The true reverse
+q(x_{t−1}|x_t) is intractable, which is why Move 1
+conditions on x_0. Read the decomposition as a budget:
+T−1 of the T+1 terms are denoising. That is why the
+whole lesson is about simplifying those terms.
 
 ## Where the naive ELBO breaks
 
@@ -109,6 +133,41 @@ The true denoised value sits between the noisy point
 variance is β̃_t = ((1−ᾱ_{t-1})/(1−ᾱ_t))·β_t =
 (0.1/0.19)·0.1 = 0.0526: small, because knowing x_0
 removes most uncertainty.
+
+### Deriving the posterior mean
+
+A math course shows the Bayes algebra. The posterior is
+proportional to likelihood times prior-over-the-past:
+
+```ascii
+q(x_{t-1} | x_t, x_0) propto q(x_t | x_{t-1}) * q(x_{t-1} | x_0)
+```
+
+Both factors are Gaussian: q(x_t|x_{t-1}) =
+N(sqrt(a_t)*x_{t-1}, b_t) and q(x_{t-1}|x_0) =
+N(sqrt(a_bar_{t-1})*x_0, 1-a_bar_{t-1}). The product of
+two Gaussians is Gaussian. Its precision (one over
+variance) is the sum of the precisions:
+
+```ascii
+1/sigma_tilde^2 = a_t / b_t + 1 / (1 - a_bar_{t-1})
+                = (1 - a_bar_t) / ( b_t * (1 - a_bar_{t-1}) )
+```
+
+The numerator simplifies because a_t*a_bar_{t-1} =
+a_bar_t: a_t*(1-a_bar_{t-1}) + b_t = 1 - a_bar_t.
+So sigma_tilde^2 = b_t*(1-a_bar_{t-1})/(1-a_bar_t),
+matching the worked 0.0526. The mean is the
+precision-weighted average of the two centers:
+
+```ascii
+mu_tilde = sigma_tilde^2 * ( sqrt(a_t)*x_t / b_t
+              + sqrt(a_bar_{t-1})*x_0 / (1 - a_bar_{t-1}) )
+```
+
+Multiply through and the lesson's formula drops out.
+Preconditions: b_t > 0 and a_bar_t < 1, so no division
+by zero. Both hold for any usable schedule.
 
 ### Move 2: KL of Gaussians is squared error
 
@@ -180,12 +239,79 @@ methods of Lesson 10.
 The noise has a fixed scale (standard Gaussian) at
 every step t, while x_0's scale relative to x_t varies
 wildly with t. A network predicting a fixed-scale
-target trains more stably: the loss landscape looks
+target trains more stably: the optimization surface looks
 the same at t = 10 and t = 900. Predicting x_0 would
 ask the network to output tiny corrections at high
 noise and huge ones at low noise. Same information,
 friendlier regression. The decision rule: pick the
 prediction target with the most constant scale.
+
+### The fourth face: v-prediction
+
+There is a fourth parameterization, **v-prediction**
+(Salimans and Ho 2022): predict the "velocity"
+
+```ascii
+v = sqrt(a_bar_t) * epsilon - sqrt(1 - a_bar_t) * x_0
+```
+
+On the toy (t = 2): v = 0.9·0.688 − 0.4359·4.0 =
+0.619 − 1.744 = −1.124. Given v and x_t, both ε and
+x_0 are recoverable: ε = √ᾱ_t·v + √(1−ᾱ_t)·x_t and
+x_0 = √ᾱ_t·x_t − √(1−ᾱ_t)·v. Check the second on the
+toy: 0.9·3.9 − 0.4359·(−1.124) = 3.51 + 0.490 =
+4.000. The clean answer, recovered exactly.
+
+Why a fourth face? At high noise (ᾱ_t → 0), v ≈ −x_0:
+predicting v predicts the clean image, the right
+target when noise dominates. At low noise (ᾱ_t → 1),
+v ≈ ε: it becomes noise prediction. v interpolates
+between the two regimes, so one target trains well
+across all t. [uncertain] v-prediction's use in
+current production video models is reported but not
+verified here.
+
+![v-prediction: one target for all noise levels](assets/l09-v-prediction.webp "v = -1.124 on the toy. At high noise v is x_0, at low noise v is epsilon. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
+### The weighting autopsy
+
+Dropping the weights was not neutral. The true ELBO
+weights each step's squared error by
+β_t²/(2σ_t²α_t(1−ᾱ_t)). With σ_t² = β_t this is
+β_t/(2α_t(1−ᾱ_t)). On the linear schedule:
+
+```ascii
+t = 1:    weight 0.500
+t = 10:   weight 0.074
+t = 100:  weight 0.010
+t = 500:  weight 0.006
+t = 900:  weight 0.009
+```
+
+The ELBO spends 90× more budget on step t = 1 than
+on t = 500: it obsesses over near-noiseless fine
+detail and nearly ignores the noisy steps where
+global structure is decided. L_simple weights every
+step equally. Human eyes care about structure more
+than imperceptible fine noise, so the uniform
+weighting looks better. The "wrong" objective trains
+the right thing for perception. The decision rule:
+when a bound's weights fight your metric, reweight
+deliberately and say so.
+
+### Learned variances: the hybrid loss
+
+The basic DDPM fixes Σ_θ. **Improved DDPM** learns
+it: the network outputs v per dimension and sets
+Σ_θ = exp(v·log β_t + (1−v)·log β̃_t), interpolating
+between the two fixed choices. The loss becomes
+L_hybrid = L_simple + λ·L_vlb with λ = 0.001: the
+simple loss drives the means, a whisper of the true
+bound tunes the variances. Likelihood improves
+(the model reports honest uncertainty per step).
+Sample quality barely moves. The decision rule from
+the Q&A holds: learn variances for likelihood
+benchmarks, fix them for sample quality.
 
 ![One prediction, three faces: noise, clean image, score](assets/l09-three-faces.webp "Know one, know all three. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
 
@@ -270,20 +396,23 @@ exactly this.
 
 ### Where L_simple runs in real systems
 
-L_simple is the training loss inside every DDPM-lineage
-image generator: pick t, add noise, predict the noise.
-The three-faces equivalence is why the same trained
-network can drive DDIM sampling (Lesson 10) and
-score-based guidance without retraining: the weights
-already encode all three views. [uncertain] Which
-production models use exactly L_simple versus weighted
-variants is not public.
+Verified October 2026: L_simple is the training loss
+inside DDPM-lineage image generators: DDPM (Ho et al.
+2020), Stable Diffusion 1.x/2.x, and SDXL. Pick t, add
+noise, predict the noise. The three-faces equivalence is
+why the same trained network can drive DDIM sampling
+(Lesson 10) and score-based guidance without retraining:
+the weights already encode all three views. [uncertain]
+Which production models use exactly L_simple versus
+weighted variants is not public.
 
 ## Videos for this lesson
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/AnWitwNPnN4" title="W8L28: ELBO for DDPM : Part 1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: the DDPM ELBO derived, part 1. If the embed is blocked: <a href="https://www.youtube.com/watch?v=AnWitwNPnN4" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/0p7T-3WiPnQ" title="W8L33: Inference in DDPM" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Lecture video: inference in DDPM, walking the chain backward to generate. If the embed is blocked: <a href="https://www.youtube.com/watch?v=0p7T-3WiPnQ" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
+
+![Chapter plate: three moves to one MSE](assets/plate-l09-chap-ddpm-loss.webp "Three exact moves and one deliberate cheat: the field chose samples. Chapter plate. Shell 5. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
 
 > [!QA]
 > Q: How does the horrible DDPM ELBO become a simple MSE?
@@ -293,7 +422,7 @@ variants is not public.
 
 > [!QA]
 > Q: Walk me through move 1 on fresh numbers.
-> A: x_0 = 10.0, x_3 = 6.934 (from the Lesson 8 exercise), α_3 = 0.8, ᾱ_2 = 0.64, ᾱ_3 = 0.512, β_3 = 0.2. Coeff of x_0: √0.64·0.2/(1−0.512) = 0.8·0.2/0.488 = 0.328. Coeff of x_3: √0.8·(1−0.64)/0.488 = 0.8944·0.36/0.488 = 0.660. μ̃_3 = 0.328·10 + 0.660·6.934 = 3.28 + 4.576 = 7.856. Between the noisy 6.934 and the clean 10, closer to the noisy point because β_3 is large. Variance: ((1−0.64)/(1−0.512))·0.2 = (0.36/0.488)·0.2 = 0.148.
+> A: x_0 = 10.0, x_3 = 6.934 (from the Lesson 8 exercise), α_3 = 0.8, ᾱ_2 = 0.64, ᾱ_3 = 0.512, β_3 = 0.2. Coeff of x_0: √0.64·0.2/(1−0.512) = 0.8·0.2/0.488 = 0.328. Coeff of x_3: √0.8·(1−0.64)/0.488 = 0.8944·0.36/0.488 = 0.660. μ̃_3 = 0.328·10 + 0.660·6.934 = 3.28 + 4.576 = 7.856 (7.854 with unrounded coefficients). Between the noisy 6.934 and the clean 10, closer to the noisy point because β_3 is large. Variance: ((1−0.64)/(1−0.512))·0.2 = (0.36/0.488)·0.2 = 0.148.
 > Follow-up: Why is the mean closer to x_3 than x_0 here?
 > A: Because this step's noise (β_3 = 0.2) is large relative to the accumulated certainty. The posterior hedges: it trusts the noisy observation more when the step noise is big. As β_t → 0, the mean converges to x_t itself: no noise added, nothing to undo.
 
