@@ -238,6 +238,18 @@ positive. The model assigns it a huge weight. In fresh reviews
 &ldquo;masterpiece&rdquo; appears in sarcastic negatives and the classifier
 burns. This is lecture 6&rsquo;s variance with the numbers filled in:
 n &lt;&lt; d, memorization, no generalization.</p>
+<h3 id="subchapter-the-58-percent-explained">Subchapter: the 58 percent, explained</h3>
+<p>Why 58 and not 50? With 10,001 knobs and 500 examples the ratio is
+20 parameters per example: total memorization capacity. Training
+loss goes near 0. On fresh reviews the model keeps only what
+generalizes: a handful of genuinely predictive words
+(&ldquo;masterpiece&rdquo; twice-positive, &ldquo;awful&rdquo; mostly negative) plus
+noise. The 8 points above chance are the few real signals
+surviving the memorization. The lesson: n &lt;&lt; d does not give 50
+percent (pure chance). It gives chance plus whatever tiny true
+signal the noise did not drown. With 500 labels and 10,000
+features, that is 8 points.</p>
+<figure><img alt="58 percent" src="assets/plate-l12-58-percent.webp"><figcaption>Why 58 percent. 10,001 knobs on 500 examples: 20 parameters per example. Training 100 percent, test 58: memorization plus a whisper of signal. Source: original plate for the from-scratch failure. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="the-paradigm-pre-train-then-adapt">The paradigm: pre-train, then adapt</h2>
 <p>A <strong>foundation model</strong> is a large model <strong>pre-trained</strong> on massive
 broad data, then <strong>adapted</strong> to specific tasks. Pre-training uses a
@@ -271,6 +283,20 @@ pre-training, isolated: same 500 labels, same linear head, the only
 difference is the representations underneath. When a probe fails,
 the representations lack the task&rsquo;s information and you need deeper
 adaptation.</p>
+<h3 id="subchapter-probe-the-probe">Subchapter: probe the probe</h3>
+<p>A linear probe can fail for two reasons: the information is
+absent, or it is present but tangled (not linearly readable).
+Distinguish them with the probe ladder. Step 1: linear probe.
+Fails at 62 percent. Step 2: MLP probe (a small nonlinear head on
+frozen representations). Scores 80 percent: the sentiment
+information is there, just not linear. Step 3: full fine-tuning,
+85 percent. The ladder tells you what to blame: if the MLP probe
+also fails, the pre-training never captured sentiment and no
+shallow adaptation will save you. If the MLP probe succeeds, the
+representations are fine and the linear head was the bottleneck.
+Never read a failed linear probe as &ldquo;bad representations&rdquo; without
+climbing the ladder.</p>
+<figure><img alt="Probe ladder" src="assets/plate-l12-probe-ladder.webp"><figcaption>Probe the probe. Linear probe fails at 62. MLP probe hits 80: the info is present but tangled. Fine-tune: 85. Source: original plate for the probe ladder. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="lora-adapt-without-moving-billions">LoRA: adapt without moving billions</h2>
 <p>Full fine-tuning updates every parameter: for a 7B model, 7 billion
 knobs move on 500 labels. Overkill and overfitting-prone, and each
@@ -292,6 +318,34 @@ task.</p>
 point: &ldquo;adapting means you don&rsquo;t have to change much&rdquo;), and small
 changes to big matrices live in low-dimensional subspaces. The
 rank r is the dial: r = 8 to 64 in practice, tuned on dev.</p>
+<h3 id="subchapter-lora-merges-free">Subchapter: LoRA merges free</h3>
+<p>The adapter has a deployment trick. During training, the forward
+pass computes Wx + ABx: two matrix multiplies, slightly slower.
+At deployment, merge: W&rsquo; = W + AB, computed once. Then inference
+is a single multiply by W&rsquo;, exactly as fast as the base model.
+Zero latency cost. This is why LoRA won over adapters that insert
+new layers (which cannot merge): the lesson&rsquo;s formula W + AB is
+mergeable by construction. Serving story: keep one frozen base
+model in memory, swap merged W&rsquo; per task, or keep W and add AB on
+the fly for multi-tenant serving. The rank r controls the adapter
+file: at d = 4096, r = 8, each adapted matrix ships 65,536 fp16
+values = 128 KB. A full 7B-model adapter set is tens of MB, not
+tens of GB.</p>
+<figure><img alt="LoRA merges free" src="assets/plate-l12-lora-merge.webp"><figcaption>LoRA merges free. Train: W frozen, A and B learn. Deploy: W' = W + AB, one multiply, zero extra latency. Source: original plate for the merge trick. Project: Stanford Frontier AI.</figcaption></figure>
+<h3 id="subchapter-the-contamination-audit">Subchapter: the contamination audit</h3>
+<p>&ldquo;Unlabeled internet data&rdquo; includes the test sets. The audit has
+three tools. N-gram overlap: what fraction of the benchmark&rsquo;s
+13-grams appear verbatim in the pre-training corpus? High overlap
+means the model may have read the test. Canary strings: benchmarks
+like BIG-bench embed random GUIDs in their data. If the model
+completes a canary, it trained on the benchmark. Post-cutoff
+tests: same benchmark style, new items written after the training
+cutoff. A model scoring 95 percent on the 2022 items and 70 on the
+2025 items memorized, not generalized. The decision rule: never
+trust a benchmark number without its contamination report. The
+paradigm&rsquo;s evaluation crisis is structural: the training set is
+&ldquo;everything&rdquo;, so every test is suspect.</p>
+<figure><img alt="Contamination audit" src="assets/plate-l12-contamination.webp"><figcaption>The contamination audit. N-gram overlap, canary strings, post-cutoff tests: three tools to check whether the model read the test. Source: original plate for the contamination audit. Project: Stanford Frontier AI.</figcaption></figure>
 <h2 id="multitask-and-parallelism">Multitask and parallelism</h2>
 <p>Two more pieces from the lecture. <strong>Multitask</strong> pre-training and
 adaptation: train on many tasks at once so representations serve
@@ -309,7 +363,7 @@ Only a few organizations can pay it. Second, opacity squared: not
 only are the representations unreadable, their failures are
 unpredictable: the model inherits every bias and poison in the
 unlabeled billions. Third, adaptation limits: linear probing fails
-when the task needs information the pre-training never captured;
+when the task needs information the pre-training never captured.
 LoRA&rsquo;s low rank cannot express large behavioral changes. Fourth,
 evaluation contamination: the &ldquo;unlabeled&rdquo; internet contains the
 test sets, so reported numbers may measure memorization, not
@@ -352,7 +406,7 @@ emergent, powerful, and not yet fully understood.</p>
 </tr>
 </tbody>
 </table>
-<div class="qa"><div class="q">What is a foundation model, and what changed with GPT-3?</div><div class="a"><p>A large model pre-trained on massive broad data and adapted per task, instead of trained per task from scratch. Before, each task needed its own labeled dataset and model: 500 labels meant a 500-label model. After GPT-3, one pre-trained model serves thousands of tasks: the 500 labels adapt a model that already knows language. The lecture calls it an emergent paradigm: scale unlocked behavior (few-shot learning, broad transfer) that smaller models did not show.
+<div class="qa"><div class="q">What is a foundation model, and what changed with GPT-3?</div><div class="a"><p>A large model pre-trained on massive broad data and adapted per task, instead of trained per task from scratch. Before, each task needed its own labeled dataset and model: 500 labels meant a 500-label model. After GPT-3, one pre-trained model serves thousands of tasks: the 500 labels adapt a model that already knows language. The lecture calls it an emergent paradigm: scale produced behavior (few-shot learning, broad transfer) that smaller models did not show.
 It moves the starting point. Random initialization plus 500 labels is a blind search in a huge space: memorization. Pre-trained weights start near good solutions for many tasks, so 500 labels do a short, guided walk instead. Mechanistically, the representations already separate the concepts. The labels only identify which direction is sentiment.</p><div class="followup"><strong>Follow-up:</strong> Why does pre-training help with only 500 labels?</div></div></div>
 <div class="qa"><div class="q">How does LoRA work, and how much does it save?</div><div class="a"><p>Freeze the pre-trained weight W (d by d). Learn the update as a product of thin matrices: W + A*B with A d-by-r, B r-by-d, rank r small. Only A and B train. At d = 1,000, r = 10: 20,000 trainable values versus 1,000,000 for a full update, a 50x cut. At d = 4,096, r = 8: 65,536 versus 16.8M, a 256x cut. Each task ships a megabyte adapter. The base model is shared.
 When adaptation needs a large behavioral change that does not fit in a rank-r subspace: e.g., teaching the model a wholly new domain or unlearning deeply ingrained behavior. Rank r is the capacity dial. Raise it and LoRA approaches full fine-tuning&rsquo;s expressiveness while losing its savings. Linear probing failing first is the signal that shallow adaptation is insufficient.</p><div class="followup"><strong>Follow-up:</strong> When does LoRA fail and full fine-tuning win?</div></div></div>
@@ -372,15 +426,43 @@ The representations already solve the task. Fine-tuning adds almost nothing. Shi
    honesty test for representations.</li>
 <li><strong>LoRA.</strong> W + AB, rank r. d=1000, r=10: 20K vs 1M dof. MB
    adapters, shared base.</li>
-<li><strong>Multitask, parallelism.</strong> Shared structure transfers; 3D
+<li><strong>Multitask, parallelism.</strong> Shared structure transfers. 3D
    parallelism makes pre-training possible.</li>
-<li><strong>The honest price.</strong> Millions per pre-train, inherited biases,
-   adaptation limits, test contamination.</li>
 </ol>
+<div class="qa"><div class="q">Walk me through the mechanism: verify the LoRA savings at d=4096, r=8, and price the adapter file.</div><div class="a"><p>Full update: d^2 = 4096^2 = 16,777,216 trainable values. LoRA: A is 4096x8, B is 8x4096: 2<em>4096</em>8 = 65,536 values. Ratio: 16,777,216/65,536 = 256. The adapter file per matrix: 65,536 values in fp16 = 131,072 bytes = 128 KB. A 7B model adapts a few hundred matrices: tens of MB per task adapter. The base model (tens of GB) is shared. That is the shipping story: one base, many pocket-sized adapters.
+No, if you merge: W&rsquo; = W + AB computed once, then inference is one multiply by W&rsquo;, exactly base-model speed. Unmerged (Wx + ABx per forward pass), it adds a small second multiply. Merging is why LoRA beat layer-inserting adapters: the formula is mergeable by construction.</p><div class="followup"><strong>Follow-up:</strong> At deployment, does LoRA slow inference?</div></div></div>
+<div class="qa"><div class="q">Applied design: linear probe scores 62%, barely above the 58% from-scratch baseline. Full fine-tuning scores 85%. What happened, and what do you ship?</div><div class="a"><p>The representations lack linearly-readable sentiment, but fine-tuning reshaped them into solvers: the probe gap (62 vs 85) measures what adaptation had to build. Climb the probe ladder first: an MLP probe at ~80% would say the info was present but tangled. At ~62% it says pre-training never captured sentiment. Either way, ship the fine-tuned (or LoRA) model: it works. But note the risk: the capability was built from 500 labels, not inherited from billions, so it is brittle under distribution shift. Monitor it.
+Not the decision, but the diagnosis: the representations had the information, only the linear head was blind. A nonlinear head or LoRA suffices. Full fine-tuning was overkill. Next time, try LoRA first when the MLP probe passes: cheaper, less overfitting on 500 labels.</p><div class="followup"><strong>Follow-up:</strong> The MLP probe scores 80%. Does that change the ship decision?</div></div></div>
+<div class="qa"><div class="q">When is full fine-tuning worth moving 7B knobs instead of LoRA?</div><div class="a"><p>When the behavioral change does not fit in a rank-r subspace. Teaching a new language, unlearning deeply ingrained behavior, or adding a new modality: these move the model far, and rank 8 cannot express far. The dial: raise r. At d=4096, r=64: 524,288 values per matrix, still 32x cheaper than full. When r approaches d, LoRA&rsquo;s savings vanish and you should fine-tune fully. The probe ladder failing at every rung is the signal that shallow adaptation is insufficient.
+Yes: train one adapter per skill and add them (W + A1B1 + A2B2). In practice they interfere: the sum of two good adapters is not always a good adapter. The production pattern is one adapter per task, swapped at serving time, or a merged multi-task adapter trained jointly. Composition is an open research problem, not a free lunch.</p><div class="followup"><strong>Follow-up:</strong> Can you stack LoRA adapters?</div></div></div>
+<div class="qa"><div class="q">How do you audit a benchmark for test contamination?</div><div class="a"><p>Three tools. N-gram overlap: fraction of the benchmark&rsquo;s 13-grams appearing verbatim in the training corpus. Canary strings: planted random GUIDs (BIG-bench style). If the model completes one, it trained on the test. Post-cutoff tests: new items in the same style written after the training cutoff. A 95%-on-2022 vs 70%-on-2025 split means memorization. Decision rule: no contamination report, no trust in the number. The paradigm&rsquo;s training set is &ldquo;everything&rdquo;, so every test is suspect by default.
+Run the three tools. High n-gram overlap or a completed canary: contamination, the public number is inflated. Clean tools but a holdout gap: the benchmark does not measure your task (distribution shift, different difficulty). Either way the public number misled you, but the fixes differ: decontaminate and re-evaluate, versus build a better eval.</p><div class="followup"><strong>Follow-up:</strong> Your model aces the public benchmark but fails your private holdout. Contamination or capability gap?</div></div></div>
+<ol start="9">
+<li><strong>The 58.</strong> 20 parameters per example. Chance plus a whisper.</li>
+<li><strong>The ladder.</strong> Linear 62, MLP 80, fine-tune 85. Absent or
+    tangled: the ladder tells you which.</li>
+<li><strong>The merge.</strong> W&rsquo; = W + AB at deploy. Zero latency cost.
+    128 KB per matrix at d=4096, r=8.</li>
+<li><strong>The audit.</strong> N-grams, canaries, post-cutoff tests. No
+    report, no trust.</li>
+</ol>
+<h2 id="what-is-used-where">What is used where</h2>
+<p><strong>Pre-trained representations run production NLP.</strong> Every
+production text classifier, search ranker, and recommendation
+model starts from pre-trained embeddings or encoders: the
+500-label story is the daily reality of applied ML. <strong>LoRA is the
+default fine-tuning method</strong> for large models: HuggingFace PEFT
+made it one import, and serving stacks swap adapters per tenant.
+Linear probing is the standard representation-quality metric in
+research. The contamination audit is now part of serious model
+evaluation: benchmark numbers ship with decontamination reports.</p>
+<h2 id="watch-next">Watch next</h2>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/LPZh9BOjkQs" title="Explainer: foundation models explained" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: foundation models, explained. The pre-train/adapt paradigm in one visual pass. Watch after the LoRA section.</p></div>
+
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - Lecture 12 video, Stanford Online YouTube:
-  https://www.youtube.com/watch?v=_kREM2UAiJ8 — Tengyu Ma presents
+  - <a href="https://www.youtube.com/watch?v=_kREM2UAiJ8">Tengyu Ma presents</a>
   the pre-train/adapt paradigm, representation learning, linear
   probing, LoRA with the rank arithmetic, multitask, and
   parallelism.
@@ -399,14 +481,14 @@ understood. The mechanisms given here are the lecture&rsquo;s.</p>
 <li><strong>CS229 L13:</strong> contrastive learning: another way to build
   representations without labels.</li>
 <li><strong>CS229 L14-L15:</strong> the transformer: the architecture that made
-  foundation models scale; SFT as adaptation.</li>
+  foundation models scale. SFT as adaptation.</li>
 <li><strong>CS229 L17:</strong> RL as the adaptation step for reasoning.</li>
 <li><strong>CS336:</strong> pre-training at scale: the systems behind the
   paradigm.</li>
 <li><strong>CS224N:</strong> pre-training for language: from word vectors to
   foundation models.</li>
 </ul>
-      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=_kREM2UAiJ8" target="_blank" rel="noopener">Lecture 12 video, Stanford Online YouTube</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
+      <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=_kREM2UAiJ8" target="_blank" rel="noopener">Lecture 12 video, Stanford Online YouTube</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=LPZh9BOjkQs" target="_blank" rel="noopener">Explainer: foundation models, explained</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/2106.09685" target="_blank" rel="noopener">Hu et al., LoRA: Low-Rank Adaptation of Large Language Models (2021)</a></li><li><span class="src-tag">NOTES</span>Official subtitle transcript (en-US)</li><li><span class="src-tag">NOTES</span>CS229 Spring 2026 official course notes (local PDF)</li></ul></section>
       <nav class="pager"><a href="../cs229/l11-diffusion-models.html"><span class="lbl">← Previous</span>Lecture 11: Diffusion Models</a><a href="../cs229/l13-contrastive-rag.html"><span class="lbl">Next →</span>Lecture 13: Contrastive Embeddings, Search, and RAG</a></nav>
     </article>
     <footer class="pagefoot">
