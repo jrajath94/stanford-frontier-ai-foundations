@@ -6,7 +6,7 @@ course_order: 11
 order: 3
 nav: "L03 · f-Divergences"
 title: "Lecture 3: f-Divergences and Variational Divergence Minimization"
-summary: "KL is one member of a large family. The f-divergence definition with three worked members (KL, Jensen-Shannon, total variation), and the variational lower bound that lets you estimate a divergence from samples alone: the machinery behind GANs."
+summary: "KL is one member of a large family. The f-divergence definition with six worked members (KL, reverse KL, Jensen-Shannon, total variation, Hellinger, chi-squared), Pinsker's inequality, the f-GAN menu, and the variational lower bound that lets you estimate a divergence from samples alone: the machinery behind GANs."
 date: "2026-10-05"
 instructor: "Prof. Prathosh A P"
 offering: "2025"
@@ -37,7 +37,9 @@ on zero probabilities and its mode-covering personality are
 choices, not laws. Maybe another distance fits some task better.
 The lecture builds the whole family at once, then shows that
 every member contains KL, Jensen-Shannon, and total variation
-as special cases.
+as special cases. Throughout this lesson, every log is the
+natural log (base e), so every divergence is measured in
+nats.
 
 The **f-divergence** between truth P_X and model P_θ is:
 
@@ -69,7 +71,7 @@ the "divergence" could go negative and training would chase a
 meaningless target. The decision rule: any f you invent must be
 convex with f(1) = 0, or it is not a divergence.
 
-## Three members, one toy, real numbers
+## Six members, one toy, real numbers
 
 Take the same coin toy from Lesson 2. Truth P_X = {0.5, 0.5},
 model P_θ = {0.9, 0.1}. The density ratios are 0.5/0.9 = 0.556
@@ -128,18 +130,93 @@ Simple, but its absolute value has a kink at zero that makes
 gradient optimization awkward. The decision rule: TV is for
 theory and proofs, not for gradient descent.
 
+### Reverse KL: the −log u member
+
+f(u) = −log u. This is KL with the ratio flipped: it weights
+by the model instead of the truth.
+
+```ascii
+D = 0.9 * (-log 0.556) + 0.1 * (-log 5.0)
+  = 0.9 * 0.588 + 0.1 * (-1.609)
+  = 0.529 - 0.161 = 0.368
+```
+
+Reverse KL scores 0.368, calmer than forward KL's 0.511.
+Its personality is mode-seeking (Lesson 2): it punishes
+the model for spreading mass where the truth has none,
+but barely punishes it for ignoring a whole mode. The
+f-GAN paper trains this member with a critic whose
+output activation is −exp(v), keeping the output inside the critic's
+valid range.
+
+### Hellinger: the bounded one
+
+f(u) = (√u − 1)². The squared Hellinger distance is
+bounded between 0 and 1, so it can never explode:
+
+```ascii
+D = 0.9 * (sqrt(0.556) - 1)^2 + 0.1 * (sqrt(5.0) - 1)^2
+  = 0.9 * (0.745 - 1)^2 + 0.1 * (2.236 - 1)^2
+  = 0.9 * 0.0650 + 0.1 * 1.528
+  = 0.0585 + 0.1528 = 0.211
+```
+
+H² = 0.211 (H = 0.460). Bounded divergences are the
+answer when outliers must not dominate: no single
+outcome can contribute more than its share. The price
+is weak gradients near convergence: everything
+compresses into [0, 1], so fine distinctions drown.
+
+### Chi-squared: the quadratic one
+
+f(u) = (u − 1)². Pearson's χ² punishes ratio errors
+quadratically:
+
+```ascii
+D = 0.9 * (0.556 - 1)^2 + 0.1 * (5.0 - 1)^2
+  = 0.9 * 0.197 + 0.1 * 16.0
+  = 0.177 + 1.6 = 1.778
+```
+
+χ² = 1.778, the loudest score on the toy. The tails
+term (5.0 − 1)² = 16 dominates: quadratic punishment
+makes far-apart ratios scream. That loudness is why
+χ²-based training is twitchy: one outlier ratio can
+hijack the gradient. Least-squares GANs live here.
+
 ### Reading the table: f is a design choice
 
 | Divergence | f(u) | Coin toy score | Personality |
 |---|---|---|---|
 | KL (forward) | u log u | 0.511 | Asymmetric, infinite on zeros, mode-covering |
+| Reverse KL | −log u | 0.368 | Asymmetric, mode-seeking |
 | Jensen-Shannon | 0.5u log u − 0.5(u+1)log((u+1)/2) | 0.102 | Symmetric, calm, saturates when far apart |
 | Total variation | 0.5\|u − 1\| | 0.400 | Symmetric, simple, kinked gradient |
+| Squared Hellinger | (√u − 1)² | 0.211 | Symmetric, bounded in [0,1], weak near convergence |
+| Pearson χ² | (u − 1)² | 1.778 | Loud on outliers, twitchy gradients |
+
+Scale note: this table uses the standard (halved) JS f,
+score 0.102. The f-GAN menu below lists the unhalved f:
+exactly twice this, 0.203 on the same toy. The factor of
+2 is the only difference between the two conventions.
 
 The lecture's point: choosing f chooses the training
 dynamics. Different f, different properties, different model.
 
-![Three f's, one coin toy: 0.511, 0.102, 0.400](assets/l03-three-members.webp "Same truth, same model. The f chooses the score. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+![Six f's, one coin toy: 0.511, 0.368, 0.102, 0.400, 0.211, 1.778](assets/l03-six-members.webp "Same truth, same model. The f chooses the score and the personality. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
+### Pinsker's inequality: TV never exceeds √(KL/2)
+
+The members are not independent. **Pinsker's inequality**
+ties TV to KL: TV ≤ √(KL/2), always. Check it on the toy:
+√(0.511/2) = √0.2555 = 0.5055, and TV = 0.4 ≤ 0.5055.
+The bound holds with room to spare. It says a small KL
+guarantees a small TV: if the model is close in KL, no
+single event can have a large probability gap. The
+converse fails: TV = 0.4 with KL = 0.511 is close to the
+bound, but in general a small TV does not bound KL (KL
+can explode on a zero while TV stays calm). The decision
+rule: KL controls TV, not the other way around.
 
 ## Where density estimation breaks
 
@@ -186,11 +263,13 @@ D_f(P_X || P_theta) = max over T of  E[T(x)] - E[f*(T(x_hat))]
 ```
 
 Both expectations are over samples. No densities anywhere.
-f* is the convex conjugate of f (a standard transform. For the
-GAN's f it works out to −log(1 − e^t), as the lecture derives).
-The critic T plays a game: score real samples high, score
-generated samples in a way that keeps the second term small.
-The best critic's score equals the true divergence.
+f* is the **convex conjugate** of f: f*(t) = max over u of
+(u·t − f(u)). For each slope t, it records the best value of
+the straight line u·t minus f. For the GAN's f it works out
+to −log(1 − e^t), as the lecture derives. The critic T plays
+a game: score real samples high, score generated samples in a
+way that keeps the second term small. The best critic's score
+equals the true divergence.
 
 ### The coin-toy critic, worked
 
@@ -202,13 +281,30 @@ The bound is E[T] over truth minus E[f*(T)] over model:
 bound = (0.5*a + 0.5*b) - (0.9*f*(a) + 0.1*f*(b))
 ```
 
-Try a = 0.5, b = −0.5 (critic favors heads, the truth's
-relatively likelier outcome). With the lecture's f* this
-evaluates to roughly 0.06, below the true JS value 0.102.
-A better critic pushes it up toward 0.102 but never above.
-The bound is honest: it never overclaims the distance.
-The generator then moves θ to push even the best critic's
-score down.
+Which sign should the critic use? The ratio p_X/p_θ is 0.556
+on heads and 5.0 on tails. Tails is the outcome the model
+underweights relative to the truth. The optimal critic
+T* = f′(p_X/p_θ) = (−0.336, +0.511) scores tails higher.
+The critic should favor tails, not heads.
+
+Try a = −0.5, b = +0.5: the correct sign, modest strength.
+The menu's JS row gives the conjugate f*(t) = −log(2 − e^t):
+
+```ascii
+f*(-0.5) = -log(2 - e^-0.5) = -log(2 - 0.6065) = -0.3318
+f*(+0.5) = -log(2 - e^+0.5) = -log(2 - 1.6487) = 1.0462
+E[T] over truth      = 0.5*(-0.5) + 0.5*(0.5) = 0
+E[f*(T)] over model  = 0.9*(-0.3318) + 0.1*(1.0462)
+                     = -0.2986 + 0.1046 = -0.1940
+bound = 0 - (-0.1940) = 0.194
+```
+
+The menu's JS f is the unhalved one, so the true value on
+the toy is 0.203 (twice the table's 0.102). Our critic
+reaches 0.194: below the truth, never above. A better
+critic pushes it up toward 0.203. The bound is honest: it
+never overclaims the distance. The generator then moves θ
+to push even the best critic's score down.
 
 Since we cannot search over all functions, we approximate T
 with a neural network T_w. The max becomes approximate, so we
@@ -222,13 +318,15 @@ minimizing. That two-player structure is the GAN.
 The honest property cuts both ways. The bound never overclaims,
 so a weak critic underestimates the distance. The generator
 then optimizes a lie: it thinks it is close when it is not.
-The numbers: a critic stuck at 0.06 tells the generator the
-job is nearly done, while the true distance is 0.102, almost
-twice as far. In practice this means the critic must be trained
-well at every step, which doubles the optimization burden and
-is the root of GAN instability. The decision rule: if the
-critic is weak, the generator's gradients are fiction. Train
-the critic first, trust the generator second.
+The numbers: shrink the critic to a = −0.1, b = +0.1 (same
+correct sign, one fifth the strength). The bound falls to
+0.071 while the true distance stays 0.203, nearly three times
+farther. The generator sees 0.071 and thinks the job is nearly
+done. In practice this means the critic must be trained well
+at every step, which doubles the optimization burden and is
+the root of GAN instability. The decision rule: if the critic
+is weak, the generator's gradients are fiction. Train the
+critic first, trust the generator second.
 
 ![A critic lower-bounds the divergence from samples alone](assets/l03-variational-bound.webp "Best critic = true divergence. Weak critic = honest underestimate. Shell 3. Source: original toy. Project: Stanford Frontier AI.")
 
@@ -274,6 +372,125 @@ design space. Change f, change the game.
 
 ![Choose the GAN's f, and the GAN objective falls out](assets/l03-gan-falls-out.webp "One substitution chain: f to conjugate to critic reparameterization to the game. Shell 3. Source: f-GAN paper. Project: Stanford Frontier AI.")
 
+## The f-GAN menu: one row per divergence
+
+The f-GAN paper (Table 1) lists, for each member, the
+generator f, its conjugate f*, and the critic's output
+activation g_f that keeps the conjugate's domain valid.
+Each row is a complete GAN variant: plug the row into
+the variational bound and train.
+
+Scale note: the menu's JS row uses the unhalved f, exactly
+twice the standard JS of the six-members table above. Its
+score on the coin toy is 0.203, not 0.102. The critic toy
+earlier used this row's conjugate, so its true value was
+0.203.
+
+| Divergence | f(u) | f*(t) | Critic activation g_f(v) |
+|---|---|---|---|
+| Total variation | (1/2)\|u−1\| | t | (1/2) tanh(v) |
+| KL | u log u | exp(t−1) | v |
+| Reverse KL | −log u | −1−log(−t) | −exp(v) |
+| Pearson χ² | (u−1)² | (1/4)t²+t | v |
+| Neyman χ² | (u−1)²/u | 2−2√(1−t) | 1−exp(v) |
+| Squared Hellinger | (√u−1)² | t/(1−t) | 1−exp(v) |
+| Jensen-Shannon | −(u+1)log((u+1)/2) + u log u | −log(2−e^t) | log 2 − log(1+e^{−v}) |
+| GAN | u log u −(u+1)log(u+1) | −log(1−e^t) | −log(1+e^{−v}) |
+
+Read one row fully. Pearson χ²: the critic outputs a raw
+real v (activation is the identity), and the bound is
+E[v(x)] − E[(1/4)v(x̂)² + v(x̂)]. No sigmoid anywhere.
+The activation column is the engineering: it is what
+makes each row's conjugate stay in its valid domain.
+
+Read one more row on the toy. Neyman χ²: f(u) = (u−1)²/u.
+
+```ascii
+D = 0.9 * (0.556 - 1)^2 / 0.556 + 0.1 * (5.0 - 1)^2 / 5.0
+  = 0.9 * 0.3556 + 0.1 * 3.2
+  = 0.32 + 0.32 = 0.64
+```
+
+Neyman scores 0.64, and the two outcomes contribute
+exactly 0.32 each. The 1/u in f reweights: ratio errors
+on heads (u = 0.556, the model overweights) count as
+loudly as on tails (u = 5.0, the model underweights).
+That is Neyman's personality: it watches both directions
+of the mismatch with equal weight.
+
+The paper also records the GAN-JS relationship:
+D_GAN = 2·D_JS − log 4. The GAN's f is not JS itself
+but an affine cousin: same minimizer, shifted scale.
+On the coin toy, D_GAN = 2·0.102 − 1.386 = −1.182.
+Negative, because the GAN's f dips below zero away
+from u = 1. Only the minimizer's location matters for
+training, not the value's sign.
+
+### The optimal critic, per row
+
+Each row also names its optimal critic:
+T*(x) = f′(p_X(x)/p_θ(x)). For the KL row,
+f′(u) = 1 + log u. On the coin toy:
+
+```ascii
+T*(heads) = 1 + log(0.556) = 1 - 0.588 = 0.412
+T*(tails) = 1 + log(5.0)   = 1 + 1.609 = 2.609
+```
+
+Now evaluate the bound with this critic. The KL row
+has f*(t) = exp(t−1):
+
+```ascii
+E_{P_X}[T*] = 0.5*0.412 + 0.5*2.609 = 1.511
+f*(0.412) = exp(-0.588) = 0.556,  f*(2.609) = exp(1.609) = 5.0
+E_{P_theta}[f*(T*)] = 0.9*0.556 + 0.1*5.0 = 0.500 + 0.500 = 1.000
+bound = 1.511 - 1.000 = 0.511
+```
+
+Exactly the true KL, 0.511. The optimal critic
+recovers the divergence to the digit. Any weaker
+critic scores less. This is the bound's promise made
+concrete: the max over T is not abstract. It is
+attained at T*, and a neural critic that approximates
+T* gets close.
+
+### The data-processing inequality
+
+One more property of every f-divergence: processing
+both distributions through the same function cannot
+increase their distance. If T maps samples to
+summaries, D_f(T(P_X) || T(P_θ)) ≤ D_f(P_X || P_θ).
+Information can only be destroyed, never created.
+
+The implication for GANs: a critic that
+post-processes its input (pools it, downsamples it)
+measures a lower bound of a lower bound. The
+estimate stays honest (never overclaims), but it
+gets looser. The decision rule: give the critic the
+rawest input it can handle. Every preprocessing step
+is divergence you chose not to measure.
+
+![The optimal critic recovers KL = 0.511 exactly](assets/l03-optimal-critic.webp "T* = 1 + log ratio. Bound: 1.511 - 1.000 = 0.511. Shell 2. Source: original toy. Project: Stanford Frontier AI.")
+
+### Where the family runs in real systems
+
+The original GAN (Goodfellow et al. 2014) is the GAN
+row: JS-flavored, saturating, the Lesson 4 game. The
+f-GAN paper's point was that the other rows train too,
+each with its own dynamics. In practice the field did
+not adopt the menu widely: StyleGAN2 uses the
+non-saturating logistic variant of the GAN row, not a
+different f. Least-squares GANs (Mao et al.) are the
+Pearson χ² row: the quadratic punishment this lesson
+computed as 1.778 on the toy. [uncertain] Which current
+production systems train non-GAN rows of the menu is
+not public. The menu's lasting value is diagnostic:
+when a GAN misbehaves, the row tells you which
+personality is misbehaving.
+
+*Model facts in this section verified October 2026.
+Anything not verifiable is marked [uncertain].*
+
 ## The honest price: a bound, not the thing
 
 The variational trick costs exactly what it saves. We never
@@ -300,6 +517,8 @@ optimization effort for the critic.
 
 <div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/mEvIvOYCVmE" title="Entropy and KL Divergence, Visually" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">External explainer: KL divergence built visually from entropy, the family member this lesson generalizes. If the embed is blocked: <a href="https://www.youtube.com/watch?v=mEvIvOYCVmE" target="_blank" rel="noopener">watch on YouTube</a>.</p></div>
 
+![Chapter plate: one menu of divergences](assets/plate-l03-chap-fdiv.webp "Every convex f gives a divergence; the critic makes the bound computable. Chapter plate. Shell 5. Source: original synthesis of the lesson. Project: Stanford Frontier AI.")
+
 > [!QA]
 > Q: What is an f-divergence?
 > A: A family of distribution distances indexed by a convex function f with f(1) = 0: D_f = integral p_θ(x) f(p_X(x)/p_θ(x)) dx. KL (f = u log u), Jensen-Shannon, and total variation (f = 0.5|u−1|) are members. On the coin toy they scored 0.511, 0.102, and 0.4. Every member is non-negative and zero only for identical distributions.
@@ -314,7 +533,7 @@ optimization effort for the critic.
 
 > [!QA]
 > Q: How can you compute a divergence from samples alone?
-> A: With the variational lower bound: D_f = max over critics T of E[T(x)] − E[f*(T(x̂))], both expectations over samples. Approximate T by a neural network and you get a lower bound on the true divergence, no density estimation needed. On the coin toy a two-parameter critic scored 0.06 against the true JS value 0.102: below it, never above.
+> A: With the variational lower bound: D_f = max over critics T of E[T(x)] − E[f*(T(x̂))], both expectations over samples. Approximate T by a neural network and you get a lower bound on the true divergence, no density estimation needed. On the coin toy a two-parameter critic with the correct sign scored 0.194 against the true (unhalved) JS value 0.203: below it, never above. A weak critic with the same sign scored only 0.071, showing how far under a weak critic can read.
 > Follow-up: What is the catch?
 > A: It is a bound, not the value. A weak critic underestimates the distance, so the generator optimizes a lie. The critic must stay well trained, which is the root of GAN training instability.
 
@@ -326,7 +545,7 @@ optimization effort for the critic.
 
 > [!QA]
 > Q: You are designing a GAN for sharp product photos. Which f do you pick, and why?
-> A: Start with the GAN's JS-like f: it is symmetric and calm near the solution, and the whole DCGAN architecture family is tuned for it. But watch the start of training: if real and generated distributions barely overlap, JS saturates and gradients die. The f-GAN answer is to switch to a friendlier f with stronger far-apart gradients, or move to the Wasserstein distance of Lesson 5, which never saturates.
+> A: Start with the GAN's JS-like f: it is symmetric and calm near the solution, and the whole DCGAN (Deep Convolutional GAN) architecture family is tuned for it. But watch the start of training: if real and generated distributions barely overlap, JS saturates and gradients die. The f-GAN answer is to switch to a friendlier f with stronger far-apart gradients, or move to the Wasserstein distance of Lesson 5, which never saturates.
 > Follow-up: What is the first diagnostic you watch?
 > A: The critic's score gap between real and fake batches. If D(x) sits at 1.0 on real and 0.0 on fake from step one, the critic is perfect, the JS is saturated, and the generator learns nothing. A healthy game keeps the critic uncertain: D around 0.5 to 0.8 on fakes.
 
