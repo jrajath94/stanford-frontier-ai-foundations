@@ -33,8 +33,10 @@ sources:
 
 ## The scene: a new model drops, and your GPUs say no
 
-A new large language model drops. You rent a cluster of A100s to
-fine-tune it. The job starts, the weights load, and the process
+A new large language model drops. You rent a cluster of A100s
+(NVIDIA data-center GPUs) to fine-tune it, that is, to keep
+training it briefly on new data so it follows instructions. The
+job starts, the weights load, and the process
 dies with three words: out of memory. This is not a bug in your
 code. This is the default experience of working with large models
 in 2024, and it is the reason this course exists.
@@ -79,7 +81,7 @@ improvement, gives roughly **2x every 2 years**. The gap is 16x
 per 2-year window, and it compounds. Each generation of models
 demands far more than new hardware supplies.
 
-![Compute trends](assets/slide-l01-compute-trends.png "Shell 1. Training compute rises 32x per 2 years against Moore's law 2x. Source: Stanford slides, Sevilla et al. 2022.")
+![Compute trends](assets/slide-l01-compute-trends.png "Shell 1. Training compute rises 32x per 2 years against Moore's law 2x. Source: Stanford slides, Sevilla et al. 2022. Project: Stanford Frontier AI.")
 
 Work the arithmetic. Two years pass. Hardware doubles. Model
 compute demand multiplies by 32. The missing factor of 16 must
@@ -92,7 +94,7 @@ curve, but accelerator memory is nearly flat: the V100 holds
 32 GB, the TPUv3 holds 32 GB, the A100 holds 40 or 80 GB. The
 largest models sit far above all of them.
 
-![Memory wall](assets/slide-l01-memory-wall.png "Shell 2. Model size over time against fixed accelerator memories. Source: Stanford slides.")
+![Memory wall](assets/slide-l01-memory-wall.png "Shell 2. Model size over time against fixed accelerator memories. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 That out-of-memory error from the opening scene is now
 explained. The weights do not fit. No setting in your training
@@ -106,14 +108,16 @@ The third gap is the subtlest, and the lecture returns to it in
 every later lecture. An algorithm can be better on paper and
 slower on the machine.
 
-The lecture's example is attention, the core operation of the
-transformer. A fancy new linear attention algorithm scales as
+The lecture's example is attention, the transformer's core
+operation. Each of N tokens scores all N others, so the score
+matrix holds N squared entries. A fancy new linear attention
+algorithm scales as
 O(N) in sequence length, against O(N squared) for standard
 attention. On paper it wins. But FlashAttention, a
 hardware-aware implementation of the exact O(N squared)
 algorithm, runs faster in measured wall-clock time.
 
-![Algorithmic scaling vs wall-clock](assets/slide-l01-algorithmic-scaling-meme.png "Shell 3. Linear attention wins on asymptotics. FlashAttention wins on the GPU. Source: Stanford slides, meme credit Michael Zhang.")
+![Algorithmic scaling vs wall-clock](assets/slide-l01-algorithmic-scaling-meme.png "Shell 3. Linear attention wins on asymptotics. FlashAttention wins on the GPU. Source: Stanford slides, meme credit Michael Zhang. Project: Stanford Frontier AI.")
 
 Why? Big-O notation hides constants and ignores how an
 algorithm uses memory. A linear algorithm that ignores the
@@ -132,7 +136,7 @@ shows inference cost rising steadily as the user base grows.
 Design for training when the bill is upfront. Design for
 serving when the bill compounds.
 
-![Training and inference costs](assets/slide-l01-train-infer-costs.png "Shell 4. Training is a large upfront cost. Inference compounds with users. Source: Stanford slides, OctoML.")
+![Training and inference costs](assets/slide-l01-train-infer-costs.png "Shell 4. Training is a large upfront cost. Inference compounds with users. Source: Stanford slides, OctoML. Project: Stanford Frontier AI.")
 
 Three gaps, each demonstrated: compute demand outruns hardware
 (32x vs 2x), model size outruns memory (the OOM scene), and
@@ -160,8 +164,8 @@ model-aware. Dettmers et al. (LLM.int8(), 2022) diagnosed the
 failure: outlier features in large transformers break naive
 8-bit quantization. Their outlier-aware mixed-precision
 decomposition keeps most of the matrix in INT8 and handles
-outliers in FP16, enabling inference up to 175B parameters
-without accuracy loss. Quantization is not a blunt bit-width
+outliers in FP16 (a 16-bit floating-point format), enabling inference
+up to 175B parameters without accuracy loss. Quantization is not a blunt bit-width
 cut. It is a diagnosis of which values actually break, then a
 targeted fix. Lecture 7 derives the classical schemes.
 
@@ -174,8 +178,9 @@ quantization stores each number in fewer bits.
 The toy that shows the failure: eight weights, [0.5, -0.3, 0.8,
 0.2, 127.0, -0.4, 0.6, 0.1]. INT8 spans -128 to 127. Naive
 quantization scales by the max: 127.0 maps to 127, and 0.5 maps to
-0.5 / 127 * 127, about 0. Every small weight rounds to zero. The
-matrix becomes the outlier plus zeros. Accuracy collapses.
+round(0.5 / 127 * 127) = round(0.5) = 0. The small weights round
+to 0 or 1. The outlier keeps 127. The matrix becomes the outlier
+plus near-zeros. Accuracy collapses.
 
 ### Subchapter: the outlier fix (LLM.int8)
 
@@ -198,7 +203,7 @@ factor of 2 in memory. Two schemes dominate.
 of second derivatives) to spread each weight's rounding error
 onto the weights that remain unquantized. It needs one
 calibration pass over sample text. Most public 4-bit Llama quants
-on HuggingFace are GPTQ.
+on HuggingFace are GPTQ [uncertain].
 
 **AWQ** (activation-aware weight quantization) protects the small
 fraction of weight channels that activations hit hardest: it
@@ -209,14 +214,15 @@ kernels.
 | Scheme | Bits | What it protects | Calibration data | Public use |
 |---|---|---|---|---|
 | LLM.int8 | 8 | outlier columns in FP16 | none, dynamic | HuggingFace transformers |
-| GPTQ | 4 | rounding error spread via Hessian | yes, small set | most Llama 4-bit quants |
+| GPTQ | 4 | rounding error spread via Hessian | yes, small set | most Llama 4-bit quants [uncertain] |
 | AWQ | 4 | salient weights by activation scale | yes, small set | vLLM, AutoAWQ |
 | FP8 | 8 | range via E4M3/E5M2 formats | none | DeepSeek-V3 training |
 
 **FP8** is a different animal: a floating format, not integer,
 used during training itself. DeepSeek-V3 trained in FP8, public
-in its paper. DeepSeek-V4 moved to NVFP4, a 4-bit microscaling
-format. What quantization GPT-5 uses, if any, is not public.
+in its paper. DeepSeek-V4 is reported to have moved to NVFP4,
+a 4-bit microscaling format [uncertain]. What quantization
+GPT-5 uses, if any, is not public.
 Unknown.
 
 **Model: sparsity.** Traditionally neural networks are dense:
@@ -259,7 +265,7 @@ Unknown.
 
 ![The gate routes. Imbalance starves experts](assets/plate-l01-moe-routing.webp "Uneven gates collapse MoE into one dense expert. The balance loss spreads the load. Shell 3. Source: original toy for MoE routing. Project: Stanford Frontier AI.")
 
-![Dense vs mixture of experts](assets/plate-moe.svg "Shell 5. The gate selects experts per token. Only active experts compute. Source: original plate. Shazeer, Mirhoseini et al. 2017, Fedus et al. 2021.")
+![Dense vs mixture of experts](assets/plate-moe.svg "Shell 5. The gate selects experts per token. Only active experts compute. Source: original plate. Shazeer, Mirhoseini et al. 2017, Fedus et al. 2021. Project: Stanford Frontier AI.")
 
 **Software: parallelism and mapping.** Scaling across devices
 needs parallelization strategies, and the strategy must match
@@ -270,7 +276,7 @@ model parallelism communicates less but idles more. Tensor
 parallelism idles less but communicates more, so it demands
 fast interconnects.
 
-![Parallelism tradeoffs](assets/slide-l01-parallelism-tradeoffs.png "Shell 6. Model parallelism: less communication, more idle time. Tensor parallelism: more communication, less idle time. Source: Stanford slides.")
+![Parallelism tradeoffs](assets/slide-l01-parallelism-tradeoffs.png "Shell 6. Model parallelism: less communication, more idle time. Tensor parallelism: more communication, less idle time. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 And the network decides where each style lives. Connections
 inside one machine are orders of magnitude faster than
@@ -284,16 +290,19 @@ Three ways to split the work. The network decides where each
 lives.
 
 **Data parallelism.** Copy the whole model to each GPU. Split the
-batch. Each GPU trains on its slice, then all-reduce syncs the
-gradients. Memory need: the full model must fit on one GPU.
-Communication: one gradient sync per step, large but infrequent.
-Spans nodes happily.
+batch (the group of training examples processed in one step).
+Each GPU trains on its slice, then all-reduce (a collective
+operation that leaves every GPU holding the sum of all GPUs'
+gradients) syncs the gradients. Memory need: the full model must
+fit on one GPU. Communication: one gradient sync per step, large
+but infrequent. Spans nodes happily.
 
 **Tensor parallelism.** Split single operations across GPUs. One
 matrix multiply becomes two halves on two GPUs, results combined.
 Memory need: the model shards, so 70B in FP16 (140 GB) fits across
 two 80 GB cards. Communication: every layer, small and frequent.
-Stays inside one machine, on NVLink.
+Stays inside one machine, on NVLink (NVIDIA's fast GPU-to-GPU
+link, detailed in L05).
 
 **Pipeline parallelism.** Split the layers. GPU 0 holds layers
 1-8, GPU 1 holds 9-16. Feed microbatches through. Memory need:
@@ -305,8 +314,9 @@ The rule: frequent fine-grained communication stays intra-node.
 Rare coarse communication spans the cluster. Llama 3 trained on
 16,384 H100s with data plus model plus pipeline parallelism,
 public in the Meta paper. Megatron-LM is the public tensor-parallel
-implementation. DeepSeek-V3's DualPipe overlaps communication with
-computation to hide the cost, public in its paper. GPT-4's
+implementation. DeepSeek-V3's DualPipe, a pipeline schedule that
+overlaps communication with computation to hide the cost, is
+public in its paper. GPT-4's
 strategy is not public. Unknown.
 
 ![Three ways to split the work](assets/plate-l01-parallel-family.webp "Frequent fine traffic stays in the node. Rare coarse traffic spans the cluster. Shell 3. Source: original toy for the parallelism family. Project: Stanford Frontier AI.")
@@ -372,7 +382,7 @@ a chip for one workload family, not a general GPU. Co-design
 trades generality for speed, and the search makes the trade
 explicit.
 
-![Efficiency across the stack](assets/slide-l01-efficiency-stack.png "Shell 7. Data, model, software, hardware: each layer gets its own efficiency levers. Source: Stanford slides.")
+![Efficiency across the stack](assets/slide-l01-efficiency-stack.png "Shell 7. Data, model, software, hardware: each layer gets its own efficiency levers. Source: Stanford slides. Project: Stanford Frontier AI.")
 
 ## What is used where: the real models
 
@@ -382,18 +392,19 @@ as of October 2026.
 
 | Model | Public efficiency levers | Why these |
 |---|---|---|
-| DeepSeek-V4 (Apr 2026) | NVFP4 training, hybrid CSA+HCA attention (MLA dropped), MoE, 1M context | MIT-licensed; every lever cuts cost per token [uncertain: exact parameter counts vary by source] |
-| DeepSeek-V3 (Dec 2024) | FP8 training, MLA attention, MoE (256 routed + 1 shared expert, 8 active), DualPipe parallelism | 671B parameters, 37B active per token; the full-stack cost playbook |
+| DeepSeek-V4 [uncertain: public details unconfirmed as of Oct 2026] | reported NVFP4 training [uncertain], hybrid sparse attention combining CSA and HCA patterns [uncertain: the expansions of these acronyms are not confirmed in public sources as of Oct 2026], MoE [uncertain], 1M context [uncertain] | claimed variants V4-Pro 1.6T total / 49B active and V4-Flash 284B / 13B active [uncertain]; MIT license [uncertain] |
+| DeepSeek-V3 (Dec 2024) | FP8 training, MLA attention (multi-head latent attention: keys and values are compressed into a small latent vector, which shrinks the KV cache), MoE (256 routed + 1 shared expert, 8 active), DualPipe parallelism | 671B parameters, 37B active per token; the full-stack cost playbook |
 | Llama 4 Maverick (Apr 2025) | MoE (128 experts, 17B active of 400B), 1M context | the entire Llama 4 family went MoE; open weights |
-| Mixtral 8x7B | MoE top-2 of 8, sliding window, GQA | open-weights MoE; sparse compute with long context |
-| Gemini 3.1 Pro (Feb 2026) | sparse MoE transformer (per public model card), 1M context | long context plus reasoning as the product feature [uncertain: exact counts not public] |
+| Mixtral 8x7B | MoE top-2 of 8, sliding window, GQA (grouped-query attention: query heads share a smaller set of key and value heads, which shrinks the KV cache) | open-weights MoE; sparse compute with long context |
+| Gemini 3.1 Pro (Feb 2026) | sparse MoE transformer [uncertain: architecture not confirmed in public sources as of Oct 2026], 1M context | long context plus reasoning as the product feature [uncertain: exact counts not public] |
 | GPT-5 (Aug 2025) | not public | unknown; internals unconfirmed |
 
-Read it as the course in miniature. DeepSeek is the full stack:
-train cheaper (FP8, then NVFP4), serve cheaper (MLA, then hybrid
-attention. MoE), scale wider (DualPipe). Llama 4 shows even Meta
-moved its flagship line to MoE. GPT-5 reminds you that the table
-records only what makers announce.
+Read it as the course in miniature. DeepSeek-V3 is the full
+stack: train cheaper (FP8), serve cheaper (MLA, MoE), scale
+wider (DualPipe). DeepSeek-V4's reported additions (NVFP4
+training, hybrid attention) are unconfirmed [uncertain]. Llama 4
+shows even Meta moved its flagship line to MoE. GPT-5 reminds
+you that the table records only what makers announce.
 
 ## Mapping back: each gap gets its levers
 
@@ -405,7 +416,7 @@ Each of the three gaps now has an answer, by name:
 | Model size outruns memory (the OOM scene) | Quantization, sparsity, MoE, splitting weights across devices |
 | Asymptotics outrun wall-clock (the meme) | Measure on target hardware; design for the memory hierarchy, not big-O |
 
-![Full-stack efficiency](assets/media-generation-plate-chapter-l01-fullstack-0-ba96d864-a7fa-4e8c-b343-e346c5aa61cf.webp "Shell 7b. Every layer of the stack gets its own efficiency lever. Source: original chapter plate.")
+![Full-stack efficiency](assets/media-generation-plate-chapter-l01-fullstack-0-ba96d864-a7fa-4e8c-b343-e346c5aa61cf.webp "Shell 7b. Every layer of the stack gets its own efficiency lever. Source: original chapter plate. Project: Stanford Frontier AI.")
 
 ## The honest price
 
@@ -428,7 +439,7 @@ the work across a cluster (L10).
 > Q: Why does the field keep training larger models instead of better small ones?
 > A: Two reasons. Scaling laws show smooth, predictable gains from more compute, data, and parameters, so size is a reliable lever. Emergent abilities such as few-shot learning and chain of thought appear only at large scale, so some capabilities have no small-model equivalent. Systems work exists because this appetite for scale collides with hardware limits.
 > Follow-up: What breaks first as models grow?
-> A: Money and memory. Training a frontier model costs tens of millions of dollars, and model size outruns accelerator memory: GPT-4-scale weights sit far above an A100's 40 or 80 GB. That is why the course opens with memory and compute, not with architectures.
+> A: Money and memory. Training a frontier model costs tens of millions of dollars, and model size outruns accelerator memory: GPT-4-scale weights sit far above an A100's 40 or 80 GB [uncertain: GPT-4's actual size is not public; this is the lecture's placement, not a confirmed number]. That is why the course opens with memory and compute, not with architectures.
 
 > [!QA]
 > Q: Quote the two growth rates and say why they matter together.
@@ -446,11 +457,11 @@ the work across a cluster (L10).
 > Q: A new LLM drops and your A100 fine-tune dies with out-of-memory. What are your options?
 > A: Three, and the course covers each. Shrink the model: quantization and sparsity (Lectures 1 and 7). Split the model: parallelism across devices (Lecture 10). Or shrink what you store per token: KV cache management (Lecture 4). The OOM is the memory wall made concrete: model size grows steeply while the A100 holds 40 or 80 GB.
 >
-> Follow-up: Which do you try first? Shrink the model: it needs no extra hardware. Quantization halves memory with minimal quality loss (Lecture 7). If that is not enough, try parallelism (Lecture 10). Touch the KV cache (Lecture 4) only after the model itself fits: cache tricks do not save a model that is too big to load.
+> Follow-up: Which do you try first? Shrink the model: it needs no extra hardware. Quantization cuts memory ~4x with INT8 (and more with INT4) with minimal quality loss (Lecture 7). If that is not enough, try parallelism (Lecture 10). Touch the KV cache (Lecture 4) only after the model itself fits: cache tricks do not save a model that is too big to load.
 
 > [!QA]
 > Q: Walk me through the LLM.int8 fix. Why does naive INT8 quantization break large transformers?
-> A: Start with the toy: weights [0.5, -0.3, 0.8, 0.2, 127.0, -0.4, 0.6, 0.1]. INT8 covers -128 to 127, so naive quantization scales everything by the max. The outlier 127.0 becomes 127. The small weights become 0. The matrix is now the outlier plus zeros, and accuracy collapses. Dettmers et al. found real large transformers grow such outlier feature dimensions. The fix: keep the outlier columns (about 0.1 percent of weights) in FP16 and quantize the rest to INT8. Memory still drops nearly 4x. The paper ran OPT-175B with no accuracy loss.
+> A: Start with the toy: weights [0.5, -0.3, 0.8, 0.2, 127.0, -0.4, 0.6, 0.1]. INT8 covers -128 to 127, so naive quantization scales everything by the max. The outlier 127.0 becomes 127. The small weights round to 0 or 1. The matrix is now the outlier plus near-zeros, and accuracy collapses. Dettmers et al. found real large transformers grow such outlier feature dimensions. The fix: keep the outlier columns (about 0.1 percent of weights) in FP16 and quantize the rest to INT8. Memory still drops nearly 4x. The paper ran OPT-175B with no accuracy loss.
 > Follow-up: Why does the failure get worse past 6B parameters?
 > A: Outliers emerge with scale. Small models have calm activation ranges, so naive INT8 works. Past about 6B, a few dimensions grow huge magnitudes, and one scale factor can no longer serve both the outliers and the rest. The diagnosis is scale-dependent, which is why the fix is model-aware rather than a blunt bit cut.
 
@@ -554,3 +565,31 @@ of fine-tuning is L08.
   training-versus-inference cost split.
 - **CS329H:** RLHF and preference modeling, the systems view
   of which is [L08](l08-finetuning-and-peft.html).
+
+## Coverage map
+
+Every lecture concept mapped to the line that teaches it. File:
+l01-introduction.md.
+
+| Lecture concept | Anchor | Line |
+|---|---|---|
+| OOM opening scene (memory wall) | "out of memory" | 40 |
+| Scaling laws (Kaplan 2020) | "scaling laws" | 49 |
+| Emergent behaviors (few-shot, CoT) | "emergent behaviors" | 56 |
+| Fine-tuning (LaMDA example) | "Fine-tuning" | 64 |
+| Compute trends: 32x vs Moore 2x | "32x every 2 years" | 79 |
+| Accelerator memory wall (V100/A100) | "V100 holds" | 93 |
+| Paper speed vs wall-clock (attention meme) | "FlashAttention" | 116 |
+| Training vs inference cost split | "upfront bill" | 131 |
+| The key question (what closes the gap) | "key question" | 146 |
+| Quantization lever (LLM.int8) | "LLM.int8" | 163 |
+| Naive INT8 failure (outlier toy) | "toy that shows the failure" | 178 |
+| 4-bit family: GPTQ, AWQ, FP8 | "GPTQ" | 197 |
+| Sparsity lever (MoE) | "Mixture-of-experts" | 229 |
+| MoE routing (top-2) and expert collapse | "expert collapse" / "top-2 of 8" | 251 / 261 |
+| Parallelism: data | "Data parallelism" | 292 |
+| Parallelism: tensor | "Tensor parallelism" | 300 |
+| Parallelism: pipeline | "Pipeline parallelism" | 307 |
+| Hardware lever (FLOPs lie, EfficientNet) | "design for the device" | 324 |
+| Full-stack co-search (FAST paper) | "FAST" section | 361 |
+| Honest price of the levers | "honest price" | 421 |
