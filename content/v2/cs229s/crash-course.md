@@ -98,7 +98,7 @@ data on-chip and halves redundant loads. Tensor cores multiply
 matmuls. The hierarchy decides everything: frequent collectives
 stay inside the node, rare ones span the cluster.
 
-<figure class="crash-fig"><img src="assets/plate-device-block.svg" alt="Device block"><figcaption>Defined here; MS&E435 reuses this symbol.</figcaption></figure>
+<figure class="crash-fig"><img src="assets/plate-device-block.svg" alt="Device block"><figcaption>Defined here. MS&E435 reuses this symbol.</figcaption></figure>
 
 <ul class="crash-links">
 <li><a href="l05-gpu-execution-model.html">Lecture 5: the device block</a></li>
@@ -108,7 +108,7 @@ stay inside the node, rare ones span the cluster.
 
 <div class="crash-section" markdown="1">
 
-### 5. Training costs 3x a forward pass; decoding is memory bound
+### 5. Training costs 3x forward, and decoding is memory bound
 
 Backprop on the toy graph shows the two systems facts: reuse
 intermediate derivatives, and store activations for the
@@ -124,7 +124,7 @@ GPT-2-XL token. The RTX 4090 has compute for 30,000
 tokens/s but decodes about 300. Memory sets the serving
 limit, not FLOPs.
 
-<figure class="crash-fig"><img src="assets/media-generation-plate-chapter-l04-inference-0-45c8f33f-3e8d-41ee-a2d5-173728fe9c9a.webp" alt="Inference chapter plate"><figcaption>Cache and guess when memory bound; batch when you can.</figcaption></figure>
+<figure class="crash-fig"><img src="assets/media-generation-plate-chapter-l04-inference-0-45c8f33f-3e8d-41ee-a2d5-173728fe9c9a.webp" alt="Inference chapter plate"><figcaption>Cache and guess when memory bound. Batch when you can.</figcaption></figure>
 
 <ul class="crash-links">
 <li><a href="l04-transformer-performance.html">Lecture 4: FLOP counting and KV caching</a></li>
@@ -281,7 +281,7 @@ the memory gap demands.
 
 **Parallelism decision:** fits on one GPU: data. One fast
 node: tensor (NVLink only). Many nodes: pipeline.
-Thousand-GPU scale: all three (PTD); Alpa automates the
+Thousand-GPU scale: all three (PTD). Alpa automates the
 search.
 
 **Quantization family:** GPTQ for a quick one-shot shrink,
