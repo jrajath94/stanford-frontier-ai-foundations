@@ -4,16 +4,16 @@ course_slug: cs229
 course_name: "CS229: Machine Learning"
 course_order: 2
 order: 13
-nav: "L13 · Contrastive Learning and RAG"
+nav: "L13 · Contrastive, Search, RAG"
 title: "Lecture 13: Contrastive Embeddings, Search, and RAG"
 summary: "Learn embeddings without labels via contrastive learning, then use them for semantic search and retrieval-augmented generation."
 date: "2026-05-18"
 instructor: "Tengyu Ma"
 offering: "Spring 2026"
-duration: "1:00:34"
+duration: "1:15:32"
 video_id: lNTajqxxOn4
-video_title: "Lecture 13: Representation Learning in Practice"
-video_caption: "Original lecture. Tengyu Ma covers contrastive learning, semantic search, and retrieval-augmented generation. [uncertain] The YouTube title for this video is mislabeled; the title here follows the transcript."
+video_title: "Lecture 13: Contrastive Learning and RAG"
+video_caption: "Original lecture. Tengyu Ma builds contrastive embeddings from augmentations and hard negatives, then semantic search and RAG."
 concepts: [contrastive-learning, embeddings, augmentation, hard-negatives, semantic-search, RAG, retrieval]
 sources:
   - tag: video
@@ -25,242 +25,212 @@ sources:
     label: "CS229 Spring 2026 official course notes (local PDF)"
 ---
 
-## How to read this lesson
+## The job: find the photo by describing it
 
-This lesson has two levels. **Level 1 (Core)** contains what you need to
-understand everything that follows in CS229 and the courses that build on
-it. **Level 2 (Deep)** contains what you need for correct, interview-grade
-understanding. Read Level 1 straight through. Return to Level 2 when you
-want depth.
+A user types "cat playing soccer" into a photo app with ten million
+unlabeled pictures. No tags, no labels, no captions. The job: return
+the right photos. Keyword search fails: the pixels contain no words.
+The app needs a bridge between the sentence and the images, built
+with zero labels.
 
-No prerequisites are assumed. Every term is defined at first use.
-Embeddings and representation learning were defined in [lecture
-12](l12-foundation-models.html); they are reused, not re-explained.
+## First attempt: train a classifier per concept
 
-## Level 1: Learning embeddings without labels
+The naive idea: label some photos ("cat", "soccer", "dog") and
+train classifiers. With ten million photos and no labels, this
+needs an army of labelers. Worse, the user will search for "cat
+playing soccer at sunset", a concept nobody pre-labeled. Fixed
+label sets cannot cover open-ended queries. The labels are the
+bottleneck, again.
 
-Lecture 12 wanted similar inputs near each other in vector space. How do
-you learn that mapping with no labels? **Contrastive learning**
-[06:53](ts:06:53). The trick: manufacture supervision from the data
-itself.
+## The key question
 
-Take an image x. Apply **augmentation** twice: random crop, flip, blur,
-noise [07:24](ts:07:24). Cropping matters most. Two random crops of the
-same photo show different corners, maybe the top-right and the
-bottom-left. They are a **positive pair**: different views, same source.
-Any two crops from different images are a **negative pair**.
+Can we learn representations that place matching things near each
+other, using no labels at all? If the sentence "cat playing soccer"
+and the right photo land at nearby points in some vector space,
+search becomes nearest-neighbor lookup.
 
-![Contrastive learning](assets/svg/l13-contrastive.svg "Pull positives together, push negatives apart. No labels. Original plate.")
+## Contrastive learning: pull together, push apart
 
-The loss pulls positives together and pushes negatives apart. In matrix
-terms: make the diagonal big and the off-diagonals small
-[28:32](ts:28:32). Each row is one image's similarities to everything in
-the batch. The diagonal holds its positive pair. Everything else should
-score low. No human ever labeled anything. The augmentations are the
-supervision.
+Take one image x. **Augment** it twice: random crop, flip, blur,
+noise. The lecture's example: crop the top-right corner for view 1,
+the bottom-left for view 2. The two views show different pixels of
+the same scene. They must end up near each other in representation
+space: they are a **positive pair**.
+
+Now take other images' views: **negatives**. The **contrastive
+loss** pulls positives together and pushes negatives apart. For an
+anchor view, with one positive and N negatives, the loss is:
+
+```ascii
+loss = -log( exp(sim(anchor, positive)/tau) / sum over all pairs exp(sim(anchor, pair)/tau) )
+```
+
+Read it: the fraction of the softmax that lands on the positive
+pair. If the positive scores 0.9 similarity and 100 negatives score
+0.1, the fraction is e^9/(e^9 + 100*e^1) ~ 0.9997, loss ~ 0.0003.
+If a negative scores 0.85, the fraction drops and the loss bites.
+**Tau** (temperature) sharpens or softens the competition. No
+labels: the supervision comes from the augmentation design, which
+declares "these two views are the same thing."
+
+Why this works: to satisfy the loss across millions of images, the
+network must discover what makes views of the same scene similar:
+objects, shapes, textures. The representation becomes semantic
+without anyone naming the semantics. This is lecture 12's
+representation learning without the labels.
+
+![Contrastive learning](assets/svg/l13-contrastive.svg "Contrastive learning. Two augmented views of one image are pulled together. Views of other images are pushed apart. No labels: augmentation is the supervision. Source: original plate for Stanford Frontier AI.")
+
+## Where it breaks: easy negatives teach nothing
+
+Random negatives are too easy. Anchor: cat playing soccer. Random
+negative: a truck. Similarity 0.05. The loss is already ~0. The
+network learns nothing from this pair. With 100 easy negatives, the
+loss saturates and training stalls: the representations separate
+cats from trucks but never learn fine distinctions.
+
+## Hard negatives
+
+**Hard negatives** are pairs that look similar but are not the same.
+The lecture's example: the anchor is a photo of a cat playing
+soccer. The hard negative is text about the FIFA World Cup: soccer,
+but no cat. Ambiguous, confusing, distracting. Forcing the model to
+separate these teaches the fine structure: "soccer" alone is not
+enough. The cat matters.
+
+**Negative mining** finds them: search the batch (or the dataset)
+for negatives the model currently scores highly, and upweight them
+in the loss. The loss becomes demanding exactly where the model is
+weak. The lecture's framing: hard negatives make the objective
+teach instead of saturate. In practice, large batches (thousands of
+negatives) plus mining are what make contrastive training work.
+Small batches starve the loss of informative comparisons.
+
+## Semantic search: the payoff
+
+Once trained, the embedding space is a search engine. Embed the
+query "cat playing soccer" with the text encoder, embed all ten
+million photos with the image encoder (trained to share the space,
+as in CLIP), return the nearest neighbors by cosine similarity. No
+tags, no keywords: meaning matches meaning. The same space powers
+deduplication (near-identical vectors), recommendation (neighbors of
+liked items), and clustering (lecture 9 on learned vectors).
+
+## RAG: the model's missing memory
+
+A frontier lab's model never saw your company's private documents:
+they cannot leak into its training data. But you want a personal
+assistant that answers from those documents. Fine-tuning on them is
+expensive and bakes them in opaquely. The lecture's alternative:
+**retrieval-augmented generation** (RAG).
+
+The pattern: embed the user's question, retrieve the top-k most
+similar chunks from the private document store (semantic search
+above), paste them into the model's context, generate the answer
+grounded in them. The model never trained on the documents. It
+reads them at test time.
+
+Work the toy. Question: "What is our refund window?" Document
+store: 10,000 embedded chunks. Retrieval returns 3 chunks: "Refunds
+within 30 days...", "Shipping refunds excluded...", "Holiday
+extension to 60 days...". The prompt becomes: question + 3 chunks.
+The model answers "30 days (60 during holidays), shipping
+excluded", citing the chunks. Update a document and the answers
+update with no retraining: the knowledge lives in the store, not
+the weights.
+
+![RAG](assets/svg/l13-rag.svg "Retrieval-augmented generation. Embed the question, retrieve top-k chunks, generate grounded in them. Knowledge lives in the store, not the weights. Source: original plate for Stanford Frontier AI.")
+
+## The honest price
+
+Contrastive learning buys label-free representations and pays in
+compute and design: huge batches for informative negatives, and the
+augmentation policy is the real supervision: bad augmentations teach
+bad invariances (crop too aggressively and the model learns that
+object parts are interchangeable with wholes). Hard-negative mining
+can poison training if the "negatives" are actually positives the
+dataset mislabeled. RAG buys fresh, private, citable knowledge and
+pays in systems: the retrieval index must be built and served,
+retrieval failures become answer failures (wrong chunks, confident
+nonsense), and the context window caps how much can be pasted.
+Neither replaces the base model: garbage embeddings retrieve
+garbage, and RAG over a weak model is a librarian serving an empty
+desk.
+
+## Mapping back
+
+| Idea | Pain it answers | How |
+|---|---|---|
+| Contrastive loss | Ten million photos, zero labels | Pull augmented views together, push others apart; softmax fraction on the positive; tau sharpens |
+| Augmentation as supervision | No labels to define "same" | Two crops of one image are declared the same thing; semantics emerge from the constraint |
+| Hard negatives | Random negatives score 0.05: loss saturates | FIFA-text vs cat-soccer-photo: confusing pairs keep the loss teaching; mining finds them |
+| Semantic search | Keywords cannot search pixels | Shared embedding space: query and photos as vectors, nearest neighbors by cosine |
+| RAG | Frontier models never saw private docs | Retrieve top-k chunks, paste into context, generate grounded; knowledge in the store |
 
 > [!QA]
-> Q: Where do the labels come from in contrastive learning?
-> A: Nowhere. They are manufactured. Two augmentations of the same image are declared similar by construction. Everything else in the batch is declared dissimilar. The model learns embeddings that respect those declarations. This is called self-supervised learning: the data provides its own training signal through the augmentation design.
-> Follow-up: Why is the random crop the most important augmentation?
-> A: Because it forces the model to match different parts of the same scene. Two crops may share no pixels, yet the model must place them nearby. That demands real understanding of content, not pixel matching. Weaker augmentations let the model cheat with low-level statistics. The crop is the hardest task that is still fair.
-
-## Level 1: Hard negatives
-
-Most negatives are easy: a cat photo versus an airplane is no contest.
-Easy negatives teach little. **Hard negatives** [41:54](ts:41:54) are the
-pairs the model currently confuses: two similar-but-different images it
-cannot yet tell apart. Mining them, finding the informative negatives,
-drives learning.
-
-There is a curriculum logic. Early in training everything is hard, so
-random negatives suffice. Late in training, only hard negatives move the
-needle. Systems that ignore this waste compute on solved comparisons.
-The lecture treats hard-negative mining as a first-class design
-decision, not a trick.
+> Q: How can a model learn without any labels in contrastive learning?
+> A: The labels are replaced by augmentation design. Take one image, make two random views (crop top-right, crop bottom-left, flip, blur). Declare them the same thing: a positive pair. Other images' views are negatives. The loss pulls positives together and pushes negatives apart in representation space. Across millions of images, the only way to satisfy this is to discover real visual structure: objects, shapes, textures. The supervision is the statement "these two views show the same scene", which needs no human.
+> Follow-up: What goes wrong with bad augmentations?
+> A: The model learns exactly the invariances you declare. Crop too aggressively and it learns that a wheel equals a car. Augment with color jitter on a task where color matters (bird species) and it learns to ignore the signal. The augmentation policy is the hidden label set: design it with the downstream task in mind.
 
 > [!QA]
-> Q: What makes a negative "hard"?
-> A: The model's current confusion. A hard negative is a dissimilar pair the model scores as similar: it looks alike but is not. These pairs carry the most gradient signal because the loss is largest on them. Easy negatives contribute near-zero loss and near-zero learning. Training efficiency is mostly about spending compute on the informative pairs.
+> Q: What are hard negatives and why do they matter?
+> A: Negatives that look similar to the anchor but are not the same: the lecture's cat-playing-soccer photo versus FIFA World Cup text. Random negatives (a truck) score 0.05 similarity and the loss saturates near zero: no learning. Hard negatives score high and keep the loss biting, forcing fine distinctions: soccer is not enough, the cat matters. Negative mining actively finds the negatives the model currently confuses and upweights them, aiming the training at the model's weaknesses.
 > Follow-up: Can hard negatives hurt?
-> A: Yes, through false negatives. A mined "negative" might actually be a positive: two photos of the same cat from different batches, declared dissimilar. The loss then punishes a correct similarity. Hard-negative mining needs safeguards against label noise, or it teaches the model to separate things that belong together.
-
-## Level 1: Semantic search
-
-Embeddings turn search into geometry. Embed every document once. Embed
-the query. Return the nearest vectors. That is **semantic search**:
-matching by meaning, not by keywords.
-
-The lecture's framing is the LLM era. Frontier labs train generic
-models on public data. Your documents are private: bank statements, the
-CEO's memo, your laptop. You cannot leak them into the lab's training
-set, and you do not want to. Semantic search over your own corpus keeps
-the private data on your side while still making it searchable.
-
-![RAG pipeline](assets/svg/l13-rag.svg "Query, retrieve private docs, answer with context. Nothing is trained. Original plate.")
-
-## Level 1: Retrieval-augmented generation
-
-**Retrieval-augmented generation** (RAG) [53:41](ts:53:41) answers
-questions with private data and no training. The recipe: the user asks a
-question. A retriever finds the most relevant documents in the private
-corpus, typically five to ten [56:22](ts:56:22). Those documents plus the
-question go into the LLM's context. The LLM answers from both.
-
-Compare with the alternative: fine-tune the model on your private data.
-Fine-tuning is expensive, needs enough data to matter, and forces you to
-host a massive model [55:04](ts:55:04). RAG needs no training and no
-hosting. The model never sees your data during training. It sees only
-the retrieved snippets, at query time.
-
-RAG has four advantages the lecture names. **Modularity**: retrieval and
-generation are separate systems, improved independently. **Governance**:
-permissions apply at retrieval [57:18](ts:57:18). Deny a user access to
-the earnings projection and the retriever simply never returns it.
-**Forgetting**: delete a document from the corpus and it is never
-retrieved again [57:50](ts:57:50). Forgetting trained-in data is an open
-research problem; forgetting retrieved data is a delete key. **Cost**:
-retrieval is far cheaper than training or hosting.
+> A: Yes, when they are false negatives: actually-positive pairs mislabeled by the pipeline (two photos of the same cat from different users). Mining then punishes the model for a correct similarity, teaching it to separate things that should be together. Deduplication and careful mining thresholds guard against this.
 
 > [!QA]
-> Q: RAG or fine-tuning for private data?
-> A: RAG when the data changes, when permissions matter, when data is scarce, or when you cannot afford training and hosting. Fine-tuning when the task needs deep behavioral change, like a new language or a new skill, that retrieved context cannot supply. Many systems use both: RAG for knowledge, fine-tuning for behavior. The lecture's framing is that RAG is the default for knowledge and fine-tuning the tool for capabilities.
-> Follow-up: What breaks in RAG?
-> A: Retrieval quality. If the retriever misses the needed document, the LLM answers from ignorance, confidently. Chunking decisions, embedding quality, and the number of retrieved documents all move results. RAG also inherits the LLM's context limits: too many documents crowd out the question. The failure mode is silent: wrong answers with no warning.
-
-## Level 2: The contrastive loss, precisely
-
-For a batch of N images, make 2N augmented views. For view i with
-positive partner j, the loss is:
-
-loss_i = -log( exp(sim(i,j)/t) / sum_k exp(sim(i,k)/t) )
-
-Similarity is usually cosine. Temperature t sharpens the distribution.
-The numerator rewards the positive pair. The denominator sums over all
-2N-1 others, pushing every negative down. This is the InfoNCE form: the
-diagonal-big, off-diagonal-small objective in one formula.
-
-Temperature matters more than it looks. Low temperature makes the loss
-focus on the hardest negatives. High temperature spreads attention. It
-is a hyperparameter with real effects, tuned like a learning rate.
-
-## Level 2: RAG as a systems pattern
-
-Step back and RAG is a pattern, not a product. Separate the knowledge
-store from the reasoning engine. The store is cheap, editable,
-permissioned. The engine is expensive, frozen, general. The interface is
-retrieval: the engine asks, the store answers.
-
-The pattern recurs. Tool-using agents retrieve API results into context.
-Coding assistants retrieve repository snippets. The lecture's governance
-and forgetting arguments apply to all of them: anything the model should
-not permanently know belongs in the store, not the weights. Weights are
-write-once. Stores are editable. Design accordingly.
+> Q: When is RAG better than fine-tuning on the private documents?
+> A: When the knowledge changes, must be cited, or must stay out of the weights. RAG: update a document and answers update with zero retraining. The model can quote its sources. Private data never enters training. Fine-tuning: bakes knowledge into weights opaquely, needs retraining per update, cannot cite. RAG wins for living, private, reference-style knowledge. Fine-tuning wins for behavior and style: teaching the model how to answer, not what the facts are.
+> Follow-up: What is RAG's failure mode?
+> A: Retrieval failure. Wrong chunks retrieved means the model generates confidently from wrong premises: the answer is fluent and false. Mitigations: better embeddings, hybrid keyword+vector search, reranking the top-k, and having the model say "not in the documents" when nothing relevant retrieves. The index is load-bearing infrastructure, not an accessory.
 
 ## Recap: the whole lesson on one screen
 
-Eight ideas carry this lecture. Read each card. Say the core sentence out
-loud. If you can, you own the lesson.
-
-<div class="recap-grid">
-<div class="recap-card">
-<img src="assets/svg/l13-contrastive.svg" alt="Contrastive learning">
-<div class="rc-body">
-<strong>1. Contrastive: manufacture supervision</strong>
-<p>Two augmentations of one image are a positive pair. Everything else
-is negative. Pull positives, push negatives. No labels.</p>
-<p class="rc-num">Key: augmentations are the labels</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l13-contrastive.svg" alt="Positive and negative pairs">
-<div class="rc-body">
-<strong>2. Diagonal big, off-diagonal small</strong>
-<p>Each row scores one view against the batch. The positive pair sits
-on the diagonal. Everything else should score low.</p>
-<p class="rc-num">Key: the batch is the world</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l13-contrastive.svg" alt="Augmentations">
-<div class="rc-body">
-<strong>3. Cropping matters most</strong>
-<p>Random crops force matching different parts of one scene. The model
-must understand content, not pixels. Hard-but-fair tasks teach.</p>
-<p class="rc-num">Key: crop, flip, blur, noise</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l13-contrastive.svg" alt="Hard negatives">
-<div class="rc-body">
-<strong>4. Hard negatives carry the signal</strong>
-<p>Confused pairs teach. Easy pairs contribute nothing. Mine the hard
-ones, but guard against false negatives.</p>
-<p class="rc-num">Key: spend compute on confusion</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l13-rag.svg" alt="Semantic search">
-<div class="rc-body">
-<strong>5. Search becomes geometry</strong>
-<p>Embed the corpus once. Embed the query. Nearest vectors win.
-Meaning, not keywords. Private data stays private.</p>
-<p class="rc-num">Key: near means relevant</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l13-rag.svg" alt="RAG pipeline">
-<div class="rc-body">
-<strong>6. RAG: retrieve, then generate</strong>
-<p>Question plus 5-10 retrieved docs into the LLM. No training, no
-hosting. Knowledge without the training bill.</p>
-<p class="rc-num">Key: context, not weights</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l13-rag.svg" alt="RAG advantages">
-<div class="rc-body">
-<strong>7. RAG's four wins</strong>
-<p>Modular. Governed by permissions. Forgetting is a delete key. Cheap.
-Fine-tuning is for behavior, RAG for knowledge.</p>
-<p class="rc-num">Key: editable beats trained-in</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l13-rag.svg" alt="RAG failure mode">
-<div class="rc-body">
-<strong>8. RAG fails silently</strong>
-<p>Missed retrieval means confident ignorance. Chunking, embedding
-quality, and doc count decide results. No warning on failure.</p>
-<p class="rc-num">Key: retrieval is the bottleneck</p>
-</div>
-</div>
-</div>
+1. **The job.** "Cat playing soccer" over ten million unlabeled
+   photos. Keywords cannot search pixels.
+2. **First attempt.** Label concepts, train classifiers. Armies of
+   labelers. Open-ended queries uncovered.
+3. **The key question.** Learn a space where matching things are
+   near, with no labels?
+4. **Contrastive.** Two augmented views: positive pair. Others:
+   negatives. Softmax fraction on the positive. Tau sharpens.
+   Augmentation is the supervision.
+5. **Where it breaks.** Easy negatives (truck, 0.05): loss
+   saturates, nothing learned.
+6. **Hard negatives.** FIFA text vs cat-soccer photo: confusing
+   pairs keep it teaching. Mining aims at weakness.
+7. **Search.** Embed query, nearest neighbors by cosine. Tags
+   obsolete.
+8. **RAG.** Private docs the model never saw: retrieve top-k,
+   paste into context, generate grounded. Knowledge in the store.
+9. **The honest price.** Batches and augmentation design.
+   False-negative poisoning. Retrieval as load-bearing infra.
 
 ## Official sources and further reading
 
 **Official:**
-- Lecture 13 video: contrastive learning [06:53](ts:06:53), augmentations [07:24](ts:07:24), diagonal structure [28:32](ts:28:32), hard negatives [41:54](ts:41:54), RAG [53:41](ts:53:41), fine-tuning cost [55:04](ts:55:04), retrieved count [56:22](ts:56:22), governance [57:18](ts:57:18), forgetting [57:50](ts:57:50).
-- CS229 Spring 2026 official course notes: representation learning chapter.
+- Lecture 13 video, Stanford Online YouTube:
+  https://www.youtube.com/watch?v=lNTajqxxOn4 — Tengyu Ma builds
+  contrastive learning from augmentations, presents hard-negative
+  mining, then semantic search and RAG for private knowledge.
+- Official subtitle transcript (en-US): the lecture's spoken text.
+- CS229 Spring 2026 official course notes (local PDF): the formal
+  contrastive loss and RAG pattern.
 
-**Further reading:**
-- Chen et al. (2020), "A Simple Framework for Contrastive Learning of Visual Representations" (SimCLR): the canonical method.
-- Lewis et al. (2020), "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks": the RAG paper.
-
-**Caveats from these sources.** The lecture's contrastive presentation
-follows the SimCLR shape; other variants (MoCo, CLIP) differ in the
-negative handling. The "five to ten documents" count is typical, not
-optimal; it varies by task. The forgetting argument assumes the corpus
-is the only copy; cached embeddings need their own deletion.
+**Caveats from these sources.** The augmentation examples (random
+crop top-right vs bottom-left, flip, blur, noise) and the hard
+negative example (cat playing soccer vs FIFA World Cup text) are the
+lecture's own. The RAG motivation (frontier labs cannot see
+enterprise proprietary data) is the lecture's framing. The refund-window
+toy is an original miniature of the lecture's pattern.
 
 ## Connections to the other courses
 
-- **CS336:** retrieval augments language models at scale; the course covers RAG systems in depth.
-- **CS224N:** sentence embeddings and dense retrieval are the text versions of this lecture.
-- **CS329H:** tool use generalizes RAG: retrieve anything, not just documents, into context.
-
-> [!CHEAT]
-> **Contrastive and RAG cheatsheet.** Contrastive: positive = two augmentations of one image; negatives = rest of batch; loss pulls positives, pushes negatives; diagonal big, off-diagonal small. Hard negatives: confused pairs teach; beware false negatives. Crop is the key augmentation. Semantic search: embed corpus, embed query, nearest wins. RAG: retrieve 5-10 docs, add to context, generate; no training. Wins: modular, governed, forgettable, cheap. Fails: silently, at retrieval.
-
-> [!MEMORY]
-> **Weights are write-once.** Anything editable, permissioned, or deletable belongs in a store, not in parameters. RAG is the pattern: cheap store, frozen engine, retrieval between them.
+- **CS229 L10:** PCA: the linear ancestor of learned embeddings.
+- **CS229 L12:** representation learning's other route: pre-trained
+  foundation models. Probing their embeddings.
+- **CS229 L14:** the text and image encoders are transformers.
+- **CS224N:** contrastive objectives for sentence embeddings
+  (SimCSE and successors).
+- **CS336:** serving retrieval indices and RAG pipelines at scale.
