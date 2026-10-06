@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.classList.remove('no-js');</script>
-<title>Lecture 3: Variational Autoencoders — The Sculptor — Stanford Frontier AI</title>
+<title>Lecture 3: Variational Autoencoders: The Sculptor — Stanford Frontier AI</title>
 <meta name="description" content="The sculptor answers the one question with hidden causes: an encoder guesses latent settings, a decoder rebuilds from them. The reparameterization trick worked ">
 <link rel="stylesheet" href="../assets/vendor/katex.min.css">
 <link rel="stylesheet" href="../assets/style.css">
@@ -216,10 +216,10 @@
   </nav>
   <main class="content" id="main">
     <article>
-      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative Models</a> / Lecture 3: Variational Autoencoders — The Sculptor</nav>
-      <h1>Lecture 3: Variational Autoencoders — The Sculptor</h1>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">Mathematical Foundations of Generative Models</a> / Lecture 3: Variational Autoencoders: The Sculptor</nav>
+      <h1>Lecture 3: Variational Autoencoders: The Sculptor</h1>
       <p class="meta-line">2026-10-05 · Instructor: Prof. Prathosh A P · 2025</p>
-      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="RN3_gkjlYoA"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/RN3_gkjlYoA" title="Lecture 3: Variational Autoencoders — The Sculptor" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=RN3_gkjlYoA" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=RN3_gkjlYoA" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">Original Stanford lecture. Timestamps in the text link to the exact moment.</p></div><h2 id="the-question-for-hidden-causes">The question, for hidden causes</h2>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><div class="video-block" data-vid="RN3_gkjlYoA"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/RN3_gkjlYoA" title="W5L20: VAE (IIT Madras)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="video-blocked" hidden><p>Video blocked (ad-blocker or local file mode).</p><a class="watch-btn" href="https://www.youtube.com/watch?v=RN3_gkjlYoA" target="_blank" rel="noopener">Watch on YouTube</a></div></div><p class="video-fallback">Video not loading? <a href="https://www.youtube.com/watch?v=RN3_gkjlYoA" target="_blank" rel="noopener">Watch on YouTube</a></p><p class="video-cap">The lecture this chapter follows. Latent variables, the ELBO, and the reparameterization trick.</p></div><h2 id="the-question-for-hidden-causes">The question, for hidden causes</h2>
 <p>Restate the one question: learn the rule behind samples, draw
 fresh samples from it. The sculptor&rsquo;s answer: assume every outcome
 has a hidden cause. A face photo is caused by hidden settings:
@@ -271,11 +271,30 @@ two terms:</p>
        rebuild x well      keep codes near the prior
        from the drawn z    N(0,1)
 </pre>
+<figure><img alt="ELBO: reconstruction reward minus KL rent" src="assets/plate-l03-elbo.webp"><figcaption>The toy photo pays 2.318 nats of rent to sit at mu = 2.0, sigma = 0.5. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <p>Read it as a deal. The first term pays for good reconstructions.
 The second term charges rent for code distributions that stray
 from the prior. Maximizing the ELBO is maximizing a guaranteed
 lower bound on log p(x). (The sibling course, math-genai L04,
 derives this bound from Jensen&rsquo;s inequality. Here we use it.)</p>
+<h3 id="subchapter-the-elbo-in-one-jensen-step">Subchapter: the ELBO in one Jensen step</h3>
+<p>Where does the bound come from? Start from the true
+log-probability, which integrates over all codes:</p>
+<pre class="ascii">log p(x) = log E_q[ p(x, z) / q(z | x) ]
+</pre>
+<p>The expectation is over the encoder&rsquo;s distribution q. Now apply
+<strong>Jensen&rsquo;s inequality</strong>: the log of an average is at least the
+average of the log, because log curves downward. Push the log
+inside:</p>
+<pre class="ascii">log p(x) &gt;= E_q[ log p(x, z) - log q(z | x) ] = ELBO
+</pre>
+<p>One inequality, and the intractable integral becomes a tractable
+expectation the model can estimate with samples of z. Split
+p(x, z) = p(x | z) p(z) and the two ELBO terms appear:
+reconstruction plus the KL rent. The gap between log p(x) and the
+ELBO is exactly the encoder&rsquo;s error: a perfect encoder
+(q = the true posterior) would close it. Every VAE maximizes a
+guarantee, and the guarantee&rsquo;s looseness is the encoder&rsquo;s fault.</p>
 <p>The KL term has a closed form for bell curves, so it can be
 computed by hand. For q = N(mu, sigma^2) against p = N(0,1):</p>
 <pre class="ascii">KL = 0.5 x (mu^2 + sigma^2 - 1 - log(sigma^2))
@@ -291,6 +310,23 @@ zero rent: it already matches the prior. The KL term is a leash.
 The reconstruction term pulls codes apart so photos stay
 distinguishable. The leash pulls them back to the origin. Every
 VAE lives in this tension.</p>
+<h3 id="subchapter-why-diagonal-gaussians">Subchapter: why diagonal Gaussians</h3>
+<p>The encoder outputs mu and sigma, not a full covariance matrix.
+Three reasons, each practical. First, the reparameterization
+trick needs a <strong>location-scale</strong> family: z = location + scale x
+noise. Diagonal Gaussians are the simplest such family. Second,
+a full covariance on a d-dimensional latent needs d^2 numbers.
+Diagonal needs 2d. At d = 512, that is 262,144 vs 1,024. Third,
+the KL to N(0,1) has the closed form used above only because
+both are diagonal. A full-covariance KL needs a matrix log
+determinant: the O(d^3) bill from L04, returned.</p>
+<p>The price of diagonal: the encoder cannot model correlations
+between latent axes. Axis 3 cannot say &ldquo;when I am high, axis 7
+is low.&rdquo; The decoder must absorb all the correlation structure.
+In practice the decoder is a deep network and manages. The
+decision rule: diagonal Gaussians are the default. Reach for
+fuller posteriors (normalizing-flow posteriors, ironically) only
+when the decoder is too weak to carry the correlations.</p>
 <h2 id="the-reparameterization-trick-by-hand">The reparameterization trick, by hand</h2>
 <p>One problem remains. Training needs gradients through the random
 draw z. But &ldquo;draw a random number&rdquo; has no derivative. You cannot
@@ -299,6 +335,7 @@ backpropagate through a dice roll.</p>
 directly from N(mu, sigma^2), draw epsilon from N(0,1) and set:</p>
 <pre class="ascii">z = mu + sigma x epsilon
 </pre>
+<figure><img alt="The reparameterization trick: move the dice roll aside" src="assets/plate-l03-reparam.webp"><figcaption>z = 2.0 + 0.5 x 0.6 = 2.3. Gradients: dz/dmu = 1, dz/dsigma = 0.6. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <p>Watch it with the toy numbers. mu = 2.0, sigma = 0.5, and the
 drawn epsilon = 0.6:</p>
 <pre class="ascii">z = 2.0 + 0.5 x 0.6 = 2.3
@@ -325,6 +362,8 @@ draw z = -1.2  -&gt;   x = 3 x -1.2 + 1 = -2.6
 The holes are gone because the KL leash forced training codes to
 cover the prior&rsquo;s territory. The sampling rule exists because the
 prior is fixed and simple.</p>
+<div class="video-block"><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/_LgMWM-Ok-c" title="Understanding and Visualising the Mathematics Behind Generative AI: VAEs" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="video-cap">Explainer: Mathematics of Machines, the mathematics behind VAEs. Latent variables, the reparameterization trick, KL divergence, and the ELBO derived, not just stated. Watch after the reparameterization section.</p></div>
+
 <h2 id="mapping-back-what-each-property-fixes">Mapping back: what each property fixes</h2>
 <table>
 <thead>
@@ -338,7 +377,7 @@ prior is fixed and simple.</p>
 <tr>
 <td>Latent holes: z = 0 decodes to garbage</td>
 <td>KL leash toward N(0,1)</td>
-<td>Every code distribution overlaps the prior&rsquo;s territory; no region is untrained</td>
+<td>Every code distribution overlaps the prior&rsquo;s territory. No region is untrained</td>
 </tr>
 <tr>
 <td>No sampling rule over z</td>
@@ -348,7 +387,7 @@ prior is fixed and simple.</p>
 <tr>
 <td>Dice roll blocks gradients</td>
 <td>z = mu + sigma x epsilon</td>
-<td>Randomness moves to parameter-free epsilon; dz/dmu = 1, dz/dsigma = epsilon</td>
+<td>Randomness moves to parameter-free epsilon. dz/dmu = 1, dz/dsigma = epsilon</td>
 </tr>
 </tbody>
 </table>
@@ -365,6 +404,7 @@ and mu = +0.5. The reconstructions become x-hat = 2.5 and x-hat
 z = 0, the most likely draw under the prior. The decoder outputs
 x-hat = 5, the average of the two photos. It matches neither
 training photo. It is a blurry compromise.</p>
+<figure><img alt="The KL leash crowds codes, and the midpoint becomes the average" src="assets/plate-l03-blur.webp"><figcaption>Reconstructions shrink {0, 10} to {2.5, 7.5}. z = 0 decodes to 5. Shell 2. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
 <p>This is the VAE signature: smooth latent space, blurry samples.
 The same smoothness that lets z = 0 decode to something sane
 forces it to decode to an average. Sharpness would need the
@@ -374,6 +414,103 @@ KL-smoothed space forbids.</p>
 likelihood. The gap between log p(x) and the ELBO equals the
 error of the encoder&rsquo;s approximation. The model maximizes a
 guarantee, and the guarantee can be loose.</p>
+<h3 id="subchapter-posterior-collapse-demonstrated">Subchapter: posterior collapse, demonstrated</h3>
+<p>Give the decoder too much power and the latent dies. Suppose the
+decoder is autoregressive over pixels: it can model every pixel
+from the previous pixels alone. Then the best deal is to set
+q(z|x) = N(0,1) for every photo. KL rent: exactly 0. The decoder
+reconstructs everything and never reads z.</p>
+<figure><img alt="Posterior collapse: the decoder stops reading z" src="assets/plate-l03-collapse.webp"><figcaption>KL = 0 for every photo. The latent carries nothing. The decoder works alone. Shell 3. Source: original toy. Project: Stanford Frontier AI.</figcaption></figure>
+<p>Watch the ELBO accept this. Reconstruction is perfect (the strong
+decoder needs no help), KL is 0, so the ELBO is maximal. The
+model found a loophole: the bound does not require the latent to
+be useful. Samples from the prior decode to generic outputs that
+ignore z entirely. This is <strong>posterior collapse</strong>: the
+approximate posterior collapses onto the prior.</p>
+<p>The fixes attack the loophole. <strong>KL annealing</strong>: start the KL
+weight at 0 and raise it slowly, so the latent gets useful before
+the rent arrives. <strong>Weaker decoders</strong>: deny the decoder
+autoregression so it must read z. <strong>Minimum KL budgets</strong>: force
+each latent axis to pay at least some rent (keep at least 0.5
+nats per axis, say). The decision rule: if your latent
+interpolations do nothing, check the KL per axis first. Zeros
+mean collapse, not a bad prior.</p>
+<h3 id="subchapter-beta-vae-the-blur-knob">Subchapter: beta-VAE: the blur knob</h3>
+<p>The ELBO weights reconstruction and KL equally. <strong>beta-VAE</strong>
+(Higgins et al., 2017) adds a knob: ELBO = E[log p(x|z)] -
+beta x KL. Beta = 1 is the standard VAE. Beta &lt; 1 loosens the
+leash: codes drift outward, reconstructions sharpen, holes creep
+back. Beta &gt; 1 tightens it: codes crowd the origin, samples blur
+further, but the latent axes disentangle (each axis tends to own
+one factor of variation, since crowding punishes redundancy).</p>
+<p>On the toy: beta = 0.1 cuts the rent at mu = 2.0, sigma = 0.5
+from 2.318 to 0.232 nats. The codes settle near -0.9 and +0.9
+instead of -0.5 and +0.5. Reconstructions: x-hat = 0.5 and 9.5,
+nearly perfect. The price: z = 0.7 now sits between sparser
+territory, and prior samples degrade. The knob trades sharpness
+for hole-filling, continuously. There is no free setting.</p>
+<h3 id="subchapter-vq-vae-the-discrete-turn">Subchapter: VQ-VAE: the discrete turn</h3>
+<p>What if the latent is discrete? <strong>VQ-VAE</strong> (van den Oord et al.,
+2017) keeps a codebook of K vectors. The encoder outputs a
+continuous vector, which is replaced by its nearest codebook
+neighbor. The decoder sees only codebook entries. Gradients flow
+through the quantization via the <strong>straight-through estimator</strong>:
+copy the decoder&rsquo;s gradient to the encoder as if the
+quantization were the identity.</p>
+<p>The numbers: a 256x256 image becomes a 32x32 grid of codes from
+a codebook of 8,192 entries. Each code costs log2(8192) = 13
+bits. The latent is 1,024 x 13 bits = 13,312 bits, against
+256x256x3x8 = 1,572,864 bits of pixels: 118x compression into
+discrete tokens. Those tokens are exactly what DALL-E 1&rsquo;s
+storyteller predicts autoregressively. VQ-VAE turned the
+sculptor&rsquo;s continuous latent into the storyteller&rsquo;s vocabulary.</p>
+<p>No KL rent here: the prior over codes is learned (a small
+autoregressive model over the code grid), not fixed to N(0,1).
+The holes problem is dodged differently: every code is a
+codebook entry by construction, so every latent decodes to
+something the decoder trained on. Posterior collapse cannot
+happen either: the decoder gets nothing but the codes.</p>
+<h2 id="what-is-used-where-the-sculptor-in-production">What is used where: the sculptor in production</h2>
+<table>
+<thead>
+<tr>
+<th>System</th>
+<th>How it uses the sculptor</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stable Diffusion 1/2</td>
+<td>A KL-regularized VAE compresses 512x512x3 to 64x64x4 before diffusion runs</td>
+<td>Public: Rombach et al., 2022, arxiv 2112.10752</td>
+</tr>
+<tr>
+<td>DALL-E 1</td>
+<td>A discrete VAE (dVAE) compresses images to tokens. A transformer predicts the tokens</td>
+<td>Public: Ramesh et al., 2021</td>
+</tr>
+<tr>
+<td>VQGAN</td>
+<td>VQ-VAE plus adversarial loss for high-quality image tokens</td>
+<td>Public research: Esser et al., 2021</td>
+</tr>
+<tr>
+<td>VITS</td>
+<td>Conditional VAE with flow-based priors for end-to-end text-to-speech</td>
+<td>Public: Kim et al., 2021, arxiv 2106.06103</td>
+</tr>
+<tr>
+<td>beta-VAE</td>
+<td>Disentangled representation learning in research</td>
+<td>Public research: Higgins et al., 2017, arxiv 1606.05579</td>
+</tr>
+</tbody>
+</table>
+<p>The pattern: pure VAEs rarely ship as the final generator (the
+blur price). They ship as the <strong>compressor</strong>: the VAE builds the
+latent room, and a restorer (diffusion) or storyteller
+(transformer) dreams inside it.</p>
 <h2 id="tying-to-cs229-l10-the-amortized-e-step">Tying to CS229 L10: the amortized E-step</h2>
 <p>CS229 L10 teaches EM for mixtures: alternate between guessing
 hidden assignments (E-step) and fitting parameters (M-step). The
@@ -398,25 +535,38 @@ You can, but its gradient estimates have high variance: they depend on the sampl
 The true log p(x) requires integrating over all z, which is intractable. The ELBO replaces the true posterior p(z|x) with the encoder&rsquo;s approximation q(z|x), and Jensen&rsquo;s inequality turns the approximation into a guaranteed lower bound. The gap between the bound and the truth is exactly the encoder&rsquo;s error: a perfect encoder would close it. The sibling course (math-genai) carries the full derivation.</p><div class="followup"><strong>Follow-up:</strong> Why is the ELBO a lower bound and not the true likelihood?</div></div></div>
 <div class="qa"><div class="q">Why are VAE samples blurry?</div><div class="a"><p>The KL leash pulls all codes toward the prior, so the decoder must map a smooth, crowded latent space to distinct photos. On the toy, codes settle at mu = -0.5 and +0.5 instead of -1 and +1, reconstructions shrink from {0, 10} to {2.5, 7.5}, and the most likely sample z = 0 decodes to 5, the average of both photos. Smoothness fills the holes and averages the outputs. The two are the same mechanism.
 That is the beta-VAE knob: scale the KL term by beta &lt; 1. Reconstructions sharpen as the leash loosens, but the holes return: codes drift apart, unsampled regions reappear, and prior samples degrade. The tradeoff is intrinsic, not a bug. [uncertain]: whether the lecture covers beta-VAE. The knob follows directly from the ELBO form.</p><div class="followup"><strong>Follow-up:</strong> Can you fix the blur by weakening the KL term?</div></div></div>
-<figure><img alt="Chapter plate: the KL leash fills the holes and blurs the samples" src="assets/plate-l03.png"><figcaption>Chapter plate. The KL leash fills the holes and blurs the samples; one mechanism. Source: original plate for Stanford Frontier AI.</figcaption></figure>
+<div class="qa"><div class="q">Walk me through computing the ELBO for the toy photo.</div><div class="a"><p>Photo x, encoder outputs mu = 2.0, sigma = 0.5. Step 1: draw epsilon = 0.6, form z = 2.0 + 0.5 x 0.6 = 2.3. Step 2: decode z to x-hat, score log p(x|z): say the reconstruction log-prob is -1.2 nats. Step 3: compute the KL rent in closed form: 0.5 x (4.00 + 0.25 - 1 - log 0.25) = 2.318 nats. ELBO = -1.2 - 2.318 = -3.518 nats. Training maximizes this over all photos: better reconstructions raise it, cheaper codes raise it.
+Because the expectation over q(z|x) is intractable in closed form for a neural decoder. One sample per photo per step is noisy but unbiased, and averaging over many steps and photos washes the noise out. The reparameterization trick is what makes that single sample&rsquo;s gradient usable.</p><div class="followup"><strong>Follow-up:</strong> Why estimate the reconstruction term with a single z sample?</div></div></div>
+<div class="qa"><div class="q">What is posterior collapse, and how do you detect it?</div><div class="a"><p>The decoder learns to reconstruct without reading z, and the encoder gives up: q(z|x) = N(0,1) for every x, KL = 0 everywhere. The ELBO accepts this because reconstruction is perfect and rent is zero. Detection: check the KL per latent axis. Axes at ~0 nats are dead. Also test latent interpolations: if sweeping z changes nothing in the output, the latent is decorative.
+KL annealing: ramp the KL weight from 0 upward so the latent gets useful before rent arrives. It costs tuning the schedule. Weaker decoder: remove autoregression so the decoder must read z. It costs some reconstruction quality. Both attack the loophole directly: make ignoring z expensive or impossible.</p><div class="followup"><strong>Follow-up:</strong> Applied: your VAE&#x27;s samples ignore the latent. Name two fixes and their costs.</div></div></div>
+<div class="qa"><div class="q">VQ-VAE vs VAE: when does discrete win?</div><div class="a"><p>VQ-VAE replaces the Gaussian latent with a codebook of discrete entries and nearest-neighbor quantization. It wins when a downstream model wants tokens: DALL-E 1&rsquo;s transformer predicts codebook indices autoregressively, which needs discrete symbols. It also dodges posterior collapse structurally (the decoder sees only codes) and the holes problem (every latent is a trained codebook entry). It loses the smooth interpolation that makes Gaussian VAEs good for editing faces along continuous axes.
+Nearest-neighbor lookup has no derivative: tiny encoder changes do not change the chosen code until they cross a boundary. The straight-through estimator copies the decoder&rsquo;s gradient straight to the encoder, pretending the quantization was the identity. It is biased but works, and the codebook itself learns via a separate dictionary loss.</p><div class="followup"><strong>Follow-up:</strong> Why does VQ-VAE need the straight-through estimator?</div></div></div>
+<div class="qa"><div class="q">Applied: design the latent space for a face generator. Continuous VAE or VQ-VAE?</div><div class="a"><p>Depends on the downstream job. For editing (slide &ldquo;smile&rdquo; from 0 to 1), pick the continuous VAE: smooth axes give smooth edits, and beta &gt; 1 disentangles the axes. For generation quality at scale, pick VQ-VAE plus a transformer prior: discrete tokens let the storyteller model the prior sharply, which is the DALL-E 1 recipe. The interview signal: name the tradeoff (smoothness and editability vs sharpness and token modeling), then match it to the product.
+In the continuous VAE, as the blur-vs-holes knob (beta). In VQ-VAE, nowhere: there is no KL to a fixed prior. The prior is a learned autoregressive model over codes, trained separately. That separation is VQ-VAE&rsquo;s architectural point.</p><div class="followup"><strong>Follow-up:</strong> Where does the KL rent show up in your design?</div></div></div>
+<figure><img alt="Chapter plate: the KL leash fills the holes and blurs the samples" src="assets/plate-l03.png"><figcaption>Chapter plate. The KL leash fills the holes and blurs the samples. One mechanism. Source: original plate for Stanford Frontier AI.</figcaption></figure>
 <h2 id="recap-the-whole-lesson-on-one-screen">Recap: the whole lesson on one screen</h2>
 <ol>
 <li><strong>The question, for hidden causes.</strong> Learn the rule. Draw fresh samples. Assume hidden settings cause each outcome.</li>
 <li><strong>First attempt: point codes.</strong> Encoder maps photos to points (-3.1, -2.9, +2.9, +3.1). Reconstruction works.</li>
 <li><strong>Holes, demonstrated.</strong> z = 0 was never trained. The decoder outputs a smeared double image. No distribution over z was learned, so sampling is undefined.</li>
 <li><strong>The key question.</strong> What if the encoder output a distribution over codes, all pulled toward one shared prior?</li>
-<li><strong>The ELBO.</strong> Reconstruction reward minus KL rent. Toy KL at mu = 2.0, sigma = 0.5: 2.318 nats.</li>
+<li><strong>The ELBO.</strong> Reconstruction reward minus KL rent. One Jensen step turns the intractable integral into a bound. Toy KL at mu = 2.0, sigma = 0.5: 2.318 nats. Diagonal Gaussians keep it cheap.</li>
 <li><strong>The trick, by hand.</strong> z = 2.0 + 0.5 x 0.6 = 2.3. dz/dmu = 1, dz/dsigma = 0.6. The dice roll is differentiable.</li>
 <li><strong>Sampling.</strong> Draw z ~ N(0,1), decode: z = 0.7 -&gt; x = 3.1. Holes gone, rule exists.</li>
 <li><strong>The price: blur.</strong> Codes shrink toward 0, reconstructions shrink {0,10} -&gt; {2.5,7.5}, and z = 0 decodes to the average, 5. Plus the ELBO gap: a bound, not the likelihood.</li>
+<li><strong>Failure modes.</strong> Posterior collapse: KL = 0, the decoder ignores z. Fixes: KL annealing, weaker decoders. beta-VAE: the blur knob, beta &lt; 1 sharpens, holes return.</li>
+<li><strong>The discrete turn.</strong> VQ-VAE: codebook, nearest neighbor, straight-through gradients. 8,192 codes, 13 bits each, 118x compression. The sculptor becomes the storyteller&rsquo;s tokenizer.</li>
+<li><strong>In production.</strong> VAEs ship as compressors: Stable Diffusion&rsquo;s VAE, DALL-E 1&rsquo;s dVAE, VITS speech. The restorer or storyteller dreams inside.</li>
 </ol>
 <h2 id="official-sources-and-further-reading">Official sources and further reading</h2>
 <p><strong>Official:</strong>
 - W5L20: VAE (video RN3_gkjlYoA) and W6L21: VAE reparameterization (video blh_AnhwIpw): the lectures this chapter follows. [uncertain]: the exact toy numbers in the lectures are not verified. The worked values here are original toys built to the lectures&rsquo; topics.
-- Kingma &amp; Welling, Auto-Encoding Variational Bayes (2013): https://arxiv.org/abs/1312.6114 — the original VAE paper.</p>
+- Kingma &amp; Welling, Auto-Encoding Variational Bayes (2013): https://arxiv.org/abs/1312.6114 (the original VAE paper).</p>
 <p><strong>Further reading:</strong>
 - math-genai (sibling) ELBO lesson: the full Jensen derivation this chapter uses as a result.
-- CS229 L10: EM and mixture models: the E-step this chapter&rsquo;s encoder amortizes.</p>
+- CS229 L10: EM and mixture models: the E-step this chapter&rsquo;s encoder amortizes.
+- Higgins et al., beta-VAE (2017): https://arxiv.org/abs/1606.05579 (the blur knob).
+- van den Oord et al., VQ-VAE (2017): https://arxiv.org/abs/1711.00937 (the discrete turn).</p>
 <p><strong>Caveats from these sources.</strong> The 1-D Gaussian toys are illustrative. Real VAEs use high-dimensional diagonal Gaussians and deep encoder/decoder networks. The blur analysis assumes a smooth decoder. Architectural choices (autoregressive decoders, hierarchical latents) change the sharpness tradeoff.</p>
 <h2 id="connections-to-the-other-courses">Connections to the other courses</h2>
 <ul>
@@ -424,9 +574,10 @@ That is the beta-VAE knob: scale the KL term by beta &lt; 1. Reconstructions sha
 <li><strong>math-genai (sibling):</strong> the ELBO derivation via Jensen, and latent variable models as a family.</li>
 <li><strong>CS229S L02:</strong> the transformer as a possible VAE decoder: autoregressive decoders sharpen samples by modeling pixel dependencies the smooth latent cannot.</li>
 <li><strong>CS336:</strong> latent-space structure in large models. The KL tension reappears wherever a prior regularizes learned representations.</li>
+<li><strong>L05 (this course):</strong> latent diffusion: the restorer dreams inside the sculptor&rsquo;s latent room.</li>
 </ul>
       <section class="sources"><h2>Sources</h2><ul><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=RN3_gkjlYoA" target="_blank" rel="noopener">W5L20: VAE (video RN3_gkjlYoA)</a></li><li><span class="src-tag">VIDEO</span><a href="https://www.youtube.com/watch?v=blh_AnhwIpw" target="_blank" rel="noopener">W6L21: VAE reparameterization (video blh_AnhwIpw)</a></li><li><span class="src-tag">PAPER</span><a href="https://arxiv.org/abs/1312.6114" target="_blank" rel="noopener">Kingma &amp; Welling, Auto-Encoding Variational Bayes (2013)</a></li></ul></section>
-      <nav class="pager"><a href="../math-genmodels/l02-autoregressive-models.html"><span class="lbl">← Previous</span>Lecture 2: Autoregressive Models — The Storyteller</a><a href="../math-genmodels/l04-normalizing-flows.html"><span class="lbl">Next →</span>Lecture 4: Normalizing Flows — The Warper</a></nav>
+      <nav class="pager"><a href="../math-genmodels/l02-autoregressive-models.html"><span class="lbl">← Previous</span>Lecture 2: Autoregressive Models: The Storyteller</a><a href="../math-genmodels/l04-normalizing-flows.html"><span class="lbl">Next →</span>Lecture 4: Normalizing Flows: The Warper</a></nav>
     </article>
     <footer class="pagefoot">
       <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
