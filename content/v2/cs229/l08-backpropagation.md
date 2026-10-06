@@ -25,229 +25,236 @@ sources:
     label: "CS229 Spring 2026 official course notes (local PDF)"
 ---
 
-## How to read this lesson
+## The job: train 10,000 knobs before lunch
 
-This lesson has two levels. **Level 1 (Core)** contains what you need to
-understand everything that follows in CS229 and the courses that build on
-it. **Level 2 (Deep)** contains what you need for correct, interview-grade
-understanding. Read Level 1 straight through. Return to Level 2 when you
-want depth.
+Lecture 7 built the MLP. A modest one has 10,000 knobs. Gradient
+descent needs the gradient: the downhill direction for every knob.
+The naive way to get it is finite differences: nudge knob 1 a hair,
+measure how the loss moves, restore. Repeat 10,000 times. Each
+measurement is a full forward pass. Training one step costs 10,001
+forward passes. For a language model with 1 billion knobs, one
+gradient step costs 1 billion forward passes. The universe ends
+first.
 
-No prerequisites are assumed. Every term is defined at first use. The
-neuron, MLP, and residual block were defined in [lecture
-7](l07-neural-networks-1.html); they are reused, not re-explained.
+The key question: can all 10,000 (or 1 billion) derivatives be
+computed for the price of one forward pass?
 
-## Level 1: The fundamental theorem
+## First attempt: finite differences
 
-Training needs the gradient of the loss with respect to every parameter.
-A modern network has billions of parameters. Computing a billion
-derivatives sounds like it should cost far more than one forward pass.
-It does not.
+Make it concrete. Loss L(w) = w^2, one knob, w = 3. Finite
+differences: L(3.001) - L(3) over 0.001 = (9.006 - 9)/0.001 = 6. The
+true derivative is 6. It works, and it is simple enough to debug
+anything. Its cost is the killer: n knobs need n+1 forward
+evaluations per gradient. For the 10,000-knob MLP, each training
+step pays 10,001 forward passes. Nobody trains this way, but
+everyone debugs this way: finite differences are the ground truth
+you check backprop against.
 
-The theorem: both the forward pass (evaluating the loss) and the gradient
-computation run in time linear in the number of parameters
-[11:00](ts:11:00). O(N) for the loss, O(N) for all N derivatives. The
-lecture's main job is proving this and showing the algorithm that
-achieves it: **backpropagation**.
+## The chain rule, on a toy with real numbers
 
-The proof idea is composition. A network is a chain of **modules**
-M_1 ... M_k: matrix multiplies, activations, normalizations. The forward
-pass computes each module's output in turn. The backward pass walks the
-chain in reverse, and each module does a fixed amount of work
-proportional to its own size. Sum over modules: O(N). No module ever
-needs to know the whole network.
+A network is a chain of simple operations. The **chain rule** says:
+if you know how the loss responds to a module's output, you can
+compute how it responds to the module's input, using only local
+information. Work it on a 2-layer toy, by hand, before any
+formalism.
+
+```ascii
+forward pass:
+  x = [1, 2]
+  W1 = [[1, -1], [0.5, 0.5]],  b1 = [0, 0]
+  z1 = W1 x = [1*1 + (-1)*2,  0.5*1 + 0.5*2] = [-1, 1.5]
+  a1 = ReLU(z1) = [0, 1.5]
+  W2 = [2, -1],  b2 = 0
+  y_hat = W2 a1 = 2*0 + (-1)*1.5 = -1.5
+  target y = 1
+  L = (1/2)(y_hat - y)^2 = 0.5 * (-2.5)^2 = 3.125
+```
+
+The prediction is -1.5, the truth is 1, the loss is 3.125. Now walk
+backward. At each step, ask: "if this intermediate value wiggled a
+little, how much would the loss move?" Multiply by the local slope
+to pass the question one step back.
+
+```ascii
+backward pass:
+  dL/dy_hat = (y_hat - y) = -2.5
+      "each unit of prediction moves loss by -2.5"
+
+  dL/dW2 = dL/dy_hat * a1 = -2.5 * [0, 1.5] = [0, -3.75]
+      "W2's second knob matters (a1's second entry is live).
+       Its first knob does not (a1's first entry is 0)"
+
+  dL/da1 = W2 * dL/dy_hat = [2, -1] * (-2.5) = [-5, 2.5]
+      "push a1's entries along W2's direction"
+
+  dL/dz1 = dL/da1 * ReLU'(z1) = [-5 * 0, 2.5 * 1] = [0, 2.5]
+      "ReLU's slope is 0 at z1[0] = -1 (dead), 1 at z1[1] = 1.5 (live)"
+
+  dL/dW1 = dL/dz1 outer x = [0, 2.5]^T [1, 2] = [[0, 0], [2.5, 5]]
+      "each weight's gradient is downstream signal times its input"
+```
+
+Read the result. Every knob's gradient came from one backward walk,
+reusing each module's local slope. The dead ReLU (z1[0] = -1)
+zeroed a whole row of W1's gradient: that neuron learns nothing
+this step, exactly lecture 7's dying neuron, now visible in the
+arithmetic. One forward pass, one backward pass, all gradients. No
+finite differences.
+
+## The fundamental theorem
+
+The lecture states it as an informal theorem. A differentiable
+circuit with N operations computing one real-valued output: the
+forward pass costs O(N), and the full gradient costs O(N) too. Not
+O(N^2). Not N forward passes. One constant factor more than the
+forward pass.
+
+Why it matters: N here counts operations, which for a network is
+proportional to the parameter count. The gradient for 1 billion
+knobs costs about as much as 2 or 3 forward passes, not 1 billion.
+This single fact is what makes training large models possible. The
+lecture's phrasing: the gradient is "efficiently computable" at the
+same scale as the function itself.
+
+The mechanism behind the theorem is **modules with backward
+functions**. Each operation (matrix multiply, ReLU, loss) knows two
+things: how to compute its output from its input (forward), and how
+to convert "gradient with respect to my output" into "gradient with
+respect to my input" (backward). Chain the backward functions in
+reverse order and the gradient pops out. Modern frameworks
+(PyTorch, JAX) are exactly this: a library of modules, each with a
+forward and a backward, composed into a graph.
+
+![Backpropagation](assets/svg/l08-backprop.svg "Backpropagation. Forward pass computes values. Backward pass chains each module's backward function in reverse. Full gradient costs O(N), like the forward pass. Source: original plate for Stanford Frontier AI.")
+
+## The rank-1 gradient
+
+Look again at dL/dW2 = [0, -3.75]. It equals (dL/dy_hat) * a1: a
+column vector times a row vector, an **outer product**. An outer
+product always has rank 1: every row is a multiple of one vector.
+The lecture proves this holds for every weight matrix in the
+network: each gradient dL/dW is rank 1 (for one example).
+
+This is not trivia. It means the gradient's information is
+structured: the update to W is "add a multiple of (signal outer
+input)". Low-rank structure is what makes some advanced optimizers
+and compression schemes possible. It also explains a subtle fact:
+the gradient never has more independent directions than the batch
+provides. With batch size 1, every weight update is rank 1.
+
+![Rank-1 gradient](assets/svg/l08-rank1.svg "The rank-1 gradient. dL/dW is an outer product of the backward signal and the forward input. One example, rank one. Source: original plate for Stanford Frontier AI.")
+
+## Second order without the matrix
+
+Lecture 3 priced Newton's method at O(n d^2 + d^3): the Hessian
+(second-derivative matrix) is d by d, and inverting it is hopeless
+at scale. The lecture salvages something. You cannot form the
+Hessian for d = 1 billion (10^18 entries), but you can compute a
+**Hessian-vector product** H*v in O(N) time, the same cost as a
+gradient, using one extra backward pass through the gradient
+computation.
+
+Why that suffices: many second-order methods never need H itself,
+only its product with vectors. Conjugate gradient, for example,
+solves H^-1 g by repeated H*v products. So the door to curvature
+information is not fully closed at scale. It is open exactly as far
+as matrix-free methods can walk through. The lecture's contrast:
+the matrix is too big to exist, but its action on any vector is
+cheap.
+
+## The honest price
+
+Backprop buys O(N) gradients and pays three prices. First, memory:
+the backward pass needs the forward pass's intermediate values
+(a1, z1), so training stores every layer's activations. For deep
+networks this dominates memory, which is why the later lectures
+obsess over activation checkpointing and KV caches. Second,
+numerical fragility: the chain multiplies many local slopes, so
+vanishing and exploding gradients (lecture 7, the RNN lesson) are
+backprop's native diseases. Third, the theorem needs
+differentiability: ReLU's kink at 0, discrete sampling, and
+if-statements break the chain, and each needs its own workaround.
+The gradient is cheap, exact, and partial: it tells you the
+downhill direction from here, nothing about the landscape beyond.
+
+## Mapping back
+
+| Idea | Pain it answers | How |
+|---|---|---|
+| Chain rule backward walk | Finite differences need n+1 forward passes per gradient | One backward pass reuses local slopes; toy: all gradients from a single reverse walk |
+| Fundamental theorem | Gradient cost seemed to scale with knob count | Forward O(N) implies gradient O(N); 1B knobs cost ~2-3 forward passes, not 1B |
+| Modules + backward functions | Hand-deriving gradients per architecture | Each op ships forward and backward; frameworks compose them; the graph is the program |
+| Rank-1 gradient | Gradient structure was opaque | dL/dW = signal outer input; rank 1 per example; toy W2 gradient [0, -3.75] |
+| Hessian-vector products | Newton needs O(d^3); Hessian has 10^18 entries at d=1B | H*v in O(N) via double backward; matrix-free methods keep curvature affordable |
 
 > [!QA]
-> Q: Why is backprop O(N) and not O(N^2)?
-> A: Each module's backward step costs proportional to that module's parameter count, not the network's. The chain rule factors the full gradient into local pieces, one per module. Summing local costs over all modules gives O(N) total. The naive alternative, perturbing each parameter and remeasuring the loss, costs O(N) forward passes: O(N^2). Backprop's trick is sharing work across parameters.
-> Follow-up: Does the constant matter in practice?
-> A: Yes. Backprop costs roughly 2x a forward pass: one forward sweep plus one backward sweep of similar size. Training step budgets in large runs assume this 3x ratio (forward plus backward plus optimizer). The theorem gives the scaling. Engineering gives the constant.
-
-## Level 1: Modules and backward functions
-
-Each module M has a forward function and a **backward function**
-[26:53](ts:26:53). Forward: given input x, compute output u = M(x).
-Backward: given the gradient of the loss with respect to the output,
-dJ/du, compute the gradient with respect to the input, dJ/dx.
-
-The backward function is the **chain rule** [17:59](ts:17:59): dJ/dx =
-(transpose of the Jacobian of M) times dJ/du [23:35](ts:23:35). The
-**Jacobian** is the matrix of all partial derivatives of the output with
-respect to the input. You never form it fully. Each module implements its
-own backward directly, using only its local math.
-
-![Backprop as modules](assets/svg/l08-backprop.svg "Forward computes activations. Backward pushes dJ/du through each module's backward function. Original plate.")
-
-The seed of the backward pass is dJ/dJ = 1 at the loss. Walk it back
-through every module. Two streams emerge: activation derivatives that
-propagate through layers, and weight gradients collected per layer. The
-modules need not match: matmul, sigma, LayerNorm each bring their own
-backward. Compose them and the chain rule handles the rest.
-
-![Backprop module diagram](assets/figs-notes/notes-backprop-modules.png "Forward pass, activation-derivative backward pass, and per-layer weight-gradient pass. Source: Stanford notes.")
+> Q: Why is backpropagation O(N) and not O(N^2)?
+> A: Each module's backward function converts the gradient at its output to the gradient at its input using only local information: a matrix-vector product shaped like the module itself. Chaining these in reverse visits each module once, so the total work is proportional to the number of operations N, the same as the forward pass. The naive fear was that each of the N knobs needs its own pass. The chain rule shares the work across all knobs in one reverse walk.
+> Follow-up: What exactly must be stored from the forward pass?
+> A: Every intermediate value the backward functions need: the inputs to each module (a1, z1 in the toy). That is why training memory is dominated by activations, not weights. Forget to save them and you recompute the forward pass: the price of backprop's speed is memory.
 
 > [!QA]
-> Q: What is a backward function, concretely?
-> A: For a module with forward u = M(x), the backward function takes the incoming gradient dJ/du and returns dJ/dx = J_M^T · dJ/du, where J_M is the module's Jacobian. For a matrix multiply it is a matrix-vector product. For an elementwise activation it is elementwise multiplication by the derivative. Each module author writes one backward, and the chain rule composes them.
-> Follow-up: Why the transpose?
-> A: Dimensions. dJ/du is a row-like object over outputs; dJ/dx must be row-like over inputs. The Jacobian maps input-directions to output-directions, so pulling a gradient back through it needs the transpose. In code this is just the right multiplication order. The transpose is bookkeeping, not deep mathematics.
-
-## Level 1: The gradient is rank 1
-
-A gem from the lecture. For one training example and one weight matrix,
-the gradient dJ/dW is always **rank 1** [55:00](ts:55:00): an outer
-product of the error vector and the input vector.
-
-![Rank-1 gradient](assets/svg/l08-rank1.svg "dJ/dW = error outer input. One example, one matrix: always rank 1. Original plate.")
-
-This is the error-times-input pattern from lecture 2, grown up. The
-gradient is not a generic matrix. It has structure: every row is a scaled
-copy of the input. Efficiency methods exploit this fact to compress
-updates. With many examples the gradients average and the rank grows, but
-the per-example structure is the building block.
-
-For activations the backward is even simpler. Elementwise activation
-means each output depends only on its own input, so the Jacobian is
-**diagonal** [57:37](ts:57:37): sigma'(z_i) on the diagonal, zeros
-elsewhere. Backward through an activation is elementwise multiplication
-by the derivative. No matrix needed.
+> Q: Work one step of the toy backward pass from the numbers.
+> A: Forward gave y_hat = -1.5, y = 1, L = 3.125. dL/dy_hat = -2.5. dL/dW2 = -2.5 * [0, 1.5] = [0, -3.75]: the first knob gets zero gradient because its input a1[0] = 0. dL/da1 = [2,-1]*(-2.5) = [-5, 2.5]. dL/dz1 = [-5*0, 2.5*1] = [0, 2.5]: the dead ReLU at z1[0] = -1 kills that path. dL/dW1 = [0,2.5]^T [1,2] = [[0,0],[2.5,5]]. Every number follows from "downstream signal times local slope".
+> Follow-up: Which knob learns the most this step, and why?
+> A: W1[1,1] with gradient 5: it sits on the live path (a1[1] = 1.5, ReLU slope 1) fed by the largest input (x[1] = 2) with the full downstream signal (2.5). Gradient descent will move it most. The dead neuron's row stays frozen: zero gradient, zero learning, exactly the dying-ReLU phenomenon.
 
 > [!QA]
-> Q: Why does the rank-1 fact matter?
-> A: It says gradients carry far less information than their size suggests. A d-by-d weight gradient from one example has d^2 entries but only 2d degrees of freedom. Update-compression and low-rank adaptation methods exploit exactly this. It also explains why gradient noise has structure: the noise lives in a low-dimensional subspace per example.
-> Follow-up: Does the rank stay 1 for a minibatch?
-> A: No. The minibatch gradient is the average of per-example rank-1 matrices, and the average of rank-1 matrices is generally full rank. The rank-1 property is per example. Methods that exploit it must handle the averaging explicitly.
-
-## Level 2: Apply it twice. Second-order methods
-
-The module construction applies twice. Take one gradient step:
-theta' = theta - alpha * grad J(theta). Evaluate J(theta'). Now
-differentiate with respect to theta. Theta appears twice: directly, and
-inside theta'. The backward functions compose again, at about 3x the
-parameter cost. This is the basis of **second-order methods**
-[13:09](ts:13:09): Hessian-vector products without ever forming the
-Hessian.
-
-Applications: meta-learning (differentiate through the learning step
-itself), hyperparameter gradients, and curvature-aware optimizers. The
-point is not the applications. It is that backprop is a general
-differentiation engine for composed computations, not just a neural
-network trick. Any differentiable program gets O(N) gradients.
-
-## Level 2: Vectorization over examples
-
-The lecture closes by batching the whole construction over training
-examples. Stack examples into matrices. Every module's forward and
-backward becomes matrix math. GPUs do matrix math fast. This is why
-minibatch training from lecture 2 is not just statistics: it is also the
-unit of efficient computation. The mathematics of backprop and the
-hardware of GPUs agree on the batch as the atomic workload.
+> Q: What does "the gradient of a weight matrix is rank 1" mean?
+> A: For one training example, dL/dW = (backward signal) outer (forward input): a column times a row. Every row of that matrix is a multiple of the input vector, so the matrix has rank 1 no matter how big W is. In the toy, dL/dW2 = [0, -3.75] is (-2.5) times [0, 1.5]. Practical meaning: a single example's update carries one direction of information per layer. The batch size caps the rank of the total update.
+> Follow-up: How do Hessian-vector products dodge the O(d^3) bill?
+> A: Forming the Hessian needs d^2 entries and inverting it d^3 work: dead at d = 1B. But H*v, the Hessian's action on one vector, costs O(N) via an extra backward pass through the gradient graph. Matrix-free methods like conjugate gradient only ever need H*v, so they get curvature information without ever building the matrix. The lecture's line: the matrix is too big to exist, its action is cheap.
 
 ## Recap: the whole lesson on one screen
 
-Eight ideas carry this lecture. Read each card. Say the core sentence out
-loud. If you can, you own the lesson.
-
-<div class="recap-grid">
-<div class="recap-card">
-<img src="assets/svg/l08-backprop.svg" alt="Backprop as modules">
-<div class="rc-body">
-<strong>1. The theorem: O(N) for loss and gradient</strong>
-<p>Forward pass and full gradient both cost linear in parameter count.
-Backprop achieves it. Finite differences would cost O(N^2).</p>
-<p class="rc-num">Key: both O(#params)</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/figs-notes/notes-backprop-modules.png" alt="Backprop module diagram, Stanford notes">
-<div class="rc-body">
-<strong>2. Networks are compositions of modules</strong>
-<p>Matmul, activation, norm: each with a forward and a backward. Sum of
-local costs is O(N). Modules need not match.</p>
-<p class="rc-num">Key: M_1 ... M_k, forward then back</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l08-backprop.svg" alt="Backward function">
-<div class="rc-body">
-<strong>3. Backward = transpose Jacobian times incoming gradient</strong>
-<p>dJ/dx = J_M^T dJ/du. Each module implements its own. Seed with
-dJ/dJ = 1. The chain rule does the rest.</p>
-<p class="rc-num">Key: local backward, global composition</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l08-rank1.svg" alt="Rank-1 gradient">
-<div class="rc-body">
-<strong>4. One example, one matrix: rank 1</strong>
-<p>dJ/dW = error outer input. The error-times-input pattern, grown up.
-Averaging over examples raises the rank.</p>
-<p class="rc-num">Key: outer product structure</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l08-backprop.svg" alt="Diagonal activation backward">
-<div class="rc-body">
-<strong>5. Activation backward is diagonal</strong>
-<p>Elementwise means the Jacobian is diagonal: sigma'(z_i) only.
-Backward is elementwise multiply. No matrix needed.</p>
-<p class="rc-num">Key: multiply by sigma'(z)</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l08-backprop.svg" alt="Second-order methods">
-<div class="rc-body">
-<strong>6. Apply twice: second-order methods</strong>
-<p>Differentiate through a gradient step. Hessian-vector products at ~3x
-cost, no Hessian formed. Meta-learning lives here.</p>
-<p class="rc-num">Key: backprop is a general engine</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/svg/l08-rank1.svg" alt="Two backward streams">
-<div class="rc-body">
-<strong>7. Two streams: activations and weights</strong>
-<p>Activation derivatives propagate through layers. Weight gradients are
-collected per layer. Both come from one backward walk.</p>
-<p class="rc-num">Key: propagate dJ/du, collect dJ/dW</p>
-</div>
-</div>
-<div class="recap-card">
-<img src="assets/figs-notes/notes-backprop-modules.png" alt="Vectorization, Stanford notes">
-<div class="rc-body">
-<strong>8. Batches are the hardware's atom</strong>
-<p>Stack examples into matrices. Module math becomes matrix math. GPUs
-agree with the statistics: the minibatch is the unit of work.</p>
-<p class="rc-num">Key: vectorize over examples</p>
-</div>
-</div>
-</div>
+1. **The job.** Gradients for 10,000 knobs before lunch. Finite
+   differences need 10,001 forward passes per step.
+2. **First attempt.** Finite differences: correct, simple, dead at
+   scale. Kept only as the debugging ground truth.
+3. **The key question.** Can all derivatives cost one forward pass?
+4. **The chain rule, by hand.** 2-layer toy: forward gives
+   y_hat = -1.5, L = 3.125. Backward walk: dL/dW2 = [0,-3.75],
+   dL/dW1 = [[0,0],[2.5,5]]. Dead ReLU zeroes a row.
+5. **The theorem.** Forward O(N) implies gradient O(N). 1B knobs
+   cost ~2-3 forward passes. This is why large models train.
+6. **Modules.** Each op ships forward + backward. Frameworks
+   compose them. The graph is the program.
+7. **Rank 1.** dL/dW = signal outer input, per example. Batch size
+   caps update rank.
+8. **Hessian-vector.** H*v in O(N). The matrix never exists.
+   Curvature stays affordable for matrix-free methods.
+9. **The honest price.** Activation memory, vanishing/exploding
+   chains, differentiability required. Cheap, exact, local.
 
 ## Official sources and further reading
 
 **Official:**
-- Lecture 8 video: O(N) theorem [11:00](ts:11:00), chain rule [17:59](ts:17:59), transpose Jacobian [23:35](ts:23:35), backward function [26:53](ts:26:53), rank 1 [55:00](ts:55:00), diagonal activation backward [57:37](ts:57:37), second-order basis [13:09](ts:13:09).
-- CS229 Spring 2026 official course notes: backpropagation chapter; the module figure above is from it.
+- Lecture 8 video, Stanford Online YouTube:
+  https://www.youtube.com/watch?v=ne2ngVAoMG8 — Tengyu Ma states
+  the complexity theorem, builds the chain rule via modules and
+  backward functions, and derives the rank-1 gradient and
+  Hessian-vector products.
+- Official subtitle transcript (en-US): the lecture's spoken text.
+- CS229 Spring 2026 official course notes (local PDF): the formal
+  theorem statement and derivations.
 
-**Further reading:**
-- Rumelhart, Hinton, and Williams (1986), "Learning representations by back-propagating errors": the paper that made backprop famous.
-- Griewank and Walther, Evaluating Derivatives: the general theory of automatic differentiation.
-
-**Caveats from these sources.** The O(N) theorem counts arithmetic
-operations, not memory: storing activations for the backward pass costs
-memory linear in depth times batch size, which is the real bottleneck at
-scale. The rank-1 fact is per example; minibatch gradients are full
-rank. Second-order via double backprop costs extra memory for the
-computation graph.
+**Caveats from these sources.** The theorem is stated informally in
+the lecture ("if you really want to make it formal you need a lot
+of jargon"). The precise circuit model is in the notes. The 2-layer
+toy in this lesson is an original miniature demonstrating the
+lecture's module/backward-function framing with the lecture's
+conventions. The "1 billion knobs" scale is the lecture's
+motivating regime for the theorem.
 
 ## Connections to the other courses
 
-- **CS336:** every transformer training step is this lecture's backward walk at billion-parameter scale; the 3x forward-backward cost ratio governs training budgets.
-- **CS224N:** backprop through time is the same chain rule unrolled over sequence steps.
-- **CS329H:** policy gradients differentiate through sampling, and the module view explains why the score-function estimator composes.
-
-> [!CHEAT]
-> **Backprop cheatsheet.** Theorem: forward O(N), gradient O(N). Modules M_1..M_k each with forward and backward. Backward: dJ/dx = J_M^T dJ/du; seed dJ/dJ=1. Rank-1: one example, one W gives error outer input. Activations: diagonal Jacobian, elementwise multiply by sigma'(z). Twice: Hessian-vector products ~3x, basis of second-order methods. Batch everything into matrices.
-
-> [!MEMORY]
-> **Share the work.** Backprop's whole trick is that N derivatives share one backward walk. Whenever a computation looks like it needs N separate passes, ask what walk they could share.
+- **CS229 L02:** gradient descent, the consumer of the gradients
+  this lesson produces.
+- **CS229 L07:** the MLP architecture whose knobs backprop trains.
+  The dying ReLU visible in the toy's arithmetic.
+- **CS229 L14-L15:** backprop at transformer scale: activation
+  memory becomes the KV cache problem.
+- **CS336:** the O(N) theorem in practice: how frameworks
+  implement backward functions on GPUs.
+- **CS224N:** backprop through time: the chain rule unrolled over
+  sequences.
