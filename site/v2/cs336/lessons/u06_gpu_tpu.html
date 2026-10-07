@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U06 · GPU/TPU architecture and profiling — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: GPU/TPU architecture and profiling.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-u06" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../course_map.html" data-page="cs336-course-map">Course map</a></li>
+<li><a href="../prerequisites.html" data-page="cs336-prereqs">Prerequisites</a></li>
+<li><a href="../notation_and_shapes.html" data-page="cs336-notation">Notation</a></li>
+<li><a href="../glossary.html" data-page="cs336-glossary">Glossary</a></li>
+<li><a href="../cheatsheet.html" data-page="cs336-cheatsheet">Cheatsheet</a></li>
+<li><a href="../crash-course.html" data-page="cs336-crash">Crash course</a></li>
+<li><a href="../lessons/u01_tokenization.html" data-page="cs336-u01">U01 · Text representation and tokeni</a></li>
+<li><a href="../keys/u01_answers.html" data-page="cs336-u01-answers">U01 · Answers</a></li>
+<li><a href="../lessons/u02_tensor_programming.html" data-page="cs336-u02">U02 · Executable tensor programming </a></li>
+<li><a href="../keys/u02_answers.html" data-page="cs336-u02-answers">U02 · Answers</a></li>
+<li><a href="../lessons/u03_transformer_block.html" data-page="cs336-u03">U03 · Transformer block mechanics</a></li>
+<li><a href="../keys/u03_answers.html" data-page="cs336-u03-answers">U03 · Answers</a></li>
+<li><a href="../lessons/u04_attention_moe.html" data-page="cs336-u04">U04 · Attention alternatives and exp</a></li>
+<li><a href="../keys/u04_answers.html" data-page="cs336-u04-answers">U04 · Answers</a></li>
+<li><a href="../lessons/u05_optimization.html" data-page="cs336-u05">U05 · Optimization and training corr</a></li>
+<li><a href="../keys/u05_answers.html" data-page="cs336-u05-answers">U05 · Answers</a></li>
+<li><a href="../lessons/u06_gpu_tpu.html" data-page="cs336-u06" class="active">U06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../keys/u06_answers.html" data-page="cs336-u06-answers">U06 · Answers</a></li>
+<li><a href="../lessons/u07_kernels.html" data-page="cs336-u07">U07 · Kernels and IO-aware attention</a></li>
+<li><a href="../keys/u07_answers.html" data-page="cs336-u07-answers">U07 · Answers</a></li>
+<li><a href="../lessons/u08_data_sharding.html" data-page="cs336-u08">U08 · Data and optimizer sharding</a></li>
+<li><a href="../keys/u08_answers.html" data-page="cs336-u08-answers">U08 · Answers</a></li>
+<li><a href="../lessons/u09_model_parallel.html" data-page="cs336-u09">U09 · Model and hybrid parallelism</a></li>
+<li><a href="../keys/u09_answers.html" data-page="cs336-u09-answers">U09 · Answers</a></li>
+<li><a href="../lessons/u10_scaling_laws.html" data-page="cs336-u10">U10 · Scaling laws and extrapolation</a></li>
+<li><a href="../keys/u10_answers.html" data-page="cs336-u10-answers">U10 · Answers</a></li>
+<li><a href="../labs/u01_lab.html" data-page="cs336-lab-u01">Lab 01 · Text representation and tokeni</a></li>
+<li><a href="../lessons/u11_inference.html" data-page="cs336-u11">U11 · Inference algorithms and servi</a></li>
+<li><a href="../labs/u01_lab_key.html" data-page="cs336-lab-u01-keys">Lab 01 · Keys</a></li>
+<li><a href="../keys/u11_answers.html" data-page="cs336-u11-answers">U11 · Answers</a></li>
+<li><a href="../labs/u02_lab.html" data-page="cs336-lab-u02">Lab 02 · Executable tensor programming </a></li>
+<li><a href="../lessons/u12_evaluation.html" data-page="cs336-u12">U12 · Evaluation and measurement val</a></li>
+<li><a href="../labs/u02_lab_key.html" data-page="cs336-lab-u02-keys">Lab 02 · Keys</a></li>
+<li><a href="../keys/u12_answers.html" data-page="cs336-u12-answers">U12 · Answers</a></li>
+<li><a href="../labs/u03_lab.html" data-page="cs336-lab-u03">Lab 03 · Transformer block mechanics</a></li>
+<li><a href="../lessons/u13_data_sourcing.html" data-page="cs336-u13">U13 · Data sourcing and transformati</a></li>
+<li><a href="../labs/u03_lab_key.html" data-page="cs336-lab-u03-keys">Lab 03 · Keys</a></li>
+<li><a href="../keys/u13_answers.html" data-page="cs336-u13-answers">U13 · Answers</a></li>
+<li><a href="../labs/u04_lab.html" data-page="cs336-lab-u04">Lab 04 · Attention alternatives and exp</a></li>
+<li><a href="../lessons/u14_data_mixing.html" data-page="cs336-u14">U14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../labs/u04_lab_key.html" data-page="cs336-lab-u04-keys">Lab 04 · Keys</a></li>
+<li><a href="../keys/u14_answers.html" data-page="cs336-u14-answers">U14 · Answers</a></li>
+<li><a href="../labs/u05_lab.html" data-page="cs336-lab-u05">Lab 05 · Optimization and training corr</a></li>
+<li><a href="../lessons/u15_midtraining.html" data-page="cs336-u15">U15 · Midtraining and supervised ada</a></li>
+<li><a href="../labs/u05_lab_key.html" data-page="cs336-lab-u05-keys">Lab 05 · Keys</a></li>
+<li><a href="../keys/u15_answers.html" data-page="cs336-u15-answers">U15 · Answers</a></li>
+<li><a href="../labs/u06_lab.html" data-page="cs336-lab-u06">Lab 06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../lessons/u16_alignment_rl.html" data-page="cs336-u16">U16 · Preference alignment and reaso</a></li>
+<li><a href="../labs/u06_lab_key.html" data-page="cs336-lab-u06-keys">Lab 06 · Keys</a></li>
+<li><a href="../keys/u16_answers.html" data-page="cs336-u16-answers">U16 · Answers</a></li>
+<li><a href="../labs/u07_lab.html" data-page="cs336-lab-u07">Lab 07 · Kernels and IO-aware attention</a></li>
+<li><a href="../lessons/u17_multimodal_systems.html" data-page="cs336-u17">U17 · Multimodality and training-sys</a></li>
+<li><a href="../labs/u07_lab_key.html" data-page="cs336-lab-u07-keys">Lab 07 · Keys</a></li>
+<li><a href="../keys/u17_answers.html" data-page="cs336-u17-answers">U17 · Answers</a></li>
+<li><a href="../labs/u08_lab.html" data-page="cs336-lab-u08">Lab 08 · Data and optimizer sharding</a></li>
+<li><a href="../lessons/u18_guests_defense.html" data-page="cs336-u18">U18 · Guest material and final resea</a></li>
+<li><a href="../labs/u08_lab_key.html" data-page="cs336-lab-u08-keys">Lab 08 · Keys</a></li>
+<li><a href="../keys/u18_answers.html" data-page="cs336-u18-answers">U18 · Answers</a></li>
+<li><a href="../labs/u09_lab.html" data-page="cs336-lab-u09">Lab 09 · Model and hybrid parallelism</a></li>
+<li><a href="../labs/u09_lab_key.html" data-page="cs336-lab-u09-keys">Lab 09 · Keys</a></li>
+<li><a href="../labs/u10_lab.html" data-page="cs336-lab-u10">Lab 10 · Scaling laws and extrapolation</a></li>
+<li><a href="../labs/u10_lab_key.html" data-page="cs336-lab-u10-keys">Lab 10 · Keys</a></li>
+<li><a href="../interview/u01_questions.html" data-page="cs336-int-u01">Interview · U01</a></li>
+<li><a href="../labs/u11_lab.html" data-page="cs336-lab-u11">Lab 11 · Inference algorithms and servi</a></li>
+<li><a href="../interview/u01_key.html" data-page="cs336-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../labs/u11_lab_key.html" data-page="cs336-lab-u11-keys">Lab 11 · Keys</a></li>
+<li><a href="../interview/u02_questions.html" data-page="cs336-int-u02">Interview · U02</a></li>
+<li><a href="../labs/u12_lab.html" data-page="cs336-lab-u12">Lab 12 · Evaluation and measurement val</a></li>
+<li><a href="../interview/u02_key.html" data-page="cs336-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../labs/u12_lab_key.html" data-page="cs336-lab-u12-keys">Lab 12 · Keys</a></li>
+<li><a href="../interview/u03_questions.html" data-page="cs336-int-u03">Interview · U03</a></li>
+<li><a href="../labs/u13_lab.html" data-page="cs336-lab-u13">Lab 13 · Data sourcing and transformati</a></li>
+<li><a href="../interview/u03_key.html" data-page="cs336-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../labs/u13_lab_key.html" data-page="cs336-lab-u13-keys">Lab 13 · Keys</a></li>
+<li><a href="../interview/u04_questions.html" data-page="cs336-int-u04">Interview · U04</a></li>
+<li><a href="../labs/u14_lab.html" data-page="cs336-lab-u14">Lab 14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../interview/u04_key.html" data-page="cs336-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../labs/u14_lab_key.html" data-page="cs336-lab-u14-keys">Lab 14 · Keys</a></li>
+<li><a href="../interview/u05_questions.html" data-page="cs336-int-u05">Interview · U05</a></li>
+<li><a href="../labs/u15_lab.html" data-page="cs336-lab-u15">Lab 15 · Midtraining and supervised ada</a></li>
+<li><a href="../interview/u05_key.html" data-page="cs336-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../labs/u15_lab_key.html" data-page="cs336-lab-u15-keys">Lab 15 · Keys</a></li>
+<li><a href="../interview/u06_questions.html" data-page="cs336-int-u06">Interview · U06</a></li>
+<li><a href="../labs/u16_lab.html" data-page="cs336-lab-u16">Lab 16 · Preference alignment and reaso</a></li>
+<li><a href="../interview/u06_key.html" data-page="cs336-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../labs/u16_lab_key.html" data-page="cs336-lab-u16-keys">Lab 16 · Keys</a></li>
+<li><a href="../interview/u07_questions.html" data-page="cs336-int-u07">Interview · U07</a></li>
+<li><a href="../labs/u17_lab.html" data-page="cs336-lab-u17">Lab 17 · Multimodality and training-sys</a></li>
+<li><a href="../interview/u07_key.html" data-page="cs336-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../labs/u17_lab_key.html" data-page="cs336-lab-u17-keys">Lab 17 · Keys</a></li>
+<li><a href="../interview/u08_questions.html" data-page="cs336-int-u08">Interview · U08</a></li>
+<li><a href="../labs/u18_lab.html" data-page="cs336-lab-u18">Lab 18 · Guest material and final resea</a></li>
+<li><a href="../interview/u08_key.html" data-page="cs336-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../labs/u18_lab_key.html" data-page="cs336-lab-u18-keys">Lab 18 · Keys</a></li>
+<li><a href="../interview/u09_questions.html" data-page="cs336-int-u09">Interview · U09</a></li>
+<li><a href="../interview/u09_key.html" data-page="cs336-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../interview/u10_questions.html" data-page="cs336-int-u10">Interview · U10</a></li>
+<li><a href="../interview/u10_key.html" data-page="cs336-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../interview/u11_questions.html" data-page="cs336-int-u11">Interview · U11</a></li>
+<li><a href="../interview/u11_key.html" data-page="cs336-int-u11-keys">Interview · U11 keys</a></li>
+<li><a href="../interview/u12_questions.html" data-page="cs336-int-u12">Interview · U12</a></li>
+<li><a href="../interview/u12_key.html" data-page="cs336-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../interview/u13_questions.html" data-page="cs336-int-u13">Interview · U13</a></li>
+<li><a href="../interview/u13_key.html" data-page="cs336-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../interview/u14_questions.html" data-page="cs336-int-u14">Interview · U14</a></li>
+<li><a href="../interview/u14_key.html" data-page="cs336-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../interview/u15_questions.html" data-page="cs336-int-u15">Interview · U15</a></li>
+<li><a href="../interview/u15_key.html" data-page="cs336-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../interview/u16_questions.html" data-page="cs336-int-u16">Interview · U16</a></li>
+<li><a href="../interview/u16_key.html" data-page="cs336-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../interview/u17_questions.html" data-page="cs336-int-u17">Interview · U17</a></li>
+<li><a href="../interview/u17_key.html" data-page="cs336-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../interview/u18_questions.html" data-page="cs336-int-u18">Interview · U18</a></li>
+<li><a href="../interview/u18_key.html" data-page="cs336-int-u18-keys">Interview · U18 keys</a></li>
+<li><a href="../interview/oral-defenses.html" data-page="cs336-int-oral">Interview · Oral</a></li>
+<li><a href="../interview/keys-oral.html" data-page="cs336-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../interview/transfer-sets.html" data-page="cs336-int-transfer">Interview · Transfer</a></li>
+<li><a href="../interview/keys-transfer.html" data-page="cs336-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../capstones/capstone_applied.html" data-page="cs336-cap-applied">Capstone · Applied</a></li>
+<li><a href="../capstones/capstone_research.html" data-page="cs336-cap-research">Capstone · Research</a></li>
+<li><a href="../keys/diagnostic_key.html" data-page="cs336-diagnostic-keys">Diagnostic · Keys</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U06 · GPU/TPU architecture and profiling</nav>
+      <h1>U06 · GPU/TPU architecture and profiling</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u06-gputpu-architecture-and-profiling">U06 , GPU/TPU architecture and profiling</h1>
+<p>Prerequisites: P06, P07, P14, P16. Bridge links in <code>../prerequisites.md</code>.
+Session: cross-cutting branch (reported as profiling in the course
+sessions, exact session mapping in <code>../course_map.md</code>).
+Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
+PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
+<h2 id="standing-assumptions-stated-not-sourced">Standing assumptions (stated, not sourced)</h2>
+<p>All compute in this unit uses one reference device, stated here: peak
+bf16 dense 312 TFLOP/s, HBM bandwidth 2.0 TB/s, HBM 80 GB, 108 SMs.
+These are lesson assumptions for the toy arithmetic, not measured
+benchmarks. No GPU exists on this box, every number is numpy-computed
+from the assumptions.</p>
+<h2 id="local-remediation-latency-bandwidth-throughput">Local remediation , latency, bandwidth, throughput</h2>
+<p>Read this if diagnostic items D9 or D12 were not full marks. Latency
+is the time for one operation, bandwidth is bytes per second,
+throughput is operations per second. A kernel is memory-bound when its
+arithmetic intensity (FLOP per byte) is below peak-FLOP/bandwidth, it
+is compute-bound above it. The roofline model plots attainable
+throughput as min(peak, intensity * bandwidth).</p>
+<p>Worked check: intensity 1.0 FLOP/byte on the reference device gives
+min(312, 1.0*2.0) = 2.0 TFLOP/s: 1 percent of peak (from
+<code>assets/compute_u06.py</code>, executed 2026-10-06).
+Assessment: at what intensity does the reference device switch from
+memory-bound to compute-bound? Key: <code>../keys/u06_answers.md</code> R1.</p>
+<hr />
+<h3 id="c01-sm-block-thread-warp-mapping">C01: SM, block, thread, warp mapping</h3>
+<p>Leaf id <code>cs336-U06-C01</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the execution hierarchy. Objectives: map work onto SMs,
+   define occupancy. Depends on P06, P07.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: what runs where? Toy:
+   256 threads/block, 8 blocks/SM, 108 SMs = 221,184 active threads
+   (2.0K per SM) on the reference device.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> A GPU has SMs, each SM runs thread blocks, blocks
+   split into warps of 32 threads that execute in lockstep. Occupancy
+   is the fraction of the SM&rsquo;s thread capacity that is active:
+   latency hiding needs enough warps to cover memory stalls.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> SM count 108
+   (assumption). Warp = 32 threads. Assumption: the kernel is written
+   to fill blocks.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Active threads = threads/block *
+   blocks/SM * SMs. Occupancy = active / max threads per SM. More
+   warps per SM means more independent work to schedule during a
+   stall.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
+   2026-10-06): 221,184 threads, 2.0K per SM.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The mapping is a
+   launch configuration: <code>kernel&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;()</code> assigns
+   blocks to SMs. No numpy model on this box, the lab checks the
+   arithmetic.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Thread counts divide
+   evenly into warps (256 = 8 warps). Expected outputs in the lab
+   key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Launch overhead is microseconds, the cost that matters
+   is idle SMs from too little work.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> CPU threads (few,
+    heavy). GPU threads (many, light). The hierarchy is the GPU&rsquo;s
+    answer to latency.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> One block of 32 threads on a
+    108-SM device: 107 SMs idle. The assumption &ldquo;the GPU is fast&rdquo;
+    breaks when the work does not fill it, small-batch inference is
+    the classic case.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: GPU
+    programming guides (primary: vendor docs). Extension: predict the
+    active-thread count for 512-thread blocks, hypothesis: the formula
+    scales linearly until a resource limit.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the hierarchy levels. (b) Oral ladder:
+    define a warp, compute active threads, justify 32-wide lockstep,
+    write the launch, compare with CPU threads, debug the idle-SM
+    case, critique the fill assumption, design the 512-thread
+    prediction. (c) Transfer: a kernel launches 10 blocks. How many
+    SMs stay idle on the reference device? Answers:
+    <code>../keys/u06_answers.md</code> A1.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U06 task 1 checks the thread arithmetic
+    and the idle-SM computation. See <code>../labs/u06_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u06_fig01: lesson plate, the SM/block/warp
+    hierarchy. Source: original. Render: <code>assets/render_u06.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u06_fig01" src="../assets/u06_fig01.png"><figcaption>lesson plate, the SM/block/warp hierarchy. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c02-memory-hierarchy">C02: Memory hierarchy</h3>
+<p>Leaf id <code>cs336-U06-C02</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: where data lives. Objectives: order the memories by size
+   and speed, state what each is for. Depends on P06, P07.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why not keep everything
+   in registers? Toy: 80 GB HBM holds 1,220,703 KV tokens at 65,536
+   bytes/token (GQA-8, d=2048, L=32, bf16), registers hold kilobytes
+   per thread.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Registers (fastest, KB per thread) hold the
+   working set. Shared memory (tens of KB per block) is programmer-
+   managed scratch. HBM (80 GB, 2 TB/s) holds the model and the
+   cache. TPU: HBM plus on-chip vector/matrix units with software-
+   managed memory.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Bytes and
+   bytes/s. Assumption: the reference device numbers.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Every byte the kernel touches must
+   travel HBM -&gt; L2 -&gt; shared/registers. Arithmetic intensity
+   measures how much math amortizes each byte moved, the hierarchy
+   rewards reuse (tiling, U07).</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
+   2026-10-06): 65,536 bytes/token, 1,220,703 tokens fit in 80 GB.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The lab computes the
+   fit for other (g, d, L) choices. No device code on this box.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Doubling g halves the
+   fit, fp16 versus bf16 identical bytes. Expected outputs in the lab
+   key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> HBM capacity bounds context length (U04-C01), HBM
+   bandwidth bounds decode speed.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> CPU DRAM (larger,
+    slower), TPU HBM (same role, different chip). The hierarchy shape
+    is the same.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Register spilling: too many
+    live values push registers to slow local memory and the kernel
+    slows 2-5x with no code change except variable count. The
+    assumption &ldquo;more unrolling is better&rdquo; breaks at the register
+    limit.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: vendor
+    architecture whitepapers (primary). Extension: fit the KV cache
+    for MQA versus MHA, hypothesis: 8x more tokens for MQA.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the three levels and their roles.
+    (b) Oral ladder: define shared memory, compute the token fit,
+    justify reuse, write the fit formula, compare TPU with GPU,
+    debug spilling, critique the reference numbers, design the
+    MQA/MHA comparison. (c) Transfer: context must double on fixed
+    HBM. Name two levers. Answers: <code>../keys/u06_answers.md</code> A2.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U06 task 2 computes KV fits and the
+    spill rule. See <code>../labs/u06_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the hierarchy table (level, size, speed,
+    role). No figure, tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c03-roofline-model">C03: Roofline model</h3>
+<p>Leaf id <code>cs336-U06-C03</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: bounding kernel performance. Objectives: compute the
+   roofline, classify kernels. Depends on P07, U02-C10.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: is this kernel slow
+   because of math or memory? Toy from <code>compute_u06.py</code>: attention
+   scores (intensity 1.0) -&gt; 2.0 TFLOP/s, memory-bound, GEMM
+   (170.7) -&gt; 312 TFLOP/s, compute-bound.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Attainable = min(peak FLOP/s, intensity *
+   bandwidth). The knee is at peak/bandwidth = 156 FLOP/byte on the
+   reference device. Below the knee, only bandwidth matters, above
+   it, only math.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Intensity in
+   FLOP/byte. Assumption: the reference peak and bandwidth.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Time &gt;= max(FLOP/peak, bytes/bw), so
+   throughput &lt;= min(peak, intensity*bw). The U02 intensities plug
+   straight in.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
+   2026-10-06): 2.0 TFLOP/s (1% of peak) for scores, 312.0 (100%)
+   for GEMM and FFN.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>roofline(intensity)</code>:
+   three lines. The lab classifies a kernel list.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Intensity 156 -&gt;
+   exactly the knee (312). Monotonic in intensity below the knee.
+   Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The model is free and predicts within ~2x before any
+   profiling.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Full simulation
+    (accurate, expensive). Roofline is the first-pass tool.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A kernel at 50 percent of
+    roofline with intensity 200: the model says compute-bound, but
+    the real limit is occupancy or instruction overhead. The
+    assumption &ldquo;only two limits exist&rdquo; breaks, the roofline is an
+    upper bound, not a diagnosis.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    roofline paper (Williams et al., 2009, primary). Extension:
+    classify the U02 intensities, hypothesis: only scores and
+    softmax sit below the knee.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the formula and the knee. (b) Oral
+    ladder: define intensity, compute the scores bound, justify the
+    min, implement, compare with simulation, debug the 50-percent
+    case, critique the two-limit assumption, design the U02
+    classification. (c) Transfer: bandwidth doubles. Which kernels
+    speed up? Answers: <code>../keys/u06_answers.md</code> A3.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U06 task 3 classifies kernels and
+    finds the knee. See <code>../labs/u06_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u06_fig02: lesson plate, the roofline curve
+    with the toy kernels placed. Source: original. Render:
+    <code>assets/render_u06.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u06_fig02" src="../assets/u06_fig02.png"><figcaption>lesson plate, the roofline curve with the toy kernels placed. Source: original. Render: assets/render_u06.py.</figcaption></figure>
+<hr />
+<h3 id="c04-occupancy-and-latency-hiding">C04: Occupancy and latency hiding</h3>
+<p>Leaf id <code>cs336-U06-C04</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: keeping SMs fed. Objectives: explain why occupancy matters,
+   compute it. Depends on C01.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the math says 312
+   TFLOP/s but the kernel gets 150. Why? Toy: halving active warps
+   halves the latency-hiding ability, memory stalls go uncovered.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Memory loads take hundreds of cycles. The SM
+   hides this by switching to other warps. Occupancy is the fraction
+   of maximum warps resident, low occupancy means stalls with no
+   warp to switch to.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Warps per SM.
+   Assumption: the workload has enough parallelism to offer.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Little&rsquo;s-law style: needed warps ~=
+   latency * throughput. Fewer resident warps than needed leaves
+   bandwidth idle.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab table: occupancy versus register and
+   shared-memory usage for a toy kernel.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The occupancy
+   calculator: given registers/thread and shared/block, compute
+   resident blocks. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> More registers -&gt;
+   fewer blocks, the calculator reproduces the vendor table on the
+   toy. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Tuning occupancy is free at launch time, the cost is
+   engineering time.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Instruction-level
+    parallelism (same warp, independent ops). Occupancy is the
+    thread-level answer.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> 100 percent occupancy with
+    low intensity: the kernel is still memory-bound, occupancy cannot
+    fix a bandwidth limit. The assumption &ldquo;more occupancy is always
+    better&rdquo; breaks, past enough warps there is no gain.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: CUDA
+    occupancy documentation (primary). Extension: sweep the toy
+    calculator, hypothesis: a plateau past the latency-hiding point.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the latency-hiding mechanism.
+    (b) Oral ladder: define occupancy, compute resident blocks,
+    justify warp switching, implement the calculator, compare with
+    ILP, debug the low-occupancy kernel, critique the plateau,
+    design the sweep. (c) Transfer: the kernel is memory-bound at
+    full occupancy. What next? Answers: <code>../keys/u06_answers.md</code> A4.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U06 task 4 implements the occupancy
+    calculator. See <code>../labs/u06_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the occupancy table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c05-measurement-methodology">C05: Measurement methodology</h3>
+<p>Leaf id <code>cs336-U06-C05</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: trustworthy timing. Objectives: state the warmup/sync/
+   statistics rules. Depends on P06.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the first timing says
+   10 ms, the second says 3 ms. Which is right? Toy: the lab models
+   warmup effects and shows the median-of-N rule.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> GPUs execute asynchronously: time with device
+   sync, warm up (caches, clocks), then take the median of many
+   runs. Report the setup (shapes, dtype, device state) or the
+   number is meaningless.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Milliseconds,
+   medians, N&gt;=30. Assumption: clocks are stable (see C11).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Async launch returns before the work
+   finishes: unsynced timing measures launch overhead. Warmup fills
+   caches and ramps clocks. Median rejects outliers.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab model: run times [12, 3.1, 3.0, 3.2,
+   3.1] ms: first is warmup, median of the rest 3.1 ms.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>time_kernel(f)</code>:
+   warmup loop, sync, timed loop, median. About 10 lines of pattern.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Median within 10
+   percent across repeats, warmup run excluded. Expected outputs in
+   the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Minutes of benchmarking save days of wrong tuning.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Vendor profilers
+    (nsys, ncu) for the inside view. The rules above are the floor.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Timing without sync: every
+    kernel reports ~5 us and the &ldquo;optimization&rdquo; that launches fewer
+    kernels looks like a win. The assumption &ldquo;the timer measures
+    work&rdquo; breaks under asynchrony, sync is load-bearing.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: profiler
+    documentation (primary). Extension: measure with and without
+    sync on the toy model, hypothesis: 10x difference.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the three rules. (b) Oral ladder:
+    define async launch, compute the median, justify warmup,
+    implement the pattern, compare with profiler output, debug the
+    no-sync timing, critique the stable-clock assumption, design
+    the comparison. (c) Transfer: two kernels report 3.1 and 3.3 ms.
+    Is the difference real? Answers: <code>../keys/u06_answers.md</code> A5.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U06 task 5 implements the timing
+    pattern on the model. See <code>../labs/u06_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the timing checklist. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c06-gemm-shapes-and-batching">C06: GEMM shapes and batching</h3>
+<p>Leaf id <code>cs336-U06-C06</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: matrix-multiply performance. Objectives: explain why shape
+   matters, use batching. Depends on C03, U02-C06.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: same FLOPs, different
+   speed. Why? Toy: a skinny GEMM (M=1) is memory-bound while a
+   square one is compute-bound at equal FLOP count.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> GEMM efficiency depends on the (M,N,K) shape:
+   large K gives reuse, tiny M (decode, batch 1) gives none. Batching
+   (bigger M) moves decode toward the compute-bound regime.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> M,N,K dims.
+   Assumption: the weight matrix is the same in both cases.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Intensity ~= 2MNK/(MN+NK+MK) bytes
+   scaled: for M=1 this collapses to ~2K/(K+&hellip;) per byte: the
+   weight matrix streams once per token.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: intensity for (M=1,N=4096,K=4096)
+   versus (M=4096,N=4096,K=4096), the roofline classifies them.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>gemm_intensity(M,N,K,
+   bytes)</code>: the formula. About 5 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> M=1 intensity &lt;&lt; knee,
+   large M intensity &gt;&gt; knee. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Batching costs latency per request (queueing) and buys
+   throughput.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Weight-only
+    quantization (raises intensity by shrinking bytes). Batching is
+    the scheduling answer.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Batching to M=1024 on a
+    latency-sensitive serving task: throughput soars, p99 latency
+    violates the SLO. The assumption &ldquo;bigger is better&rdquo; breaks
+    against the latency contract.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: GEMM
+    performance literature (primary: vendor guides). Extension:
+    sweep M and plot intensity, hypothesis: knee crossing near
+    M=156-ish scaled.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the shape effect. (b) Oral ladder:
+    define the intensity formula, compute the M=1 case, justify the
+    collapse, implement, compare with quantization, debug the SLO
+    violation, critique the equal-FLOP comparison, design the sweep.
+    (c) Transfer: decode at batch 64. Compute-bound yet?
+    Answers: <code>../keys/u06_answers.md</code> A6.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U06 task 6 sweeps M and classifies.
+    See <code>../labs/u06_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the shape table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c07-scaling-laws-hardware-and-mfu">C07: Scaling laws hardware and MFU</h3>
+<p>Leaf id <code>cs336-U06-C07</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: model FLOP utilization. Objectives: compute MFU, state what
+   it excludes. Depends on C03, U02-C07.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the cluster trains at
+   25 TFLOP/s per GPU. Is that good? Toy from <code>compute_u06.py</code>: 25.2
+   TFLOP/s on a 7B model at 1800 tok/s = 8.1 percent MFU.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> MFU = achieved model FLOPs / peak device FLOPs.
+   The numerator counts the math the model needs (2*params per
+   token), the denominator is the device peak. 8 percent is poor,
+   40-60 percent is a well-tuned large run.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Percent.
+   Assumption: the 2*params/token FLOP model (U02-C07).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Achieved = 2 * P * tokens/s. MFU =
+   achieved/peak. It excludes rematerialization and communication:
+   hardware FLOP utilization (HFU) includes them.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
+   2026-10-06): 25.2 TFLOP/s, 8.1 percent MFU.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>mfu(params, tok_s,
+   peak)</code>: three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> MFU &lt;= 100 percent,
+   doubling tok/s doubles MFU. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> MFU is a diagnostic, not a knob, the knobs are batch,
+   parallelism, kernels.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> HFU (includes
+    extra FLOPs), tokens/s alone (not normalized). MFU compares
+    across hardware.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> MFU 55 percent with frequent
+    checkpoint restarts: the metric looks healthy while the run
+    wastes a third of its wall clock. The assumption &ldquo;MFU measures
+    the run&rdquo; breaks, it measures only the compute phase.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the MFU
+    definition (primary: large-run reports). Extension: compute MFU
+    versus HFU with 30 percent rematerialization, hypothesis: HFU &gt;
+    MFU by the rework factor.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the MFU formula. (b) Oral ladder:
+    define the numerator, compute the toy, justify the 2*params,
+    implement, compare with HFU, debug the restart case, critique
+    the FLOP-model assumption, design the remat comparison.
+    (c) Transfer: MFU 8 percent on a 7B run. Name the first three
+    suspects. Answers: <code>../keys/u06_answers.md</code> A7.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U06 task 7 computes MFU and HFU.
+    See <code>../labs/u06_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u06_fig03: lesson plate, MFU versus HFU bars
+    (computed toy). Source: original. Render: <code>assets/render_u06.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u06_fig03" src="../assets/u06_fig03.png"><figcaption>lesson plate, MFU versus HFU bars (computed toy). Source: original.</figcaption></figure>
+<hr />
+<h3 id="c08-interconnect-topology">C08: Interconnect topology</h3>
+<p>Leaf id <code>cs336-U06-C08</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: multi-GPU links. Objectives: model all-reduce time, compare
+   link tiers. Depends on P16, U08, U09.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how long does a 7B
+   gradient sync take? Toy from <code>compute_u06.py</code>: ~0.02 s over
+   600 GB/s links, ~0.07 s over 200 GB/s links (ring model, 2x data).</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> GPUs connect in tiers: fast inside the node
+   (hundreds of GB/s), slower across nodes (tens to hundreds of
+   GB/s). Ring all-reduce moves ~2x the data per GPU, time ~=
+   2*bytes/bandwidth.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> GB/s, seconds.
+   Assumption: the ring model and the two reference bandwidths.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Each of N GPUs sends and receives
+   2<em>(N-1)/N * bytes ~= 2</em>bytes. Time = that / link bandwidth.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
+   2026-10-06): 0.02 s and 0.07 s for 7 GB.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>allreduce_time(bytes,
+   bw)</code>: two lines. The lab compares tiers.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Time halves when
+   bandwidth doubles, 2x data factor present. Expected outputs in
+   the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Communication time competes with compute, overlap
+   (U08/U09) hides it.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Tree all-reduce
+    (lower latency, same bandwidth term). Ring is the bandwidth-
+    optimal baseline.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A topology-unaware mapping
+    puts heavy pairs across the slow tier: the 0.07 s becomes the
+    step&rsquo;s critical path. The assumption &ldquo;bandwidth is uniform&rdquo;
+    breaks, placement matters.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    collective-communication analyses (primary: paper sections).
+    Extension: model 70B (140 GB) on both tiers, hypothesis: seconds,
+    dominating the step without overlap.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the ring time formula. (b) Oral
+    ladder: define the 2x factor, compute the toy, justify the ring,
+    implement, compare tiers, debug the placement case, critique
+    the ring assumption, design the 70B model. (c) Transfer: the
+    all-reduce takes 30 percent of the step. Name two fixes.
+    Answers: <code>../keys/u06_answers.md</code> A8.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U06 task 8 models collectives and
+    placement. See <code>../labs/u06_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the tier comparison table. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c09-vendor-claims-as-source-verification-branches">C09: Vendor claims as source-verification branches</h3>
+<p>Leaf id <code>cs336-U06-C09</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: treating vendor numbers as branches. Objectives: state the
+   verification protocol for a peak-FLOP claim. Depends on C05.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the vendor says 624
+   TFLOP/s. Do you get it? Toy: the lab checks which conditions a
+   peak claim needs (dense, right dtype, right shapes, sparsity).</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Peak numbers are ceilings under ideal
+   conditions: dense math, supported dtype, large shapes, sometimes
+   structured sparsity. Your kernel&rsquo;s roofline (C03) is the honest
+   comparison, not the vendor peak.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> TFLOP/s with
+   conditions attached. Assumption: none, every condition is checked.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The verification protocol: (1) quote
+   the claim with its conditions, (2) reproduce the conditions or
+   state the deviation, (3) measure per C05, (4) report achieved
+   versus claimed with the gap explained.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: the fp8 624 number needs fp8 dense
+   GEMM at large shapes, a skinny fp8 kernel achieves a fraction.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> A claim checklist
+   template (markdown), filled per claim. The lab fills one.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Every claim carries
+   its conditions, no bare peak number appears in a report.
+   Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> An hour of verification beats a week of tuning to a
+   phantom target.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Third-party
+    benchmarks (same protocol applies). Vendor claims are branches
+    to verify, not facts to cite.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Tuning a memory-bound kernel
+    against the dense peak: months of work for a ceiling the kernel
+    can never touch. The assumption &ldquo;the peak is the target&rdquo; breaks,
+    the roofline is the target.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: vendor
+    whitepapers as primary sources for the conditions. Extension:
+    verify one claim end to end, hypothesis: the conditions explain
+    the gap.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the four protocol steps. (b) Oral
+    ladder: define the conditions, check the fp8 claim, justify the
+    roofline comparison, fill the template, compare with third-
+    party, debug the phantom-target tuning, critique the checklist,
+    design the verification. (c) Transfer: a startup claims 2x on
+    your workload. What do you ask for? Answers:
+    <code>../keys/u06_answers.md</code> A9.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U06 task 9 fills the claim template.
+    See <code>../labs/u06_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the claim checklist. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c10-precision-formats-and-hardware-support">C10: Precision formats and hardware support</h3>
+<p>Leaf id <code>cs336-U06-C10</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: dtype support on the device. Objectives: tabulate formats,
+   state the throughput ratios. Depends on P08, U02-C12.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: what does fp8 buy? Toy
+   from <code>compute_u06.py</code>: 624 vs 312 TFLOP/s dense (2x), and half
+   the memory traffic of bf16.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Newer devices add narrow formats (fp8) with 2x
+   the dense throughput of bf16 and half the bytes. The catch: range
+   and precision need scaling (per-tensor or per-block) and the
+   kernels must exist.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> E4M3/E5M2 fp8
+   variants. Assumption: the reference 2x ratio.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Halving bytes doubles intensity at
+   fixed FLOPs: memory-bound kernels speed up even before the 2x
+   math rate matters.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
+   2026-10-06): 312 -&gt; 624 TFLOP/s, traffic halved.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The format table with
+   bits, range, and throughput ratio. The lab extends it.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Ratios multiply
+   correctly: fp8 GEMM at the roofline min. Expected outputs in the
+   lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Quantization engineering (scaling, kernels) versus free
+   2x on paper.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> bf16 (safe
+    default), int8 (inference). fp8 for training throughput where
+    supported.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> fp8 without scaling on a
+    model with outlier activations: overflows, loss diverges. The
+    assumption &ldquo;narrower is a free lunch&rdquo; breaks, scaling is part of
+    the format.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: fp8
+    format specifications (primary). Extension: model the intensity
+    doubling for the M=1 GEMM, hypothesis: still memory-bound, 2x
+    faster.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the format table. (b) Oral ladder:
+    define E4M3, compute the ratio, justify the intensity doubling,
+    extend the table, compare with int8, debug the overflow, critique
+    the 2x assumption, design the M=1 model. (c) Transfer: the device
+    lacks fp8. What is the fallback plan? Answers:
+    <code>../keys/u06_answers.md</code> A10.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U06 task 10 extends the format table
+    and models the M=1 case. See <code>../labs/u06_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the format table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c11-power-and-thermal-throttling">C11: Power and thermal throttling</h3>
+<p>Leaf id <code>cs336-U06-C11</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: the failure case. Objectives: explain throttling, state
+   the detection. Depends on C05.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the kernel slowed down
+   overnight with no code change. Toy: the lab models a clock drop
+   from 1.4 GHz to 1.0 GHz and its 29 percent throughput hit.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Devices cap power and temperature by lowering
+   clocks. A throttled device reports the same kernel at lower
+   throughput, timings drift and comparisons lie.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> GHz, watts,
+   degrees. Assumption: the toy clock numbers.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Throughput scales with clock for
+   compute-bound kernels: 1.0/1.4 = 0.71, a 29 percent hit.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: the 29 percent number and the detection
+   rule (repeated baseline timing drifting down).</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The detection rule:
+   time a fixed microbenchmark before and after the run, flag a drop
+   over 5 percent.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> The rule fires on the
+   toy throttle and stays quiet on noise. Expected outputs in the
+   lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> A throttled run wastes the whole allocation, detection
+   is cheap.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Power-capped
+    scheduling (cluster-level). Detection is the user-level answer.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Blaming the code for a
+    throttled slowdown: a week of tuning against a moving target.
+    The assumption &ldquo;the device is constant&rdquo; breaks, measure the
+    device first.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: device
+    management docs (primary). Extension: correlate the toy drift
+    with temperature, hypothesis: monotonic.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the mechanism and the rule. (b) Oral
+    ladder: define throttling, compute the 29 percent, justify the
+    baseline, implement the rule, compare with capping, debug the
+    misattributed slowdown, critique the 5 percent threshold, design
+    the correlation. (c) Transfer: the baseline drifts 8 percent
+    mid-run. What do you do? Answers: <code>../keys/u06_answers.md</code> A11.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U06 task 11 implements the detection
+    rule. See <code>../labs/u06_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the throttle table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c12-profiling-invariants">C12: Profiling invariants</h3>
+<p>Leaf id <code>cs336-U06-C12</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: sanity checks on any profile. Objectives: state the
+   invariants, apply them. Depends on C03, C05.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the profiler says the
+   kernel beats the roofline. Now what? Toy: the invariant &ldquo;no
+   kernel exceeds its roofline&rdquo; flags a measurement error.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Three invariants: (1) throughput &lt;= roofline,
+   (2) the profiled FLOP/byte counts match the analytic model within
+   ~2x, (3) timings reproduce within 10 percent. Violations mean the
+   measurement is wrong, not the model.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Ratios and
+   tolerances. Assumption: the analytic FLOP counts (U02).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Each invariant is a consistency check
+   between independent estimates: model versus measurement.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: a toy profile violating invariant 1 is
+   traced to unsynced timing.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>check_invariants(
+   profile)</code>: the three asserts. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Passes on the sane toy,
+   fails loudly on the broken one. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Seconds per profile, catches hours of confusion.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Expert review
+    (slower, deeper). Invariants are the automatic first pass.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> &ldquo;Optimizing&rdquo; past the
+    roofline: the timer was wrong and the optimization was a
+    measurement artifact. The assumption &ldquo;the profiler is right&rdquo;
+    breaks, the invariants arbitrate.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: profiler
+    methodology docs (primary). Extension: inject each violation
+    into the toy, hypothesis: each trips exactly one invariant.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the three invariants. (b) Oral ladder:
+    define each, trace the violation, justify the tolerances,
+    implement, compare with expert review, debug the artifact,
+    critique the 2x tolerance, design the injection. (c) Transfer:
+    the profile shows 120 percent of roofline. Ordered response?
+    Answers: <code>../keys/u06_answers.md</code> A12.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U06 task 12 implements the invariant
+    checks. See <code>../labs/u06_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the invariant checklist. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h2 id="unit-russian-doll-ladder-u06">Unit Russian-doll ladder (U06)</h2>
+<ul>
+<li>Shell 0: where does the time go: math, memory, or links?</li>
+<li>Shell 1: one roofline, one MFU, one all-reduce time.</li>
+<li>Shell 2: SMs, warps, HBM, links, clocks.</li>
+<li>Shell 3: one hierarchy, one memory fit, one timing.</li>
+<li>Shell 4: the roofline function, the MFU function, the invariant
+  checks.</li>
+<li>Shell 5: the knee, the 8.1 percent, the 0.02 s.</li>
+<li>Shell 6: change M, predict the bound, observe.</li>
+<li>Shell 7: remove the sync, remove the warmup, throttle the clock.</li>
+<li>Shell 8: dense peak vs roofline, MFU vs HFU, ring vs tree.</li>
+<li>Shell 9: vendor-claim verification, throttle detection.</li>
+<li>Shell 10: the profile is the production performance contract.</li>
+</ul>
+      
+      <nav class="pager"><a href="../keys/u05_answers.html"><span class="lbl">← Previous</span>U05 · Answers</a><a href="../keys/u06_answers.html"><span class="lbl">Next →</span>U06 · Answers</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
