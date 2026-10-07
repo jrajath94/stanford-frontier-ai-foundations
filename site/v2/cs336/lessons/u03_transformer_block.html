@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U03 · Transformer block mechanics — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Transformer block mechanics.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-u03" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../course_map.html" data-page="cs336-course-map">Course map</a></li>
+<li><a href="../prerequisites.html" data-page="cs336-prereqs">Prerequisites</a></li>
+<li><a href="../notation_and_shapes.html" data-page="cs336-notation">Notation</a></li>
+<li><a href="../glossary.html" data-page="cs336-glossary">Glossary</a></li>
+<li><a href="../cheatsheet.html" data-page="cs336-cheatsheet">Cheatsheet</a></li>
+<li><a href="../crash-course.html" data-page="cs336-crash">Crash course</a></li>
+<li><a href="../lessons/u01_tokenization.html" data-page="cs336-u01">U01 · Text representation and tokeni</a></li>
+<li><a href="../keys/u01_answers.html" data-page="cs336-u01-answers">U01 · Answers</a></li>
+<li><a href="../lessons/u02_tensor_programming.html" data-page="cs336-u02">U02 · Executable tensor programming </a></li>
+<li><a href="../keys/u02_answers.html" data-page="cs336-u02-answers">U02 · Answers</a></li>
+<li><a href="../lessons/u03_transformer_block.html" data-page="cs336-u03" class="active">U03 · Transformer block mechanics</a></li>
+<li><a href="../keys/u03_answers.html" data-page="cs336-u03-answers">U03 · Answers</a></li>
+<li><a href="../lessons/u04_attention_moe.html" data-page="cs336-u04">U04 · Attention alternatives and exp</a></li>
+<li><a href="../keys/u04_answers.html" data-page="cs336-u04-answers">U04 · Answers</a></li>
+<li><a href="../lessons/u05_optimization.html" data-page="cs336-u05">U05 · Optimization and training corr</a></li>
+<li><a href="../keys/u05_answers.html" data-page="cs336-u05-answers">U05 · Answers</a></li>
+<li><a href="../lessons/u06_gpu_tpu.html" data-page="cs336-u06">U06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../keys/u06_answers.html" data-page="cs336-u06-answers">U06 · Answers</a></li>
+<li><a href="../lessons/u07_kernels.html" data-page="cs336-u07">U07 · Kernels and IO-aware attention</a></li>
+<li><a href="../keys/u07_answers.html" data-page="cs336-u07-answers">U07 · Answers</a></li>
+<li><a href="../lessons/u08_data_sharding.html" data-page="cs336-u08">U08 · Data and optimizer sharding</a></li>
+<li><a href="../keys/u08_answers.html" data-page="cs336-u08-answers">U08 · Answers</a></li>
+<li><a href="../lessons/u09_model_parallel.html" data-page="cs336-u09">U09 · Model and hybrid parallelism</a></li>
+<li><a href="../keys/u09_answers.html" data-page="cs336-u09-answers">U09 · Answers</a></li>
+<li><a href="../lessons/u10_scaling_laws.html" data-page="cs336-u10">U10 · Scaling laws and extrapolation</a></li>
+<li><a href="../keys/u10_answers.html" data-page="cs336-u10-answers">U10 · Answers</a></li>
+<li><a href="../labs/u01_lab.html" data-page="cs336-lab-u01">Lab 01 · Text representation and tokeni</a></li>
+<li><a href="../lessons/u11_inference.html" data-page="cs336-u11">U11 · Inference algorithms and servi</a></li>
+<li><a href="../labs/u01_lab_key.html" data-page="cs336-lab-u01-keys">Lab 01 · Keys</a></li>
+<li><a href="../keys/u11_answers.html" data-page="cs336-u11-answers">U11 · Answers</a></li>
+<li><a href="../labs/u02_lab.html" data-page="cs336-lab-u02">Lab 02 · Executable tensor programming </a></li>
+<li><a href="../lessons/u12_evaluation.html" data-page="cs336-u12">U12 · Evaluation and measurement val</a></li>
+<li><a href="../labs/u02_lab_key.html" data-page="cs336-lab-u02-keys">Lab 02 · Keys</a></li>
+<li><a href="../keys/u12_answers.html" data-page="cs336-u12-answers">U12 · Answers</a></li>
+<li><a href="../labs/u03_lab.html" data-page="cs336-lab-u03">Lab 03 · Transformer block mechanics</a></li>
+<li><a href="../lessons/u13_data_sourcing.html" data-page="cs336-u13">U13 · Data sourcing and transformati</a></li>
+<li><a href="../labs/u03_lab_key.html" data-page="cs336-lab-u03-keys">Lab 03 · Keys</a></li>
+<li><a href="../keys/u13_answers.html" data-page="cs336-u13-answers">U13 · Answers</a></li>
+<li><a href="../labs/u04_lab.html" data-page="cs336-lab-u04">Lab 04 · Attention alternatives and exp</a></li>
+<li><a href="../lessons/u14_data_mixing.html" data-page="cs336-u14">U14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../labs/u04_lab_key.html" data-page="cs336-lab-u04-keys">Lab 04 · Keys</a></li>
+<li><a href="../keys/u14_answers.html" data-page="cs336-u14-answers">U14 · Answers</a></li>
+<li><a href="../labs/u05_lab.html" data-page="cs336-lab-u05">Lab 05 · Optimization and training corr</a></li>
+<li><a href="../lessons/u15_midtraining.html" data-page="cs336-u15">U15 · Midtraining and supervised ada</a></li>
+<li><a href="../labs/u05_lab_key.html" data-page="cs336-lab-u05-keys">Lab 05 · Keys</a></li>
+<li><a href="../keys/u15_answers.html" data-page="cs336-u15-answers">U15 · Answers</a></li>
+<li><a href="../labs/u06_lab.html" data-page="cs336-lab-u06">Lab 06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../lessons/u16_alignment_rl.html" data-page="cs336-u16">U16 · Preference alignment and reaso</a></li>
+<li><a href="../labs/u06_lab_key.html" data-page="cs336-lab-u06-keys">Lab 06 · Keys</a></li>
+<li><a href="../keys/u16_answers.html" data-page="cs336-u16-answers">U16 · Answers</a></li>
+<li><a href="../labs/u07_lab.html" data-page="cs336-lab-u07">Lab 07 · Kernels and IO-aware attention</a></li>
+<li><a href="../lessons/u17_multimodal_systems.html" data-page="cs336-u17">U17 · Multimodality and training-sys</a></li>
+<li><a href="../labs/u07_lab_key.html" data-page="cs336-lab-u07-keys">Lab 07 · Keys</a></li>
+<li><a href="../keys/u17_answers.html" data-page="cs336-u17-answers">U17 · Answers</a></li>
+<li><a href="../labs/u08_lab.html" data-page="cs336-lab-u08">Lab 08 · Data and optimizer sharding</a></li>
+<li><a href="../lessons/u18_guests_defense.html" data-page="cs336-u18">U18 · Guest material and final resea</a></li>
+<li><a href="../labs/u08_lab_key.html" data-page="cs336-lab-u08-keys">Lab 08 · Keys</a></li>
+<li><a href="../keys/u18_answers.html" data-page="cs336-u18-answers">U18 · Answers</a></li>
+<li><a href="../labs/u09_lab.html" data-page="cs336-lab-u09">Lab 09 · Model and hybrid parallelism</a></li>
+<li><a href="../labs/u09_lab_key.html" data-page="cs336-lab-u09-keys">Lab 09 · Keys</a></li>
+<li><a href="../labs/u10_lab.html" data-page="cs336-lab-u10">Lab 10 · Scaling laws and extrapolation</a></li>
+<li><a href="../labs/u10_lab_key.html" data-page="cs336-lab-u10-keys">Lab 10 · Keys</a></li>
+<li><a href="../interview/u01_questions.html" data-page="cs336-int-u01">Interview · U01</a></li>
+<li><a href="../labs/u11_lab.html" data-page="cs336-lab-u11">Lab 11 · Inference algorithms and servi</a></li>
+<li><a href="../interview/u01_key.html" data-page="cs336-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../labs/u11_lab_key.html" data-page="cs336-lab-u11-keys">Lab 11 · Keys</a></li>
+<li><a href="../interview/u02_questions.html" data-page="cs336-int-u02">Interview · U02</a></li>
+<li><a href="../labs/u12_lab.html" data-page="cs336-lab-u12">Lab 12 · Evaluation and measurement val</a></li>
+<li><a href="../interview/u02_key.html" data-page="cs336-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../labs/u12_lab_key.html" data-page="cs336-lab-u12-keys">Lab 12 · Keys</a></li>
+<li><a href="../interview/u03_questions.html" data-page="cs336-int-u03">Interview · U03</a></li>
+<li><a href="../labs/u13_lab.html" data-page="cs336-lab-u13">Lab 13 · Data sourcing and transformati</a></li>
+<li><a href="../interview/u03_key.html" data-page="cs336-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../labs/u13_lab_key.html" data-page="cs336-lab-u13-keys">Lab 13 · Keys</a></li>
+<li><a href="../interview/u04_questions.html" data-page="cs336-int-u04">Interview · U04</a></li>
+<li><a href="../labs/u14_lab.html" data-page="cs336-lab-u14">Lab 14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../interview/u04_key.html" data-page="cs336-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../labs/u14_lab_key.html" data-page="cs336-lab-u14-keys">Lab 14 · Keys</a></li>
+<li><a href="../interview/u05_questions.html" data-page="cs336-int-u05">Interview · U05</a></li>
+<li><a href="../labs/u15_lab.html" data-page="cs336-lab-u15">Lab 15 · Midtraining and supervised ada</a></li>
+<li><a href="../interview/u05_key.html" data-page="cs336-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../labs/u15_lab_key.html" data-page="cs336-lab-u15-keys">Lab 15 · Keys</a></li>
+<li><a href="../interview/u06_questions.html" data-page="cs336-int-u06">Interview · U06</a></li>
+<li><a href="../labs/u16_lab.html" data-page="cs336-lab-u16">Lab 16 · Preference alignment and reaso</a></li>
+<li><a href="../interview/u06_key.html" data-page="cs336-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../labs/u16_lab_key.html" data-page="cs336-lab-u16-keys">Lab 16 · Keys</a></li>
+<li><a href="../interview/u07_questions.html" data-page="cs336-int-u07">Interview · U07</a></li>
+<li><a href="../labs/u17_lab.html" data-page="cs336-lab-u17">Lab 17 · Multimodality and training-sys</a></li>
+<li><a href="../interview/u07_key.html" data-page="cs336-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../labs/u17_lab_key.html" data-page="cs336-lab-u17-keys">Lab 17 · Keys</a></li>
+<li><a href="../interview/u08_questions.html" data-page="cs336-int-u08">Interview · U08</a></li>
+<li><a href="../labs/u18_lab.html" data-page="cs336-lab-u18">Lab 18 · Guest material and final resea</a></li>
+<li><a href="../interview/u08_key.html" data-page="cs336-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../labs/u18_lab_key.html" data-page="cs336-lab-u18-keys">Lab 18 · Keys</a></li>
+<li><a href="../interview/u09_questions.html" data-page="cs336-int-u09">Interview · U09</a></li>
+<li><a href="../interview/u09_key.html" data-page="cs336-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../interview/u10_questions.html" data-page="cs336-int-u10">Interview · U10</a></li>
+<li><a href="../interview/u10_key.html" data-page="cs336-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../interview/u11_questions.html" data-page="cs336-int-u11">Interview · U11</a></li>
+<li><a href="../interview/u11_key.html" data-page="cs336-int-u11-keys">Interview · U11 keys</a></li>
+<li><a href="../interview/u12_questions.html" data-page="cs336-int-u12">Interview · U12</a></li>
+<li><a href="../interview/u12_key.html" data-page="cs336-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../interview/u13_questions.html" data-page="cs336-int-u13">Interview · U13</a></li>
+<li><a href="../interview/u13_key.html" data-page="cs336-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../interview/u14_questions.html" data-page="cs336-int-u14">Interview · U14</a></li>
+<li><a href="../interview/u14_key.html" data-page="cs336-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../interview/u15_questions.html" data-page="cs336-int-u15">Interview · U15</a></li>
+<li><a href="../interview/u15_key.html" data-page="cs336-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../interview/u16_questions.html" data-page="cs336-int-u16">Interview · U16</a></li>
+<li><a href="../interview/u16_key.html" data-page="cs336-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../interview/u17_questions.html" data-page="cs336-int-u17">Interview · U17</a></li>
+<li><a href="../interview/u17_key.html" data-page="cs336-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../interview/u18_questions.html" data-page="cs336-int-u18">Interview · U18</a></li>
+<li><a href="../interview/u18_key.html" data-page="cs336-int-u18-keys">Interview · U18 keys</a></li>
+<li><a href="../interview/oral-defenses.html" data-page="cs336-int-oral">Interview · Oral</a></li>
+<li><a href="../interview/keys-oral.html" data-page="cs336-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../interview/transfer-sets.html" data-page="cs336-int-transfer">Interview · Transfer</a></li>
+<li><a href="../interview/keys-transfer.html" data-page="cs336-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../capstones/capstone_applied.html" data-page="cs336-cap-applied">Capstone · Applied</a></li>
+<li><a href="../capstones/capstone_research.html" data-page="cs336-cap-research">Capstone · Research</a></li>
+<li><a href="../keys/diagnostic_key.html" data-page="cs336-diagnostic-keys">Diagnostic · Keys</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U03 · Transformer block mechanics</nav>
+      <h1>U03 · Transformer block mechanics</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u03-transformer-block-mechanics">U03 , Transformer block mechanics</h1>
+<p>Prerequisites: P05, P11, P12, P14. Bridge links in <code>../prerequisites.md</code>.
+Session: S03 (reported: Apr 6, Architectures, Hyperparameters).
+Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
+PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
+<h2 id="local-remediation-the-block-in-one-paragraph">Local remediation , the block in one paragraph</h2>
+<p>Read this if diagnostic item D9 was not full marks. A transformer block
+maps (B,T,d) to (B,T,d). It has two sub-blocks, each wrapped as
+x + subblock(norm(x)): first multi-head causal self-attention, then a
+position-wise feedforward network. Attention lets each position mix
+information from earlier positions, the FFN transforms each position
+independently, residuals and norms keep gradients flowing through L
+stacked blocks. The reference implementation lives in
+<code>assets/compute_u03.py</code> and every number below comes from running it.</p>
+<p>Worked check: with B=2, T=8, d=16, h=4, dff=32, V=64, the block maps
+(2,8,16) to (2,8,16), attention weights sum to 1 per row (max dev
+2.22e-16), future weights are exactly 0, and RMSNorm outputs have row
+rms 0.9999 to 1.0000. Assessment: change T to 4 and predict every
+shape before running. Key: <code>../keys/u03_answers.md</code> R1.</p>
+<hr />
+<h3 id="c01-embedding-lookup">C01: Embedding lookup</h3>
+<p>Leaf id <code>cs336-U03-C01</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S03. Scope: from
+   token ids to vectors. Objectives: implement lookup, state its shapes,
+   parameter count, and gradient sparsity. Depends on P11, P13.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: where do token meanings
+   come from? Toy: E has shape (64,16), ids [[3, 17]] give E[[3,17]] with
+   shape (1,2,16). Each row of E is a learned vector, lookup is an index operation,
+   not computation.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The embedding table is a dictionary from id to
+   vector. The model learns the vectors by gradient descent. Lookup
+   costs no FLOPs, it costs memory traffic (one row per token).</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> E: (V,d). ids:
+   (B,T) int. Output: (B,T,d). Assumption: ids are in [0,V), out-of-range
+   ids are a bug, not a feature.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> y[b,t,:] = E[ids[b,t],:]. The gradient
+   wrt E is sparse: only rows that appeared in the batch get updates.
+   Parameter count V<em>d (here 64</em>16 = 1024).</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u03.py</code> (executed
+   2026-10-06): lookup on (2,8) ids gives (2,8,16), the full block
+   output keeps that shape through to logits (2,8,64).</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>embed(ids, E)</code>: return
+   E[ids] with a range assert on ids. Three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Shape assert, id 0 maps to
+   row 0, out-of-range id raises. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Memory V<em>d</em>bytes, traffic B<em>T</em>d*bytes per forward.
+   Negligible FLOPs. The table is often the largest single matrix for
+   large V.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Hashed or factorized
+    embeddings for huge V, one-hot times E is the same math, never the
+    implementation. Keep the table for standard models.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> An id of V (off by one from a
+    bad shift) indexes out of bounds or wraps silently depending on the
+    framework. The assumption &ldquo;ids are valid&rdquo; breaks at data pipeline
+    bugs, the range assert is the backstop.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the original
+    transformer paper&rsquo;s embedding description (primary: paper text).
+    Extension: measure row-update frequency across training, hypothesis:
+    a Zipfian skew with most updates on few rows.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: shapes in and out, param count.
+    (b) Oral ladder: define lookup, hand-index a (2,3) id matrix,
+    justify zero FLOPs, implement with assert, compare with one-hot,
+    debug the off-by-one id, critique the valid-id assumption, design
+    the skew experiment. (c) Transfer: V doubles. Which ledger row
+    moves, and by how much? Answers: <code>../keys/u03_answers.md</code> A1.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U03 task 1 implements lookup and the
+    range assert. See <code>../labs/u03_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the lookup diagram (ids -&gt; rows). The block
+    figure (u03_fig02) shows where lookup sits.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c02-qkv-projections">C02: Q/K/V projections</h3>
+<p>Leaf id <code>cs336-U03-C02</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S03. Scope: the
+   three linear maps that start attention. Objectives: state shapes and
+   FLOP cost, explain why three separate maps exist. Depends on C01,
+   U02-C06.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why three matrices for one
+   input? Toy: x (2,8,16) times Wq, Wk, Wv (each 16x16) gives q, k, v
+   each (2,8,16). Queries ask, keys advertise, values carry content, one
+   shared map could not learn the three roles.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Three learned lenses on the same input. The
+   attention score compares a query lens against key lenses, the values
+   are what actually get mixed. Separate parameters let each role
+   specialize.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Wq,Wk,Wv: (d,d).
+   q,k,v: (B,T,d), later reshaped per head. FLOP cost 3<em>2</em>B<em>T</em>d*d.
+   Assumption: dense maps, structured variants are U04.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> q = xWq etc. are linear maps, no
+   nonlinearity. The reshape to (B,h,T,dh) splits the d axis into h
+   heads (C05). Gradients flow to each W independently.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u03.py</code> (executed
+   2026-10-06): the toy block&rsquo;s QKV cost is 3<em>2</em>2<em>8</em>16*16 = 24576 FLOP,
+   matching the U02 formula, Wq std 0.2549 versus Xavier target 0.2500.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>qkv(x, Wq, Wk, Wv)</code>:
+   three matmuls with shape asserts. Five lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Shapes (B,T,d) each,
+   against a fused single-matmul reference: allclose. Expected outputs
+   in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> 3 of the 4 attention matmuls&rsquo; FLOPs, 3d^2 parameters.
+   Fusing the three into one matmul saves launch overhead (U07).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Fused QKV (one
+    (d,3d) map, then split), MQA/GQA shrink K/V heads (U04). Fuse for
+    speed, keep separate for clarity in teaching code.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Tying Wq = Wk (shared map):
+    scores become symmetric similarities and the model loses the
+    ask/advertise asymmetry, some heads need it. The assumption &ldquo;three
+    roles need three maps&rdquo; is load-bearing for expressivity.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: attention
+    mechanism ablations (primary: paper ablations). Extension: tie Wq=Wk
+    in the toy and compare loss, hypothesis: loss rises.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: shapes, count, cost. (b) Oral ladder:
+    define each role, compute the toy FLOP count by hand, justify three
+    maps, implement qkv, compare fused versus separate, debug a shared
+    Wq/Wk, critique the dense assumption, design the tying experiment.
+    (c) Transfer: d doubles. Which term grows fastest in the block?
+    Answers: <code>../keys/u03_answers.md</code> A2.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U03 task 2 implements qkv and the fused
+    comparison. See <code>../labs/u03_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the three-map diagram. The block figure
+    (u03_fig02) reuses it.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c03-scaled-softmax-attention">C03: Scaled softmax attention</h3>
+<p>Leaf id <code>cs336-U03-C03</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S03. Scope: the
+   attention operation itself. Objectives: derive the formula, explain
+   the scale, verify the row-sum invariant. Depends on C02, P06.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how does a position choose
+   what to read? Toy: scores S = QK^T/sqrt(dh), weights P = softmax(S),
+   output = PV. From the run: rows sum to 1 with max deviation
+   2.22e-16.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Each query scores every key by dot product, softmax
+   turns scores into a probability distribution, the output is the
+   expected value under that distribution. Attention is differentiable
+   dictionary lookup with learned keys.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> S,P: (B,h,T,T).
+   Scale 1/sqrt(dh): unit none. Assumption: keys and queries have
+   roughly unit variance per component, so dot products grow like dh.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Without scale, QK^T has variance dh, so
+   softmax saturates and gradients vanish. Dividing by sqrt(dh) keeps
+   the input variance near 1. Softmax: P[i,j] = exp(S[i,j]) /
+   sum_k exp(S[i,k]), rows sum to 1 by construction.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u03.py</code> (executed
+   2026-10-06): attention weights (2,4,8,8), row sums deviate from 1 by
+   at most 2.22e-16, all entries nonnegative.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>attention(qh, kh, vh)</code>:
+   scores, scale, softmax with max-subtraction, mix. About 10 lines,
+   the numerically stable softmax is mandatory.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Row sums to 1, uniform
+   input gives uniform weights, one-hot scores give argmax selection.
+   Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> 2<em>B</em>h<em>T</em>T*dh per scores and per mix, the T^2 terms.
+   Memory (B,h,T,T) materialized in the naive form (U07 removes it).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Unscaled attention
+    (fails at large dh), linear attention (U04). Keep the scale, it is
+    not optional.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Forgetting the scale at dh=128:
+    scores have std ~11, softmax collapses to one-hot, gradients die,
+    and the model trains as a hard retrieval system. The assumption
+    &ldquo;dot products stay small&rdquo; breaks with dh, the scale restores it.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    transformer paper&rsquo;s attention definition (primary). Extension: sweep
+    the scale factor on the toy and measure gradient norms, hypothesis:
+    the norm peaks near 1/sqrt(dh).</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the formula and the scale.
+    (b) Oral ladder: define the distribution view, compute one row by
+    hand, justify 1/sqrt(dh), implement stable softmax, compare with
+    unscaled, debug the saturation symptom, critique the unit-variance
+    assumption, design the scale sweep. (c) Transfer: dh grows 4x with
+    no other change. What breaks first? Answers:
+    <code>../keys/u03_answers.md</code> A3.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U03 task 3 implements attention and the
+    invariant checks. See <code>../labs/u03_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the score/weight/mix table. The mask figure
+    (u03_fig01) builds on it.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c04-causal-masking">C04: Causal masking</h3>
+<p>Leaf id <code>cs336-U03-C04</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S03. Scope:
+   enforcing the autoregressive order. Objectives: build the mask,
+   prove future weights are zero, state the train/inference link.
+   Depends on C03.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: what stops position 3 from
+   reading position 5 during training? Toy: add -inf (here -1e9) to
+   scores where j &gt; i before softmax. From the run: max future weight
+   exactly 0.00e+00.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The mask is a one-way mirror: each position sees
+   itself and the past, never the future. Training then matches
+   inference, where the future does not exist yet.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Mask M: (T,T) with
+   -inf above the diagonal, 0 elsewhere. Assumption: left-to-right
+   generation, bidirectional tasks use different masks.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> softmax(S + M): entries with -inf become
+   exp(-inf) = 0 after normalization. The gradient through them is also
+   zero: no learning signal crosses the boundary.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u03.py</code> (executed
+   2026-10-06): with T=8, the upper triangle of P is exactly 0
+   (max 0.00e+00), the lower triangle holds the full distribution.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>causal_mask(T)</code>:
+   triu(ones, 1) * -1e9. <code>masked_softmax(S, mask)</code>: add then stable
+   softmax. About 6 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Future weights are zero,
+   each row still sums to 1, position 0 attends only to itself.
+   Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The mask is free (a constant). The T^2/2 masked entries
+   still cost FLOPs in the naive form, kernels skip them (U07).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Prefix masks (some
+    positions see the future, e.g. bidirectional encoders), sliding
+    window masks (U04). Causal is mandatory for autoregressive LMs.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Mask applied after softmax
+    instead of before: future weights are zeroed but the row no longer
+    sums to 1, silently rescaling every output. The assumption &ldquo;zeroing
+    is enough&rdquo; breaks, the mask must enter before normalization.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    autoregressive factorization references (primary: textbook
+    treatment). Extension: train the toy with the mask after softmax
+    and compare loss, hypothesis: the loss looks normal but generation
+    degrades.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: where the mask enters and why.
+    (b) Oral ladder: define the one-way mirror, hand-mask a 3x3 score
+    matrix, justify before-softmax, implement causal_mask, compare with
+    prefix masks, debug the after-softmax bug, critique the
+    left-to-right assumption, design the misplaced-mask experiment.
+    (c) Transfer: batched sequences have different lengths with padding.
+    What second mask is needed, and where does it enter?
+    Answers: <code>../keys/u03_answers.md</code> A4.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U03 task 4 builds masks and checks the
+    zero-future invariant. See <code>../labs/u03_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u03_fig01: lesson plate, the 8x8 mask with
+    allowed and blocked cells. Source: original toy. Shell 3. Render:
+    <code>assets/render_u03.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u03_fig01" src="../assets/u03_fig01.png"><figcaption>lesson plate, the 8x8 mask with allowed and blocked cells. Source: original toy. Shell 3. Render: assets/render_u03.py.</figcaption></figure>
+<hr />
+<h3 id="c05-multi-head-reshape">C05: Multi-head reshape</h3>
+<p>Leaf id <code>cs336-U03-C05</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S03. Scope:
+   splitting d into h heads. Objectives: perform the reshape and its
+   inverse, explain why heads help. Depends on C02, C03.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why not one big attention
+   head? Toy: (2,8,16) reshapes to (2,4,8,4): 4 heads of dim 4. Each
+   head learns its own score pattern, the outputs concatenate back to
+   16.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Heads are parallel attention units sharing the
+   input. Splitting lets each head specialize (one tracks syntax, one
+   tracks position) while keeping total width fixed. The reshape is
+   bookkeeping, the learning is in the per-head scores.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> (B,T,d) &lt;-&gt;
+   (B,h,T,dh) with d = h*dh. Assumption: d divisible by h.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Reshape (B,T,h,dh) then transpose to
+   (B,h,T,dh) for the batched score computation, after mixing,
+   transpose back and reshape to (B,T,d). The output projection Wo mixes
+   heads.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u03.py</code> (executed
+   2026-10-06): the toy runs h=4, dh=4, attention tensor (2,4,8,8),
+   output reshapes back to (2,8,16) exactly.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>split_heads(x, h)</code> and
+   <code>merge_heads(x)</code>: reshape/transpose pairs with shape asserts. About
+   8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> merge(split(x)) == x
+   exactly. Head slices are disjoint along d. Expected outputs in the
+   lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The reshapes are free metadata ops (views). Heads do not
+   change total FLOPs at fixed d, they change the score pattern
+   capacity.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> One head with dh=d
+    (less pattern diversity), MQA/GQA share KV heads (U04). Keep h
+    dividing d, typical dh in {64, 128}.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> d not divisible by h: the
+    reshape fails loudly (good) or, worse, a manual split with wrong
+    arithmetic silently scrambles head boundaries (bad). The assumption
+    &ldquo;d = h*dh&rdquo; needs an assert, not trust.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: multi-head
+    ablation studies (primary: paper ablations). Extension: vary h at
+    fixed d on the toy and measure pattern diversity (head disagreement),
+    hypothesis: diversity rises then saturates.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the two reshapes and their shapes.
+    (b) Oral ladder: define a head, hand-split a (1,2,4) tensor into 2
+    heads, justify the transpose, implement split/merge, compare with
+    one head, debug the scrambled split, critique the divisibility
+    assumption, design the diversity experiment. (c) Transfer: h=1 at
+    fixed d. What changes in capacity and in the KV cache (U04)?
+    Answers: <code>../keys/u03_answers.md</code> A5.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U03 task 5 implements split/merge and
+    the roundtrip check. See <code>../labs/u03_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the reshape diagram. The block figure
+    (u03_fig02) shows head structure.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c06-residual-connections">C06: Residual connections</h3>
+<p>Leaf id <code>cs336-U03-C06</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S03. Scope: the
+   x + subblock(x) paths. Objectives: explain the gradient identity
+   path, show what breaks without it. Depends on P05, P11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how do gradients survive
+   100 layers? Toy: y = x + f(x) gives dy/dx = I + df/dx. The identity
+   term carries gradient even when df/dx vanishes. The block applies
+   this twice per layer.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The residual is a highway: the input always reaches
+   the output, and the sub-block only proposes a correction. Deep
+   stacks learn corrections, not full transformations.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> x, f(x): (B,T,d).
+   Addition is elementwise, shapes must match. Assumption: the
+   correction stays small relative to x (true at init, monitored later).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> dy/dx = I + J_f. Even if J_f -&gt; 0, the
+   gradient passes through I unchanged. Without residuals, L layers
+   multiply L Jacobians and gradients vanish or explode exponentially.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u03.py</code> (executed
+   2026-10-06): y - x has shape (2,8,16), the correction tensor, at
+   init its norm is small relative to x (verifiable in the lab by
+   comparing norms).</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>residual(x, fn)</code>:
+   return x + fn(x). The block calls it for attention and FFN. Three
+   lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> With fn = zeros, output
+   equals input exactly (identity test). Gradient of a sum reaches x
+   through the identity path (finite-difference check in the lab).</p>
+</li>
+<li>
+<p><strong>Costs.</strong> One addition per sub-block: negligible FLOPs, one extra
+   read of x. The cheapest important operation in the network.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Highway gates
+    (learned mixing), dense connections (concatenation). Plain residuals
+    win on simplicity, keep them.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Removing residuals from a deep
+    stack: the network becomes untrainable past a few layers (the
+    classic degradation). The assumption &ldquo;depth is free&rdquo; breaks without
+    the identity path.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the ResNet
+    paper (He et al., 2016, primary). Extension: train the toy stack
+    with and without residuals and compare gradient norms by layer,
+    hypothesis: without residuals the norms decay geometrically.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the formula and the identity term.
+    (b) Oral ladder: define the highway, derive dy/dx, justify depth
+    scaling, implement residual, compare with highway gates, debug a
+    missing residual (symptom: early layers stop learning), critique the
+    small-correction assumption, design the norm-decay experiment.
+    (c) Transfer: the correction norm grows to match x. What training
+    symptom follows, and which knob (C07/C08) addresses it?
+    Answers: <code>../keys/u03_answers.md</code> A6.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U03 task 6 tests the identity path and
+    the norm comparison. See <code>../labs/u03_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the highway diagram. The block figure
+    (u03_fig02) draws both residuals.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c07-pre-norm-versus-post-norm">C07: Pre-norm versus post-norm</h3>
+<p>Leaf id <code>cs336-U03-C07</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S03. Scope: where
+   the normalization sits. Objectives: write both forms, explain the
+   stability difference. Depends on C06, C08.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: norm inside or outside the
+   residual? Toy: pre-norm: x + subblock(norm(x)). Post-norm:
+   norm(x + subblock(x)). Pre-norm keeps the highway clean (the residual
+   stream never passes through a norm), post-norm normalizes the sum.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Pre-norm: the residual stream is the identity path
+   end to end, sub-blocks read a normalized copy. Post-norm: every layer
+   output is renormalized, which stabilizes activations but puts the
+   norm on the gradient highway.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> norm: RMSNorm or
+   LayerNorm (C08). Assumption: the norm has learnable gain.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> In pre-norm, dy/dx keeps the identity
+   term exactly. In post-norm, the gradient passes through the norm&rsquo;s
+   Jacobian at every layer, which rescales it. Post-norm needs careful
+   init and warmup, pre-norm trains more easily but lets the residual
+   stream magnitude grow with depth.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> The toy block in <code>compute_u03.py</code> uses
+   pre-norm. The lab compares gradient norms through a 4-layer stack in
+   both forms on fixed data, pre-norm keeps the identity path exact
+   (verifiable by the residual identity test).</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>block_pre(x)</code> and
+   <code>block_post(x)</code>: the two wirings, six lines each, sharing sub-blocks.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Both map (B,T,d) to
+   (B,T,d). With zeroed sub-blocks, pre-norm output equals input
+   exactly, post-norm output equals norm(input). Expected outputs in the
+   lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Same FLOPs. Pre-norm may need a final norm before the
+   output head (the stream is unnormalized), post-norm does not.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Modern LMs use
+    pre-norm almost universally. Post-norm survives in some encoders.
+    Choose pre-norm for decoder LMs.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Post-norm at depth 48 without
+    warmup: gradients through 48 norm Jacobians shrink or explode and
+    training diverges in the first steps. The assumption &ldquo;placement is
+    cosmetic&rdquo; breaks, it changes the effective learning dynamics.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: pre-norm
+    versus post-norm analyses (primary: paper comparisons). Extension:
+    measure residual-stream norm versus depth in both forms, hypothesis:
+    pre-norm grows, post-norm stays flat.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: write both wirings. (b) Oral ladder:
+    define the highway in each, derive the gradient path difference,
+    justify pre-norm for deep decoders, implement both, compare,
+    debug post-norm divergence, critique the learnable-gain assumption,
+    design the stream-norm experiment. (c) Transfer: you inherit a
+    post-norm checkpoint. What training knob matters most at resume?
+    Answers: <code>../keys/u03_answers.md</code> A7.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U03 task 7 implements both wirings and
+    the zero-block tests. See <code>../labs/u03_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the two wiring diagrams. The block figure
+    (u03_fig02) uses pre-norm.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c08-rmsnorm-and-layernorm">C08: RMSNorm and LayerNorm</h3>
+<p>Leaf id <code>cs336-U03-C08</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S03. Scope: the
+   normalization math. Objectives: derive both, compare cost and
+   behavior. Depends on P05.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: what does &ldquo;normalize&rdquo;
+   compute, exactly? Toy: RMSNorm: x / rms(x) * g, where
+   rms = sqrt(mean(x^2) + eps). From the run: output row rms lands in
+   [0.9999, 1.0000] with g = 1.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Normalization rescales each row to a standard
+   magnitude so the next sub-block sees stable inputs. RMSNorm skips the
+   mean subtraction of LayerNorm: cheaper, and the mean carries little
+   signal in residual streams.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> x: (B,T,d). g:
+   (d,) learnable gain. eps: 1e-6 guard. Assumption: normalization over
+   the last axis only.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> LayerNorm: (x - mean)/std * g + b.
+   RMSNorm: x/rms * g. RMSNorm drops two reductions (mean) and the bias,
+   the forward saves one pass over d, the backward is simpler.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u03.py</code> (executed
+   2026-10-06): RMSNorm with unit gain gives row rms between 0.9999 and
+   1.0000 (eps accounts for the shortfall).</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>rmsnorm(x, w, eps)</code> and
+   <code>layernorm(x, w, b, eps)</code>: five lines each.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Row rms is 1 (RMSNorm),
+   row mean 0 and std 1 (LayerNorm), with g=1,b=0 on constant input the
+   output is well-defined via eps (no NaN). Expected outputs in the lab
+   key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> O(B<em>T</em>d) FLOPs, memory-bound (few ops per element).
+   RMSNorm is the cheaper of the two, both are small next to attention.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> No norm (fails at
+    depth), DeepNorm variants. RMSNorm is the modern default for
+    decoder LMs.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> eps = 0 with a zero row
+    (possible after masking): division by zero gives NaN that poisons
+    the whole run. The assumption &ldquo;rows are nonzero&rdquo; breaks, eps is
+    load-bearing.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the RMSNorm
+    paper (Zhang and Sennrich, 2019, primary). Extension: swap norms in
+    the toy and compare final loss, hypothesis: no significant
+    difference at this scale.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: both formulas. (b) Oral ladder: define
+    rms, compute RMSNorm on [3,4] by hand (rms=3.54, out=[0.85,1.13]),
+    justify dropping the mean, implement both, compare cost, debug the
+    NaN, critique the last-axis assumption, design the swap experiment.
+    (c) Transfer: activations are fp16. What norm detail matters most?
+    Answers: <code>../keys/u03_answers.md</code> A8.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U03 task 8 implements both norms and the
+    invariant checks. See <code>../labs/u03_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the formula comparison table. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c09-ffn-and-swiglu">C09: FFN and SwiGLU</h3>
+<p>Leaf id <code>cs336-U03-C09</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S03. Scope: the
+   position-wise feedforward network. Objectives: derive SwiGLU,
+   compare with ReLU FFN, count parameters. Depends on C06.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: what does the FFN add that
+   attention lacks? Toy: SwiGLU(x) = (Swish(xWg) * (xWu)) Wd, with
+   Swish(z) = z*sigmoid(z). In the toy: d=16, dff=32, three maps,
+   1536 parameters.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Attention mixes across positions, the FFN transforms
+   each position alone, adding depth-wise capacity and the nonlinearity
+   the network needs. The gate (Swish branch) lets the network modulate
+   the up-projected features multiplicatively.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Wg,Wu: (d,dff).
+   Wd: (dff,d). Intermediate: (B,T,dff). Assumption: dff is a multiple
+   that keeps parameter budgets comparable across variants.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Standard FFN: relu(xW1)W2 (two maps).
+   SwiGLU: (swish(xWg) * xWu)Wd (three maps). To hold parameters fixed,
+   SwiGLU uses dff = (2/3)*4d. The elementwise product is the gating.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u03.py</code> (executed
+   2026-10-06): the toy SwiGLU maps (2,8,16) -&gt; (2,8,32) -&gt; (2,8,16),
+   the block totals 2592 parameters = 10d^2 + 2d with dff=2d.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>swiglu(x, Wg, Wu, Wd)</code>:
+   four lines. <code>ffn_relu(x, W1, W2)</code>: three lines for comparison.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Shapes roundtrip to
+   (B,T,d). With Wg = Wu, SwiGLU reduces to a gated square (a useful
+   debug case). Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> 3<em>2</em>B<em>T</em>d<em>dff FLOPs, the largest single term in the layer
+   (72.7 percent in the U02 toy). Parameters 3</em>d*dff.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> ReLU/GELU FFN (two
+    maps, dff=4d), SwiGLU (three maps, dff≈2.67d). SwiGLU is the modern
+    default, keep ReLU for the teaching baseline.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> dff copied from a ReLU config
+    (4d) into SwiGLU: parameters jump 50 percent and the FLOP budget
+    breaks. The assumption &ldquo;dff is portable across activations&rdquo; breaks,
+    scale it by 2/3 when switching.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the GLU
+    variants paper (Shazeer, 2020, primary). Extension: compare ReLU
+    versus SwiGLU at matched parameters on the toy, hypothesis: SwiGLU
+    wins slightly.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the formula and the three maps.
+    (b) Oral ladder: define the gate, compute the toy param count by
+    hand, justify the 2/3 rule, implement both, compare, debug the dff
+    copy bug, critique the matched-parameter assumption, design the
+    activation comparison. (c) Transfer: inference is memory-bound.
+    Which FFN fact matters most for the weight traffic?
+    Answers: <code>../keys/u03_answers.md</code> A9.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U03 task 9 implements both FFNs and the
+    parameter comparison. See <code>../labs/u03_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the map-count table. The block figure
+    (u03_fig02) shows the FFN as one stage.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c10-position-encoding-and-rope">C10: Position encoding and RoPE</h3>
+<p>Leaf id <code>cs336-U03-C10</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S03. Scope: how
+   the model knows order. Objectives: derive RoPE, verify norm
+   preservation and relative-position dependence. Depends on C02, P03.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: attention is
+   permutation-invariant, so where does order come from? Toy: RoPE
+   rotates each Q/K pair by an angle proportional to its position.
+   From the run: rotation preserves norms to 4.44e-16.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> RoPE turns absolute positions into relative ones:
+   the dot product of a rotated query and rotated key depends on the
+   angle difference, i.e. on relative distance. No position vectors are
+   added, the rotation carries the information.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Angles:
+   theta(t,i) = t * base^(-2i/dh). Pairs: consecutive dh entries.
+   Assumption: dh even.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> For pair (x0,x1) at position t with
+   frequency w: [x0 cos(tw) - x1 sin(tw), x0 sin(tw) + x1 cos(tw)].
+   Then (R_t q).(R_s k) = q.R_{s-t}k: relative. Norms preserved because
+   rotation is orthogonal.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u03.py</code> (executed
+   2026-10-06): applying RoPE to random (2,8,4,4) changes no vector
+   norm (max dev 4.44e-16), the block&rsquo;s attention runs with RoPE on Q
+   and K.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>rope_angles(T, dh)</code> and
+   <code>apply_rope(x, ang)</code>: the pair rotation, about 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Norm preservation,
+   position 0 is the identity, shifting both sequences by k leaves all
+   dot products unchanged (relative property test in the lab).</p>
+</li>
+<li>
+<p><strong>Costs.</strong> O(B<em>T</em>d) FLOPs, tiny. No parameters. The angles can be
+   precomputed.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Learned absolute
+    embeddings (fail past training length), ALiBi (bias instead of
+    rotation). RoPE is the modern default for its length extrapolation.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Applying RoPE to V as well as
+    Q/K: values get position-dependent rotation that the output
+    projection never asked for, scrambling content by position. The
+    assumption &ldquo;rotate everything&rdquo; breaks, RoPE touches Q and K only.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the RoPE
+    paper (Su et al., 2021, primary). Extension: test the relative
+    property numerically on the toy, hypothesis: holds to 1e-12.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the rotation formula. (b) Oral ladder:
+    define relative encoding, hand-rotate one pair by 90 degrees,
+    justify Q/K-only, implement apply_rope, compare with absolute
+    embeddings, debug RoPE-on-V, critique the even-dh assumption,
+    design the shift-invariance test. (c) Transfer: context extends 4x
+    past training. Which RoPE parameter do you touch first, and why?
+    Answers: <code>../keys/u03_answers.md</code> A10.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U03 task 10 implements RoPE and the
+    three property tests. See <code>../labs/u03_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u03_fig03: lesson plate, one pair rotating
+    across positions. Source: original toy. Shell 4 (new symbol).
+    Render: <code>assets/render_u03.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u03_fig03" src="../assets/u03_fig03.png"><figcaption>lesson plate, one pair rotating across positions. Source: original toy. Shell 4 (new symbol).</figcaption></figure>
+<hr />
+<h3 id="c11-output-head-and-weight-tying">C11: Output head and weight tying</h3>
+<p>Leaf id <code>cs336-U03-C11</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S03. Scope: from
+   final hidden state to vocabulary logits. Objectives: state the head&rsquo;s
+   shapes and cost, explain tying. Depends on C01, U02-C06.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how do vectors become word
+   probabilities? Toy: logits = y @ E.T with y (2,8,16), E (64,16):
+   (2,8,64). Softmax over the last axis gives next-token probabilities.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The head is a linear map to vocabulary size,
+   usually tied to the embedding table (same matrix, transposed).
+   Tying says the way in and the way out share geometry: similar words
+   have similar rows.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Head: (d,V) or
+   tied E.T. Logits: (B,T,V). Cost 2<em>B</em>T<em>d</em>V. Assumption: the final
+   norm (C07) precedes the head.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Untied: V*d new parameters. Tied: zero
+   new parameters, gradients from the loss flow into E from both ends.
+   The cross-entropy loss (U05) consumes the logits.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u03.py</code> (executed
+   2026-10-06): tied head gives logits (2,8,64), cost 2<em>2</em>8<em>16</em>64 =
+   32768 FLOP, small at this V, dominant at large V.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>logits(y, E, tied=True)</code>:
+   y @ E.T with a shape assert. Three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Shape (B,T,V), rows sum
+   to 1 after softmax, tying means E.grad gets contributions from both
+   lookup and head (checked by counting nonzero grad rows in the lab).</p>
+</li>
+<li>
+<p><strong>Costs.</strong> At V=32000, d=512: 2<em>B</em>T<em>d</em>V per step and V*d parameters
+   untied. Tying halves the embedding-adjacent parameters.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Untied head (more
+    parameters, sometimes better at huge V), sampled softmax for
+    training at extreme V. Tie by default.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Tying with a head that needs
+    different geometry (e.g. input embeddings frozen from elsewhere):
+    the shared matrix serves two masters and both degrade. The
+    assumption &ldquo;one geometry fits both&rdquo; breaks under frozen
+    embeddings, untie then.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: weight
+    tying analyses (primary: paper ablations). Extension: compare tied
+    versus untied loss on the toy at matched total parameters,
+    hypothesis: tied wins slightly at small V.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: shapes, cost, what tying shares.
+    (b) Oral ladder: define logits, compute the toy head FLOPs by hand,
+    justify tying, implement, compare, debug a shape mismatch from an
+    untied head, critique the shared-geometry assumption, design the
+    matched-parameter comparison. (c) Transfer: V grows 10x. Which two
+    costs dominate now? Answers: <code>../keys/u03_answers.md</code> A11.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U03 task 11 implements the head and the
+    grad-flow check. See <code>../labs/u03_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the tied/untied comparison table. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c12-initialization-and-gradient-stability">C12: Initialization and gradient stability</h3>
+<p>Leaf id <code>cs336-U03-C12</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S03. Scope:
+   starting the network so it can train. Objectives: derive Xavier
+   scaling, state the residual-init rule. Depends on P05, P11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why not init all weights
+   to 1? Toy: Wq drawn with std sqrt(2/(d+d)) = 0.25 at d=16, measured
+   0.2549. Ones would amplify every signal 16x per layer.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Initialization sets the signal scale at step zero.
+   Xavier keeps variances stable across a linear map: Var(out) =
+   Var(in). Residual branches start small so the network begins near
+   the identity function.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Gain g: multiplier
+   on the std. Assumption: inputs have unit variance, activations are
+   roughly linear at init.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> For y = Wx with W (m,n): Var(y_i) =
+   n<em>Var(W)</em>Var(x). Setting Var(W) = 2/(m+n) (Xavier) balances forward
+   and backward. Output projections (Wo, Wd) often use a smaller gain
+   scaled by 1/sqrt(2L) so L residuals do not inflate the stream.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u03.py</code> (executed
+   2026-10-06): Xavier target std 0.2500 at d=16, sampled Wq std
+   0.2549, within sampling noise of the target.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>xavier(shape, gain)</code>:
+   normal with std gain*sqrt(2/(fan_in+fan_out)). Four lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Sampled std within 10
+   percent of target for large shapes, forward variance preserved
+   through one block at init (lab check).</p>
+</li>
+<li>
+<p><strong>Costs.</strong> One-time. Wrong init costs the whole training run.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Kaiming (for ReLU,
+    gain sqrt(2)), small fixed std (e.g. 0.02, the GPT-2 choice).
+    Xavier/Kaiming for the analysis, 0.02-style for the recipe.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Zero-init of all weights:
+    every head computes the same thing, gradients are identical, and
+    symmetry never breaks. The assumption &ldquo;any small init works&rdquo; breaks
+    at exactly zero, randomness is load-bearing.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: Glorot and
+    Bengio (2010, primary). Extension: sweep the output-projection gain
+    on a 4-layer toy and measure early gradient norms, hypothesis: the
+    1/sqrt(2L) scaling keeps norms flat.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the Xavier formula and its purpose.
+    (b) Oral ladder: define fan-in, derive Var(y), justify the 2/(m+n),
+    implement xavier, compare with zeros, debug the symmetry symptom,
+    critique the linear-at-init assumption, design the gain sweep.
+    (c) Transfer: depth doubles. Which init changes, and by what
+    factor? Answers: <code>../keys/u03_answers.md</code> A12.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U03 task 12 implements Xavier and the
+    variance checks. See <code>../labs/u03_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the init table (matrix, fan-in, fan-out,
+    std). No figure, tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h2 id="unit-russian-doll-ladder-u03">Unit Russian-doll ladder (U03)</h2>
+<ul>
+<li>Shell 0: how does a block turn (B,T,d) into (B,T,d) with memory of
+  order?</li>
+<li>Shell 1: the toy block at B=2, T=8, d=16 with every shape printed.</li>
+<li>Shell 2: ids, embeddings, Q/K/V, scores, weights, norms, FFN maps.</li>
+<li>Shell 3: one mask, one RoPE rotation, one residual addition.</li>
+<li>Shell 4: the full numpy block, the stable softmax.</li>
+<li>Shell 5: row sums to 1, future weights zero, RoPE norm preserved,
+  merge/split roundtrip.</li>
+<li>Shell 6: change dh, predict the saturation, observe gradient norms.</li>
+<li>Shell 7: remove the scale, remove residuals, tie Wq=Wk, watch each
+  break.</li>
+<li>Shell 8: pre-norm versus post-norm, RMSNorm versus LayerNorm, ReLU
+  versus SwiGLU at matched parameters.</li>
+<li>Shell 9: head-diversity versus h, RoPE shift-invariance test.</li>
+<li>Shell 10: the block is the unit that data, tensor, and pipeline
+  parallelism split (U08/U09).</li>
+</ul>
+      
+      <nav class="pager"><a href="../keys/u02_answers.html"><span class="lbl">← Previous</span>U02 · Answers</a><a href="../keys/u03_answers.html"><span class="lbl">Next →</span>U03 · Answers</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
