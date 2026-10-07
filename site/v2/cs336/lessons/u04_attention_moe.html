@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U04 · Attention alternatives and expert architectures — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Attention alternatives and expert architectures.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-u04" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../course_map.html" data-page="cs336-course-map">Course map</a></li>
+<li><a href="../prerequisites.html" data-page="cs336-prereqs">Prerequisites</a></li>
+<li><a href="../notation_and_shapes.html" data-page="cs336-notation">Notation</a></li>
+<li><a href="../glossary.html" data-page="cs336-glossary">Glossary</a></li>
+<li><a href="../cheatsheet.html" data-page="cs336-cheatsheet">Cheatsheet</a></li>
+<li><a href="../crash-course.html" data-page="cs336-crash">Crash course</a></li>
+<li><a href="../lessons/u01_tokenization.html" data-page="cs336-u01">U01 · Text representation and tokeni</a></li>
+<li><a href="../keys/u01_answers.html" data-page="cs336-u01-answers">U01 · Answers</a></li>
+<li><a href="../lessons/u02_tensor_programming.html" data-page="cs336-u02">U02 · Executable tensor programming </a></li>
+<li><a href="../keys/u02_answers.html" data-page="cs336-u02-answers">U02 · Answers</a></li>
+<li><a href="../lessons/u03_transformer_block.html" data-page="cs336-u03">U03 · Transformer block mechanics</a></li>
+<li><a href="../keys/u03_answers.html" data-page="cs336-u03-answers">U03 · Answers</a></li>
+<li><a href="../lessons/u04_attention_moe.html" data-page="cs336-u04" class="active">U04 · Attention alternatives and exp</a></li>
+<li><a href="../keys/u04_answers.html" data-page="cs336-u04-answers">U04 · Answers</a></li>
+<li><a href="../lessons/u05_optimization.html" data-page="cs336-u05">U05 · Optimization and training corr</a></li>
+<li><a href="../keys/u05_answers.html" data-page="cs336-u05-answers">U05 · Answers</a></li>
+<li><a href="../lessons/u06_gpu_tpu.html" data-page="cs336-u06">U06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../keys/u06_answers.html" data-page="cs336-u06-answers">U06 · Answers</a></li>
+<li><a href="../lessons/u07_kernels.html" data-page="cs336-u07">U07 · Kernels and IO-aware attention</a></li>
+<li><a href="../keys/u07_answers.html" data-page="cs336-u07-answers">U07 · Answers</a></li>
+<li><a href="../lessons/u08_data_sharding.html" data-page="cs336-u08">U08 · Data and optimizer sharding</a></li>
+<li><a href="../keys/u08_answers.html" data-page="cs336-u08-answers">U08 · Answers</a></li>
+<li><a href="../lessons/u09_model_parallel.html" data-page="cs336-u09">U09 · Model and hybrid parallelism</a></li>
+<li><a href="../keys/u09_answers.html" data-page="cs336-u09-answers">U09 · Answers</a></li>
+<li><a href="../lessons/u10_scaling_laws.html" data-page="cs336-u10">U10 · Scaling laws and extrapolation</a></li>
+<li><a href="../keys/u10_answers.html" data-page="cs336-u10-answers">U10 · Answers</a></li>
+<li><a href="../labs/u01_lab.html" data-page="cs336-lab-u01">Lab 01 · Text representation and tokeni</a></li>
+<li><a href="../lessons/u11_inference.html" data-page="cs336-u11">U11 · Inference algorithms and servi</a></li>
+<li><a href="../labs/u01_lab_key.html" data-page="cs336-lab-u01-keys">Lab 01 · Keys</a></li>
+<li><a href="../keys/u11_answers.html" data-page="cs336-u11-answers">U11 · Answers</a></li>
+<li><a href="../labs/u02_lab.html" data-page="cs336-lab-u02">Lab 02 · Executable tensor programming </a></li>
+<li><a href="../lessons/u12_evaluation.html" data-page="cs336-u12">U12 · Evaluation and measurement val</a></li>
+<li><a href="../labs/u02_lab_key.html" data-page="cs336-lab-u02-keys">Lab 02 · Keys</a></li>
+<li><a href="../keys/u12_answers.html" data-page="cs336-u12-answers">U12 · Answers</a></li>
+<li><a href="../labs/u03_lab.html" data-page="cs336-lab-u03">Lab 03 · Transformer block mechanics</a></li>
+<li><a href="../lessons/u13_data_sourcing.html" data-page="cs336-u13">U13 · Data sourcing and transformati</a></li>
+<li><a href="../labs/u03_lab_key.html" data-page="cs336-lab-u03-keys">Lab 03 · Keys</a></li>
+<li><a href="../keys/u13_answers.html" data-page="cs336-u13-answers">U13 · Answers</a></li>
+<li><a href="../labs/u04_lab.html" data-page="cs336-lab-u04">Lab 04 · Attention alternatives and exp</a></li>
+<li><a href="../lessons/u14_data_mixing.html" data-page="cs336-u14">U14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../labs/u04_lab_key.html" data-page="cs336-lab-u04-keys">Lab 04 · Keys</a></li>
+<li><a href="../keys/u14_answers.html" data-page="cs336-u14-answers">U14 · Answers</a></li>
+<li><a href="../labs/u05_lab.html" data-page="cs336-lab-u05">Lab 05 · Optimization and training corr</a></li>
+<li><a href="../lessons/u15_midtraining.html" data-page="cs336-u15">U15 · Midtraining and supervised ada</a></li>
+<li><a href="../labs/u05_lab_key.html" data-page="cs336-lab-u05-keys">Lab 05 · Keys</a></li>
+<li><a href="../keys/u15_answers.html" data-page="cs336-u15-answers">U15 · Answers</a></li>
+<li><a href="../labs/u06_lab.html" data-page="cs336-lab-u06">Lab 06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../lessons/u16_alignment_rl.html" data-page="cs336-u16">U16 · Preference alignment and reaso</a></li>
+<li><a href="../labs/u06_lab_key.html" data-page="cs336-lab-u06-keys">Lab 06 · Keys</a></li>
+<li><a href="../keys/u16_answers.html" data-page="cs336-u16-answers">U16 · Answers</a></li>
+<li><a href="../labs/u07_lab.html" data-page="cs336-lab-u07">Lab 07 · Kernels and IO-aware attention</a></li>
+<li><a href="../lessons/u17_multimodal_systems.html" data-page="cs336-u17">U17 · Multimodality and training-sys</a></li>
+<li><a href="../labs/u07_lab_key.html" data-page="cs336-lab-u07-keys">Lab 07 · Keys</a></li>
+<li><a href="../keys/u17_answers.html" data-page="cs336-u17-answers">U17 · Answers</a></li>
+<li><a href="../labs/u08_lab.html" data-page="cs336-lab-u08">Lab 08 · Data and optimizer sharding</a></li>
+<li><a href="../lessons/u18_guests_defense.html" data-page="cs336-u18">U18 · Guest material and final resea</a></li>
+<li><a href="../labs/u08_lab_key.html" data-page="cs336-lab-u08-keys">Lab 08 · Keys</a></li>
+<li><a href="../keys/u18_answers.html" data-page="cs336-u18-answers">U18 · Answers</a></li>
+<li><a href="../labs/u09_lab.html" data-page="cs336-lab-u09">Lab 09 · Model and hybrid parallelism</a></li>
+<li><a href="../labs/u09_lab_key.html" data-page="cs336-lab-u09-keys">Lab 09 · Keys</a></li>
+<li><a href="../labs/u10_lab.html" data-page="cs336-lab-u10">Lab 10 · Scaling laws and extrapolation</a></li>
+<li><a href="../labs/u10_lab_key.html" data-page="cs336-lab-u10-keys">Lab 10 · Keys</a></li>
+<li><a href="../interview/u01_questions.html" data-page="cs336-int-u01">Interview · U01</a></li>
+<li><a href="../labs/u11_lab.html" data-page="cs336-lab-u11">Lab 11 · Inference algorithms and servi</a></li>
+<li><a href="../interview/u01_key.html" data-page="cs336-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../labs/u11_lab_key.html" data-page="cs336-lab-u11-keys">Lab 11 · Keys</a></li>
+<li><a href="../interview/u02_questions.html" data-page="cs336-int-u02">Interview · U02</a></li>
+<li><a href="../labs/u12_lab.html" data-page="cs336-lab-u12">Lab 12 · Evaluation and measurement val</a></li>
+<li><a href="../interview/u02_key.html" data-page="cs336-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../labs/u12_lab_key.html" data-page="cs336-lab-u12-keys">Lab 12 · Keys</a></li>
+<li><a href="../interview/u03_questions.html" data-page="cs336-int-u03">Interview · U03</a></li>
+<li><a href="../labs/u13_lab.html" data-page="cs336-lab-u13">Lab 13 · Data sourcing and transformati</a></li>
+<li><a href="../interview/u03_key.html" data-page="cs336-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../labs/u13_lab_key.html" data-page="cs336-lab-u13-keys">Lab 13 · Keys</a></li>
+<li><a href="../interview/u04_questions.html" data-page="cs336-int-u04">Interview · U04</a></li>
+<li><a href="../labs/u14_lab.html" data-page="cs336-lab-u14">Lab 14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../interview/u04_key.html" data-page="cs336-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../labs/u14_lab_key.html" data-page="cs336-lab-u14-keys">Lab 14 · Keys</a></li>
+<li><a href="../interview/u05_questions.html" data-page="cs336-int-u05">Interview · U05</a></li>
+<li><a href="../labs/u15_lab.html" data-page="cs336-lab-u15">Lab 15 · Midtraining and supervised ada</a></li>
+<li><a href="../interview/u05_key.html" data-page="cs336-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../labs/u15_lab_key.html" data-page="cs336-lab-u15-keys">Lab 15 · Keys</a></li>
+<li><a href="../interview/u06_questions.html" data-page="cs336-int-u06">Interview · U06</a></li>
+<li><a href="../labs/u16_lab.html" data-page="cs336-lab-u16">Lab 16 · Preference alignment and reaso</a></li>
+<li><a href="../interview/u06_key.html" data-page="cs336-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../labs/u16_lab_key.html" data-page="cs336-lab-u16-keys">Lab 16 · Keys</a></li>
+<li><a href="../interview/u07_questions.html" data-page="cs336-int-u07">Interview · U07</a></li>
+<li><a href="../labs/u17_lab.html" data-page="cs336-lab-u17">Lab 17 · Multimodality and training-sys</a></li>
+<li><a href="../interview/u07_key.html" data-page="cs336-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../labs/u17_lab_key.html" data-page="cs336-lab-u17-keys">Lab 17 · Keys</a></li>
+<li><a href="../interview/u08_questions.html" data-page="cs336-int-u08">Interview · U08</a></li>
+<li><a href="../labs/u18_lab.html" data-page="cs336-lab-u18">Lab 18 · Guest material and final resea</a></li>
+<li><a href="../interview/u08_key.html" data-page="cs336-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../labs/u18_lab_key.html" data-page="cs336-lab-u18-keys">Lab 18 · Keys</a></li>
+<li><a href="../interview/u09_questions.html" data-page="cs336-int-u09">Interview · U09</a></li>
+<li><a href="../interview/u09_key.html" data-page="cs336-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../interview/u10_questions.html" data-page="cs336-int-u10">Interview · U10</a></li>
+<li><a href="../interview/u10_key.html" data-page="cs336-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../interview/u11_questions.html" data-page="cs336-int-u11">Interview · U11</a></li>
+<li><a href="../interview/u11_key.html" data-page="cs336-int-u11-keys">Interview · U11 keys</a></li>
+<li><a href="../interview/u12_questions.html" data-page="cs336-int-u12">Interview · U12</a></li>
+<li><a href="../interview/u12_key.html" data-page="cs336-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../interview/u13_questions.html" data-page="cs336-int-u13">Interview · U13</a></li>
+<li><a href="../interview/u13_key.html" data-page="cs336-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../interview/u14_questions.html" data-page="cs336-int-u14">Interview · U14</a></li>
+<li><a href="../interview/u14_key.html" data-page="cs336-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../interview/u15_questions.html" data-page="cs336-int-u15">Interview · U15</a></li>
+<li><a href="../interview/u15_key.html" data-page="cs336-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../interview/u16_questions.html" data-page="cs336-int-u16">Interview · U16</a></li>
+<li><a href="../interview/u16_key.html" data-page="cs336-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../interview/u17_questions.html" data-page="cs336-int-u17">Interview · U17</a></li>
+<li><a href="../interview/u17_key.html" data-page="cs336-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../interview/u18_questions.html" data-page="cs336-int-u18">Interview · U18</a></li>
+<li><a href="../interview/u18_key.html" data-page="cs336-int-u18-keys">Interview · U18 keys</a></li>
+<li><a href="../interview/oral-defenses.html" data-page="cs336-int-oral">Interview · Oral</a></li>
+<li><a href="../interview/keys-oral.html" data-page="cs336-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../interview/transfer-sets.html" data-page="cs336-int-transfer">Interview · Transfer</a></li>
+<li><a href="../interview/keys-transfer.html" data-page="cs336-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../capstones/capstone_applied.html" data-page="cs336-cap-applied">Capstone · Applied</a></li>
+<li><a href="../capstones/capstone_research.html" data-page="cs336-cap-research">Capstone · Research</a></li>
+<li><a href="../keys/diagnostic_key.html" data-page="cs336-diagnostic-keys">Diagnostic · Keys</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U04 · Attention alternatives and expert architectures</nav>
+      <h1>U04 · Attention alternatives and expert architectures</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u04-attention-alternatives-and-expert-architectures">U04 , Attention alternatives and expert architectures</h1>
+<p>Prerequisites: P04, P14, P15. Bridge links in <code>../prerequisites.md</code>.
+Session: S04 (reported: Apr 8, Attention Alternatives, MoE).
+Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
+PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
+<h2 id="local-remediation-why-attention-is-expensive">Local remediation , why attention is expensive</h2>
+<p>Read this if the U02/U03 assessments were not solid. Standard attention
+costs O(T^2 * d) FLOPs and O(T^2) memory for scores, plus a KV cache of
+2 * kv_heads * dh bytes per token per layer. Two pain points follow:
+compute at long T, and cache bytes at long T. Every mechanism in this
+unit attacks one or both. The baseline numbers: at B=2, T=1024, d=512,
+h=8, L=12, bf16, the MHA KV cache is 50.3 MB and one layer&rsquo;s full
+attention is 2.15 GFLOP (from <code>assets/compute_u04.py</code>, executed
+2026-10-06).</p>
+<p>Worked check: halving kv_heads halves the cache, the score FLOPs do
+not move (queries still number h). Assessment: predict the MQA cache
+from the MHA number before reading C02. Key: <code>../keys/u04_answers.md</code>
+R1.</p>
+<hr />
+<h3 id="c01-local-and-sparse-attention">C01: Local and sparse attention</h3>
+<p>Leaf id <code>cs336-U04-C01</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S04. Scope:
+   restricting which keys each query sees. Objectives: derive the
+   windowed FLOP count, state what local attention cannot do. Depends on
+   U03-C03, U03-C04.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: must every query read all
+   1024 keys? Toy: window w=128 gives 0.27 GFLOP per layer versus 2.15
+   full: an 8.0x cut (from <code>compute_u04.py</code>).</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Local attention is a sliding window: query at t
+   sees keys in [t-w, t]. Most linguistic dependencies are local, so
+   the window keeps most of the signal at a fraction of the cost.
+   Dilated or strided patterns extend the reach without dense cost.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> w: window size.
+   Cost 2<em>B</em>h<em>T</em>w<em>dh versus 2</em>B<em>h</em>T<em>T</em>dh. Assumption: the task&rsquo;s
+   needed context fits mostly inside w.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Each query scores w keys instead of T.
+   The mask is banded plus causal. Dilated: keys at t, t-d, t-2d, &hellip;
+   Strided: a few global tokens see everything.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u04.py</code> (executed
+   2026-10-06): w=128 at T=1024 cuts attention FLOPs 8.0x (2.15 to
+   0.27 GFLOP). The ratio equals T/w exactly.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>local_mask(T, w)</code>:
+   banded causal mask. Six lines, the lab checks the band shape.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Row t has exactly
+   min(t+1, w) allowed keys, rows sum to 1 after softmax, w=T recovers
+   full attention. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> FLOPs and score memory both scale with T*w. The KV cache
+   is unchanged (keys are still stored for the window).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Full attention for
+    short T or when long-range matters, linear attention (C04) when the
+    T^2 must go entirely. Local wins when w covers the effective
+    context.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A passkey-retrieval task with
+    the key 5000 tokens back and w=128: the model can never see the
+    answer. The assumption &ldquo;dependencies are local&rdquo; breaks on
+    retrieval-style tasks, the failure is silent (fluent wrong
+    answers).</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: Longformer
+    and BigBird papers (primary: pattern designs). Extension: measure
+    task accuracy versus w on a synthetic retrieval task, hypothesis:
+    a sharp threshold at the retrieval distance.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the windowed cost formula. (b) Oral
+    ladder: define the window, compute the 8x by hand, justify the
+    banded mask, implement local_mask, compare with full, debug a
+    window that leaks the future, critique the locality assumption,
+    design the retrieval experiment. (c) Transfer: w=128, T=100k.
+    What still breaks, and what is the next lever?
+    Answers: <code>../keys/u04_answers.md</code> A1.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U04 task 1 builds the mask and the FLOP
+    comparison. See <code>../labs/u04_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the banded mask sketch. No figure, the mask
+    pattern is tabular.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c02-mha-mqa-gqa">C02: MHA, MQA, GQA</h3>
+<p>Leaf id <code>cs336-U04-C02</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S04. Scope:
+   sharing KV heads across query heads. Objectives: derive the cache
+   formula, compare the three on cache bytes and quality. Depends on
+   U03-C05.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: do 8 heads need 8 separate
+   KV copies? Toy from <code>compute_u04.py</code> (B=2, T=1024, d=512, L=12,
+   bf16): MHA (8 KV heads) 50.3 MB, GQA-2 12.6 MB, MQA (1 KV head) 6.3
+   MB. Queries stay 8 in all three.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> KV heads are shared read-only memory, query heads
+   are the readers. MHA: every reader has a private copy. MQA: one copy
+   for all readers. GQA: groups of readers share. Quality degrades
+   gracefully as sharing rises, cache shrinks proportionally.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> kv_heads g:
+   MHA g=h, MQA g=1, GQA g in between. Cache per token per layer:
+   2<em>g</em>dh bytes. Assumption: dh fixed, only g moves.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> K,V projections output (B,T,g*dh)
+   instead of (B,T,d), each query head reads KV head h mod g (or a
+   group mapping). Scores stay (B,h,T,T): the FLOP count barely moves,
+   the bytes collapse.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u04.py</code> (executed
+   2026-10-06): 50.3, 12.6, 6.3 MB for g = 8, 2, 1: exactly
+   proportional to g.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>gqa_scores(Q, K, V,
+   groups)</code>: repeat KV heads to h via repeat_interleave, then standard
+   attention. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> GQA with g=h equals MHA
+   exactly, MQA output shapes match MHA, cache formula verified against
+   the byte counts. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Cache divides by h/g. Quality: MQA can lose a little on
+   some tasks, GQA-8 is the common sweet spot.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> MLA (C03) for more
+    compression with learned latents. GQA is the default for new
+    models, MQA when decode memory dominates everything.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Converting an MHA checkpoint
+    to MQA by averaging KV heads: the averaged heads are not what
+    training would learn, and quality drops more than a trained MQA.
+    The assumption &ldquo;heads are interchangeable&rdquo; breaks, uptraining is
+    the honest path.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the GQA
+    paper (Ainslie et al., 2023, primary) and the MQA paper (Shazeer,
+    2019, primary). Extension: compare MHA/GQA/MQA loss at fixed
+    training FLOPs on the toy, hypothesis: gaps shrink with scale.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the cache formula and the three g
+    values. (b) Oral ladder: define a KV head, compute the MQA cache by
+    hand, justify why FLOPs barely move, implement the repeat,
+    compare the three, debug the averaged-heads conversion, critique
+    the fixed-dh assumption, design the fixed-FLOP comparison.
+    (c) Transfer: decode batch grows 16x. Which variant&rsquo;s advantage
+    grows, and why? Answers: <code>../keys/u04_answers.md</code> A2.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U04 task 2 implements GQA attention and
+    the cache table. See <code>../labs/u04_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u04_fig01: lesson plate, KV head sharing across
+    MHA/MQA/GQA. Source: original toy. Shell 3. Render:
+    <code>assets/render_u04.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u04_fig01" src="../assets/u04_fig01.png"><figcaption>lesson plate, KV head sharing across MHA/MQA/GQA. Source: original toy. Shell 3. Render: assets/render_u04.py.</figcaption></figure>
+<hr />
+<h3 id="c03-mla-mechanism-and-cache-tradeoff">C03: MLA mechanism and cache tradeoff</h3>
+<p>Leaf id <code>cs336-U04-C03</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S04. Scope:
+   multi-head latent attention. Objectives: derive the latent cache,
+   state the compute tradeoff. Depends on C02, P04.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: can the cache shrink
+   below one KV head? Toy: MLA with latent dim 128 gives 12.6 MB on
+   the same config (from <code>compute_u04.py</code>): like GQA-2, but the latent
+   is learned, not a head subset.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> MLA compresses K and V into a low-rank latent
+   vector per token (down-projection), then up-projects per head at
+   use time. The cache stores the latent, not the heads. Rank is the
+   knob: smaller latent, smaller cache, more compression loss.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Latent dim dc
+   (here 128 &lt; d=512). Cache per token per layer: 2*dc bytes (plus a
+   small decoupled RoPE key in full designs). Assumption: the
+   down/up projections are learned jointly.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> c = x W_down (d -&gt; dc), cached.
+   Per head: k_h = c W_up_k, v_h = c W_up_v. The up-projections run
+   per query during decode: extra FLOPs traded for fewer bytes. The
+   absorption trick can fold the up-projection into the query side.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u04.py</code> (executed
+   2026-10-06): dc=128 gives 12.6 MB, matching GQA-2&rsquo;s bytes with a
+   learned compression instead of head sharing.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>mla_cache(x)</code> and
+   <code>mla_heads(c)</code>: down then per-head up, with shape asserts. About 10
+   lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> With dc=d and identity
+   projections, MLA equals MHA (reconstruction check). Cache bytes
+   match the formula. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Cache shrinks by d/dc, decode adds the up-projection
+   FLOPs per token. Net win when memory-bound (decode usually is).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> GQA when
+    simplicity matters, MLA when the cache must go lower than MQA
+    allows. MLA&rsquo;s complexity pays off at long context.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> dc set too small: the latent
+    cannot carry the key distinctions heads need, and attention
+    blurs. The assumption &ldquo;low rank suffices&rdquo; breaks past the
+    task&rsquo;s rank, the symptom is flat attention weights.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    DeepSeek-V2/V3 reports (primary: architecture sections). Extension:
+    sweep dc on the toy and measure reconstruction error versus cache
+    bytes, hypothesis: a knee in the curve.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the latent cache formula. (b) Oral
+    ladder: define the latent, compute the 12.6 MB by hand, justify
+    the extra FLOPs, implement down/up, compare with GQA, debug the
+    tiny-dc blur, critique the learned-jointly assumption, design the
+    dc sweep. (c) Transfer: prefill is compute-bound, decode is
+    memory-bound. Where does MLA help, and where does it hurt?
+    Answers: <code>../keys/u04_answers.md</code> A3.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U04 task 3 implements MLA and the
+    reconstruction check. See <code>../labs/u04_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the cache-bytes table (MHA/GQA/MQA/MLA).
+    The chapter figure (u04_fig03) plots it.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c04-linear-attention">C04: Linear attention</h3>
+<p>Leaf id <code>cs336-U04-C04</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S04. Scope:
+   attention in O(T) via kernel feature maps. Objectives: derive the
+   recurrent form, prove equivalence with the quadratic form.
+   Depends on U03-C03, P06.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: can attention be a
+   recurrence? Toy from <code>compute_u04.py</code>: with phi(x) = relu(x)+eps,
+   the recurrent form matches the quadratic form to 2.22e-16.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Replace softmax with a feature map: softmax(QK^T)V
+   becomes phi(Q)(phi(K)^T V) / normalizer. The bracketed term is a
+   fixed-size state updated per token: attention becomes an RNN with a
+   matrix-valued hidden state.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> State S: (dh,dh),
+   normalizer z: (dh,). Cost O(T*dh^2). Assumption: the feature map
+   keeps the kernel positive and the approximation faithful.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> out_t = phi(q_t)^T S_t / phi(q_t)^T z_t
+   with S_t = S_{t-1} + phi(k_t) v_t^T. This equals the causal
+   no-softmax attention by associativity of matrix multiplication.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u04.py</code> (executed
+   2026-10-06): max deviation 2.22e-16 between forms on random
+   (6,4) inputs: exact, not approximate, for the same kernel.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>linear_attn(q, k, v,
+   phi)</code>: the recurrence, about 12 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Equivalence with the
+   quadratic form, state size independent of T, causal by
+   construction. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> O(T*dh^2) time, O(dh^2) memory: linear in T. The catch is
+   expressivity: the kernel is weaker than softmax.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Softmax attention
+    for quality, linear when T makes T^2 impossible and the task
+    tolerates the kernel. Gated variants (C06) close some of the gap.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> phi = identity with negative
+    inputs: the &ldquo;probabilities&rdquo; go negative and the normalizer can hit
+    zero. The assumption &ldquo;phi keeps things positive&rdquo; is load-bearing,
+    elu+1 or relu+eps are the standard guards.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the linear
+    transformer paper (Katharopoulos et al., 2020, primary).
+    Extension: compare task quality of linear versus softmax on the
+    toy at several T, hypothesis: the gap is task-dependent.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the recurrent update. (b) Oral ladder:
+    define the state, hand-run two steps, justify associativity,
+    implement the recurrence, compare with softmax, debug the
+    negative-phi blowup, critique the kernel assumption, design the
+    quality comparison. (c) Transfer: T=1M, dh=128. What are the
+    state bytes, and what breaks in the quadratic form?
+    Answers: <code>../keys/u04_answers.md</code> A4.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U04 task 4 implements the recurrence
+    and the equivalence check. See <code>../labs/u04_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the state-update diagram. No figure, the
+    recurrence is tabular.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c05-recurrent-and-state-space-alternatives">C05: Recurrent and state-space alternatives</h3>
+<p>Leaf id <code>cs336-U04-C05</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S04. Scope:
+   sequence models without pairwise attention. Objectives: state the
+   SSM recurrence, compare its scaling with attention. Depends on C04,
+   P04.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: what if the state were a
+   vector, not a matrix? Toy: a linear SSM keeps h_t = A h_{t-1} + B
+   x_t with h in R^N: O(T*N) time, O(N) memory, no T^2 anywhere.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> State-space models compress history into a fixed
+   vector through a learned linear dynamical system. Selectivity (Mamba)
+   makes A, B input-dependent so the state can forget. Attention
+   remembers everything, SSMs remember a summary.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> State dim N,
+   matrices A (N,N, often diagonal), B (N,1), C (1,N). Assumption: the
+   dynamics are stable (eigenvalues inside the unit disk).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Unrolling gives a convolution with the
+   kernel K = (CB, CAB, CA^2B, &hellip;): training parallelizes via FFT or
+   scan, inference is a recurrence. Selectivity breaks the convolution
+   view but keeps the scan.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Hand-verified recurrence on a scalar SSM
+   (A=0.9, B=1, C=1, x=[1,0,1]): h = [1, 0.9, 1.81], y = h. The lab
+   checks the unrolled-versus-recurrent match.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>ssm_scan(x, A, B, C)</code>:
+   the recurrence, about 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Recurrence equals
+   unrolled convolution for the linear case, stable A keeps bounded
+   states on long runs. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> O(T*N) time, O(N) state: the cheapest long-context
+   option. The price is recall precision on long-range lookups.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Linear attention
+    (matrix state, more expressive), full attention (exact recall).
+    SSMs win on very long sequences with compressible history.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Fixed (non-selective) SSM on a
+    passkey task: the state averages the key away and recall fails.
+    The assumption &ldquo;a summary suffices&rdquo; breaks on exact-recall tasks,
+    selectivity or attention is the fix.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the Mamba
+    papers (Gu and Dao, 2023/2024, primary). Extension: compare SSM
+    versus attention on synthetic recall at increasing distances,
+    hypothesis: a distance threshold where attention wins.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the recurrence and its cost. (b) Oral
+    ladder: define the state, hand-unroll three steps, justify the
+    convolution view, implement the scan, compare with linear
+    attention, debug the unstable A, critique the summary assumption,
+    design the recall experiment. (c) Transfer: the task is mostly
+    local with rare long jumps. What hybrid do you propose?
+    Answers: <code>../keys/u04_answers.md</code> A5.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U04 task 5 implements the SSM scan and
+    the equivalence check. See <code>../labs/u04_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the scaling comparison table
+    (attention/linear/SSM). No figure, tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c06-gated-delta-mechanisms">C06: Gated delta mechanisms</h3>
+<p>Leaf id <code>cs336-U04-C06</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S04. Scope:
+   strengthening linear recurrences with gating and delta updates.
+   Objectives: write the gated update, explain what problem it solves.
+   Depends on C04, C05.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: linear attention forgets
+   nothing and overwrites blindly, how do we get selective memory?
+   Toy: S_t = alpha_t * S_{t-1} + beta_t * phi(k_t) v_t^T with learned
+   gates: the state can now decay old content and admit new content.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Gates are learned valves on the state: alpha
+   controls forgetting, beta controls writing. The delta rule goes
+   further: remove the old value of the key before writing the new
+   one, like editing a memory slot.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> alpha_t, beta_t:
+   scalars in (0,1) per step. Assumption: gates are functions of the
+   input (selective), not constants.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Gated: S_t = diag(alpha_t) S_{t-1} +
+   beta_t outer(phi(k_t), v_t). Delta: S_t = S_{t-1} (I - beta_t
+   phi(k_t) phi(k_t)^T) + beta_t outer(phi(k_t), v_t): the projection
+   removes what the key already stored.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab check: with alpha=1, beta=1 the gated form
+   reduces to plain linear attention (matches C04 to 1e-12), with
+   alpha=0 the state holds only the current token.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>gated_linear_attn</code>:
+   the recurrence with gate inputs, about 14 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Reduction to C04 at
+   alpha=beta=1, causality (state at t independent of future),
+   bounded state on long runs. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Same O(T*dh^2) as linear attention plus the gate
+   projections. The win is quality, not speed.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Plain linear
+    attention (simpler, weaker memory), SSMs (vector state). Gated
+    variants are the current quality frontier for subquadratic
+    attention.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Constant gates (not
+    input-dependent): the model cannot do content-based forgetting
+    and behaves like a leaky average. The assumption &ldquo;gates are
+    selective&rdquo; is the whole point, constants waste the mechanism.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: Gated
+    DeltaNet and related papers (primary: paper derivations).
+    Extension: ablate the delta term on the toy, hypothesis: the delta
+    helps most on tasks with repeated keys.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the gated and delta updates. (b) Oral
+    ladder: define the valves, hand-run one gated step, justify the
+    delta projection, implement, compare with plain linear, debug
+    constant gates, critique the selectivity assumption, design the
+    ablation. (c) Transfer: the workload has bursty repeated keys.
+    Which mechanism do you pick, and why?
+    Answers: <code>../keys/u04_answers.md</code> A6.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U04 task 6 implements the gated
+    recurrence and the reduction check. See <code>../labs/u04_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the update-equation table. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c07-dense-versus-moe-ffns">C07: Dense versus MoE FFNs</h3>
+<p>Leaf id <code>cs336-U04-C07</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S04. Scope:
+   replacing one FFN with many experts. Objectives: state the MoE
+   parameter math, explain why FLOPs per token barely move. Depends on
+   U03-C09.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how do models reach
+   100B+ parameters without 100B of compute per token? Toy from
+   <code>compute_u04.py</code>: 8 experts of 3.15M params = 25.17M total, but
+   only k=2 are active per token: 6.29M active, a 4.0x ratio.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> MoE is conditional compute: the model owns many
+   FFNs (experts) but consults only k per token. Parameters scale with
+   E, compute scales with k. The router decides who sees what.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> E experts, top-k
+   routing. Expert: one SwiGLU FFN (3<em>d</em>dff params). Assumption: k &lt;&lt; E.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Total params = E * expert_params.
+   Active per token = k * expert_params. Ratio E/k. The router adds
+   d*E params, negligible. Communication appears in distributed
+   settings (U09-C06).</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u04.py</code> (executed
+   2026-10-06): dense 3.15M, MoE total 25.17M, active 6.29M, ratio
+   4.0 = E/k = 8/2.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>moe_layer(x, experts,
+   router, k)</code>: route, dispatch, combine. About 15 lines, the lab uses
+   a slow but clear loop version.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> With E=1, k=1 the MoE
+   equals the dense FFN. Active param count matches k*expert_params.
+   Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Parameters xE/k versus dense, per-token FLOPs ~k times
+   dense-FFN, memory for all experts, all-to-all in expert
+   parallelism.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Dense scaling
+    (simpler, more FLOPs per quality point), wider dense FFN. MoE wins
+    when parameters are cheap and FLOPs are dear.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> E=64, k=1 with no load
+    balancing: 3 experts get all tokens, 61 starve, and the model is
+    effectively a 3-expert model with 64 experts&rsquo; memory. The
+    assumption &ldquo;capacity is used&rdquo; breaks without balancing (C11).</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    Switch Transformer paper (Fedus et al., 2022, primary) and the
+    Mixtral report. Extension: measure expert utilization versus E on
+    the toy, hypothesis: utilization falls without the aux loss.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: total versus active parameters.
+    (b) Oral ladder: define an expert, compute the 4.0x by hand,
+    justify conditional compute, implement the layer, compare with
+    dense, debug the starved experts, critique the k&lt;&lt;E assumption,
+    design the utilization experiment. (c) Transfer: inference is
+    memory-bound and all experts must sit in HBM. What changes in the
+    E/k choice? Answers: <code>../keys/u04_answers.md</code> A7.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U04 task 7 implements the MoE layer
+    and the parameter counts. See <code>../labs/u04_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the dense/MoE parameter table. The routing
+    figure (u04_fig02) shows dispatch.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c08-router-scores">C08: Router scores</h3>
+<p>Leaf id <code>cs336-U04-C08</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S04. Scope: how
+   the router scores experts. Objectives: derive softmax and sigmoid
+   routers, state the normalization choice. Depends on C07, P06.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: who decides which experts
+   fire? Toy: scores = softmax(xW), W (d,E). Token t picks the top-k
+   scores, the output is the score-weighted sum of expert outputs.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The router is a tiny classifier over experts. Its
+   scores are both the selection signal and the mixing weights.
+   Softmax forces competition (weights sum to 1), sigmoid lets experts
+   fire independently.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> W_r: (d,E).
+   Scores: (T,E). Assumption: the router trains jointly with the
+   experts via the task loss plus balancing terms.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Softmax router: p = softmax(xW_r),
+   output = sum_{e in topk} p_e * expert_e(x). Sigmoid router:
+   p = sigmoid(xW_r) with separate normalization. Top-k selection is
+   non-differentiable, gradients flow through the selected experts&rsquo;
+   weights.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u04.py</code> (executed
+   2026-10-06): on 16 random tokens with E=8, top-2 selection gives
+   loads [5,5,3,2,3,5,4,2]: visibly imbalanced without any balancing
+   loss.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>route(x, W, k)</code>:
+   scores, top-k indices and weights. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Weights of selected
+   experts are positive, k indices per token, softmax rows sum to 1.
+   Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> d<em>E parameters and B</em>T*E scoring FLOPs: tiny next to
+   experts.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Learned routers
+    versus hash routing (fixed assignment, no learning). Learned wins
+    on quality, hash wins on simplicity and perfect balance.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Router collapse: the router
+    sends everything to one expert early, that expert learns fastest,
+    and the rich get richer. The assumption &ldquo;joint training balances&rdquo;
+    breaks, C11 exists because of this.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: router
+    design studies (primary: paper ablations). Extension: track the
+    entropy of router scores during toy training, hypothesis: entropy
+    falls without intervention.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the routing formula. (b) Oral ladder:
+    define the scores, hand-route 4 tokens to 3 experts, justify
+    softmax versus sigmoid, implement route, compare with hash
+    routing, debug the collapse, critique the joint-training
+    assumption, design the entropy experiment. (c) Transfer: k=1.
+    What changes in the gradient path, and what is the standard fix?
+    Answers: <code>../keys/u04_answers.md</code> A8.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U04 task 8 implements the router and
+    the load histogram. See <code>../labs/u04_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u04_fig02: lesson plate, token to top-k expert
+    dispatch with capacity. Source: original toy. Shell 3. Render:
+    <code>assets/render_u04.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u04_fig02" src="../assets/u04_fig02.png"><figcaption>lesson plate, token to top-k expert dispatch with capacity. Source: original toy. Shell 3. Render: assets/render_u04.py.</figcaption></figure>
+<hr />
+<h3 id="c09-top-k-experts">C09: Top-k experts</h3>
+<p>Leaf id <code>cs336-U04-C09</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S04. Scope: the
+   top-k selection and combination. Objectives: implement top-k
+   dispatch, state the k=1 versus k=2 tradeoff. Depends on C08.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why k=2 and not 1 or 8?
+   Toy: k=2 of 8 gives the 4.0x param/compute ratio with a weighted
+   blend, k=1 halves active compute but makes routing discontinuities
+   sharper.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> k sets the blend: k=1 is hard selection (one
+   expert owns the token), k=2 blends two opinions. Larger k smooths
+   training and costs compute linearly.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> k: experts per
+   token. Output: sum of k expert outputs weighted by router scores.
+   Assumption: k &lt;= E, usually k in {1, 2}.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> y = sum_{e in topk(t)} w_{t,e} *
+   expert_e(x_t). With k=E the MoE is a dense weighted ensemble
+   (defeats the purpose). Gradients reach only the selected experts.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u04.py</code> (executed
+   2026-10-06): k=2 active params 6.29M, k=1 would be 3.15M (same as
+   dense) with 8x total params.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>topk_combine(x,
+   experts, idx, w)</code>: gather, run, weight, sum. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> k=E equals the full
+   weighted sum, k=1 picks the argmax expert, weights renormalize
+   after selection in the standard variant. Expected outputs in the
+   lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Active compute scales with k, router scoring is
+   unaffected. k=2 is the common default.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Soft routing (all
+    experts, weighted): smoother but no compute saving. Top-k is the
+    standard because it saves the compute.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Renormalizing top-k weights
+    versus not: the two conventions give different effective learning
+    rates per expert and different load statistics. The assumption
+    &ldquo;weights are weights&rdquo; breaks across implementations, match the
+    convention to the checkpoint.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: top-k
+    routing analyses (primary: paper ablations). Extension: compare
+    k=1 versus k=2 loss on the toy at matched active compute,
+    hypothesis: k=2 wins slightly.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the combination formula. (b) Oral
+    ladder: define top-k, hand-combine 2 experts, justify k=2,
+    implement, compare with soft routing, debug the renormalization
+    mismatch, critique the k&lt;=E assumption, design the k comparison.
+    (c) Transfer: a token&rsquo;s top-2 scores are 0.51 and 0.49. What
+    risk does hard top-1 carry here? Answers: <code>../keys/u04_answers.md</code>
+    A9.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U04 task 9 implements top-k combine
+    and the k=E check. See <code>../labs/u04_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the k comparison table. The routing figure
+    (u04_fig02) shows k=2.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c10-capacity-and-dropped-tokens">C10: Capacity and dropped tokens</h3>
+<p>Leaf id <code>cs336-U04-C10</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S04. Scope:
+   per-expert token budgets. Objectives: derive the capacity formula,
+   explain dropped tokens. Depends on C08, C09.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: what happens when 10
+   tokens pick the same expert? Toy from <code>compute_u04.py</code>: capacity =
+   1.25 * 16 * 2 / 8 = 5 per expert, 3 tokens were dropped.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Capacity is a per-expert inbox size. Tokens beyond
+   capacity are dropped: they skip the expert (their representation
+   passes through unchanged or via residual). The capacity factor
+   trades memory for drop rate.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Capacity C =
+   factor * T * k / E. Dropped token: routed but unprocessed.
+   Assumption: dropping is preferable to unbounded memory.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Total assignments T<em>k spread over E
+   experts: mean T</em>k/E. The factor (often 1.0-1.25) gives headroom.
+   Overflow tokens are skipped, their router weights are typically
+   redistributed or ignored.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u04.py</code> (executed
+   2026-10-06): 16 tokens, k=2, E=8, factor 1.25 -&gt; capacity 5,
+   loads [5,5,3,2,3,5,4,2], 3 dropped.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>dispatch(tokens, idx,
+   cap)</code>: per-expert queues with overflow counting. About 12 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> No expert exceeds cap,
+   dropped + processed = T*k, cap formula verified. Expected outputs
+   in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Higher factor: more memory, fewer drops. Factor 1.0 is
+   tight, 1.25 is common during training, inference often uses no cap
+   (all tokens processed, variable time).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> No dropping with
+    dynamic batching (complex), expert-choice routing (experts pick
+    tokens, guaranteeing balance). Standard: token-choice with capacity.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Factor 1.0 with imbalanced
+    routing: a large fraction of tokens drop, and the model undertrains
+    on exactly the tokens the router preferred. The assumption
+    &ldquo;drops are rare&rdquo; needs the balancing loss (C11) to hold.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: Switch
+    Transformer capacity analysis (primary). Extension: measure drop
+    rate versus factor on the toy, hypothesis: drops fall steeply then
+    flatten.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the capacity formula. (b) Oral ladder:
+    define a dropped token, compute capacity by hand, justify the
+    factor, implement dispatch, compare with expert-choice, debug the
+    silent-drop bug, critique the drop-is-fine assumption, design the
+    factor sweep. (c) Transfer: inference latency spikes on some
+    batches. Which MoE mechanism is the suspect, and what is the fix?
+    Answers: <code>../keys/u04_answers.md</code> A10.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U04 task 10 implements dispatch and the
+    drop accounting. See <code>../labs/u04_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the capacity/drops table. The routing
+    figure (u04_fig02) marks capacity.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c11-load-balancing-objectives">C11: Load-balancing objectives</h3>
+<p>Leaf id <code>cs336-U04-C11</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S04. Scope: the
+   auxiliary losses that spread tokens. Objectives: derive the aux
+   loss, state its weight tradeoff. Depends on C08, C10.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how do we stop the
+   rich-get-richer collapse? Toy from <code>compute_u04.py</code>: aux =
+   E * sum(frac_e * mean_prob_e) = 2.2893 versus uniform 2.0: the
+   router is imbalanced and the loss says so.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The aux loss penalizes the correlation between
+   &ldquo;fraction of tokens sent to e&rdquo; and &ldquo;mean router probability for e&rdquo;.
+   Uniform routing minimizes it. It is added to the task loss with a
+   small weight.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> frac_e: assigned
+   token fraction. mean_prob_e: mean router score. Weight alpha
+   (often 0.01). Assumption: the aux loss is differentiable through
+   the router scores (it is, top-k selection is the non-differentiable
+   part, handled by straight-through).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> L_aux = alpha * E * sum_e frac_e *
+   pbar_e. Under uniform routing with top-k: frac_e = k/E, pbar_e =
+   1/E, so L_aux/alpha = k. Minimizing pushes both toward uniform.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u04.py</code> (executed
+   2026-10-06): 2.2893 versus uniform 2.0: the 0.29 gap quantifies the
+   imbalance seen in the loads.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>aux_loss(frac,
+   pbar, E, alpha)</code>: three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Uniform inputs give
+   exactly k, one-hot routing gives E*k/&hellip; (checked in the lab),
+   gradient flows to the router weights. Expected outputs in the lab
+   key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> One extra scalar loss, negligible compute. Too large an
+   alpha hurts task loss (the router optimizes balance over quality).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> No aux loss with
+    expert-choice routing (balance by construction), z-loss for router
+    logit magnitudes. Aux loss is the standard for token-choice.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> alpha = 1.0: the router
+    becomes perfectly uniform and experts stop specializing, the model
+    is a uniform ensemble with MoE&rsquo;s memory bill. The assumption
+    &ldquo;more balance is better&rdquo; breaks, alpha is a tradeoff knob.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: ST-MoE
+    and follow-ups on balancing (primary: paper ablations).
+    Extension: sweep alpha on the toy and measure task loss versus
+    max expert load, hypothesis: a U-shaped task loss.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the aux formula and the uniform value.
+    (b) Oral ladder: define frac_e, compute the uniform value by hand,
+    justify the E factor, implement, compare with expert-choice,
+    debug the alpha=1 collapse, critique the differentiability
+    assumption, design the alpha sweep. (c) Transfer: loads are
+    balanced but quality lags dense. What do you tune first?
+    Answers: <code>../keys/u04_answers.md</code> A11.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U04 task 11 implements the aux loss
+    and the uniform check. See <code>../labs/u04_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the balance table (loads, aux, uniform).
+    No figure, tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c12-parameter-versus-active-compute-accounting">C12: Parameter versus active-compute accounting</h3>
+<p>Leaf id <code>cs336-U04-C12</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S04. Scope:
+   honest accounting for MoE models. Objectives: report total params,
+   active params, and active FLOPs, explain why &ldquo;175B model&rdquo; misleads.
+   Depends on C07, U02-C06.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: is a 25M-param MoE
+   &ldquo;bigger&rdquo; than a 6M dense model? Toy: total 25.17M, active 6.29M
+   (from <code>compute_u04.py</code>): it has the capacity of the former and the
+   per-token cost of the latter.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Three numbers, not one: total parameters (memory,
+   capacity), active parameters per token (compute, latency), and
+   active FLOPs (the training/inference bill). Headlines quote the
+   first, budgets need the second and third.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> All in params or
+   FLOPs. Assumption: k experts active per token, router cost
+   negligible.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Total = E * expert + router. Active =
+   k * expert + router. Active FLOPs per token = k * expert_flops.
+   Memory must hold the total, the bill charges the active.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u04.py</code> (executed
+   2026-10-06): total 25,165,824, active 6,291,456, ratio 4.0.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>moe_accounting(E, k,
+   d, dff)</code>: returns the three numbers. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> k=E gives active =
+   total, E=1,k=1 equals dense. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The accounting itself is free, the decisions it informs
+   (memory provisioning, batch sizing) are not.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Dense accounting
+    (one number). Always report all three for MoE, never compare MoE
+    total params against dense params as if they were the same thing.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Provisioning inference memory
+    from active params: the server OOMs because all experts must be
+    resident. The assumption &ldquo;active is what matters&rdquo; breaks for
+    memory, total rules there.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: MoE
+    scaling reports (primary: reported param/FLOP tables).
+    Extension: plot quality versus active FLOPs for dense and MoE at
+    several E, hypothesis: MoE wins per active FLOP.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the three numbers. (b) Oral ladder:
+    define active params, compute the 4.0x by hand, justify the
+    memory/bill split, implement, compare with dense, debug the
+    OOM-from-active provisioning, critique the negligible-router
+    assumption, design the scaling plot. (c) Transfer: two models
+    have equal active FLOPs, one MoE one dense. Which trains faster
+    in wall time, and why might the answer differ?
+    Answers: <code>../keys/u04_answers.md</code> A12.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U04 task 12 implements the accounting
+    and the edge-case checks. See <code>../labs/u04_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u04_fig03: chapter plate, KV cache bytes across
+    MHA/GQA/MQA/MLA with the tradeoff line. Source: original toy.
+    Render: <code>assets/render_u04.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u04_fig03" src="../assets/u04_fig03.png"><figcaption>chapter plate, KV cache bytes across MHA/GQA/MQA/MLA with the tradeoff line. Source: original toy.</figcaption></figure>
+<hr />
+<h2 id="unit-russian-doll-ladder-u04">Unit Russian-doll ladder (U04)</h2>
+<ul>
+<li>Shell 0: how do we cut the T^2 cost and the KV bytes without losing
+  the model?</li>
+<li>Shell 1: the toy config (B=2, T=1024, d=512) with cache bytes per
+  variant, 16 tokens routed to 8 experts.</li>
+<li>Shell 2: windows, KV heads, latents, states, routers, experts.</li>
+<li>Shell 3: one window cut, one KV head share, one top-k dispatch.</li>
+<li>Shell 4: the linear recurrence, the MoE layer, the aux loss.</li>
+<li>Shell 5: linear/quadratic equivalence, MLA reconstruction at dc=d,
+  GQA=MHA at g=h.</li>
+<li>Shell 6: change w, predict the FLOP change, measure.</li>
+<li>Shell 7: break locality (retrieval), break balance (no aux loss),
+  break positivity (bad phi).</li>
+<li>Shell 8: local vs linear vs SSM, MQA vs GQA vs MLA at equal cache.</li>
+<li>Shell 9: dc sweep, alpha sweep, k sweep at matched active compute.</li>
+<li>Shell 10: the cache math sets inference cost, the active-FLOP math
+  sets the training bill.</li>
+</ul>
+      
+      <nav class="pager"><a href="../keys/u03_answers.html"><span class="lbl">← Previous</span>U03 · Answers</a><a href="../keys/u04_answers.html"><span class="lbl">Next →</span>U04 · Answers</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
