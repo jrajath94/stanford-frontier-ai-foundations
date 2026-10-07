@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Unit 07 · Linear attention, SSMs, and FFT — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Linear attention, SSMs, and FFT.">
+<link rel="stylesheet" href="../../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-page="cs229s-u07" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Systems for Machine Learning (Stanford CS229S)</h3><ul>
+<li><a href="../../index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../../crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../../cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../../course_map.html" data-page="cs229s-course-map">CS229S · Course map</a></li>
+<li><a href="../../prerequisites.html" data-page="cs229s-prereqs">CS229S · Prerequisites</a></li>
+<li><a href="../../notation_and_shapes.html" data-page="cs229s-notation">CS229S · Notation</a></li>
+<li><a href="../../glossary.html" data-page="cs229s-glossary">CS229S · Glossary</a></li>
+<li><a href="../../lessons/u01/lesson-01-sequence-transformer-workload.html" data-page="cs229s-u01">U01 · Sequence models and tran</a></li>
+<li><a href="../../lessons/u01/keys.html" data-page="cs229s-u01-keys">U01 · Keys</a></li>
+<li><a href="../../lessons/u02/lesson-02-hardware-compilers.html" data-page="cs229s-u02">U02 · Hardware-aware design an</a></li>
+<li><a href="../../lessons/u02/keys.html" data-page="cs229s-u02-keys">U02 · Keys</a></li>
+<li><a href="../../lessons/u03/lesson-03-accounting-speculative.html" data-page="cs229s-u03">U03 · Transformer accounting a</a></li>
+<li><a href="../../lessons/u03/keys.html" data-page="cs229s-u03-keys">U03 · Keys</a></li>
+<li><a href="../../lessons/u04/lesson-04-cuda-efficient-attention.html" data-page="cs229s-u04">U04 · CUDA and efficient atten</a></li>
+<li><a href="../../lessons/u04/keys.html" data-page="cs229s-u04-keys">U04 · Keys</a></li>
+<li><a href="../../lessons/u05/lesson-05-quantization-sparsity.html" data-page="cs229s-u05">U05 · Quantization, sparsity, </a></li>
+<li><a href="../../lessons/u05/keys.html" data-page="cs229s-u05-keys">U05 · Keys</a></li>
+<li><a href="../../lessons/u06/lesson-06-adaptation-data-pipelines.html" data-page="cs229s-u06">U06 · Training, adaptation, an</a></li>
+<li><a href="../../lessons/u06/keys.html" data-page="cs229s-u06-keys">U06 · Keys</a></li>
+<li><a href="../../lessons/u07/lesson-07-linear-attention-ssm-fft.html" data-page="cs229s-u07" class="active">U07 · Linear attention, SSMs, </a></li>
+<li><a href="../../lessons/u07/keys.html" data-page="cs229s-u07-keys">U07 · Keys</a></li>
+<li><a href="../../lessons/u08/lesson-08-serving-moe.html" data-page="cs229s-u08">U08 · Serving and sparse MoE</a></li>
+<li><a href="../../lessons/u08/keys.html" data-page="cs229s-u08-keys">U08 · Keys</a></li>
+<li><a href="../../lessons/u09/lesson-09-parallelism-clusters-scheduling.html" data-page="cs229s-u09">U09 · Parallelism, clusters, a</a></li>
+<li><a href="../../lessons/u09/keys.html" data-page="cs229s-u09-keys">U09 · Keys</a></li>
+<li><a href="../../lessons/u10/lesson-10-retrieval-guests-synthesis.html" data-page="cs229s-u10">U10 · Retrieval systems, guest</a></li>
+<li><a href="../../lessons/u10/keys.html" data-page="cs229s-u10-keys">U10 · Keys</a></li>
+<li><a href="../../labs/lab-01-sequence-workload.html" data-page="cs229s-lab-01">Lab 01 · Sequence workload</a></li>
+<li><a href="../../labs/keys-lab-01.html" data-page="cs229s-lab-01-keys">Lab 01 · Keys</a></li>
+<li><a href="../../labs/lab-02-roofline.html" data-page="cs229s-lab-02">Lab 02 · Roofline</a></li>
+<li><a href="../../labs/keys-lab-02.html" data-page="cs229s-lab-02-keys">Lab 02 · Keys</a></li>
+<li><a href="../../labs/lab-03-kvcache-speculative.html" data-page="cs229s-lab-03">Lab 03 · KV cache, speculativ</a></li>
+<li><a href="../../labs/keys-lab-03.html" data-page="cs229s-lab-03-keys">Lab 03 · Keys</a></li>
+<li><a href="../../labs/lab-04-tiling-softmax.html" data-page="cs229s-lab-04">Lab 04 · Tiling, softmax</a></li>
+<li><a href="../../labs/keys-lab-04.html" data-page="cs229s-lab-04-keys">Lab 04 · Keys</a></li>
+<li><a href="../../labs/lab-05-quant-prune.html" data-page="cs229s-lab-05">Lab 05 · Quantization, prunin</a></li>
+<li><a href="../../labs/keys-lab-05.html" data-page="cs229s-lab-05-keys">Lab 05 · Keys</a></li>
+<li><a href="../../labs/lab-06-adaptation-pipelines.html" data-page="cs229s-lab-06">Lab 06 · Adaptation, pipeline</a></li>
+<li><a href="../../labs/keys-lab-06.html" data-page="cs229s-lab-06-keys">Lab 06 · Keys</a></li>
+<li><a href="../../labs/lab-07-ssm-fft.html" data-page="cs229s-lab-07">Lab 07 · SSM, FFT</a></li>
+<li><a href="../../labs/keys-lab-07.html" data-page="cs229s-lab-07-keys">Lab 07 · Keys</a></li>
+<li><a href="../../labs/lab-08-serving-moe.html" data-page="cs229s-lab-08">Lab 08 · Serving, MoE</a></li>
+<li><a href="../../labs/keys-lab-08.html" data-page="cs229s-lab-08-keys">Lab 08 · Keys</a></li>
+<li><a href="../../labs/lab-09-parallelism-scheduling.html" data-page="cs229s-lab-09">Lab 09 · Parallelism, schedul</a></li>
+<li><a href="../../labs/keys-lab-09.html" data-page="cs229s-lab-09-keys">Lab 09 · Keys</a></li>
+<li><a href="../../labs/lab-10-retrieval-synthesis.html" data-page="cs229s-lab-10">Lab 10 · Retrieval, synthesis</a></li>
+<li><a href="../../labs/keys-lab-10.html" data-page="cs229s-lab-10-keys">Lab 10 · Keys</a></li>
+<li><a href="../../diagnostics/diagnostic-cs229s.html" data-page="cs229s-diag">CS229S · Diagnostic</a></li>
+<li><a href="../../diagnostics/keys-cs229s.html" data-page="cs229s-diag-keys">CS229S · Diagnostic keys</a></li>
+<li><a href="../../interview/interview-u01-questions.html" data-page="cs229s-int-u01">Interview · U01</a></li>
+<li><a href="../../interview/keys-u01.html" data-page="cs229s-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../../interview/interview-u02-questions.html" data-page="cs229s-int-u02">Interview · U02</a></li>
+<li><a href="../../interview/keys-u02.html" data-page="cs229s-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../../interview/interview-u03-questions.html" data-page="cs229s-int-u03">Interview · U03</a></li>
+<li><a href="../../interview/keys-u03.html" data-page="cs229s-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../../interview/interview-u04-questions.html" data-page="cs229s-int-u04">Interview · U04</a></li>
+<li><a href="../../interview/keys-u04.html" data-page="cs229s-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../../interview/interview-u05-questions.html" data-page="cs229s-int-u05">Interview · U05</a></li>
+<li><a href="../../interview/keys-u05.html" data-page="cs229s-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../../interview/interview-u06-questions.html" data-page="cs229s-int-u06">Interview · U06</a></li>
+<li><a href="../../interview/keys-u06.html" data-page="cs229s-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../../interview/interview-u07-questions.html" data-page="cs229s-int-u07">Interview · U07</a></li>
+<li><a href="../../interview/keys-u07.html" data-page="cs229s-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../../interview/interview-u08-questions.html" data-page="cs229s-int-u08">Interview · U08</a></li>
+<li><a href="../../interview/keys-u08.html" data-page="cs229s-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../../interview/interview-u09-questions.html" data-page="cs229s-int-u09">Interview · U09</a></li>
+<li><a href="../../interview/keys-u09.html" data-page="cs229s-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../../interview/interview-u10-questions.html" data-page="cs229s-int-u10">Interview · U10</a></li>
+<li><a href="../../interview/keys-u10.html" data-page="cs229s-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../../interview/oral-defenses.html" data-page="cs229s-int-oral">Interview · Oral defenses</a></li>
+<li><a href="../../interview/keys-oral.html" data-page="cs229s-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../../interview/transfer-sets.html" data-page="cs229s-int-transfer">Interview · Transfer sets</a></li>
+<li><a href="../../interview/keys-transfer.html" data-page="cs229s-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../../capstones/capstone-a-ssm-replication.html" data-page="cs229s-cap-a">Capstone A · SSM replication</a></li>
+<li><a href="../../capstones/capstone-b-rag-serving.html" data-page="cs229s-cap-b">Capstone B · RAG serving</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../../index.html">Home</a> / <a href="#">Systems for Machine Learning (Stanford CS229S)</a> / Unit 07 · Linear attention, SSMs, and FFT</nav>
+      <h1>Unit 07 · Linear attention, SSMs, and FFT</h1>
+      <p class="meta-line">2026-10-06</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="lesson-07-linear-attention-ssms-and-fft">Lesson 07: Linear attention, SSMs, and FFT</h1>
+<p>Unit: cs229s-U07. Concepts: cs229s-U07-C01 to C12.
+Date: 2026-10-06. Baseline: October 6, 2026.
+Claim class for every leaf: PLANNED / SOURCE ATTRIBUTION PENDING.
+Family anchor: CALENDAR-ANCHORED, Week 6, Oct 28, &ldquo;Efficient
+Attention-Free Architectures&rdquo; (presented by Simran):
+&ldquo;Alternate Architectures to Transformers: Linear Attention&rdquo;,
+&ldquo;Efficiency properties of convolutions vs. rNNs vs.
+Transformers&rdquo;, &ldquo;State-space models and other subquadratic
+models&rdquo;, &ldquo;Fast fourier transforms: efficient algorithms and
+hardware implementation&rdquo;. Also Nov 1: &ldquo;State Space Models,
+SSM Convolutions&rdquo;, &ldquo;Introduction to Convolutions, Fourier
+Transforms, and the FFT-Convolution Theorem&rdquo;, &ldquo;Tradeoffs of
+Transformer vs. rNN vs. cNN Training &amp; Inference Efficiency,
+and Inductive Biases&rdquo;, &ldquo;State Space Models Walkthrough&rdquo;,
+&ldquo;Limitations of State Space Models. Towards Input-Dependent
+Sequence Mixers&rdquo;.</p>
+<h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>Same 15-item contract as U01, in compact form. Shared
+symbols follow <code>notation_and_shapes.md</code>. All numbers are
+lesson toys computed here. Shared bridges: P04 (spectral
+and numerical linear algebra), P12 (PyTorch, tensors, and
+numerical stability), P14 (transformer mechanics), P15
+(hardware and computer architecture), at
+<code>v2-pack/shared/prerequisites/</code>.</p>
+<hr />
+<h2 id="c01-convolution-versus-recurrence">C01: convolution versus recurrence</h2>
+<h3 id="source-scope-objectives-dependencies">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 6, Oct 28, &ldquo;Efficiency properties
+of convolutions vs. rNNs vs. transformers&rdquo;. Scope: the
+two ways to mix a sequence. Objective: compute both on
+a toy and compare cost. Depends on P03, P14.</p>
+<h3 id="motivating-question-and-tiny-toy">Motivating question and tiny toy</h3>
+<p>Question: a sequence mixer can run left to right with
+a state, or slide a kernel across the whole input.
+Which costs less? Toy: u = [1, 0, 1, 0]. Recurrence:
+x_t = 0.9 x_{t-1} + u_t. Convolution: kernel k =
+[1, 0.5, 0.25], y = k * u.</p>
+<h3 id="mental-model">Mental model</h3>
+<p>Recurrence is a conveyor belt: one state moves along,
+each step costs O(1). Convolution is a stencil: the
+kernel stamps every position at once, each output
+costs O(K). The belt is sequential. The stencil is
+parallel.</p>
+<h3 id="objects-shapes-assumptions">Objects, shapes, assumptions</h3>
+<ul>
+<li>Recurrence: x_t = A x_{t-1} + B u_t, scalar toy.</li>
+<li>Convolution: y_t = sum_{i=0}^{K-1} k_i u_{t-i}.</li>
+<li>Assumption: the kernel is fixed (input-independent)
+  in this comparison.</li>
+</ul>
+<h3 id="derivation">Derivation</h3>
+<p>Recurrence: x_0 = 1.0, x_1 = 0.9, x_2 = 1.81, x_3 =
+1.629. Four steps, four multiply-adds. Convolution:
+y_0 = 1, y_1 = 0.5, y_2 = 1.25, y_3 = 0.5. Each
+y_t sums up to 3 products: 12 multiply-adds total.
+Same input, different work shape: recurrence is
+O(T), convolution is O(T K).</p>
+<h3 id="computed-example">Computed example</h3>
+<p>Toy above. Recurrence state after the run: 1.629.
+Convolution output: [1, 0.5, 1.25, 0.5]. The
+recurrence forgets geometrically (weight 0.9^k on
+old inputs). The convolution sees only K = 3 steps
+back and nothing older. Lab-07 asserts both.</p>
+<h3 id="implementation-and-checks">Implementation and checks</h3>
+<pre><code class="language-python">import numpy as np
+u = [1, 0, 1, 0]
+x, xs = 0.0, []
+for ut in u:
+    x = 0.9 * x + ut
+    xs.append(x)
+k = [1, 0.5, 0.25]
+y = np.convolve(u, k)[:4]
+assert [round(v, 3) for v in xs] == [1.0, 0.9, 1.81,
+                                     1.629]
+assert [round(v, 3) for v in y] == [1.0, 0.5, 1.25,
+                                    0.5]
+</code></pre>
+<p>Check: np.convolve matches the hand computation.
+Lab-07 asserts both sequences.</p>
+<h3 id="complexity-and-costs">Complexity and costs</h3>
+<p>Recurrence: O(T) time, O(1) memory, sequential.
+Convolution: O(T K) time, parallel over T, O(T)
+memory for the output.</p>
+<h3 id="nearest-alternative-and-selection-boundary">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: attention (C02). Selection
+boundary: recurrence for streaming inference with
+tiny state. Convolution for parallel training with
+bounded context.</p>
+<h3 id="failure-case-and-counterexample">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;K covers the dependency.&rdquo;
+Counterexample: a task needs position 0 at position
+1000 with K = 3: the convolution never sees it,
+the recurrence sees it through 0.9^1000 = 4.3e-5
+of weight (C08 shows why that is its own failure).</p>
+<h3 id="research-reading-and-falsifiable-extension">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 28 efficiency-properties session.
+Falsifiable extension: sweep K on a long-range toy
+task, plot accuracy. Hypothesis: accuracy is flat
+until K reaches the dependency distance, then
+jumps. Report the curve.</p>
+<h3 id="exercises">Exercises</h3>
+<ul>
+<li>E01 (recall): write both update rules and their
+  costs.</li>
+<li>E02 (numerical): toy above. Compute the
+  recurrence states and the convolution outputs.</li>
+<li>E03 (failure diagnosis): a conv model fails a
+  task at distance 1000 with K=64. Name the cause.</li>
+<li>E04 (counterfactual): K = T. What does the
+  convolution cost, and what does it gain?</li>
+<li>E05 (research): state the K-sweep hypothesis.</li>
+</ul>
+<h3 id="visual-units">Visual units</h3>
+<ul>
+<li>Figure <code>u07_c01_belt_stencil.png</code>: belt (4
+  states) vs stencil (kernel stamps). Source:
+  original toy. Shell 1.</li>
+</ul>
+<figure><img alt="u07_c01_belt_stencil.png" src="../../assets/u07/u07_c01_belt_stencil.png"><figcaption>belt (4 states) vs stencil (kernel stamps)</figcaption></figure>
+<ul>
+<li>Audit: <code>u07c01</code> to <code>f01</code>. Before: input. After:
+  two outputs. One rule: state vs stencil.</li>
+</ul>
+<hr />
+<h2 id="c02-quadratic-attention">C02: quadratic attention</h2>
+<h3 id="source-scope-objectives-dependencies_1">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 6, Nov 1, &ldquo;Revisit Attention
+Scaling Bottlenecks&rdquo;. Scope: why attention costs
+T^2. Objective: compute the FLOPs and the score
+matrix memory for a toy. Depends on P14, P15.</p>
+<h3 id="motivating-question-and-tiny-toy_1">Motivating question and tiny toy</h3>
+<p>Question: attention compares every token to every
+token. What does that cost at T = 8192? Toy: one
+head, d = 128.</p>
+<h3 id="mental-model_1">Mental model</h3>
+<p>Attention is a town meeting: every token talks to
+every other token. T^2 conversations. The score
+matrix is the seating chart: T x T numbers that
+must live somewhere.</p>
+<h3 id="objects-shapes-assumptions_1">Objects, shapes, assumptions</h3>
+<ul>
+<li>Scores: S = Q K^T, shape (T, T).</li>
+<li>FLOPs: 2 T^2 d (scores) + 2 T^2 d (values) per
+  head.</li>
+<li>Memory: T^2 floats for the scores.</li>
+<li>Assumption: naive materialization (no tiling, 
+  U04 removes this).</li>
+</ul>
+<h3 id="derivation_1">Derivation</h3>
+<p>T^2 = 67,108,864. Times d = 128: 8,589,934,592.
+Times 2: 17,179,869,184 FLOPs = 17.2 TFLOPs per
+head for scores. The same again for the value
+mix: 34.4 TFLOPs per head total. Memory: 67.1M
+floats * 4 bytes = 268.4 MB = 256 MiB per head.
+Eight heads: 2 GiB of scores.</p>
+<h3 id="computed-example_1">Computed example</h3>
+<p>Toy above: 17.2 TFLOPs per head for the score
+matmul, 34.4 TFLOPs with values, 256 MiB of score
+memory per head in fp32. Double T to 16384: FLOPs
+x4 (137.6 TFLOPs), memory x4 (1 GiB per head).
+Lab-07 asserts the 4x law.</p>
+<h3 id="implementation-and-checks_1">Implementation and checks</h3>
+<pre><code class="language-python">T, d = 8192, 128
+flops_scores = 2 * T * T * d
+mem_bytes = T * T * 4
+assert flops_scores == 17179869184
+assert mem_bytes == 268435456
+assert (2 * (2*T) ** 2 * d) == 4 * flops_scores
+</code></pre>
+<p>Check: doubling T quadruples both. Lab-07 asserts
+the 4x law.</p>
+<h3 id="complexity-and-costs_1">Complexity and costs</h3>
+<p>O(T^2 d) time, O(T^2) memory. The cost that the
+rest of this unit tries to remove.</p>
+<h3 id="nearest-alternative-and-selection-boundary_1">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: linear attention (C03).
+Selection boundary: quadratic when T is small
+enough that T^2 fits. Subquadratic when it does
+not.</p>
+<h3 id="failure-case-and-counterexample_1">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;T stays small.&rdquo; Counterexample:
+T = 1M: scores need 4 TB per head. No machine
+materializes that. The model must change, not the
+hardware.</p>
+<h3 id="research-reading-and-falsifiable-extension_1">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 1 bottleneck-revisit session.
+Falsifiable extension: time naive attention at
+T = 1k, 2k, 4k, 8k on one device. Hypothesis:
+time grows 4x per doubling. Report the ratios.</p>
+<h3 id="exercises_1">Exercises</h3>
+<ul>
+<li>E06 (recall): write the FLOP and memory
+  formulas.</li>
+<li>E07 (numerical): toy above. Compute per-head
+  FLOPs with values and score memory in MiB.</li>
+<li>E08 (failure diagnosis): OOM at T = 32768 with
+  8 heads. How much score memory did it want?</li>
+<li>E09 (counterfactual): d doubles. Which cost
+  moves, and by how much?</li>
+<li>E10 (research): state the 4x timing hypothesis.</li>
+</ul>
+<h3 id="visual-units_1">Visual units</h3>
+<ul>
+<li>Figure <code>u07_c02_quad.png</code>: T^2 grid with the
+  256 MiB label. Source: original toy. Shell 2.</li>
+</ul>
+<figure><img alt="u07_c02_quad.png" src="../../assets/u07/u07_c02_quad.png"><figcaption>T^2 grid with the 256 MiB label</figcaption></figure>
+<ul>
+<li>Audit: <code>u07c02</code> to <code>f02</code>. Before: T tokens.
+  After: T^2 scores. One rule: every pair meets.</li>
+</ul>
+<hr />
+<h2 id="c03-kernelized-linear-attention">C03: kernelized linear attention</h2>
+<h3 id="source-scope-objectives-dependencies_2">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 6, Oct 28, &ldquo;Alternate
+Architectures to Transformers: Linear Attention&rdquo;.
+Scope: attention without the T^2 matrix.
+Objective: compute the FLOP ratio on the C02 toy.
+Depends on C02, P04.</p>
+<h3 id="motivating-question-and-tiny-toy_2">Motivating question and tiny toy</h3>
+<p>Question: softmax(Q K^T) V needs the T^2 matrix.
+What if similarity factorizes? Toy: feature map
+phi(x) = elu(x) + 1, phi(Q)(phi(K)^T V). Same toy:
+T = 8192, d = 128.</p>
+<h3 id="mental-model_2">Mental model</h3>
+<p>Softmax attention multiplies in the order
+(Q K^T) V: the T^2 matrix appears. Kernelized
+attention regroups: phi(Q) (phi(K)^T V). The
+parenthesis is the whole trick: sum over keys
+first into a d x d state, then hit it with each
+query. No T^2 object ever exists.</p>
+<h3 id="objects-shapes-assumptions_2">Objects, shapes, assumptions</h3>
+<ul>
+<li>phi: R^d -&gt; R^d, applied row-wise, positive.</li>
+<li>S = phi(K)^T V: (d, d) state.</li>
+<li>Output: phi(Q) S: (T, d).</li>
+<li>Assumption: phi(q)^T phi(k) approximates the
+  softmax kernel well enough.</li>
+</ul>
+<h3 id="derivation_2">Derivation</h3>
+<p>Cost: phi(K)^T V is T d^2 multiply-adds (times 2
+for mul-add). Phi(Q) S is another T d^2. Total
+2 * 2 * T d^2 = 4 T d^2? Keep the lesson&rsquo;s
+convention (2 per matmul): 2 T d^2 = 2 * 8192 *
+16384 = 268,435,456 FLOPs = 0.268 GFLOPs. C02
+scores alone: 17.2 TFLOPs. Ratio = 17.2e12 /
+2.68e8 = 64x. State memory: d^2 = 16384 floats
+= 64 KiB, vs 256 MiB of scores.</p>
+<h3 id="computed-example_2">Computed example</h3>
+<p>Toy above: 0.268 GFLOPs vs 17.2 TFLOPs (64x),
+64 KiB of state vs 256 MiB of scores. The price:
+phi changes the similarity function. Softmax is
+gone. Lab-07 asserts the 64x ratio.</p>
+<h3 id="implementation-and-checks_2">Implementation and checks</h3>
+<pre><code class="language-python">import numpy as np
+rng = np.random.default_rng(3)
+T, d = 64, 16
+Q = rng.standard_normal((T, d))
+K = rng.standard_normal((T, d))
+V = rng.standard_normal((T, d))
+phi = lambda X: np.where(X &gt; 0, X + 1,
+                         np.exp(X))  # elu+1
+S = phi(K).T @ V
+out_lin = phi(Q) @ S
+A = phi(Q) @ phi(K).T
+out_quad = A @ V
+assert np.allclose(out_lin, out_quad, atol=1e-8)
+</code></pre>
+<p>Check: regrouping is exact algebra: the two
+orders agree to 1e-8. Lab-07 asserts this
+identity (it is the mechanism, not the
+approximation).</p>
+<h3 id="complexity-and-costs_2">Complexity and costs</h3>
+<p>O(T d^2) time, O(d^2) state. Recurrent form for
+inference: update S per token, O(d^2) per step.</p>
+<h3 id="nearest-alternative-and-selection-boundary_2">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: softmax attention with
+FlashAttention (U04). Selection boundary: linear
+when T &gt;&gt; d and the task tolerates the kernel
+approximation. Softmax when exact pairwise
+weights matter.</p>
+<h3 id="failure-case-and-counterexample_2">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;phi approximates softmax.&rdquo;
+Counterexample: a task needs sharp, near-one-hot
+selection (exact copy): elu+1 is too flat, the
+output is a blur and accuracy collapses.</p>
+<h3 id="research-reading-and-falsifiable-extension_2">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 28 linear-attention session.
+Falsifiable extension: swap phi in {elu+1,
+relu, softmax-approx} on a copy task. Hypothesis:
+sharper phi wins on copy, flatter phi wins on
+smooth tasks. Report both.</p>
+<h3 id="exercises_2">Exercises</h3>
+<ul>
+<li>E11 (recall): write the regrouped formula and
+  the state shape.</li>
+<li>E12 (numerical): toy above. Compute both FLOP
+  counts and the ratio.</li>
+<li>E13 (failure diagnosis): copy accuracy collapses
+  under linear attention. Name the cause.</li>
+<li>E14 (counterfactual): d &gt; T. Is linear still
+  cheaper?</li>
+<li>E15 (research): state the phi-swap hypothesis.</li>
+</ul>
+<h3 id="visual-units_2">Visual units</h3>
+<ul>
+<li>Figure <code>u07_c03_regroup.png</code>: two parenthesizations,
+  the T^2 matrix crossed out. Source: original toy.
+  Shell 4.</li>
+</ul>
+<figure><img alt="u07_c03_regroup.png" src="../../assets/u07/u07_c03_regroup.png"><figcaption>two parenthesizations, the T^2 matrix crossed out</figcaption></figure>
+<ul>
+<li>Audit: <code>u07c03</code> to <code>f03</code>. Before: (QK^T)V. After:
+  Q(K^T V) via phi. One rule: sum over keys first.</li>
+</ul>
+<hr />
+<h2 id="c04-state-space-recurrence">C04: state-space recurrence</h2>
+<h3 id="source-scope-objectives-dependencies_3">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 6, Nov 1, &ldquo;State Space Models
+Walkthrough&rdquo;. Scope: the SSM recurrence. Objective:
+run it on a toy and read the state. Depends on P03,
+C01.</p>
+<h3 id="motivating-question-and-tiny-toy_3">Motivating question and tiny toy</h3>
+<p>Question: can a linear recurrence carry long memory
+with a small state? Toy: h_t = 0.9 h_{t-1} + x_t,
+y_t = h_t. X = [1, 0, 1, 0].</p>
+<h3 id="mental-model_3">Mental model</h3>
+<p>The state is a leaky bucket. Each input pours in,
+each step leaks 10%. The bucket level is the
+memory: recent pours weigh more, old pours fade
+but never fully vanish.</p>
+<h3 id="objects-shapes-assumptions_3">Objects, shapes, assumptions</h3>
+<ul>
+<li>h_t: (N,) state, N = 1 in the toy.</li>
+<li>A: (N, N) transition, B: (N, 1) input, C: (1, N)
+  output.</li>
+<li>y_t = C h_t.</li>
+<li>Assumption: A, B, C fixed (input-independent in
+  the classic SSM).</li>
+</ul>
+<h3 id="derivation_3">Derivation</h3>
+<p>h_0 = 1.0. H_1 = 0.9. H_2 = 0.9<em>0.9 + 1 = 1.81.
+h_3 = 0.9</em>1.81 = 1.629. Y = h. The first input&rsquo;s
+weight at t=3: 0.9^3 = 0.729. The state is a
+weighted sum of the whole past with geometric
+weights: memory with a fixed-size register.</p>
+<h3 id="computed-example_3">Computed example</h3>
+<p>Toy above: h = [1.0, 0.9, 1.81, 1.629]. Memory
+test: set x = [1, 0, 0, 0]: h_3 = 0.729: the
+single pulse is still 73% visible after 3 steps.
+Lab-07 asserts the pulse decay.</p>
+<h3 id="implementation-and-checks_3">Implementation and checks</h3>
+<pre><code class="language-python">x = [1, 0, 1, 0]
+h, hs = 0.0, []
+for xt in x:
+    h = 0.9 * h + xt
+    hs.append(h)
+assert [round(v, 3) for v in hs] == [1.0, 0.9,
+                                     1.81, 1.629]
+</code></pre>
+<p>Check: matches the C01 recurrence (it is the
+same object with new names). Lab-07 asserts the
+pulse test.</p>
+<h3 id="complexity-and-costs_3">Complexity and costs</h3>
+<p>O(T N^2) time naive (matrix-vector per step),
+O(N) state. Structured A (diagonal) drops the
+step to O(N).</p>
+<h3 id="nearest-alternative-and-selection-boundary_3">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: linear attention state
+(C03). Selection boundary: SSM when the state
+can stay small and structured. Linear attention
+when the state should be the full d x d
+outer-product memory.</p>
+<h3 id="failure-case-and-counterexample_3">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;fixed A remembers.&rdquo;
+Counterexample: the task needs to forget on
+command (a document boundary): fixed 0.9 cannot
+dump the bucket. The old document pollutes the
+new one. This motivates input-dependent A (the
+Nov 1 &ldquo;towards input-dependent mixers&rdquo; note).</p>
+<h3 id="research-reading-and-falsifiable-extension_3">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 1 SSM walkthrough. Falsifiable
+extension: two-document toy, measure leakage of
+document 1 into document 2&rsquo;s outputs. Hypothesis:
+leakage decays as 0.9^gap. Report the curve.</p>
+<h3 id="exercises_3">Exercises</h3>
+<ul>
+<li>E16 (recall): write the SSM recurrence and name
+  the shapes.</li>
+<li>E17 (numerical): toy above. Compute h and the
+  pulse-decay value at t=3.</li>
+<li>E18 (failure diagnosis): document 2 answers
+  contain document 1 facts. Name the mechanism.</li>
+<li>E19 (counterfactual): A = 1. What breaks?</li>
+<li>E20 (research): state the leakage-decay
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_3">Visual units</h3>
+<ul>
+<li>Figure <code>u07_c04_bucket.png</code>: bucket with inflow
+  and 10% leak per step. Source: original toy.
+  Shell 1.</li>
+</ul>
+<figure><img alt="u07_c04_bucket.png" src="../../assets/u07/u07_c04_bucket.png"><figcaption>bucket with inflow and 10% leak per step</figcaption></figure>
+<ul>
+<li>Audit: <code>u07c04</code> to <code>f04</code>. Before: input pulse.
+  After: decaying state. One rule: leak and add.</li>
+</ul>
+<hr />
+<h2 id="c05-convolution-view">C05: convolution view</h2>
+<h3 id="source-scope-objectives-dependencies_4">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 6, Nov 1, &ldquo;State Space Models,
+SSM Convolutions&rdquo;. Scope: the SSM as a convolution.
+Objective: unroll the recurrence into a kernel and
+verify the match. Depends on C01, C04.</p>
+<h3 id="motivating-question-and-tiny-toy_4">Motivating question and tiny toy</h3>
+<p>Question: the recurrence is sequential. Can training
+still parallelize? Toy: same SSM as C04: A = 0.9,
+B = 1, C = 1. Unroll 4 steps.</p>
+<h3 id="mental-model_4">Mental model</h3>
+<p>Unroll the loop and the state disappears into a
+kernel. Y_t is a weighted sum of past inputs with
+weights C A^k B. The recurrence and the convolution
+are the same computation wearing different clothes:
+one for streaming, one for parallel training.</p>
+<h3 id="objects-shapes-assumptions_4">Objects, shapes, assumptions</h3>
+<ul>
+<li>Kernel: K_k = C A^k B for k = 0..T-1.</li>
+<li>y = K * x (convolution).</li>
+<li>Assumption: time-invariant A, B, C (the unroll
+  needs fixed weights).</li>
+</ul>
+<h3 id="derivation_4">Derivation</h3>
+<p>y_0 = C B x_0. Y_1 = C A B x_0 + C B x_1. In
+general y_t = sum_{k=0}^{t} C A^k B x_{t-k}. Toy:
+K = [1, 0.9, 0.81, 0.729]. Convolve with x = [1,
+0, 1, 0]: y_0 = 1, y_1 = 0.9, y_2 = 0.81 + 1 =
+1.81, y_3 = 0.729 + 0.9 = 1.629. Matches C04
+exactly.</p>
+<h3 id="computed-example_4">Computed example</h3>
+<p>Toy above: K = [1, 0.9, 0.81, 0.729], y = [1.0,
+0.9, 1.81, 1.629]. Training uses the convolution
+(parallel, FFT-fast per C07). Inference uses the
+recurrence (streaming, O(1) state). Lab-07 asserts
+the match.</p>
+<h3 id="implementation-and-checks_4">Implementation and checks</h3>
+<pre><code class="language-python">import numpy as np
+A, B, C = 0.9, 1.0, 1.0
+x = np.array([1.0, 0, 1, 0])
+K = np.array([C * A**k * B for k in range(4)])
+y_conv = np.convolve(x, K)[:4]
+h = 0.0
+y_rec = []
+for xt in x:
+    h = A * h + B * xt
+    y_rec.append(C * h)
+assert np.allclose(y_conv, y_rec)
+</code></pre>
+<p>Check: convolution and recurrence agree to
+machine precision. Lab-07 asserts this duality.</p>
+<h3 id="complexity-and-costs_4">Complexity and costs</h3>
+<p>Materializing K costs O(T). The convolution costs
+O(T log T) via FFT (C07) instead of O(T^2).</p>
+<h3 id="nearest-alternative-and-selection-boundary_4">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: parallel scan (C06).
+Selection boundary: convolution view for
+time-invariant SSMs on parallel hardware. Scan
+when A varies with the input.</p>
+<h3 id="failure-case-and-counterexample_4">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;A is fixed.&rdquo; Counterexample:
+input-dependent A (selective SSM): the kernel K
+changes per position, the convolution view
+collapses, and only the scan survives.</p>
+<h3 id="research-reading-and-falsifiable-extension_4">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 1 SSM-convolutions session.
+Falsifiable extension: time conv-view vs
+recurrence training on a fixed SSM at several T.
+Hypothesis: conv-view wins past the T where FFT
+beats the sequential loop. Report the crossover.</p>
+<h3 id="exercises_4">Exercises</h3>
+<ul>
+<li>E21 (recall): write K_k and the duality.</li>
+<li>E22 (numerical): toy above. Compute K and y
+  both ways.</li>
+<li>E23 (failure diagnosis): the kernel changes per
+  position. Which view survives?</li>
+<li>E24 (counterfactual): A varies with t. What
+  happens to K?</li>
+<li>E25 (research): state the crossover hypothesis.</li>
+</ul>
+<h3 id="visual-units_4">Visual units</h3>
+<ul>
+<li>Figure <code>u07_c05_unroll.png</code>: loop unrolled into
+  kernel taps. Source: original toy. Shell 4.</li>
+</ul>
+<figure><img alt="u07_c05_unroll.png" src="../../assets/u07/u07_c05_unroll.png"><figcaption>loop unrolled into kernel taps</figcaption></figure>
+<ul>
+<li>Audit: <code>u07c05</code> to <code>f05</code>. Before: recurrence.
+  After: kernel. One rule: unroll the loop.</li>
+</ul>
+<hr />
+<h2 id="c06-scan">C06: scan</h2>
+<h3 id="source-scope-objectives-dependencies_5">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 6, Nov 1, &ldquo;Towards
+Input-Dependent Sequence Mixers&rdquo; (the scan is the
+workhorse). Scope: parallel prefix for recurrences.
+Objective: run a scan on a toy and count the
+levels. Depends on C04, P16.</p>
+<h3 id="motivating-question-and-tiny-toy_5">Motivating question and tiny toy</h3>
+<p>Question: the recurrence is sequential, the
+convolution view needs fixed A. Is there a third
+way? Toy: 8 positions, combine pairs in a tree.</p>
+<h3 id="mental-model_5">Mental model</h3>
+<p>A scan is a tournament bracket. Pair up neighbors,
+combine each pair, repeat on the winners. Log2(8)
+= 3 rounds and every prefix is known. The combine
+rule must be associative: the bracket order cannot
+matter.</p>
+<h3 id="objects-shapes-assumptions_5">Objects, shapes, assumptions</h3>
+<ul>
+<li>Elements e_i = (a_i, b_i) with x_i = a_i x_{i-1}</li>
+<li>b_i.</li>
+<li>Combine: (a2, b2) o (a1, b1) = (a2 a1, a2 b1 +
+  b2). The lesson toy reduces the full sequence to
+  its total with a pair tree. A full scan reuses the
+  same combine to yield every prefix.</li>
+<li>Assumption: the combine is associative (it is:
+  function composition).</li>
+</ul>
+<h3 id="derivation_5">Derivation</h3>
+<p>For the SSM: a_i = A (fixed per step in the toy),
+b_i = B x_i. Combine is associative because each
+pair is an affine map x -&gt; a x + b and composition
+of affine maps is associative. 8 elements: level 1
+makes 4 pairs, level 2 makes 2, level 3 makes 1:
+total work ~2n, depth 3 = log2 n. Each position&rsquo;s
+prefix falls out of the tree.</p>
+<h3 id="computed-example_5">Computed example</h3>
+<p>Toy: A = 0.9, B x = [1, 0, 1, 0, 0.5, 0, 0, 0.5].
+Sequential gives the prefix states. The tree
+reproduces the final state b = 1.9333. Depth 3, work
+7 combines vs 8 sequential steps: less sequential
+depth for the total. A full Blelloch scan yields all
+8 prefixes with about 2n work in the same depth.
+Lab-07 asserts the tree total equals the sequential
+final state.</p>
+<h3 id="implementation-and-checks_5">Implementation and checks</h3>
+<pre><code class="language-python">def combine(p, q):
+    a2, b2 = q
+    a1, b1 = p
+    return (a2 * a1, a2 * b1 + b2)
+xs = [1, 0, 1, 0, 0.5, 0, 0, 0.5]
+els = [(0.9, v) for v in xs]
+while len(els) &gt; 1:
+    els = [combine(els[i], els[i+1])
+           for i in range(0, len(els), 2)]
+a, b = els[0]
+assert abs(b - 1.9333) &lt; 0.001
+</code></pre>
+<p>Check: the final pair&rsquo;s b equals the last prefix
+state. Lab-07 asserts the scan equals the
+sequential run elementwise.</p>
+<h3 id="complexity-and-costs_5">Complexity and costs</h3>
+<p>Work O(n), depth O(log n). Needs the associative
+form. Pays extra total work for less sequential
+depth.</p>
+<h3 id="nearest-alternative-and-selection-boundary_5">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: convolution view (C05).
+Selection boundary: scan for input-dependent A. 
+convolution for fixed A (simpler, FFT-fast).</p>
+<h3 id="failure-case-and-counterexample_5">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;the combine is associative.&rdquo;
+Counterexample: a combine with rounding at each
+level (quantized scan): order changes the result
+and the tree disagrees with the loop.</p>
+<h3 id="research-reading-and-falsifiable-extension_5">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 1 input-dependent-mixers note.
+Falsifiable extension: benchmark scan vs loop vs
+conv-view at several T on CPU. Hypothesis: scan
+wins in the middle band (loop too serial,
+conv-view FFT overhead too high). Report the
+band.</p>
+<h3 id="exercises_5">Exercises</h3>
+<ul>
+<li>E26 (recall): write the combine rule.</li>
+<li>E27 (numerical): toy above. Compute the final
+  state both ways.</li>
+<li>E28 (failure diagnosis): tree and loop disagree.
+  What property failed?</li>
+<li>E29 (counterfactual): n is not a power of 2.
+  What changes?</li>
+<li>E30 (research): state the middle-band
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_5">Visual units</h3>
+<ul>
+<li>Figure <code>u07_c06_bracket.png</code>: 8 leaves, 3
+  combine levels. Source: original toy. Shell 1.</li>
+</ul>
+<figure><img alt="u07_c06_bracket.png" src="../../assets/u07/u07_c06_bracket.png"><figcaption>8 leaves, 3 combine levels</figcaption></figure>
+<ul>
+<li>Audit: <code>u07c06</code> to <code>f06</code>. Before: 8 steps.
+  After: 3 rounds. One rule: combine pairs.</li>
+</ul>
+<hr />
+<h2 id="c07-fft">C07: FFT</h2>
+<h3 id="source-scope-objectives-dependencies_6">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 6, Oct 28, &ldquo;Fast fourier
+transforms: efficient algorithms and hardware
+implementation&rdquo;, and Nov 1, &ldquo;the FFT-Convolution
+Theorem&rdquo;. Scope: the FFT as the convolution
+engine. Objective: compute the FLOP ratio for a
+toy convolution. Depends on P04, C05.</p>
+<h3 id="motivating-question-and-tiny-toy_6">Motivating question and tiny toy</h3>
+<p>Question: convolution by definition costs n^2. How
+does the FFT break that? Toy: n = 1024.</p>
+<h3 id="mental-model_6">Mental model</h3>
+<p>Convolution in time is multiplication in
+frequency. The FFT changes basis in n log n: go
+to frequency, multiply pointwise, come back. The
+theorem does the work. The FFT just makes the
+basis change cheap.</p>
+<h3 id="objects-shapes-assumptions_6">Objects, shapes, assumptions</h3>
+<ul>
+<li>FFT: n log2 n operations for size n.</li>
+<li>Conv via FFT: 2 forward + 1 inverse = 3 FFTs.</li>
+<li>Assumption: n is a power of 2 (pad if not).</li>
+</ul>
+<h3 id="derivation_6">Derivation</h3>
+<p>Naive: n^2 = 1,048,576 multiply-adds. FFT path:
+each FFT costs n log2 n = 10240. Three of them =
+30,720. Plus n pointwise multiplies = 1024. Total
+31,744. Ratio = 1,048,576 / 31,744 = 33.0x. The
+theorem: conv(x, k) = IFFT(FFT(x) * FFT(k)).</p>
+<h3 id="computed-example_6">Computed example</h3>
+<p>Toy above: 33.0x fewer operations. N = 1M: naive
+1e12, FFT path 3 * 1M * 20 = 6e7: ratio 16,667x.
+The bigger n, the bigger the win. Lab-07 asserts
+the 33.0x ratio.</p>
+<h3 id="implementation-and-checks_6">Implementation and checks</h3>
+<pre><code class="language-python">import numpy as np
+rng = np.random.default_rng(7)
+n = 64
+x = rng.standard_normal(n)
+k = rng.standard_normal(n)
+y_naive = np.convolve(x, k)[:n]
+m = 2 * n  # pad: the raw product is circular
+y_fft = np.fft.ifft(np.fft.fft(x, m) *
+                    np.fft.fft(k, m)).real[:n]
+assert np.allclose(y_naive, y_fft, atol=1e-8)
+ratio = n**2 / (3 * n * np.log2(n) + n)
+assert abs(ratio - 3.368) &lt; 0.01  # n=64 toy, n=1024
+# gives 33.0x per the derivation above
+</code></pre>
+<p>Check: FFT convolution matches naive to 1e-8.
+Lab-07 asserts the theorem on the n=64 toy and
+the 33.0x ratio at n=1024.</p>
+<h3 id="complexity-and-costs_6">Complexity and costs</h3>
+<p>O(n log n) time, O(n) memory. Bit-reversal and
+twiddle factors are the implementation detail. 
+numerical error grows like sqrt(log n).</p>
+<h3 id="nearest-alternative-and-selection-boundary_6">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: direct convolution (C01).
+Selection boundary: FFT when n is large and the
+kernel is dense. Direct when the kernel is short
+(K &lt; ~64, a matmul wins).</p>
+<h3 id="failure-case-and-counterexample_6">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;n is a power of 2.&rdquo;
+Counterexample: n = 1000 (prime-ish factors):
+the FFT pads to 1024 and the win shrinks. A bad
+implementation pads to 2048 and loses to direct.</p>
+<h3 id="research-reading-and-falsifiable-extension_6">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 28 FFT session. Falsifiable
+extension: time direct vs FFT convolution across
+n. Hypothesis: crossover near n = 128-512 on
+this CPU. Report the measured crossover.</p>
+<h3 id="exercises_6">Exercises</h3>
+<ul>
+<li>E31 (recall): state the convolution theorem.</li>
+<li>E32 (numerical): n=1024. Compute the naive
+  count, the FFT-path count, and the ratio.</li>
+<li>E33 (failure diagnosis): FFT conv is slower
+  than direct at n=64. Why?</li>
+<li>E34 (counterfactual): the kernel has 3 nonzero
+  taps. Which method wins?</li>
+<li>E35 (research): state the crossover hypothesis.</li>
+</ul>
+<h3 id="visual-units_6">Visual units</h3>
+<ul>
+<li>Figure <code>u07_c07_fft.png</code>: n^2 grid vs three
+  n log n bars, 33x label. Source: original toy.
+  Shell 8.</li>
+</ul>
+<figure><img alt="u07_c07_fft.png" src="../../assets/u07/u07_c07_fft.png"><figcaption>n^2 grid vs three n log n bars, 33x label</figcaption></figure>
+<ul>
+<li>Audit: <code>u07c07</code> to <code>f07</code>. Before: time domain.
+  After: frequency domain. One rule: multiply,
+  do not convolve.</li>
+</ul>
+<hr />
+<h2 id="c08-numerical-stability">C08: numerical stability</h2>
+<h3 id="source-scope-objectives-dependencies_7">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 6, Nov 1, &ldquo;State Space Models
+Walkthrough&rdquo; (stability of A). Scope: what the
+transition magnitude does over long sequences.
+Objective: compute growth and decay on a toy.
+Depends on P04, C04.</p>
+<h3 id="motivating-question-and-tiny-toy_7">Motivating question and tiny toy</h3>
+<p>Question: the state multiplies by A every step. What
+happens after 1000 steps? Toy: A = 0.99 vs A =
+1.01. Also discretize: A_c = -1, step 0.1.</p>
+<h3 id="mental-model_7">Mental model</h3>
+<p>A is compound interest on the state. Below 1 the
+past melts away. Above 1 it explodes. Stable
+models park A just under 1 (long memory, no
+explosion) or discretize a stable continuous A.</p>
+<h3 id="objects-shapes-assumptions_7">Objects, shapes, assumptions</h3>
+<ul>
+<li>Growth: A^n after n steps.</li>
+<li>Discretization: A_d = exp(step * A_c).</li>
+<li>Assumption: scalar A (the diagonal case, the
+  matrix case needs eigenvalues inside the unit
+  disk).</li>
+</ul>
+<h3 id="derivation_7">Derivation</h3>
+<p>0.99^1000 = e^{1000 ln 0.99} = e^{-10.05} =
+4.32e-5: the past is gone. 1.01^1000 =
+e^{9.95} = 20,959: overflow territory in fp16
+(max 65,504) after a few more steps.
+Discretization: exp(0.1 * -1) = 0.9048: a stable
+continuous decay of rate 1 becomes a per-step
+factor under 1.</p>
+<h3 id="computed-example_7">Computed example</h3>
+<p>Toy above: 4.32e-5 vs 20,959 after 1000 steps.
+fp16 overflows at 65,504: the 1.01 model dies
+at step 1115 (1.01^1115 = 65,816). Lab-07
+asserts the death step.</p>
+<h3 id="implementation-and-checks_7">Implementation and checks</h3>
+<pre><code class="language-python">import math
+assert abs(0.99**1000 - 4.32e-5) &lt; 1e-7
+assert abs(1.01**1000 - 20959) &lt; 2
+Ad = math.exp(0.1 * -1)
+assert abs(Ad - 0.9048) &lt; 0.001
+death = next(n for n in range(1000, 1200)
+             if 1.01**n &gt; 65504)
+assert death == 1115
+</code></pre>
+<p>Check: the death step is exact integer search.
+Lab-07 asserts all four numbers.</p>
+<h3 id="complexity-and-costs_7">Complexity and costs</h3>
+<p>No runtime cost. The cost is design: A must be
+parameterized to stay stable (negative real
+parts, exp discretization).</p>
+<h3 id="nearest-alternative-and-selection-boundary_7">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: normalize the state every
+step. Selection boundary: stable A by
+construction (cleaner). Runtime normalization
+when A must stay input-dependent and wild.</p>
+<h3 id="failure-case-and-counterexample_7">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;eigenvalues stay inside the
+disk.&rdquo; Counterexample: a learned dense A drifts
+past 1 during training: loss looks fine, then
+long-sequence eval explodes.</p>
+<h3 id="research-reading-and-falsifiable-extension_7">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 1 SSM walkthrough. Falsifiable
+extension: train a toy SSM with free vs
+exp-parameterized A, eval at 10x train length.
+Hypothesis: free A explodes, exp-A holds. Report
+both.</p>
+<h3 id="exercises_7">Exercises</h3>
+<ul>
+<li>E36 (recall): write the growth formula and the
+  discretization.</li>
+<li>E37 (numerical): toy above. Compute both
+  1000-step values and the fp16 death step.</li>
+<li>E38 (failure diagnosis): long eval explodes,
+  short eval is fine. Name the suspect.</li>
+<li>E39 (counterfactual): A_c = +1. What does the
+  discretization give?</li>
+<li>E40 (research): state the free-vs-exp
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_7">Visual units</h3>
+<ul>
+<li>Figure <code>u07_c08_stability.png</code>: two curves,
+  decay to zero and blowup past the fp16 line.
+  Source: original toy. Shell 7.</li>
+</ul>
+<figure><img alt="u07_c08_stability.png" src="../../assets/u07/u07_c08_stability.png"><figcaption>two curves, decay to zero and blowup past the fp16 line</figcaption></figure>
+<ul>
+<li>Audit: <code>u07c08</code> to <code>f08</code>. Before: A. After:
+  A^1000. One rule: compound the factor.</li>
+</ul>
+<hr />
+<h2 id="c09-causal-constraints">C09: causal constraints</h2>
+<h3 id="source-scope-objectives-dependencies_8">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 6, Nov 1, &ldquo;Introduction to
+Convolutions, Fourier Transforms&rdquo; (causality in
+sequence models). Scope: keeping the future out of
+the past. Objective: show leakage on a toy and fix
+it. Depends on C01, C05.</p>
+<h3 id="motivating-question-and-tiny-toy_8">Motivating question and tiny toy</h3>
+<p>Question: a centered kernel sees the future. Why is
+that fatal for generation? Toy: x = [1, 2, 3, 4],
+centered kernel [0.5, 1, 0.5] vs causal kernel [1,
+0.5, 0.25].</p>
+<h3 id="mental-model_8">Mental model</h3>
+<p>Generation is a one-way street: position t may
+only read positions &lt;= t. A centered kernel is a
+rear-view mirror pointed forward: it peeks. The
+causal mask (or causal kernel) is the rule that
+the future stays unwritten until its turn.</p>
+<h3 id="objects-shapes-assumptions_8">Objects, shapes, assumptions</h3>
+<ul>
+<li>Centered: y_t uses x_{t-1}, x_t, x_{t+1}.</li>
+<li>Causal: y_t uses x_t, x_{t-1}, x_{t-2}.</li>
+<li>Assumption: autoregressive use (training must
+  match inference order).</li>
+</ul>
+<h3 id="derivation_8">Derivation</h3>
+<p>Centered at t=1 (x=2): y = 0.5<em>1 + 1</em>2 + 0.5<em>3 =
+4.0: the output at position 1 used x_2 = 3, the
+future. Causal at t=1: y = 1</em>2 + 0.5*1 = 2.5:
+only past and present. Train with the centered
+kernel and the model learns to cheat. At
+inference the future is absent and quality
+collapses.</p>
+<h3 id="computed-example_8">Computed example</h3>
+<p>Toy above: centered y_1 = 4.0 (leaks), causal y_1
+= 2.5 (clean). Full causal outputs: [1.0, 2.5,
+4.25, 6.0]. Lab-07 asserts the leak value.</p>
+<h3 id="implementation-and-checks_8">Implementation and checks</h3>
+<pre><code class="language-python">import numpy as np
+x = np.array([1.0, 2, 3, 4])
+centered = np.convolve(x, [0.5, 1, 0.5],
+                       mode=&quot;same&quot;)
+causal = np.convolve(x, [1, 0.5, 0.25])[:4]
+assert abs(centered[1] - 4.0) &lt; 1e-9  # leaks x_2
+assert abs(causal[1] - 2.5) &lt; 1e-9
+</code></pre>
+<p>Check: mode=&rdquo;same&rdquo; centers the kernel (the
+leak). Lab-07 asserts both values.</p>
+<h3 id="complexity-and-costs_8">Complexity and costs</h3>
+<p>Causality is free: shift the kernel, mask the
+matrix. The cost is vigilance: one wrong padding
+mode leaks.</p>
+<h3 id="nearest-alternative-and-selection-boundary_8">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: bidirectional (non-causal)
+for encoding tasks. Selection boundary: causal
+for generation. Bidirectional only when the full
+sequence exists at inference.</p>
+<h3 id="failure-case-and-counterexample_8">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;padding is innocent.&rdquo;
+Counterexample: &ldquo;causal&rdquo; padding on the wrong
+side: np.convolve default centers the second
+array. A one-line padding bug leaks the future
+and eval scores look suspiciously good.</p>
+<h3 id="research-reading-and-falsifiable-extension_8">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 1 convolutions session.
+Falsifiable extension: train a toy next-token
+model with centered vs causal kernels. Hypothesis:
+centered trains to lower loss but generates
+garbage. Report both.</p>
+<h3 id="exercises_8">Exercises</h3>
+<ul>
+<li>E41 (recall): define causal vs centered.</li>
+<li>E42 (numerical): toy above. Compute y_1 both
+  ways and name the leaked value.</li>
+<li>E43 (failure diagnosis): eval is great,
+  generation is garbage. What leaked?</li>
+<li>E44 (counterfactual): the task is fill-in-the-
+  blank. Does causality still bind?</li>
+<li>E45 (research): state the centered-vs-causal
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_8">Visual units</h3>
+<ul>
+<li>Figure <code>u07_c09_causal.png</code>: kernel taps with
+  the future tap crossed out. Source: original
+  toy. Shell 7.</li>
+</ul>
+<figure><img alt="u07_c09_causal.png" src="../../assets/u07/u07_c09_causal.png"><figcaption>kernel taps with the future tap crossed out</figcaption></figure>
+<ul>
+<li>Audit: <code>u07c09</code> to <code>f09</code>. Before: centered.
+  After: causal. One rule: no future taps.</li>
+</ul>
+<hr />
+<h2 id="c10-expressivity-tradeoffs">C10: expressivity tradeoffs</h2>
+<h3 id="source-scope-objectives-dependencies_9">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 6, Nov 1, &ldquo;Tradeoffs of
+Transformer vs. rNN vs. cNN Training &amp; Inference
+Efficiency, and Inductive Biases&rdquo; and &ldquo;Limitations
+of State Space Models&rdquo;. Scope: what subquadratic
+models cannot do. Objective: bound the memory of a
+copy task. Depends on C02, C03, C04.</p>
+<h3 id="motivating-question-and-tiny-toy_9">Motivating question and tiny toy</h3>
+<p>Question: linear models are cheap. What do they
+give up? Toy: exact copy of a length-T sequence.
+Softmax attention vs a d x d linear state, d =
+128, T = 8192.</p>
+<h3 id="mental-model_9">Mental model</h3>
+<p>Softmax attention is a filing cabinet with T
+drawers: every token gets its own slot. A linear
+state is a whiteboard of d^2 numbers: all tokens
+share it. Exact copy needs T distinguishable
+slots. The whiteboard holds d^2 = 16,384 numbers
+vs T = 8,192 tokens: it fits here, but barely,
+and only as a blur.</p>
+<h3 id="objects-shapes-assumptions_9">Objects, shapes, assumptions</h3>
+<ul>
+<li>Copy task: output position t must reproduce an
+  arbitrary earlier token exactly.</li>
+<li>Softmax capacity: T slots (the T x T matrix).</li>
+<li>Linear capacity: d^2 state numbers.</li>
+<li>Assumption: worst-case inputs (adversarial
+  distinct tokens).</li>
+</ul>
+<h3 id="derivation_9">Derivation</h3>
+<p>Softmax attention can route token i to position t
+with a one-hot row: exact copy, O(T^2) cost.
+Linear state: S = sum phi(k_i) v_i^T has d^2 =
+16,384 degrees of freedom. T = 8,192 tokens each
+need d = 128 numbers for exact recall: 8,192 *
+128 = 1,048,576 numbers needed vs 16,384 held:
+64x short. Sharp selection (one-hot) is the
+failure: smooth kernels blur.</p>
+<h3 id="computed-example_9">Computed example</h3>
+<p>Toy above: need 1,048,576 numbers, have 16,384:
+the state holds 1.6% of what exact copy needs.
+Induction heads (copy the token after a match)
+are the classic casualty: softmax does them,
+linear approximates them. Lab-07 asserts the
+64x shortfall.</p>
+<h3 id="implementation-and-checks_9">Implementation and checks</h3>
+<pre><code class="language-python">T, d = 8192, 128
+need = T * d
+have = d * d
+assert need == 1048576
+assert have == 16384
+assert need // have == 64
+</code></pre>
+<p>Check: integer arithmetic, no rounding. Lab-07
+asserts the ratio.</p>
+<h3 id="complexity-and-costs_9">Complexity and costs</h3>
+<p>The tradeoff is the point: pay T^2 for exact
+pairwise routing, or pay T d^2 for a blur.</p>
+<h3 id="nearest-alternative-and-selection-boundary_9">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: hybrid (a few softmax layers
+among linear ones). Selection boundary: pure
+linear when the task is smooth and long. Hybrid
+or softmax when exact recall decides quality.</p>
+<h3 id="failure-case-and-counterexample_9">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;the blur is enough.&rdquo;
+Counterexample: passkey retrieval (find the
+number hidden at position 5000): the linear
+model&rsquo;s blur misses it, softmax nails it.</p>
+<h3 id="research-reading-and-falsifiable-extension_9">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 1 limitations session.
+Falsifiable extension: passkey task at several
+depths, linear vs softmax. Hypothesis: linear
+accuracy falls with depth, softmax holds. Report
+the curves.</p>
+<h3 id="exercises_9">Exercises</h3>
+<ul>
+<li>E46 (recall): define the copy capacity bound.</li>
+<li>E47 (numerical): toy above. Compute need, have,
+  and the shortfall ratio.</li>
+<li>E48 (failure diagnosis): passkey retrieval
+  fails on a linear model. Name the cause.</li>
+<li>E49 (counterfactual): d = 1024. Does the bound
+  still bite at T = 8192?</li>
+<li>E50 (research): state the passkey hypothesis.</li>
+</ul>
+<h3 id="visual-units_9">Visual units</h3>
+<ul>
+<li>Figure <code>u07_c10_capacity.png</code>: filing cabinet
+  (T drawers) vs whiteboard (d^2 cells), 64x
+  label. Source: original toy. Shell 8.</li>
+</ul>
+<figure><img alt="u07_c10_capacity.png" src="../../assets/u07/u07_c10_capacity.png"><figcaption>filing cabinet (T drawers) vs whiteboard (d^2 cells), 64x label</figcaption></figure>
+<ul>
+<li>Audit: <code>u07c10</code> to <code>f10</code>. Before: full matrix.
+  After: compressed state. One rule: count the
+  slots.</li>
+</ul>
+<hr />
+<h2 id="c11-hardware-realization">C11: hardware realization</h2>
+<h3 id="source-scope-objectives-dependencies_10">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 6, Oct 28, &ldquo;Fast fourier
+transforms: efficient algorithms and hardware
+implementation&rdquo;. Scope: what the hardware sees.
+Objective: compare the byte traffic of attention
+vs an SSM scan on a toy. Depends on P15, C02,
+C04.</p>
+<h3 id="motivating-question-and-tiny-toy_10">Motivating question and tiny toy</h3>
+<p>Question: both models run on the same GPU. Why
+does the SSM use less memory traffic? Toy: T =
+8192, d = 128, one head, fp16. SSM state N = 64
+per channel.</p>
+<h3 id="mental-model_10">Mental model</h3>
+<p>Attention ships the T^2 score matrix through HBM:
+the seating chart travels. The SSM scan keeps a
+small state in SRAM and streams the input once:
+the bucket stays on chip, only the water moves.</p>
+<h3 id="objects-shapes-assumptions_10">Objects, shapes, assumptions</h3>
+<ul>
+<li>Attention HBM traffic: scores 256 MiB (fp32
+  toy. 128 MiB in fp16) per head, plus QKV.</li>
+<li>SSM: state N floats per channel, streamed.</li>
+<li>Assumption: the scan fuses into one kernel
+  (no materialized intermediates).</li>
+</ul>
+<h3 id="derivation_10">Derivation</h3>
+<p>fp16 scores: 67.1M * 2 bytes = 134.2 MB per head
+per forward pass, read and written. SSM: state
+64 floats * 4 bytes = 256 bytes per channel. 
+128 channels: 32 KiB resident in SRAM. Input
+streamed once: T * d * 2 bytes = 2.1 MB. Traffic
+ratio: ~64x less HBM movement. The roofline
+moves the SSM from memory-bound toward
+compute-bound.</p>
+<h3 id="computed-example_10">Computed example</h3>
+<p>Toy above: attention ~134 MB of score traffic per
+head. SSM ~2.1 MB of streaming input plus 32 KiB
+of resident state. Ratio ~64x. Lab-07 asserts
+the byte counts.</p>
+<h3 id="implementation-and-checks_10">Implementation and checks</h3>
+<pre><code class="language-python">T, d = 8192, 128
+attn_bytes = T * T * 2
+ssm_stream = T * d * 2
+ssm_state = 64 * 4 * d
+assert attn_bytes == 134217728
+assert ssm_stream == 2097152
+assert attn_bytes // ssm_stream == 64
+</code></pre>
+<p>Check: integer byte counts. Lab-07 asserts the
+64x ratio.</p>
+<h3 id="complexity-and-costs_10">Complexity and costs</h3>
+<p>The win is realized only with a fused scan
+kernel. An unfused loop materializes states and
+loses it.</p>
+<h3 id="nearest-alternative-and-selection-boundary_10">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: FlashAttention (U04), which
+also avoids materializing scores. Selection
+boundary: SSM scan when the recurrence is the
+model. FlashAttention when softmax attention is
+the model.</p>
+<h3 id="failure-case-and-counterexample_10">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;the kernel is fused.&rdquo;
+Counterexample: a naive PyTorch loop over the
+recurrence writes h_t to HBM each step: traffic
+returns to O(T N) and the advantage vanishes.</p>
+<h3 id="research-reading-and-falsifiable-extension_10">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 28 hardware session. Falsifiable
+extension: profile fused vs loop SSM on one GPU,
+measure HBM bytes. Hypothesis: fused moves ~64x
+fewer score-equivalent bytes. Report both.</p>
+<h3 id="exercises_10">Exercises</h3>
+<ul>
+<li>E51 (recall): write both traffic formulas.</li>
+<li>E52 (numerical): toy above. Compute the three
+  byte counts and the ratio.</li>
+<li>E53 (failure diagnosis): the SSM runs slow in
+  PyTorch eager. Name the likely cause.</li>
+<li>E54 (counterfactual): SRAM halves. What breaks
+  first?</li>
+<li>E55 (research): state the fused-vs-loop
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_10">Visual units</h3>
+<ul>
+<li>Figure <code>u07_c11_traffic.png</code>: HBM bars: 134 MB
+  vs 2.1 MB. Source: original toy. Shell 5.</li>
+</ul>
+<figure><img alt="u07_c11_traffic.png" src="../../assets/u07/u07_c11_traffic.png"><figcaption>HBM bars: 134 MB vs 2.1 MB</figcaption></figure>
+<ul>
+<li>Audit: <code>u07c11</code> to <code>f11</code>. Before: score
+  matrix. After: streamed state. One rule: keep
+  the state on chip.</li>
+</ul>
+<hr />
+<h2 id="c12-workload-comparisons">C12: workload comparisons</h2>
+<h3 id="source-scope-objectives-dependencies_11">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 6, Nov 1, &ldquo;Tradeoffs of
+Transformer vs. rNN vs. cNN Training &amp; Inference
+Efficiency, and Inductive Biases&rdquo;. Scope: the
+three-way comparison. Objective: fill the cost
+table for the lesson toy. Depends on C01-C11.</p>
+<h3 id="motivating-question-and-tiny-toy_11">Motivating question and tiny toy</h3>
+<p>Question: which model for which job? Toy: T =
+8192, d = 128, one head/layer. Compare
+transformer, SSM, and CNN (K = 512).</p>
+<h3 id="mental-model_11">Mental model</h3>
+<p>Three tools, three bills. The transformer pays in
+pairs (T^2). The SSM pays in state (T d^2, tiny
+memory). The CNN pays in kernel width (T K d)
+and cannot see past K. Pick by the bottleneck:
+memory, exactness, or range.</p>
+<h3 id="objects-shapes-assumptions_11">Objects, shapes, assumptions</h3>
+<ul>
+<li>Train FLOPs per layer-ish unit, decode state,
+  context range.</li>
+<li>Assumption: single head/layer toy. Real models
+  stack these.</li>
+</ul>
+<h3 id="derivation_11">Derivation</h3>
+<p>Transformer: 34.4 TFLOPs (C02 with values), state
+= KV cache O(T d). SSM: 2 T d^2 = 0.268 GFLOPs
+(C03-style count), state O(d^2) = 64 KiB.
+CNN K=512: 2 T K d = 2 * 8192 * 512 * 128 =
+1.07 TFLOPs, range 512. Ratios: transformer /
+SSM = 128x in FLOPs. CNN sees 1/16 of the
+context.</p>
+<h3 id="computed-example_11">Computed example</h3>
+<p>Toy table:
+| model | train FLOPs | state | range |
+|&mdash;|&mdash;|&mdash;|&mdash;|
+| transformer | 34.4 T | O(T d) | full |
+| SSM | 0.268 G | 64 KiB | full (faded) |
+| CNN K=512 | 1.07 T | O(K d) | 512 |</p>
+<p>Lab-07 asserts the three FLOP numbers.</p>
+<h3 id="implementation-and-checks_11">Implementation and checks</h3>
+<pre><code class="language-python">T, d, K = 8192, 128, 512
+tr = 4 * T * T * d
+ssm = 2 * T * d * d
+cnn = 2 * T * K * d
+assert tr == 34359738368
+assert ssm == 268435456
+assert cnn == 1073741824
+</code></pre>
+<p>Check: tr/ssm = 128. Lab-07 asserts the table.</p>
+<h3 id="complexity-and-costs_11">Complexity and costs</h3>
+<p>The table is the decision tool. No single winner:
+each column has a champion.</p>
+<h3 id="nearest-alternative-and-selection-boundary_11">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: hybrids. Selection boundary:
+transformer for exact recall at affordable T. 
+SSM for long faded context. CNN for local
+patterns with parallel training.</p>
+<h3 id="failure-case-and-counterexample_11">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;one model fits all.&rdquo;
+Counterexample: passkey at T=100k: transformer
+OOMs, CNN cannot reach, SSM blurs: the task
+needs a hybrid or retrieval (U10).</p>
+<h3 id="research-reading-and-falsifiable-extension_11">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 1 tradeoffs session.
+Falsifiable extension: build the three toys at
+small scale, measure time and a recall probe.
+Hypothesis: measured ratios match the table
+within 2x. Report all.</p>
+<h3 id="exercises_11">Exercises</h3>
+<ul>
+<li>E56 (recall): fill the three-row table from
+  memory.</li>
+<li>E57 (numerical): toy above. Compute the three
+  FLOP counts and the transformer/SSM ratio.</li>
+<li>E58 (failure diagnosis): a CNN fails passkey at
+  distance 5000, K=512. Expected?</li>
+<li>E59 (counterfactual): T drops to 512. Who wins
+  now?</li>
+<li>E60 (research): state the measured-ratio
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_11">Visual units</h3>
+<ul>
+<li>Figure <code>u07_c12_table.png</code>: the three-row cost
+  table as bars. Source: original toy. Shell 8.</li>
+</ul>
+<figure><img alt="u07_c12_table.png" src="../../assets/u07/u07_c12_table.png"><figcaption>the three-row cost table as bars</figcaption></figure>
+<ul>
+<li>Audit: <code>u07c12</code> to <code>f12</code>. Before: three
+  models. After: one table. One rule: count the
+  same toy.</li>
+</ul>
+<hr />
+<h2 id="u07-chapter-plate">U07 chapter plate</h2>
+<p>Figure <code>u07_chapter.png</code>: the subquadratic ladder:
+quadratic attention -&gt; kernelized linear -&gt;
+SSM recurrence -&gt; convolution view -&gt; scan, with
+FFT as the engine under the convolution view.
+Source: original.</p>
+<figure><img alt="u07_chapter.png" src="../../assets/u07/u07_chapter.png"><figcaption>the subquadratic ladder: quadratic attention -&gt; kernelized linear -&gt; SSM recurrence -&gt; convolution view -&gt; scan, with FFT as the engine under the convolution view. Source: original</figcaption></figure>
+<h2 id="unit-scope-replication-proposal-proposed-not-executed">Unit-scope replication proposal (PROPOSED, not executed)</h2>
+<p>Course-level capstones live in <code>capstones/</code>. This
+unit proposes: verify the recurrence/convolution/
+scan triple identity on a random SSM, then measure
+the FFT crossover where conv-view beats the
+sequential loop. See lab-07.</p>
+      
+      <nav class="pager"><a href="../../lessons/u06/keys.html"><span class="lbl">← Previous</span>Unit 06 · Keys</a><a href="../../lessons/u07/keys.html"><span class="lbl">Next →</span>Unit 07 · Keys</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../../assets/vendor/katex.min.js"></script>
+<script src="../../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../../";</script>
+<script src="../../assets/app.js"></script>
+</body>
+</html>
