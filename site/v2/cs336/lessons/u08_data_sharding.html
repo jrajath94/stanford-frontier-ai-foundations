@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U08 · Data and optimizer sharding — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Data and optimizer sharding.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-u08" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../course_map.html" data-page="cs336-course-map">Course map</a></li>
+<li><a href="../prerequisites.html" data-page="cs336-prereqs">Prerequisites</a></li>
+<li><a href="../notation_and_shapes.html" data-page="cs336-notation">Notation</a></li>
+<li><a href="../glossary.html" data-page="cs336-glossary">Glossary</a></li>
+<li><a href="../cheatsheet.html" data-page="cs336-cheatsheet">Cheatsheet</a></li>
+<li><a href="../crash-course.html" data-page="cs336-crash">Crash course</a></li>
+<li><a href="../lessons/u01_tokenization.html" data-page="cs336-u01">U01 · Text representation and tokeni</a></li>
+<li><a href="../keys/u01_answers.html" data-page="cs336-u01-answers">U01 · Answers</a></li>
+<li><a href="../lessons/u02_tensor_programming.html" data-page="cs336-u02">U02 · Executable tensor programming </a></li>
+<li><a href="../keys/u02_answers.html" data-page="cs336-u02-answers">U02 · Answers</a></li>
+<li><a href="../lessons/u03_transformer_block.html" data-page="cs336-u03">U03 · Transformer block mechanics</a></li>
+<li><a href="../keys/u03_answers.html" data-page="cs336-u03-answers">U03 · Answers</a></li>
+<li><a href="../lessons/u04_attention_moe.html" data-page="cs336-u04">U04 · Attention alternatives and exp</a></li>
+<li><a href="../keys/u04_answers.html" data-page="cs336-u04-answers">U04 · Answers</a></li>
+<li><a href="../lessons/u05_optimization.html" data-page="cs336-u05">U05 · Optimization and training corr</a></li>
+<li><a href="../keys/u05_answers.html" data-page="cs336-u05-answers">U05 · Answers</a></li>
+<li><a href="../lessons/u06_gpu_tpu.html" data-page="cs336-u06">U06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../keys/u06_answers.html" data-page="cs336-u06-answers">U06 · Answers</a></li>
+<li><a href="../lessons/u07_kernels.html" data-page="cs336-u07">U07 · Kernels and IO-aware attention</a></li>
+<li><a href="../keys/u07_answers.html" data-page="cs336-u07-answers">U07 · Answers</a></li>
+<li><a href="../lessons/u08_data_sharding.html" data-page="cs336-u08" class="active">U08 · Data and optimizer sharding</a></li>
+<li><a href="../keys/u08_answers.html" data-page="cs336-u08-answers">U08 · Answers</a></li>
+<li><a href="../lessons/u09_model_parallel.html" data-page="cs336-u09">U09 · Model and hybrid parallelism</a></li>
+<li><a href="../keys/u09_answers.html" data-page="cs336-u09-answers">U09 · Answers</a></li>
+<li><a href="../lessons/u10_scaling_laws.html" data-page="cs336-u10">U10 · Scaling laws and extrapolation</a></li>
+<li><a href="../keys/u10_answers.html" data-page="cs336-u10-answers">U10 · Answers</a></li>
+<li><a href="../labs/u01_lab.html" data-page="cs336-lab-u01">Lab 01 · Text representation and tokeni</a></li>
+<li><a href="../lessons/u11_inference.html" data-page="cs336-u11">U11 · Inference algorithms and servi</a></li>
+<li><a href="../labs/u01_lab_key.html" data-page="cs336-lab-u01-keys">Lab 01 · Keys</a></li>
+<li><a href="../keys/u11_answers.html" data-page="cs336-u11-answers">U11 · Answers</a></li>
+<li><a href="../labs/u02_lab.html" data-page="cs336-lab-u02">Lab 02 · Executable tensor programming </a></li>
+<li><a href="../lessons/u12_evaluation.html" data-page="cs336-u12">U12 · Evaluation and measurement val</a></li>
+<li><a href="../labs/u02_lab_key.html" data-page="cs336-lab-u02-keys">Lab 02 · Keys</a></li>
+<li><a href="../keys/u12_answers.html" data-page="cs336-u12-answers">U12 · Answers</a></li>
+<li><a href="../labs/u03_lab.html" data-page="cs336-lab-u03">Lab 03 · Transformer block mechanics</a></li>
+<li><a href="../lessons/u13_data_sourcing.html" data-page="cs336-u13">U13 · Data sourcing and transformati</a></li>
+<li><a href="../labs/u03_lab_key.html" data-page="cs336-lab-u03-keys">Lab 03 · Keys</a></li>
+<li><a href="../keys/u13_answers.html" data-page="cs336-u13-answers">U13 · Answers</a></li>
+<li><a href="../labs/u04_lab.html" data-page="cs336-lab-u04">Lab 04 · Attention alternatives and exp</a></li>
+<li><a href="../lessons/u14_data_mixing.html" data-page="cs336-u14">U14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../labs/u04_lab_key.html" data-page="cs336-lab-u04-keys">Lab 04 · Keys</a></li>
+<li><a href="../keys/u14_answers.html" data-page="cs336-u14-answers">U14 · Answers</a></li>
+<li><a href="../labs/u05_lab.html" data-page="cs336-lab-u05">Lab 05 · Optimization and training corr</a></li>
+<li><a href="../lessons/u15_midtraining.html" data-page="cs336-u15">U15 · Midtraining and supervised ada</a></li>
+<li><a href="../labs/u05_lab_key.html" data-page="cs336-lab-u05-keys">Lab 05 · Keys</a></li>
+<li><a href="../keys/u15_answers.html" data-page="cs336-u15-answers">U15 · Answers</a></li>
+<li><a href="../labs/u06_lab.html" data-page="cs336-lab-u06">Lab 06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../lessons/u16_alignment_rl.html" data-page="cs336-u16">U16 · Preference alignment and reaso</a></li>
+<li><a href="../labs/u06_lab_key.html" data-page="cs336-lab-u06-keys">Lab 06 · Keys</a></li>
+<li><a href="../keys/u16_answers.html" data-page="cs336-u16-answers">U16 · Answers</a></li>
+<li><a href="../labs/u07_lab.html" data-page="cs336-lab-u07">Lab 07 · Kernels and IO-aware attention</a></li>
+<li><a href="../lessons/u17_multimodal_systems.html" data-page="cs336-u17">U17 · Multimodality and training-sys</a></li>
+<li><a href="../labs/u07_lab_key.html" data-page="cs336-lab-u07-keys">Lab 07 · Keys</a></li>
+<li><a href="../keys/u17_answers.html" data-page="cs336-u17-answers">U17 · Answers</a></li>
+<li><a href="../labs/u08_lab.html" data-page="cs336-lab-u08">Lab 08 · Data and optimizer sharding</a></li>
+<li><a href="../lessons/u18_guests_defense.html" data-page="cs336-u18">U18 · Guest material and final resea</a></li>
+<li><a href="../labs/u08_lab_key.html" data-page="cs336-lab-u08-keys">Lab 08 · Keys</a></li>
+<li><a href="../keys/u18_answers.html" data-page="cs336-u18-answers">U18 · Answers</a></li>
+<li><a href="../labs/u09_lab.html" data-page="cs336-lab-u09">Lab 09 · Model and hybrid parallelism</a></li>
+<li><a href="../labs/u09_lab_key.html" data-page="cs336-lab-u09-keys">Lab 09 · Keys</a></li>
+<li><a href="../labs/u10_lab.html" data-page="cs336-lab-u10">Lab 10 · Scaling laws and extrapolation</a></li>
+<li><a href="../labs/u10_lab_key.html" data-page="cs336-lab-u10-keys">Lab 10 · Keys</a></li>
+<li><a href="../interview/u01_questions.html" data-page="cs336-int-u01">Interview · U01</a></li>
+<li><a href="../labs/u11_lab.html" data-page="cs336-lab-u11">Lab 11 · Inference algorithms and servi</a></li>
+<li><a href="../interview/u01_key.html" data-page="cs336-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../labs/u11_lab_key.html" data-page="cs336-lab-u11-keys">Lab 11 · Keys</a></li>
+<li><a href="../interview/u02_questions.html" data-page="cs336-int-u02">Interview · U02</a></li>
+<li><a href="../labs/u12_lab.html" data-page="cs336-lab-u12">Lab 12 · Evaluation and measurement val</a></li>
+<li><a href="../interview/u02_key.html" data-page="cs336-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../labs/u12_lab_key.html" data-page="cs336-lab-u12-keys">Lab 12 · Keys</a></li>
+<li><a href="../interview/u03_questions.html" data-page="cs336-int-u03">Interview · U03</a></li>
+<li><a href="../labs/u13_lab.html" data-page="cs336-lab-u13">Lab 13 · Data sourcing and transformati</a></li>
+<li><a href="../interview/u03_key.html" data-page="cs336-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../labs/u13_lab_key.html" data-page="cs336-lab-u13-keys">Lab 13 · Keys</a></li>
+<li><a href="../interview/u04_questions.html" data-page="cs336-int-u04">Interview · U04</a></li>
+<li><a href="../labs/u14_lab.html" data-page="cs336-lab-u14">Lab 14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../interview/u04_key.html" data-page="cs336-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../labs/u14_lab_key.html" data-page="cs336-lab-u14-keys">Lab 14 · Keys</a></li>
+<li><a href="../interview/u05_questions.html" data-page="cs336-int-u05">Interview · U05</a></li>
+<li><a href="../labs/u15_lab.html" data-page="cs336-lab-u15">Lab 15 · Midtraining and supervised ada</a></li>
+<li><a href="../interview/u05_key.html" data-page="cs336-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../labs/u15_lab_key.html" data-page="cs336-lab-u15-keys">Lab 15 · Keys</a></li>
+<li><a href="../interview/u06_questions.html" data-page="cs336-int-u06">Interview · U06</a></li>
+<li><a href="../labs/u16_lab.html" data-page="cs336-lab-u16">Lab 16 · Preference alignment and reaso</a></li>
+<li><a href="../interview/u06_key.html" data-page="cs336-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../labs/u16_lab_key.html" data-page="cs336-lab-u16-keys">Lab 16 · Keys</a></li>
+<li><a href="../interview/u07_questions.html" data-page="cs336-int-u07">Interview · U07</a></li>
+<li><a href="../labs/u17_lab.html" data-page="cs336-lab-u17">Lab 17 · Multimodality and training-sys</a></li>
+<li><a href="../interview/u07_key.html" data-page="cs336-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../labs/u17_lab_key.html" data-page="cs336-lab-u17-keys">Lab 17 · Keys</a></li>
+<li><a href="../interview/u08_questions.html" data-page="cs336-int-u08">Interview · U08</a></li>
+<li><a href="../labs/u18_lab.html" data-page="cs336-lab-u18">Lab 18 · Guest material and final resea</a></li>
+<li><a href="../interview/u08_key.html" data-page="cs336-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../labs/u18_lab_key.html" data-page="cs336-lab-u18-keys">Lab 18 · Keys</a></li>
+<li><a href="../interview/u09_questions.html" data-page="cs336-int-u09">Interview · U09</a></li>
+<li><a href="../interview/u09_key.html" data-page="cs336-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../interview/u10_questions.html" data-page="cs336-int-u10">Interview · U10</a></li>
+<li><a href="../interview/u10_key.html" data-page="cs336-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../interview/u11_questions.html" data-page="cs336-int-u11">Interview · U11</a></li>
+<li><a href="../interview/u11_key.html" data-page="cs336-int-u11-keys">Interview · U11 keys</a></li>
+<li><a href="../interview/u12_questions.html" data-page="cs336-int-u12">Interview · U12</a></li>
+<li><a href="../interview/u12_key.html" data-page="cs336-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../interview/u13_questions.html" data-page="cs336-int-u13">Interview · U13</a></li>
+<li><a href="../interview/u13_key.html" data-page="cs336-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../interview/u14_questions.html" data-page="cs336-int-u14">Interview · U14</a></li>
+<li><a href="../interview/u14_key.html" data-page="cs336-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../interview/u15_questions.html" data-page="cs336-int-u15">Interview · U15</a></li>
+<li><a href="../interview/u15_key.html" data-page="cs336-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../interview/u16_questions.html" data-page="cs336-int-u16">Interview · U16</a></li>
+<li><a href="../interview/u16_key.html" data-page="cs336-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../interview/u17_questions.html" data-page="cs336-int-u17">Interview · U17</a></li>
+<li><a href="../interview/u17_key.html" data-page="cs336-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../interview/u18_questions.html" data-page="cs336-int-u18">Interview · U18</a></li>
+<li><a href="../interview/u18_key.html" data-page="cs336-int-u18-keys">Interview · U18 keys</a></li>
+<li><a href="../interview/oral-defenses.html" data-page="cs336-int-oral">Interview · Oral</a></li>
+<li><a href="../interview/keys-oral.html" data-page="cs336-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../interview/transfer-sets.html" data-page="cs336-int-transfer">Interview · Transfer</a></li>
+<li><a href="../interview/keys-transfer.html" data-page="cs336-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../capstones/capstone_applied.html" data-page="cs336-cap-applied">Capstone · Applied</a></li>
+<li><a href="../capstones/capstone_research.html" data-page="cs336-cap-research">Capstone · Research</a></li>
+<li><a href="../keys/diagnostic_key.html" data-page="cs336-diagnostic-keys">Diagnostic · Keys</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U08 · Data and optimizer sharding</nav>
+      <h1>U08 · Data and optimizer sharding</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u08-data-and-optimizer-sharding">U08 , Data and optimizer sharding</h1>
+<p>Prerequisites: P02, P12, P16, P17. Bridge links in <code>../prerequisites.md</code>.
+Session: cross-cutting branch (distributed training reported across
+course sessions, exact mapping in <code>../course_map.md</code>).
+Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
+PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
+<h2 id="standing-note">Standing note</h2>
+<p>No cluster on this box. Distributed algorithms are studied as numpy
+simulations of the math (averaging, sharding layouts, time models),
+every number is computed from stated assumptions. The lesson never
+claims a multi-GPU measurement.</p>
+<h2 id="local-remediation-why-shard">Local remediation , why shard</h2>
+<p>Read this if diagnostic items D10 or D12 were not full marks. A 7B
+model in fp16 with Adam needs 14 GB params + 14 GB grads + 56 GB
+optimizer states = 84 GB: more than one 80 GB GPU holds. Data
+parallelism replicates the model and splits the batch, ZeRO shards
+the states so the 84 GB divides across GPUs: 10.5 GB/GPU at ZeRO-3
+over 8 (from <code>assets/compute_u08.py</code>, executed 2026-10-06).
+Assessment: a 13B model needs how much replicated, and what does
+ZeRO-3 over 8 give per GPU? Key: <code>../keys/u08_answers.md</code> R1.</p>
+<hr />
+<h3 id="c01-data-parallel-gradient-averaging">C01: Data-parallel gradient averaging</h3>
+<p>Leaf id <code>cs336-U08-C01</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the DP update rule. Objectives: prove the averaged update
+   equals the big-batch update. Depends on P16, U05-C08.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: N GPUs each see 1/N of
+   the batch, what update keeps the math identical? Toy from
+   <code>compute_u08.py</code>: mean of shard grads equals the big-batch grad
+   exactly.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Each rank computes grads on its shard, all-
+   reduces (sums) them, divides by N. The result is the exact
+   gradient of the concatenated batch: DP is algebraically identical
+   to one big batch (up to RNG, U05-C08).</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> N ranks, grads
+   same shape as params. Assumption: the loss is a mean over the
+   batch.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> grad(mean over N*m) = mean over ranks
+   of grad(shard means). All-reduce sums, dividing by N completes
+   the mean.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u08.py</code> (executed
+   2026-10-06): the mean identity holds exactly.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>dp_step(shard_grads)</code>:
+   sum and divide. About 4 lines of numpy simulating N=4.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Matches the big-batch
+   grad to 1e-12, the lab asserts it. Expected outputs in the lab
+   key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Communication of the full grads per step, memory is
+   replicated (the problem C03 solves).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Bigger single-
+    GPU batch (limited by memory). DP scales the batch across
+    devices.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Forgetting the /N: the
+    effective lr multiplies by N and training diverges. Same bug
+    class as U05-C08, check the convention.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: data-
+    parallel training analyses (primary: framework docs).
+    Extension: simulate N=4 with distinct shards, hypothesis: exact
+    match.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the DP update rule. (b) Oral ladder:
+    define the shard, prove the mean identity, justify all-reduce,
+    implement, compare with big batch, debug the missing /N,
+    critique the mean-loss assumption, design the N=4 simulation.
+    (c) Transfer: batchnorm is in the model. What breaks?
+    Answers: <code>../keys/u08_answers.md</code> A1.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U08 task 1 simulates DP averaging.
+    See <code>../labs/u08_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u08_fig01: lesson plate, shards -&gt; all-reduce
+    -&gt; update. Source: original. Render: <code>assets/render_u08.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u08_fig01" src="../assets/u08_fig01.png"><figcaption>lesson plate, shards -&gt; all-reduce -&gt; update. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c02-all-reduce-algorithms">C02: All-reduce algorithms</h3>
+<p>Leaf id <code>cs336-U08-C02</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: ring versus tree. Objectives: write the time models, pick
+   by regime. Depends on P16, U06-C08.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: which all-reduce for
+   14 GB over 8 GPUs? Toy from <code>compute_u08.py</code>: ring takes 0.122 s
+   at 200 GB/s.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Ring: bandwidth-optimal, time ~= 2<em>(N-1)/N *
+   bytes/bw, independent of N for large N. Tree: latency-optimal,
+   2</em>log2(N) steps, better for small messages. Large grads use ring,
+   small scalars use tree.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Bytes, GB/s, N.
+   Assumption: the ring model.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Ring: each rank sends 2<em>(N-1)/N of the
+   data in N-1 steps. Tree: reduce up and broadcast down, each
+   2</em>log2(N) hops of latency plus bandwidth terms.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u08.py</code> (executed
+   2026-10-06): 0.122 s for the ring on 14 GB.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>ring_time(bytes, bw,
+   N)</code>, <code>tree_time(...)</code>: the formulas. About 6 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Ring time -&gt; 2*bytes/
+   bw as N grows, tree wins below ~1 MB. Expected outputs in the
+   lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The formulas guide bucket sizing (C04).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> All-gather /
+    reduce-scatter (the pieces of ring all-reduce, used in ZeRO).
+    Pick by message size.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Tree for 14 GB: latency
+    terms are fine but the bandwidth term is worse than ring. The
+    assumption &ldquo;fewer steps is better&rdquo; breaks for large messages,
+    bandwidth dominates.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    collective algorithms (primary: paper sections). Extension:
+    find the crossover message size, hypothesis: ~1 MB at these
+    link speeds.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the two time models. (b) Oral ladder:
+    define the 2x factor, compute the toy, justify N-independence,
+    implement, compare, debug the tree-for-large case, critique the
+    model, design the crossover. (c) Transfer: N=1024. Which, and
+    why? Answers: <code>../keys/u08_answers.md</code> A2.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U08 task 2 compares the models.
+    See <code>../labs/u08_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the algorithm comparison table. No
+    figure, tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c03-zero-stages">C03: ZeRO stages</h3>
+<p>Leaf id <code>cs336-U08-C03</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: sharding optimizer states, grads, params. Objectives:
+   compute per-GPU bytes for each stage. Depends on C01, P17.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: where do the 84 GB go?
+   Toy from <code>compute_u08.py</code> (7B, 8 GPUs): ZeRO-1: 35.0, ZeRO-2:
+   22.8, ZeRO-3: 10.5 GB/GPU.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> ZeRO-1 shards optimizer states, ZeRO-2 adds
+   grads, ZeRO-3 adds params (gathered on demand per layer). Each
+   stage trades communication for memory: stage 3 adds an all-gather
+   per layer in forward and backward.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> GB/GPU. 7B
+   model, fp16 params/grads, fp32 Adam states. Assumption: even
+   sharding.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Bytes/GPU = replicated parts +
+   sharded parts / N. Stage 1: (14+14+56/8), stage 2:
+   (14+(14+56)/8), stage 3: 84/8.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u08.py</code> (executed
+   2026-10-06): 35.0, 22.8, 10.5 GB/GPU.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>zero_bytes(stage, N,
+   P)</code>: the formula. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Stage 3 = total/N,
+   stage 0 = total. Monotonic decrease. Expected outputs in the lab
+   key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Stage 3&rsquo;s all-gathers add ~50 percent communication,
+   overlap (C08) hides most of it.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Model
+    parallelism (U09) for single layers that exceed one GPU. ZeRO
+    for the common case.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> ZeRO-3 with tiny layers:
+    the all-gather latency dominates and training slows versus
+    ZeRO-2. The assumption &ldquo;more sharding is better&rdquo; breaks when
+    communication is latency-bound, match the stage to the model.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    ZeRO paper (Rajbhandari et al., 2020, primary). Extension:
+    compute the 13B numbers, hypothesis: stage 3 fits 8x80GB.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: what each stage shards. (b) Oral
+    ladder: define the shard sets, compute the toy, justify the
+    all-gather, implement, compare stages, debug the tiny-layer
+    case, critique the even-shard assumption, design the 13B
+    check. (c) Transfer: one layer has 5B params. Which stage, and
+    what else is needed? Answers: <code>../keys/u08_answers.md</code> A3.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U08 task 3 computes the stage table.
+    See <code>../labs/u08_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u08_fig02: lesson plate, the three stages as
+    bar charts. Source: original. Render: <code>assets/render_u08.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u08_fig02" src="../assets/u08_fig02.png"><figcaption>lesson plate, the three stages as bar charts. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c04-gradient-bucketing-and-overlap">C04: Gradient bucketing and overlap</h3>
+<p>Leaf id <code>cs336-U08-C04</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: hiding communication. Objectives: explain bucketing,
+   compute the overlapped schedule. Depends on C02, P16.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: must the backward
+   finish before any communication? Toy from <code>compute_u08.py</code>: 8
+   layers at 12 ms compute + 3 ms bucket all-reduce: 96 ms
+   sequential versus 36 ms overlapped.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Bucket grads as layers finish (reverse order),
+   all-reduce each bucket while the next layer&rsquo;s backward computes.
+   Communication hides behind compute when buckets are sized so
+   all-reduce time &lt;= layer time.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> ms. Bucket size
+   ~25-50 MB typical. Assumption: the toy times.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Total = max(compute chain,
+   comm chain) + edge effects. With comm &lt;= compute per layer, the
+   total is ~compute + one bucket.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u08.py</code> (executed
+   2026-10-06): 96 ms versus 36 ms.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The overlapped
+   schedule simulator: two timelines. About 12 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Overlapped &lt;=
+   sequential, equality when comm = 0. Expected outputs in the lab
+   key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Bucket memory (one extra copy), tuning the bucket
+   size.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> No overlap
+    (simple, slow). Overlap is standard.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Buckets too large: the
+    first all-reduce starts late and the tail is exposed. The
+    assumption &ldquo;any bucketing hides comm&rdquo; breaks, size buckets so
+    each finishes within its layer&rsquo;s compute.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    framework DDP docs (primary). Extension: sweep the bucket size
+    in the simulator, hypothesis: optimum near comm=compute.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the bucketing rule. (b) Oral ladder:
+    define the bucket, compute the toy, justify reverse order,
+    implement the simulator, compare, debug the large-bucket case,
+    critique the toy times, design the sweep. (c) Transfer: compute
+    is 2x comm per layer. Bucket size? Answers:
+    <code>../keys/u08_answers.md</code> A4.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U08 task 4 simulates the schedule.
+    See <code>../labs/u08_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the timeline table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c05-mixed-precision-and-loss-scaling">C05: Mixed precision and loss scaling</h3>
+<p>Leaf id <code>cs336-U08-C05</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: fp16 training stability. Objectives: explain loss scaling,
+   state the master-weights rule. Depends on P08, U05-C12.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: tiny grads vanish in
+   fp16. What now? Toy from <code>compute_u08.py</code>: grad 6e-8 underflows,
+   scaled by 1024 it is 6.14e-05, representable, unscale after.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Keep master weights in fp32, compute in fp16.
+   Multiply the loss by S before backward: grads shift into the
+   representable range. Unscale before the optimizer step, skip the
+   step on overflow, adapt S dynamically.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> S: scale
+   (often 2^10-2^16). Assumption: the toy grad value.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> d(S<em>loss)/dw = S</em>dloss/dw: linear, so
+   dividing by S recovers the true grad. Overflow in any grad sets
+   the skip flag.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u08.py</code> (executed
+   2026-10-06): 6e-8 -&gt; 6.14e-05 at S=1024.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>scaled_step(...)</code>:
+   scale, backward, unscale, check, step-or-skip. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Unscaled grads match
+   fp32 grads, overflow triggers a skip, not a nan. Expected
+   outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> One extra fp32 weight copy, the alternative is
+   divergence.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> bf16 (wider
+    range, often no scaling needed). fp16 needs the scaler.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Fixed S too large: every
+    step overflows and training silently stalls (all steps
+    skipped). The assumption &ldquo;bigger S is safer&rdquo; breaks, dynamic
+    scaling exists for this.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: mixed-
+    precision training guides (primary). Extension: simulate the
+    skip counter, hypothesis: occasional skips are fine, constant
+    skips stall.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the scale/unscale/skip loop.
+    (b) Oral ladder: define the underflow, compute the toy, justify
+    master weights, implement, compare with bf16, debug the stall,
+    critique the fixed-S assumption, design the skip simulation.
+    (c) Transfer: grads overflow every step at S=65536. Response?
+    Answers: <code>../keys/u08_answers.md</code> A5.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U08 task 5 simulates loss scaling.
+    See <code>../labs/u08_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the dtype table (what lives in which
+    precision). No figure, tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c06-fsdp-sharding-mechanics">C06: FSDP sharding mechanics</h3>
+<p>Leaf id <code>cs336-U08-C06</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: fully-sharded data parallel. Objectives: describe the
+   all-gather/compute/release cycle. Depends on C03.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how does ZeRO-3 run a
+   layer whose params live on 8 GPUs? Toy: the lab simulates the
+   gather-compute-shard cycle on a toy layer.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Before a layer: all-gather its params (each
+   rank contributes its shard). Compute. After: release the
+   gathered params (keep the shard). Backward: same, plus reduce-
+   scatter the grads into shards.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Shard: 1/N of
+   the params. Assumption: even sharding.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The cycle&rsquo;s communication per layer:
+   2 all-gathers (forward + backward) + 1 reduce-scatter. The
+   compute sees full params, memory holds shards.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: toy layer 1M params over 4 ranks:
+   gathered 4 MB bf16 per layer use, resident 1 MB.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The cycle simulator:
+   gather, compute, release. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Outputs match the
+   unsharded computation, peak memory matches the shard math.
+   Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Communication per layer, mitigated by overlap and
+   large layers.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> ZeRO-2 + DP
+    (less comm, more memory). FSDP when memory binds.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Wrapping each tiny op as a
+    unit: all-gather latency dominates. The assumption &ldquo;finer is
+    better&rdquo; breaks, wrap at layer granularity or larger.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: FSDP
+    papers/docs (primary). Extension: vary the wrap size in the
+    simulator, hypothesis: optimum at coarse units.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the cycle steps. (b) Oral ladder:
+    define the shard, trace one layer, justify the release,
+    implement, compare with ZeRO-2, debug the tiny-unit case,
+    critique the even assumption, design the wrap sweep.
+    (c) Transfer: layers vary 100x in size. Wrap policy?
+    Answers: <code>../keys/u08_answers.md</code> A6.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U08 task 6 simulates the FSDP cycle.
+    See <code>../labs/u08_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the cycle table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c07-checkpoint-consolidation">C07: Checkpoint consolidation</h3>
+<p>Leaf id <code>cs336-U08-C07</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: saving sharded state. Objectives: describe gather-to-one
+   versus per-rank saves. Depends on C03, U05-C11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: each rank holds 1/8 of
+   the optimizer: how do you save? Toy: the lab models both layouts
+   and their byte counts.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Option A: all-gather to rank 0, save one file
+   (simple, slow, memory spike). Option B: each rank saves its shard
+   (fast, N files, needs consolidation to resume on different N).</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Files and bytes.
+   Assumption: the 7B ZeRO-3 layout.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Sharded save: N files of total/N each.
+   Resuming on M != N ranks needs resharding: concatenate then
+   re-split.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: 84 GB total, option A writes one 84 GB
+   file, option B writes 8 x 10.5 GB.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The reshard
+   procedure: load shards, concat, split. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Resharded state
+   matches the original exactly. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Option A spikes memory, option B complicates tooling.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Framework
+    checkpoint APIs (handle this internally). Know the tradeoff when
+    debugging.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Resuming sharded files on a
+    different N without resharding: shape mismatches, crash. The
+    assumption &ldquo;checkpoints are portable&rdquo; breaks, record N in the
+    metadata.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    framework checkpoint docs (primary). Extension: reshard the toy
+    8-&gt;4, hypothesis: exact.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the two layouts. (b) Oral ladder:
+    define the shard files, compute the bytes, justify resharding,
+    implement, compare, debug the N-mismatch, critique portability,
+    design the 8-&gt;4 check. (c) Transfer: the cluster changes size
+    weekly. Policy? Answers: <code>../keys/u08_answers.md</code> A7.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U08 task 7 models both layouts.
+    See <code>../labs/u08_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the layout table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c08-communication-compute-overlap">C08: Communication-compute overlap</h3>
+<p>Leaf id <code>cs336-U08-C08</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: hiding collectives. Objectives: state the overlap
+   condition, compute the hidden fraction. Depends on C04, U06-C08.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: when is communication
+   free? Toy: comm &lt;= compute per layer hides fully (C04&rsquo;s 96-&gt;36
+   ms).</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Overlap needs independent work: the next layer&rsquo;s
+   compute runs while the previous layer&rsquo;s collective flies. The
+   condition: collective time &lt;= compute time of the overlapping
+   region. Exposed comm is the remainder.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> ms. Assumption:
+   the hardware supports async collectives.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Exposed = max(0, comm - compute).
+   Total = compute + exposed. Bucketing (C04) and prefetching shape
+   the schedule to satisfy the condition.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u08.py</code> (executed
+   2026-10-06): exposed 36-12 = 24 ms of comm&hellip; precisely: total
+   36 ms versus 96 sequential.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The overlap
+   calculator: given per-layer compute/comm, return exposed. About
+   6 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Exposed = 0 when comm
+   &lt;= compute, equals comm - compute otherwise. Expected outputs in
+   the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Scheduling complexity, the alternative is exposed
+   communication.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Faster links
+    (money). Overlap is the software answer.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Overlapping with the wrong
+    stream dependency: the &ldquo;overlap&rdquo; serializes and nothing hides.
+    The assumption &ldquo;async means parallel&rdquo; breaks without correct
+    stream synchronization.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    overlap analyses (primary: paper sections). Extension: sweep
+    comm/compute ratios, hypothesis: linear exposed past 1.0.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the overlap condition. (b) Oral
+    ladder: define exposed, compute the toy, justify independence,
+    implement, compare with faster links, debug the serialization,
+    critique the async assumption, design the sweep. (c) Transfer:
+    comm is 3x compute. Options? Answers: <code>../keys/u08_answers.md</code>
+    A8.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U08 task 8 computes exposed comm.
+    See <code>../labs/u08_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u08_fig03: lesson plate, the overlapped
+    timeline. Source: original. Render: <code>assets/render_u08.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u08_fig03" src="../assets/u08_fig03.png"><figcaption>lesson plate, the overlapped timeline. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c09-scaling-efficiency-measurement">C09: Scaling efficiency measurement</h3>
+<p>Leaf id <code>cs336-U08-C09</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: weak versus strong scaling. Objectives: compute
+   efficiency, state what good looks like. Depends on C08, U06-C05.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: 8 GPUs, 8x faster?
+   Toy from <code>compute_u08.py</code>: 100 s on 1, 14 s on 8: 89 percent
+   efficiency.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Strong scaling: fixed work, more GPUs:
+   efficiency = T1/(N*TN). Weak scaling: fixed work per GPU. 85-95
+   percent is healthy, below 70 percent, something is wrong.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Percent.
+   Assumption: the toy times.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Ideal TN = T1/N. Efficiency measures
+   the overhead: communication, imbalance, stragglers.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u08.py</code> (executed
+   2026-10-06): 89 percent.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>efficiency(T1, TN,
+   N)</code>: two lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> 100 percent at ideal,
+   decreases with overhead. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Measurement time, the alternative is blind scaling.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Profiling the
+    step breakdown (deeper). Efficiency is the headline number.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> One straggler GPU: all
+    collectives wait, efficiency tanks, and the average looks like
+    a communication problem. The assumption &ldquo;GPUs are identical&rdquo;
+    breaks, check per-rank timings.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    scaling reports (primary). Extension: inject a straggler in the
+    simulator, hypothesis: efficiency drops disproportionately.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the efficiency formula. (b) Oral
+    ladder: define strong vs weak, compute the toy, justify the
+    ideal, implement, compare with profiling, debug the straggler,
+    critique the identical-GPU assumption, design the injection.
+    (c) Transfer: efficiency 55 percent at 64 GPUs. First three
+    checks? Answers: <code>../keys/u08_answers.md</code> A9.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U08 task 9 computes efficiency and
+    the straggler effect. See <code>../labs/u08_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the scaling table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c10-fault-tolerance-and-preemption">C10: Fault tolerance and preemption</h3>
+<p>Leaf id <code>cs336-U08-C10</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: surviving rank failure. Objectives: state the checkpoint-
+   restart contract. Depends on C07, U05-C11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: a GPU dies at 3am.
+   What is lost? Toy: the lab models lost work = time since last
+   checkpoint, the contract bounds it.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Checkpoint every k steps (U05-C11), on failure,
+   restart from the latest. Lost work &lt;= k steps. Elastic training
+   re-forms the group at a new N (needs resharding, C07).</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> k steps.
+   Assumption: checkpoints are frequent enough.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Expected waste = checkpoint cost +
+   (failure rate * k/2 * step time). Optimize k against the failure
+   rate.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: k=100, step 10 s, failure every 24 h:
+   expected waste per failure ~500 s of work + restart.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The waste model:
+   three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Waste grows with k,
+   checkpoint cost bounds k from below. Expected outputs in the lab
+   key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Checkpoint I/O versus lost work.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Redundant
+    compute (expensive). Checkpoint-restart is standard.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Checkpointing to the same
+    dying filesystem: the checkpoint is corrupt and the restart
+    fails. The assumption &ldquo;the checkpoint survived&rdquo; breaks, verify
+    writes and keep two.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: large-
+    run reliability reports (primary). Extension: optimize k for
+    the toy numbers, hypothesis: k ~ 100-500.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the contract. (b) Oral ladder:
+    define lost work, compute the toy, justify elastic resharding,
+    implement the model, compare with redundancy, debug the corrupt
+    checkpoint, critique the rate assumption, design the k
+    optimization. (c) Transfer: preemptions every 2 hours. k?
+    Answers: <code>../keys/u08_answers.md</code> A10.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U08 task 10 models the waste.
+    See <code>../labs/u08_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the waste table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c11-deterministic-data-loading">C11: Deterministic data loading</h3>
+<p>Leaf id <code>cs336-U08-C11</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: identical batches across resumes. Objectives: state the
+   sharding and seeding rules. Depends on P02, U05-C11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: each rank must see
+   different data, deterministically. Toy: the lab shards a toy
+   dataset by rank and checks disjointness and coverage.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Shard the dataset by rank (interleaved or
+   contiguous), seed each worker&rsquo;s RNG from (seed, epoch, rank).
+   Resume restores the loader position (U05-C11). Determinism =
+   same (seed, epoch, rank, N) gives the same batches.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Indices and
+   seeds. Assumption: the dataset is static.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> rank r takes indices r, r+N, r+2N&hellip;
+   (or a contiguous chunk). The epoch seed shuffles globally first.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: 100 items, 4 ranks: 25 each, disjoint,
+   union = all.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>shard_indices(n, N,
+   r, seed, epoch)</code>: shuffle then slice. About 6 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Disjoint, covering,
+   deterministic across calls. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> None at runtime, bugs here silently bias training.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Centralized
+    batching (simpler, slower). Sharded loading is standard.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Same seed on all ranks:
+    every rank trains on identical data, the effective batch is 1/N
+    and the run looks mysteriously slow to converge. The assumption
+    &ldquo;seeds differ&rdquo; breaks silently, the symptom is weak scaling of
+    loss.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    framework data-loading docs (primary). Extension: verify the
+    disjointness on the toy, hypothesis: exact.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the sharding rule. (b) Oral ladder:
+    define the shard, check disjointness, justify per-rank seeds,
+    implement, compare with centralized, debug the shared seed,
+    critique the static assumption, design the check. (c) Transfer:
+    N changes mid-run. What must be recomputed? Answers:
+    <code>../keys/u08_answers.md</code> A11.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U08 task 11 implements sharded
+    loading. See <code>../labs/u08_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the sharding table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c12-distributed-correctness-invariants">C12: Distributed correctness invariants</h3>
+<p>Leaf id <code>cs336-U08-C12</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: cheap alarms for distributed runs. Objectives: state the
+   invariants, implement them. Depends on C01, U05-C12.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the loss looks fine,
+   is the distribution right? Toy: the lab checks four invariants
+   on the simulator.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Invariants: (1) DP update equals big-batch
+   update, (2) shards are disjoint and covering, (3) all ranks
+   agree on the step count, (4) checkpoint reshard round-trips
+   exactly.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Equalities to
+   tolerance. Assumption: the simulator models the real ops.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Each invariant is an independent
+   re-derivation of a distributed property from the single-GPU
+   semantics.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: all four pass on the correct
+   simulator, the missing-/N bug fails invariant 1.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>dist_invariants(
+   ...)</code>: the four asserts. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Each injected bug
+   fails exactly one invariant. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Seconds, run before scaling up.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Full
+    distributed test (needs hardware). Invariants on the simulator
+    are the first gate.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Invariants pass but NCCL
+    hangs at scale: the math is right, the system is not. The
+    assumption &ldquo;math covers systems&rdquo; breaks, invariants complement
+    systems testing.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    distributed testing guides (primary). Extension: inject each
+    bug, hypothesis: one invariant each.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the four invariants. (b) Oral ladder:
+    define each, derive invariant 1, justify the round-trip,
+    implement, compare with hardware tests, debug the hang,
+    critique sufficiency, design the injection. (c) Transfer: a new
+    sharding scheme is proposed. Which invariant is written first?
+    Answers: <code>../keys/u08_answers.md</code> A12.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U08 task 12 implements the
+    invariants. See <code>../labs/u08_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the invariant checklist. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h2 id="unit-russian-doll-ladder-u08">Unit Russian-doll ladder (U08)</h2>
+<ul>
+<li>Shell 0: how does training span GPUs without changing the math?</li>
+<li>Shell 1: one DP step, one ZeRO table, one all-reduce time.</li>
+<li>Shell 2: ranks, shards, buckets, scales, checkpoints.</li>
+<li>Shell 3: one averaging, one bucket, one reshard.</li>
+<li>Shell 4: the DP simulator, the overlap calculator, the invariant
+  checks.</li>
+<li>Shell 5: 10.5 GB/GPU, 0.122 s, 89 percent.</li>
+<li>Shell 6: change N, predict the bytes, observe.</li>
+<li>Shell 7: drop the /N, share the seed, skip the unscale.</li>
+<li>Shell 8: ring vs tree, ZeRO-2 vs 3, overlap vs faster links.</li>
+<li>Shell 9: straggler injection, k optimization.</li>
+<li>Shell 10: the distribution plan is the production scaling
+  contract.</li>
+</ul>
+      
+      <nav class="pager"><a href="../keys/u07_answers.html"><span class="lbl">← Previous</span>U07 · Answers</a><a href="../keys/u08_answers.html"><span class="lbl">Next →</span>U08 · Answers</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
