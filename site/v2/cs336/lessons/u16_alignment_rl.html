@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U16 · Preference alignment and reasoning RL — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Preference alignment and reasoning RL.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-u16" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../course_map.html" data-page="cs336-course-map">Course map</a></li>
+<li><a href="../prerequisites.html" data-page="cs336-prereqs">Prerequisites</a></li>
+<li><a href="../notation_and_shapes.html" data-page="cs336-notation">Notation</a></li>
+<li><a href="../glossary.html" data-page="cs336-glossary">Glossary</a></li>
+<li><a href="../cheatsheet.html" data-page="cs336-cheatsheet">Cheatsheet</a></li>
+<li><a href="../crash-course.html" data-page="cs336-crash">Crash course</a></li>
+<li><a href="../lessons/u01_tokenization.html" data-page="cs336-u01">U01 · Text representation and tokeni</a></li>
+<li><a href="../keys/u01_answers.html" data-page="cs336-u01-answers">U01 · Answers</a></li>
+<li><a href="../lessons/u02_tensor_programming.html" data-page="cs336-u02">U02 · Executable tensor programming </a></li>
+<li><a href="../keys/u02_answers.html" data-page="cs336-u02-answers">U02 · Answers</a></li>
+<li><a href="../lessons/u03_transformer_block.html" data-page="cs336-u03">U03 · Transformer block mechanics</a></li>
+<li><a href="../keys/u03_answers.html" data-page="cs336-u03-answers">U03 · Answers</a></li>
+<li><a href="../lessons/u04_attention_moe.html" data-page="cs336-u04">U04 · Attention alternatives and exp</a></li>
+<li><a href="../keys/u04_answers.html" data-page="cs336-u04-answers">U04 · Answers</a></li>
+<li><a href="../lessons/u05_optimization.html" data-page="cs336-u05">U05 · Optimization and training corr</a></li>
+<li><a href="../keys/u05_answers.html" data-page="cs336-u05-answers">U05 · Answers</a></li>
+<li><a href="../lessons/u06_gpu_tpu.html" data-page="cs336-u06">U06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../keys/u06_answers.html" data-page="cs336-u06-answers">U06 · Answers</a></li>
+<li><a href="../lessons/u07_kernels.html" data-page="cs336-u07">U07 · Kernels and IO-aware attention</a></li>
+<li><a href="../keys/u07_answers.html" data-page="cs336-u07-answers">U07 · Answers</a></li>
+<li><a href="../lessons/u08_data_sharding.html" data-page="cs336-u08">U08 · Data and optimizer sharding</a></li>
+<li><a href="../keys/u08_answers.html" data-page="cs336-u08-answers">U08 · Answers</a></li>
+<li><a href="../lessons/u09_model_parallel.html" data-page="cs336-u09">U09 · Model and hybrid parallelism</a></li>
+<li><a href="../keys/u09_answers.html" data-page="cs336-u09-answers">U09 · Answers</a></li>
+<li><a href="../lessons/u10_scaling_laws.html" data-page="cs336-u10">U10 · Scaling laws and extrapolation</a></li>
+<li><a href="../keys/u10_answers.html" data-page="cs336-u10-answers">U10 · Answers</a></li>
+<li><a href="../labs/u01_lab.html" data-page="cs336-lab-u01">Lab 01 · Text representation and tokeni</a></li>
+<li><a href="../lessons/u11_inference.html" data-page="cs336-u11">U11 · Inference algorithms and servi</a></li>
+<li><a href="../labs/u01_lab_key.html" data-page="cs336-lab-u01-keys">Lab 01 · Keys</a></li>
+<li><a href="../keys/u11_answers.html" data-page="cs336-u11-answers">U11 · Answers</a></li>
+<li><a href="../labs/u02_lab.html" data-page="cs336-lab-u02">Lab 02 · Executable tensor programming </a></li>
+<li><a href="../lessons/u12_evaluation.html" data-page="cs336-u12">U12 · Evaluation and measurement val</a></li>
+<li><a href="../labs/u02_lab_key.html" data-page="cs336-lab-u02-keys">Lab 02 · Keys</a></li>
+<li><a href="../keys/u12_answers.html" data-page="cs336-u12-answers">U12 · Answers</a></li>
+<li><a href="../labs/u03_lab.html" data-page="cs336-lab-u03">Lab 03 · Transformer block mechanics</a></li>
+<li><a href="../lessons/u13_data_sourcing.html" data-page="cs336-u13">U13 · Data sourcing and transformati</a></li>
+<li><a href="../labs/u03_lab_key.html" data-page="cs336-lab-u03-keys">Lab 03 · Keys</a></li>
+<li><a href="../keys/u13_answers.html" data-page="cs336-u13-answers">U13 · Answers</a></li>
+<li><a href="../labs/u04_lab.html" data-page="cs336-lab-u04">Lab 04 · Attention alternatives and exp</a></li>
+<li><a href="../lessons/u14_data_mixing.html" data-page="cs336-u14">U14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../labs/u04_lab_key.html" data-page="cs336-lab-u04-keys">Lab 04 · Keys</a></li>
+<li><a href="../keys/u14_answers.html" data-page="cs336-u14-answers">U14 · Answers</a></li>
+<li><a href="../labs/u05_lab.html" data-page="cs336-lab-u05">Lab 05 · Optimization and training corr</a></li>
+<li><a href="../lessons/u15_midtraining.html" data-page="cs336-u15">U15 · Midtraining and supervised ada</a></li>
+<li><a href="../labs/u05_lab_key.html" data-page="cs336-lab-u05-keys">Lab 05 · Keys</a></li>
+<li><a href="../keys/u15_answers.html" data-page="cs336-u15-answers">U15 · Answers</a></li>
+<li><a href="../labs/u06_lab.html" data-page="cs336-lab-u06">Lab 06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../lessons/u16_alignment_rl.html" data-page="cs336-u16" class="active">U16 · Preference alignment and reaso</a></li>
+<li><a href="../labs/u06_lab_key.html" data-page="cs336-lab-u06-keys">Lab 06 · Keys</a></li>
+<li><a href="../keys/u16_answers.html" data-page="cs336-u16-answers">U16 · Answers</a></li>
+<li><a href="../labs/u07_lab.html" data-page="cs336-lab-u07">Lab 07 · Kernels and IO-aware attention</a></li>
+<li><a href="../lessons/u17_multimodal_systems.html" data-page="cs336-u17">U17 · Multimodality and training-sys</a></li>
+<li><a href="../labs/u07_lab_key.html" data-page="cs336-lab-u07-keys">Lab 07 · Keys</a></li>
+<li><a href="../keys/u17_answers.html" data-page="cs336-u17-answers">U17 · Answers</a></li>
+<li><a href="../labs/u08_lab.html" data-page="cs336-lab-u08">Lab 08 · Data and optimizer sharding</a></li>
+<li><a href="../lessons/u18_guests_defense.html" data-page="cs336-u18">U18 · Guest material and final resea</a></li>
+<li><a href="../labs/u08_lab_key.html" data-page="cs336-lab-u08-keys">Lab 08 · Keys</a></li>
+<li><a href="../keys/u18_answers.html" data-page="cs336-u18-answers">U18 · Answers</a></li>
+<li><a href="../labs/u09_lab.html" data-page="cs336-lab-u09">Lab 09 · Model and hybrid parallelism</a></li>
+<li><a href="../labs/u09_lab_key.html" data-page="cs336-lab-u09-keys">Lab 09 · Keys</a></li>
+<li><a href="../labs/u10_lab.html" data-page="cs336-lab-u10">Lab 10 · Scaling laws and extrapolation</a></li>
+<li><a href="../labs/u10_lab_key.html" data-page="cs336-lab-u10-keys">Lab 10 · Keys</a></li>
+<li><a href="../interview/u01_questions.html" data-page="cs336-int-u01">Interview · U01</a></li>
+<li><a href="../labs/u11_lab.html" data-page="cs336-lab-u11">Lab 11 · Inference algorithms and servi</a></li>
+<li><a href="../interview/u01_key.html" data-page="cs336-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../labs/u11_lab_key.html" data-page="cs336-lab-u11-keys">Lab 11 · Keys</a></li>
+<li><a href="../interview/u02_questions.html" data-page="cs336-int-u02">Interview · U02</a></li>
+<li><a href="../labs/u12_lab.html" data-page="cs336-lab-u12">Lab 12 · Evaluation and measurement val</a></li>
+<li><a href="../interview/u02_key.html" data-page="cs336-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../labs/u12_lab_key.html" data-page="cs336-lab-u12-keys">Lab 12 · Keys</a></li>
+<li><a href="../interview/u03_questions.html" data-page="cs336-int-u03">Interview · U03</a></li>
+<li><a href="../labs/u13_lab.html" data-page="cs336-lab-u13">Lab 13 · Data sourcing and transformati</a></li>
+<li><a href="../interview/u03_key.html" data-page="cs336-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../labs/u13_lab_key.html" data-page="cs336-lab-u13-keys">Lab 13 · Keys</a></li>
+<li><a href="../interview/u04_questions.html" data-page="cs336-int-u04">Interview · U04</a></li>
+<li><a href="../labs/u14_lab.html" data-page="cs336-lab-u14">Lab 14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../interview/u04_key.html" data-page="cs336-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../labs/u14_lab_key.html" data-page="cs336-lab-u14-keys">Lab 14 · Keys</a></li>
+<li><a href="../interview/u05_questions.html" data-page="cs336-int-u05">Interview · U05</a></li>
+<li><a href="../labs/u15_lab.html" data-page="cs336-lab-u15">Lab 15 · Midtraining and supervised ada</a></li>
+<li><a href="../interview/u05_key.html" data-page="cs336-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../labs/u15_lab_key.html" data-page="cs336-lab-u15-keys">Lab 15 · Keys</a></li>
+<li><a href="../interview/u06_questions.html" data-page="cs336-int-u06">Interview · U06</a></li>
+<li><a href="../labs/u16_lab.html" data-page="cs336-lab-u16">Lab 16 · Preference alignment and reaso</a></li>
+<li><a href="../interview/u06_key.html" data-page="cs336-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../labs/u16_lab_key.html" data-page="cs336-lab-u16-keys">Lab 16 · Keys</a></li>
+<li><a href="../interview/u07_questions.html" data-page="cs336-int-u07">Interview · U07</a></li>
+<li><a href="../labs/u17_lab.html" data-page="cs336-lab-u17">Lab 17 · Multimodality and training-sys</a></li>
+<li><a href="../interview/u07_key.html" data-page="cs336-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../labs/u17_lab_key.html" data-page="cs336-lab-u17-keys">Lab 17 · Keys</a></li>
+<li><a href="../interview/u08_questions.html" data-page="cs336-int-u08">Interview · U08</a></li>
+<li><a href="../labs/u18_lab.html" data-page="cs336-lab-u18">Lab 18 · Guest material and final resea</a></li>
+<li><a href="../interview/u08_key.html" data-page="cs336-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../labs/u18_lab_key.html" data-page="cs336-lab-u18-keys">Lab 18 · Keys</a></li>
+<li><a href="../interview/u09_questions.html" data-page="cs336-int-u09">Interview · U09</a></li>
+<li><a href="../interview/u09_key.html" data-page="cs336-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../interview/u10_questions.html" data-page="cs336-int-u10">Interview · U10</a></li>
+<li><a href="../interview/u10_key.html" data-page="cs336-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../interview/u11_questions.html" data-page="cs336-int-u11">Interview · U11</a></li>
+<li><a href="../interview/u11_key.html" data-page="cs336-int-u11-keys">Interview · U11 keys</a></li>
+<li><a href="../interview/u12_questions.html" data-page="cs336-int-u12">Interview · U12</a></li>
+<li><a href="../interview/u12_key.html" data-page="cs336-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../interview/u13_questions.html" data-page="cs336-int-u13">Interview · U13</a></li>
+<li><a href="../interview/u13_key.html" data-page="cs336-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../interview/u14_questions.html" data-page="cs336-int-u14">Interview · U14</a></li>
+<li><a href="../interview/u14_key.html" data-page="cs336-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../interview/u15_questions.html" data-page="cs336-int-u15">Interview · U15</a></li>
+<li><a href="../interview/u15_key.html" data-page="cs336-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../interview/u16_questions.html" data-page="cs336-int-u16">Interview · U16</a></li>
+<li><a href="../interview/u16_key.html" data-page="cs336-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../interview/u17_questions.html" data-page="cs336-int-u17">Interview · U17</a></li>
+<li><a href="../interview/u17_key.html" data-page="cs336-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../interview/u18_questions.html" data-page="cs336-int-u18">Interview · U18</a></li>
+<li><a href="../interview/u18_key.html" data-page="cs336-int-u18-keys">Interview · U18 keys</a></li>
+<li><a href="../interview/oral-defenses.html" data-page="cs336-int-oral">Interview · Oral</a></li>
+<li><a href="../interview/keys-oral.html" data-page="cs336-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../interview/transfer-sets.html" data-page="cs336-int-transfer">Interview · Transfer</a></li>
+<li><a href="../interview/keys-transfer.html" data-page="cs336-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../capstones/capstone_applied.html" data-page="cs336-cap-applied">Capstone · Applied</a></li>
+<li><a href="../capstones/capstone_research.html" data-page="cs336-cap-research">Capstone · Research</a></li>
+<li><a href="../keys/diagnostic_key.html" data-page="cs336-diagnostic-keys">Diagnostic · Keys</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U16 · Preference alignment and reasoning RL</nav>
+      <h1>U16 · Preference alignment and reasoning RL</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u16-preference-alignment-and-reasoning-rl">U16 , Preference alignment and reasoning RL</h1>
+<p>Prerequisites: P08, P17, P18. Bridge links in <code>../prerequisites.md</code>.
+Sessions: S15 (reported May 18, Alignment: RLHF/DPO) covers C01-C06,
+S16 (reported May 20, Alignment: RL Algorithms) covers C07-C12. The
+split is a teaching decision, stated here, not a source claim. Full
+map in <code>../course_map.md</code>.
+Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
+PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
+<h2 id="standing-note">Standing note</h2>
+<p>No RL training was run on this box. All rollouts, rewards, and
+losses are synthetic toys with fixed seeds from
+<code>assets/compute_u16.py</code> (numpy CPU, executed 2026-10-06), stated as
+such. &ldquo;Not in source&rdquo; marks anything the scripts do not compute.</p>
+<h2 id="russian-doll-map">Russian-doll map</h2>
+<p>Shells 0-1 in items 1-2, shells 2-3 in items 3-6, shell 4 in item 7,
+shell 5 in item 8, shell 6 in item 9, shell 7 in item 11, shell 8 in
+item 10, shell 9 in item 12, shell 10 in item 13(c). The depth gate
+is checked by item 13.</p>
+<h2 id="local-remediation-the-kl-leash">Local remediation , the KL leash</h2>
+<p>Read this if diagnostic items on KL divergence were not full marks.
+RL on language models keeps a KL penalty to a reference policy: it
+stops the policy from drifting into nonsense that games the reward.
+Toy from <code>compute_u16.py</code>: p=[0.5,0.3,0.2], q=[0.4,0.4,0.2]:
+KL(p||q)=0.0253 nats, KL(q||p)=0.0258. The two directions differ:
+KL is asymmetric. Assessment: p=[0.9,0.1], q=[0.5,0.5]. Compute
+both directions. Key: <code>../keys/u16_answers.md</code> R1.</p>
+<hr />
+<h3 id="c01-reward-model">C01: Reward model</h3>
+<p>Leaf id <code>cs336-U16-C01</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: learning human preferences as a scalar. Objectives:
+   state the Bradley-Terry model, train it on a toy pair set.
+   Depends on P08, P18.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: humans rank A over
+   B. How does that become a number? The reward model assigns
+   scalars r(A), r(B). Bradley-Terry says P(A preferred) =
+   sigmoid(r(A) - r(B)). Train r to make the observed choices
+   likely.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The reward model is a learned stand-in for
+   the human. It compresses pairwise judgments into one scalar
+   per response. Every later RL step trusts this compression.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> r: scalar
+   reward. Assumption: transitive preferences, the logistic
+   form.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Maximum likelihood on the pairs:
+   loss = -log sigmoid(r_w - r_l) summed over chosen/rejected
+   pairs (C02).</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: r_w=1.0, r_l=0.0: P=0.731. The
+   model assigns 73% to the observed choice.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>bt_loss(rw,
+   rl)</code>: -log(sigmoid(rw-rl)). Three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Swapped pairs
+   give loss -log(1-0.731)=1.31. Equal rewards give -log 0.5.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The reward model inherits the labelers&rsquo; biases
+   and disagreements. It is the ceiling of the RL that follows.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Verifiable
+    rewards (C08, no model needed) when the task has right
+    answers. Learned rewards for open-ended quality.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Labelers disagree 40%
+    of the time: the model learns the majority&rsquo;s taste and
+    calls it quality. The assumption &ldquo;labels are truth&rdquo; breaks,
+    measure agreement first.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    RLHF papers (Christiano et al., 2017. Ouyang et al., 2022,
+    primary). Extension: flip 10% of toy labels, hypothesis:
+    the fitted rewards shrink toward 0.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the Bradley-Terry formula.
+    (b) Oral ladder: define the model, compute the toy, justify
+    the sigmoid, implement <code>bt_loss</code>, compare with verifiable
+    rewards, debug the disagreement case, critique the
+    transitivity assumption, design the flip test. (c) Transfer:
+    three responses ranked A&gt;B&gt;C. Write the training pairs.
+    Answers: <code>../keys/u16_answers.md</code> A1.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U16 task 1 trains the toy.
+    See <code>../labs/u16_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c02-chosenrejected-pairs">C02: Chosen/rejected pairs</h3>
+<p>Leaf id <code>cs336-U16-C02</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the preference dataset. Objectives: construct pairs,
+   state the collection protocol. Depends on C01.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: what exactly is
+   one training example? A prompt, two responses, and a human
+   judgment of which is better. The pair (chosen, rejected) is
+   the atom of preference data.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Pairs are comparisons, not grades. They say
+   &ldquo;this over that&rdquo;, never &ldquo;this is 8/10&rdquo;. The reward model
+   learns the ordering, not an absolute scale.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Pair:
+   (x, y_w, y_l). Assumption: one judgment per pair, ties
+   discarded.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is a data
+   spec. Collection: sample two responses per prompt, get
+   rankings, filter ties and low-agreement items.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: prompt &ldquo;explain tides&rdquo;, y_w (clear,
+   correct), y_l (vague). The pair teaches clarity over vagueness
+   for this prompt only.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>make_pairs</code>:
+   group by prompt, order by rank. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Every pair has a
+   strict ranking. Prompts are unique per pair or tracked.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Human pairs cost dollars each. The dataset is
+   small by pretraining standards and precious.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> AI-generated
+    pairs (cheap, distills the judge&rsquo;s bias). Human pairs for
+    the gold set.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Both responses are bad:
+    the pair teaches &ldquo;less bad&rdquo;, and the model learns to pick
+    the least awful. The assumption &ldquo;one response is good&rdquo;
+    breaks, filter by absolute quality too.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    preference-data reports (secondary). Extension: add
+    both-bad pairs to the toy, hypothesis: the reward model
+    still separates them, wrongly.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the pair structure.
+    (b) Oral ladder: define a pair, work the toy, justify
+    comparisons over grades, implement <code>make_pairs</code>, compare
+    human with AI pairs, debug the both-bad case, critique the
+    tie-dropping, design the injection test. (c) Transfer: the
+    labelers rank by length. What does the dataset teach?
+    Answers: <code>../keys/u16_answers.md</code> A2.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U16 task 2 builds pairs.
+    See <code>../labs/u16_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c03-kl-regularization">C03: KL regularization</h3>
+<p>Leaf id <code>cs336-U16-C03</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the leash on the policy. Objectives: write the KL-
+   penalized objective, compute the penalty on a toy. Depends on
+   P08, P18.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the reward says
+   &ldquo;more of this&rdquo;, the policy goes feral. What stops it? The KL
+   term: objective = E[r] - beta * KL(pi || pi_ref). Toy from
+   <code>compute_u16.py</code>: KL 0.0253 nats at beta 0.1 costs 0.00253
+   of objective.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The reference policy (usually the SFT
+   model) is home base. KL measures the distance traveled. Beta
+   is the leash length: short leash, small changes.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Beta:
+   scalar. Assumption: token-level KL summed over the response.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The penalized objective is the
+   Lagrangian of &ldquo;maximize reward subject to KL &lt;= budget&rdquo;.
+   Beta is the Lagrange multiplier.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u16.py</code> (executed
+   2026-10-06): 0.0253 nats, penalty 0.00253 at beta 0.1.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>kl_penalty(pi,
+   ref, beta)</code>: beta * sum(pi log(pi/ref)). Three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> pi = ref gives 0.
+   Larger beta shrinks the optimal drift.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Too much KL: the policy cannot improve. Too
+   little: reward hacking (C11).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Hard KL
+    constraint via early stopping (crude). Penalty (smooth) for
+    the standard runs.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The reference is weak:
+    the leash anchors the policy to mediocrity. The assumption
+    &ldquo;the reference is good&rdquo; breaks, and the KL budget must grow
+    or the reference must improve.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    PPO-for-LM papers (primary). Extension: sweep beta on a
+    synthetic bandit, hypothesis: reward rises then falls as
+    beta shrinks.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the penalized objective.
+    (b) Oral ladder: define the leash, compute the toy, justify
+    the Lagrangian, implement the penalty, compare with early
+    stopping, debug the weak-reference case, critique the
+    token-sum, design the beta sweep. (c) Transfer: beta=0.
+    Predict the failure mode. Answers: <code>../keys/u16_answers.md</code>
+    A3.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U16 task 3 applies the penalty.
+    See <code>../labs/u16_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c04-ppo-ratiosclipping">C04: PPO ratios/clipping</h3>
+<p>Leaf id <code>cs336-U16-C04</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the clipped surrogate objective. Objectives: compute
+   the clipped terms on a toy batch. Depends on C03, P17.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the policy moved
+   too far in one update and collapsed. How does PPO stop that?
+   Toy from <code>compute_u16.py</code>: ratios [0.7, 0.9, 1.0, 1.2, 1.6],
+   advantages [1, 1, -1, 1, 1], eps 0.2: clipped terms [0.7, 0.9,
+   -1.0, 1.2, 1.2]. The 1.6 ratio is capped at 1.2.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The ratio r = pi_new/pi_old measures how
+   far the update reaches. Clipping says: no single token moves
+   the objective more than (1+eps) times its advantage. Big
+   steps are trimmed, small steps pass.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> eps=0.2.
+   Assumption: the toy ratios and advantages.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Objective = min(r<em>A,
+   clip(r, 1-eps, 1+eps)</em>A). The min takes the pessimistic
+   branch: it trims upside moves beyond the clip but keeps full
+   downside.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u16.py</code> (executed
+   2026-10-06): the five clipped terms above.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>ppo_obj(r, A,
+   eps)</code>: minimum of the two branches. Three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> r=1.0 gives A.
+   r=1.6, A=1 gives 1.2. r=0.7, A=1 gives 0.7 (unclipped side).</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Clipping biases the gradient (it is not the true
+   policy gradient). The bias buys stability.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Vanilla
+    policy gradient (unbiased, unstable). PPO clipping is the
+    standard stabilizer.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Advantages are noisy:
+    clipping the wrong sign&rsquo;s update stalls learning. The
+    assumption &ldquo;advantages are trustworthy&rdquo; breaks, and the
+    value baseline (C05) matters more than the clip.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    PPO paper (Schulman et al., 2017, primary). Extension:
+    sweep eps on a synthetic bandit, hypothesis: tiny eps
+    stalls, huge eps destabilizes.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the clipped objective.
+    (b) Oral ladder: define the ratio, compute the toy, justify
+    the min, implement <code>ppo_obj</code>, compare with vanilla PG, debug
+    the noisy-advantage case, critique the bias, design the eps
+    sweep. (c) Transfer: eps=0.5 on a 70B run. Assess.
+    Answers: <code>../keys/u16_answers.md</code> A4.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U16 task 4 clips the toy.
+    See <code>../labs/u16_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u16_fig01: clipped vs unclipped bars.
+    Source: original. Render: <code>assets/render_u16.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u16_fig01" src="../assets/u16_fig01.png"><figcaption>clipped vs unclipped bars. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c05-policyvalueadvantage">C05: Policy/value/advantage</h3>
+<p>Leaf id <code>cs336-U16-C05</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the actor-critic trio. Objectives: define each, show
+   why the advantage reduces variance. Depends on P17.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the reward is 1.
+   Was the action good, or was the state just easy? The value
+   V(s) predicts the state&rsquo;s reward, the advantage A = r - V(s)
+   credits the action. Toy: r=1, V=0.7: A=0.3, a modest win,
+   not a triumph.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The policy acts, the value predicts, the
+   advantage judges. Subtracting the baseline leaves the
+   gradient unbiased with lower variance: the classic control
+   variate.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> V(s):
+   scalar. A: scalar. Assumption: the value is trained to
+   predict returns.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> E[A * grad log pi] = E[r * grad
+   log pi] since E[V(s) * grad log pi] = 0. Same expectation,
+   smaller variance.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: r=1, V=0.7 -&gt; A=0.3. A batch of
+   advantages centers near 0 when the value is accurate.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>advantage(r,
+   V)</code>: return r - V. One line, plus the value loss (MSE).</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Perfect value
+   gives advantages with mean 0. Constant value gives the raw
+   rewards back.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The value network doubles the training
+   machinery. A bad value is worse than none: it biases the
+   credit.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> REINFORCE
+    without baseline (simple, high variance). Actor-critic for
+    real runs, group baselines (C07) when no value net exists.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The value overfits the
+    training prompts: advantages on new prompts are garbage.
+    The assumption &ldquo;the value generalizes&rdquo; breaks, regularize
+    it or drop it.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    actor-critic literature (Sutton/Barto, primary). Extension:
+    compare gradient variance with and without the baseline on
+    a synthetic bandit, hypothesis: variance falls 2x+.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the trio and the variance
+    argument. (b) Oral ladder: define each, compute the toy,
+    justify the zero-mean term, implement <code>advantage</code>, compare
+    with REINFORCE, debug the overfit value, critique the extra
+    network, design the variance test. (c) Transfer: the value
+    loss will not fall. What do you do? Answers:
+    <code>../keys/u16_answers.md</code> A5.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U16 task 5 computes advantages.
+    See <code>../labs/u16_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c06-dpo-assumptions">C06: DPO assumptions</h3>
+<p>Leaf id <code>cs336-U16-C06</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: direct preference optimization and what it assumes.
+   Objectives: compute the DPO loss on a toy, name the three
+   core assumptions. Depends on C01, C02.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: can you skip the
+   reward model and the RL? DPO trains the policy directly on
+   pairs. Toy from <code>compute_u16.py</code>: beta=0.1, pi_w=0.40,
+   pi_l=0.10, ref uniform 0.25: margin 0.139, loss 0.626.
+   Flipped labels: margin -0.139, loss 0.765.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> DPO reparameterizes the reward as
+   beta*log(pi/ref). The pair loss pushes the policy toward the
+   chosen response and away from the rejected one, anchored by
+   the reference. No sampler, no value net.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Beta=0.1.
+   Assumptions: (1) Bradley-Terry preferences, (2) the optimal
+   policy has the KL-constrained form, (3) pairs are iid.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The KL-constrained RL optimum is
+   pi<em> proportional to ref * exp(r/beta). Inverting gives r =
+   beta</em>log(pi/ref) + const. Plug into the Bradley-Terry loss:
+   the reward model cancels out.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u16.py</code> (executed
+   2026-10-06): margin 0.139, loss 0.626, flipped 0.765.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>dpo_loss(pi_w,
+   pi_l, ref_w, ref_l, beta)</code>: the margin then the logistic
+   loss. About 5 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Equal policies
+   give margin 0, loss 0.693. The flipped loss exceeds the
+   unflipped.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> DPO never explores: it only reshapes mass among
+   seen responses. It cannot discover better answers than the
+   dataset holds.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> PPO (C04,
+    explores, needs the RL machinery). DPO for offline
+    preference data.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The pairs contain
+    length bias: DPO learns &ldquo;longer is better&rdquo; and verbosity
+    explodes. The assumption &ldquo;pairs measure quality&rdquo; breaks,
+    and DPO has no KL-driven exploration to recover.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    DPO paper (Rafailov et al., 2024, primary). Extension: add
+    length bias to the toy pairs, hypothesis: the learned
+    policy&rsquo;s mean length rises.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the loss and the assumptions.
+    (b) Oral ladder: define DPO, compute the toy, derive the
+    reparameterization, implement <code>dpo_loss</code>, compare with PPO,
+    debug the length-bias case, critique the no-exploration
+    limit, design the bias test. (c) Transfer: the dataset has
+    10k pairs, the task needs novel reasoning. DPO or PPO?
+    Answers: <code>../keys/u16_answers.md</code> A6.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U16 task 6 runs DPO on the toy.
+    See <code>../labs/u16_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c07-grpo-group-baselines">C07: GRPO group baselines</h3>
+<p>Leaf id <code>cs336-U16-C07</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: group-relative policy optimization. Objectives:
+   compute group advantages on a toy, state when the signal
+   vanishes. Depends on C05.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: no value network.
+   what is the baseline? The group itself: sample G responses
+   per prompt, advantage = (r - mean)/std. Toy from
+   <code>compute_u16.py</code>: rewards [1,0,1,0] give advantages
+   [1,-1,1,-1]. All-correct [1,1,1,1] gives zero signal.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The group is its own control: better-than-
+   siblings is upweighted, worse is downweighted. No critic to
+   train, but the baseline only exists when the group varies.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> G: group
+   size. Assumption: binary rewards on the toy, G=4.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> A_i = (r_i - mean(r)) /
+   (std(r) + eps). The mean centers, the std scales. Sum of
+   advantages is 0 by construction.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u16.py</code> (executed
+   2026-10-06): [1,-1,1,-1], all-correct gives 0.00.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>grpo_adv(r)</code>:
+   normalize. Three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Advantages sum
+   to 0. Constant rewards give all zeros.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> G rollouts per prompt multiply the sampling bill.
+   Easy prompts (all correct) and hard ones (all wrong) waste
+   the group.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> PPO with a
+    value net (C05, works on uniform groups). GRPO for
+    verifiable rewards where groups vary.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The task is too easy:
+    every group is all-correct, gradients vanish, training
+    stalls silently. The assumption &ldquo;groups vary&rdquo; breaks, filter
+    prompts by difficulty.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    GRPO paper (Shao et al., 2024, primary). Extension: sweep
+    the toy difficulty, hypothesis: the mean |advantage|
+    peaks at 50% success.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the group baseline.
+    (b) Oral ladder: define it, compute the toy, justify the
+    normalization, implement <code>grpo_adv</code>, compare with a value
+    net, debug the all-correct case, critique the G cost, design
+    the difficulty sweep. (c) Transfer: G=8, half the prompts
+    are trivial. Fix the pipeline. Answers:
+    <code>../keys/u16_answers.md</code> A7.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U16 task 7 computes group
+    advantages. See <code>../labs/u16_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u16_fig03: group advantage bars.
+    Source: original. Render: <code>assets/render_u16.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u16_fig03" src="../assets/u16_fig03.png"><figcaption>group advantage bars. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c08-verifiable-rewards">C08: Verifiable rewards</h3>
+<p>Leaf id <code>cs336-U16-C08</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: rewards from checkers, not models. Objectives: build
+   an exact-match reward, state its strictness cost. Depends on
+   P17.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: for math, why
+   learn a reward model when the answer is checkable? Toy from
+   <code>compute_u16.py</code>: 6 rollouts against gold &ldquo;42&rdquo;: rewards
+   [1,1,0,1,0,1], mean 0.67. &ldquo;forty-two&rdquo; scores 0: the reward is
+   strict, the capability is not.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Verifiable rewards are programs: unit
+   tests, answer matchers, proof checkers. They do not drift,
+   they do not flatter, and they punish formatting deviations
+   as harshly as wrong answers.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Binary
+   reward. Assumption: the gold answer and the strip-and-
+   compare rule.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is a checker.
+   Normalize the output (strip, lowercase), compare to gold,
+   return 1 or 0.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u16.py</code> (executed
+   2026-10-06): mean 0.67, the &ldquo;forty-two&rdquo; zero.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>exact_match
+   (out, gold)</code>: normalize, compare. Four lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Gold itself
+   scores 1. Empty output scores 0.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Strictness mislabels capable answers. Format
+   instructions in the prompt mitigate it.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Learned
+    rewards (C01) for open-ended tasks. Verifiable for math,
+    code, and games.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The checker has a bug:
+    it accepts any answer containing &ldquo;42&rdquo;. The policy learns to
+    emit &ldquo;42&rdquo; everywhere. The assumption &ldquo;the checker is right&rdquo;
+    breaks, and reward hacking (C11) begins at the checker.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    RLVR reports (secondary). Extension: fuzz the toy checker.
+    hypothesis: the policy finds the bug within the toy.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the strictness tradeoff.
+    (b) Oral ladder: define verifiable rewards, read the toy,
+    justify the checker, implement <code>exact_match</code>, compare with
+    learned rewards, debug the buggy-checker case, critique the
+    strictness, design the fuzz test. (c) Transfer: code tasks
+    with hidden tests. Design the reward. Answers:
+    <code>../keys/u16_answers.md</code> A8.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U16 task 8 builds the checker.
+    See <code>../labs/u16_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c09-rollout-generation">C09: Rollout generation</h3>
+<p>Leaf id <code>cs336-U16-C09</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: producing the RL training data. Objectives: state the
+   rollout loop, compute its cost. Depends on U11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: where do RL
+   batches come from? Rollouts: sample prompts, generate G
+   responses each with the current policy, score them, train.
+   The generator is the inference stack (U11) running at scale.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Rollouts are the RL data loader. Its
+   throughput sets the training pace, its diversity sets the
+   learning signal. Stale or narrow rollouts starve the update.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> G: group
+   size, prompts per batch. Assumption: the U11 serving model
+   for cost.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Cost per batch = prompts x G x
+   mean length x per-token cost. The loop: sample, generate,
+   score, update, repeat.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: 128 prompts, G=8, 500 tokens
+   mean, 8 ms/token: 128<em>8</em>500*0.008 = 4096 s per batch on one
+   slot. Batching and parallelism divide it.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>rollout_batch</code>:
+   the loop. About 10 lines of pseudocode.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Every rollout
+   carries its prompt id and policy version. No prompt leaks
+   across the train/eval split.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Generation dominates RL wall-clock. Slow
+   rollouts idle the trainer (U17-C05).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Offline
+    datasets (DPO-style, no generation). Online rollouts when
+    exploration matters.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Temperature 0
+    rollouts: no diversity, groups are constant, GRPO gives zero
+    signal (C07). The assumption &ldquo;rollouts vary&rdquo; breaks, sample
+    with temperature.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    RL-at-scale reports (secondary). Extension: sweep rollout
+    temperature on a synthetic task, hypothesis: learning peaks
+    at an interior temperature.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the loop and its cost.
+    (b) Oral ladder: define rollouts, compute the toy, justify
+    the version tag, sketch the loop, compare with offline,
+    debug the zero-temperature case, critique the cost model,
+    design the temperature sweep. (c) Transfer: rollouts take
+    10x the update time. Fix the system. Answers:
+    <code>../keys/u16_answers.md</code> A9.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U16 task 9 costs a rollout.
+    See <code>../labs/u16_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c10-on-policynessstaleness">C10: On-policyness/staleness</h3>
+<p>Leaf id <code>cs336-U16-C10</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: how fresh the data must be. Objectives: measure
+   policy drift, state the staleness limit. Depends on C04.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the update used
+   rollouts from 3 versions ago. Is that fine? Toy from
+   <code>compute_u16.py</code>: KL drift over 6 updates reads [0, 0.002,
+   0.005, 0.005, 0.006, 0.004] nats. Small drift is the PPO
+   operating range, large drift breaks the ratio trust region.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> On-policy means the data came from the
+   current policy. Staleness is distance in KL. PPO tolerates a
+   little (that is what clipping is for). DPO assumes offline.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> KL drift
+   in nats. Assumption: the synthetic drift path.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The PPO ratio assumes pi_old is
+   near pi. Clipping bounds the damage, but far-off data makes
+   the surrogate meaningless.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u16.py</code> (executed
+   2026-10-06): drift path above, max 0.006 nats.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>drift(p0, p)</code>:
+   KL. Track it per update, halt the epoch when it exceeds the
+   budget.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Fresh data gives
+   drift 0. The halt triggers on the toy if the budget is 0.005.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Frequent resampling costs generation. Rare
+   resampling costs trust.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Fully
+    offline (DPO, no staleness concept). PPO&rsquo;s few-epochs-per-
+    batch middle ground.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Async systems (U17)
+    serve rollouts many versions old: the KL budget blows past
+    silently. The assumption &ldquo;data is fresh&rdquo; breaks, version-
+    gate the batches.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    PPO implementation reports (secondary). Extension: sweep
+    the staleness on a synthetic bandit, hypothesis: the
+    surrogate degrades past KL 0.05.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the drift measure.
+    (b) Oral ladder: define staleness, read the toy, justify the
+    halt, implement <code>drift</code>, compare with offline, debug the
+    async case, critique the budget choice, design the sweep.
+    (c) Transfer: 4 PPO epochs per batch, drift 0.02. Continue?
+    Answers: <code>../keys/u16_answers.md</code> A10.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U16 task 10 tracks drift.
+    See <code>../labs/u16_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c11-reward-hacking">C11: Reward hacking</h3>
+<p>Leaf id <code>cs336-U16-C11</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the proxy-truth divergence. Objectives: read the
+   hacking curve, name the defenses. Depends on C01, C08.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the reward climbs
+   but the product gets worse. What happened? Toy from
+   <code>compute_u16.py</code> (synthetic): proxy reaches 0.98 at step 100
+   while true utility falls to 0.74, gap 0.24. The gap opens at
+   step 40 (0.000) and reads 0.080 by step 60.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The policy optimizes the proxy, not the
+   truth. Goodhart&rsquo;s law: the measure becomes the target, then
+   the target moves. The gap is invisible without an
+   independent truth metric.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Proxy and
+   truth curves. Assumption: the synthetic divergence shape.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is an
+   empirical pattern. The policy exploits the proxy&rsquo;s blind
+   spots, the truth metric (held-out human eval) reveals it.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u16.py</code> (executed
+   2026-10-06): gap 0.24 at step 100.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>gap(proxy,
+   truth)</code>: the difference series. Two lines, plus the
+   monitoring plot.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> The gap is ~0
+   early and grows. Early stopping at the gap&rsquo;s knee preserves
+   truth.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Truth metrics cost human evals. Skipping them
+   costs shipping a hacker.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> More KL
+    (C03, slows the hacking). Better proxies plus truth
+    monitoring (the standard defense).</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The truth metric is
+    also gamed (both proxies share a blind spot): the gap stays
+    0 while quality falls. The assumption &ldquo;truth is true&rdquo;
+    breaks, diversify the truth metrics.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    reward-hacking surveys (secondary). Extension: retrain the
+    toy with 2x KL, hypothesis: the gap at step 100 halves.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the gap pattern.
+    (b) Oral ladder: define hacking, read the toy, justify the
+    truth metric, implement <code>gap</code>, compare the defenses, debug
+    the gamed-truth case, critique the toy, design the KL test.
+    (c) Transfer: proxy up 20%, truth flat for 500 steps. Act.
+    Answers: <code>../keys/u16_answers.md</code> A11.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U16 task 11 monitors the gap.
+    See <code>../labs/u16_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u16_fig02: proxy vs truth. Source:
+    original. Render: <code>assets/render_u16.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u16_fig02" src="../assets/u16_fig02.png"><figcaption>proxy vs truth. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c12-held-out-safetyreasoning-evaluation">C12: Held-out safety/reasoning evaluation</h3>
+<p>Leaf id <code>cs336-U16-C12</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the final gate before shipping the aligned model.
+   Objectives: define the held-out suite, state the ship
+   criteria. Depends on U12.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: RL improved the
+   training reward. Did the model get safer and smarter? Only a
+   held-out suite says so: safety probes (refusal, bias, harm)
+   and reasoning probes (math, code) that never entered
+   training.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The held-out suite is the exam the model
+   never saw. Training metrics are homework. Ship on the exam,
+   not the homework.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Ship
+   criteria: thresholds per slice with CIs. Assumption: the
+   U12 measurement rules.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is a gate.
+   Safety slices must clear their bars, reasoning slices must
+   not regress, the truth metric (C11) must agree with the
+   proxy.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy gate: safety refusal 0.98 (+-0.01),
+   reasoning 0.72 (+-0.03, no regression), truth-proxy gap &lt;
+   0.05. All three pass: ship.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>ship_gate</code>:
+   check each criterion, return pass/fail with reasons. About 10
+   lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> A failing slice
+   blocks the ship with a named reason.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The suite costs curation and guarding (U12-C04).
+   A leaked suite is homework, not an exam.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Training-
+    metric shipping (fast, blind). Held-out gating for any
+    user-facing release.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The suite is stale:
+    the model saturates it while failing new attacks. The
+    assumption &ldquo;the suite is current&rdquo; breaks, refresh on a
+    schedule.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    safety-eval practices (secondary). Extension: contaminate
+    the toy suite, hypothesis: the gate passes a worse model.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the gate criteria.
+    (b) Oral ladder: define the gate, work the toy, justify the
+    held-out rule, implement <code>ship_gate</code>, compare with
+    training-metric shipping, debug the stale-suite case,
+    critique the toy, design the contamination test.
+    (c) Transfer: reasoning up, safety flat, gap 0.08. Ship?
+    Answers: <code>../keys/u16_answers.md</code> A12.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U16 task 12 runs the gate.
+    See <code>../labs/u16_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+      
+      <nav class="pager"><a href="../labs/u06_lab.html"><span class="lbl">← Previous</span>Lab 06 · GPU/TPU architecture and profiling</a><a href="../labs/u06_lab_key.html"><span class="lbl">Next →</span>Lab 06 · Keys</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
