@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U10 · Scaling laws and extrapolation — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Scaling laws and extrapolation.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-u10" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../course_map.html" data-page="cs336-course-map">Course map</a></li>
+<li><a href="../prerequisites.html" data-page="cs336-prereqs">Prerequisites</a></li>
+<li><a href="../notation_and_shapes.html" data-page="cs336-notation">Notation</a></li>
+<li><a href="../glossary.html" data-page="cs336-glossary">Glossary</a></li>
+<li><a href="../cheatsheet.html" data-page="cs336-cheatsheet">Cheatsheet</a></li>
+<li><a href="../crash-course.html" data-page="cs336-crash">Crash course</a></li>
+<li><a href="../lessons/u01_tokenization.html" data-page="cs336-u01">U01 · Text representation and tokeni</a></li>
+<li><a href="../keys/u01_answers.html" data-page="cs336-u01-answers">U01 · Answers</a></li>
+<li><a href="../lessons/u02_tensor_programming.html" data-page="cs336-u02">U02 · Executable tensor programming </a></li>
+<li><a href="../keys/u02_answers.html" data-page="cs336-u02-answers">U02 · Answers</a></li>
+<li><a href="../lessons/u03_transformer_block.html" data-page="cs336-u03">U03 · Transformer block mechanics</a></li>
+<li><a href="../keys/u03_answers.html" data-page="cs336-u03-answers">U03 · Answers</a></li>
+<li><a href="../lessons/u04_attention_moe.html" data-page="cs336-u04">U04 · Attention alternatives and exp</a></li>
+<li><a href="../keys/u04_answers.html" data-page="cs336-u04-answers">U04 · Answers</a></li>
+<li><a href="../lessons/u05_optimization.html" data-page="cs336-u05">U05 · Optimization and training corr</a></li>
+<li><a href="../keys/u05_answers.html" data-page="cs336-u05-answers">U05 · Answers</a></li>
+<li><a href="../lessons/u06_gpu_tpu.html" data-page="cs336-u06">U06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../keys/u06_answers.html" data-page="cs336-u06-answers">U06 · Answers</a></li>
+<li><a href="../lessons/u07_kernels.html" data-page="cs336-u07">U07 · Kernels and IO-aware attention</a></li>
+<li><a href="../keys/u07_answers.html" data-page="cs336-u07-answers">U07 · Answers</a></li>
+<li><a href="../lessons/u08_data_sharding.html" data-page="cs336-u08">U08 · Data and optimizer sharding</a></li>
+<li><a href="../keys/u08_answers.html" data-page="cs336-u08-answers">U08 · Answers</a></li>
+<li><a href="../lessons/u09_model_parallel.html" data-page="cs336-u09">U09 · Model and hybrid parallelism</a></li>
+<li><a href="../keys/u09_answers.html" data-page="cs336-u09-answers">U09 · Answers</a></li>
+<li><a href="../lessons/u10_scaling_laws.html" data-page="cs336-u10" class="active">U10 · Scaling laws and extrapolation</a></li>
+<li><a href="../keys/u10_answers.html" data-page="cs336-u10-answers">U10 · Answers</a></li>
+<li><a href="../labs/u01_lab.html" data-page="cs336-lab-u01">Lab 01 · Text representation and tokeni</a></li>
+<li><a href="../lessons/u11_inference.html" data-page="cs336-u11">U11 · Inference algorithms and servi</a></li>
+<li><a href="../labs/u01_lab_key.html" data-page="cs336-lab-u01-keys">Lab 01 · Keys</a></li>
+<li><a href="../keys/u11_answers.html" data-page="cs336-u11-answers">U11 · Answers</a></li>
+<li><a href="../labs/u02_lab.html" data-page="cs336-lab-u02">Lab 02 · Executable tensor programming </a></li>
+<li><a href="../lessons/u12_evaluation.html" data-page="cs336-u12">U12 · Evaluation and measurement val</a></li>
+<li><a href="../labs/u02_lab_key.html" data-page="cs336-lab-u02-keys">Lab 02 · Keys</a></li>
+<li><a href="../keys/u12_answers.html" data-page="cs336-u12-answers">U12 · Answers</a></li>
+<li><a href="../labs/u03_lab.html" data-page="cs336-lab-u03">Lab 03 · Transformer block mechanics</a></li>
+<li><a href="../lessons/u13_data_sourcing.html" data-page="cs336-u13">U13 · Data sourcing and transformati</a></li>
+<li><a href="../labs/u03_lab_key.html" data-page="cs336-lab-u03-keys">Lab 03 · Keys</a></li>
+<li><a href="../keys/u13_answers.html" data-page="cs336-u13-answers">U13 · Answers</a></li>
+<li><a href="../labs/u04_lab.html" data-page="cs336-lab-u04">Lab 04 · Attention alternatives and exp</a></li>
+<li><a href="../lessons/u14_data_mixing.html" data-page="cs336-u14">U14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../labs/u04_lab_key.html" data-page="cs336-lab-u04-keys">Lab 04 · Keys</a></li>
+<li><a href="../keys/u14_answers.html" data-page="cs336-u14-answers">U14 · Answers</a></li>
+<li><a href="../labs/u05_lab.html" data-page="cs336-lab-u05">Lab 05 · Optimization and training corr</a></li>
+<li><a href="../lessons/u15_midtraining.html" data-page="cs336-u15">U15 · Midtraining and supervised ada</a></li>
+<li><a href="../labs/u05_lab_key.html" data-page="cs336-lab-u05-keys">Lab 05 · Keys</a></li>
+<li><a href="../keys/u15_answers.html" data-page="cs336-u15-answers">U15 · Answers</a></li>
+<li><a href="../labs/u06_lab.html" data-page="cs336-lab-u06">Lab 06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../lessons/u16_alignment_rl.html" data-page="cs336-u16">U16 · Preference alignment and reaso</a></li>
+<li><a href="../labs/u06_lab_key.html" data-page="cs336-lab-u06-keys">Lab 06 · Keys</a></li>
+<li><a href="../keys/u16_answers.html" data-page="cs336-u16-answers">U16 · Answers</a></li>
+<li><a href="../labs/u07_lab.html" data-page="cs336-lab-u07">Lab 07 · Kernels and IO-aware attention</a></li>
+<li><a href="../lessons/u17_multimodal_systems.html" data-page="cs336-u17">U17 · Multimodality and training-sys</a></li>
+<li><a href="../labs/u07_lab_key.html" data-page="cs336-lab-u07-keys">Lab 07 · Keys</a></li>
+<li><a href="../keys/u17_answers.html" data-page="cs336-u17-answers">U17 · Answers</a></li>
+<li><a href="../labs/u08_lab.html" data-page="cs336-lab-u08">Lab 08 · Data and optimizer sharding</a></li>
+<li><a href="../lessons/u18_guests_defense.html" data-page="cs336-u18">U18 · Guest material and final resea</a></li>
+<li><a href="../labs/u08_lab_key.html" data-page="cs336-lab-u08-keys">Lab 08 · Keys</a></li>
+<li><a href="../keys/u18_answers.html" data-page="cs336-u18-answers">U18 · Answers</a></li>
+<li><a href="../labs/u09_lab.html" data-page="cs336-lab-u09">Lab 09 · Model and hybrid parallelism</a></li>
+<li><a href="../labs/u09_lab_key.html" data-page="cs336-lab-u09-keys">Lab 09 · Keys</a></li>
+<li><a href="../labs/u10_lab.html" data-page="cs336-lab-u10">Lab 10 · Scaling laws and extrapolation</a></li>
+<li><a href="../labs/u10_lab_key.html" data-page="cs336-lab-u10-keys">Lab 10 · Keys</a></li>
+<li><a href="../interview/u01_questions.html" data-page="cs336-int-u01">Interview · U01</a></li>
+<li><a href="../labs/u11_lab.html" data-page="cs336-lab-u11">Lab 11 · Inference algorithms and servi</a></li>
+<li><a href="../interview/u01_key.html" data-page="cs336-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../labs/u11_lab_key.html" data-page="cs336-lab-u11-keys">Lab 11 · Keys</a></li>
+<li><a href="../interview/u02_questions.html" data-page="cs336-int-u02">Interview · U02</a></li>
+<li><a href="../labs/u12_lab.html" data-page="cs336-lab-u12">Lab 12 · Evaluation and measurement val</a></li>
+<li><a href="../interview/u02_key.html" data-page="cs336-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../labs/u12_lab_key.html" data-page="cs336-lab-u12-keys">Lab 12 · Keys</a></li>
+<li><a href="../interview/u03_questions.html" data-page="cs336-int-u03">Interview · U03</a></li>
+<li><a href="../labs/u13_lab.html" data-page="cs336-lab-u13">Lab 13 · Data sourcing and transformati</a></li>
+<li><a href="../interview/u03_key.html" data-page="cs336-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../labs/u13_lab_key.html" data-page="cs336-lab-u13-keys">Lab 13 · Keys</a></li>
+<li><a href="../interview/u04_questions.html" data-page="cs336-int-u04">Interview · U04</a></li>
+<li><a href="../labs/u14_lab.html" data-page="cs336-lab-u14">Lab 14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../interview/u04_key.html" data-page="cs336-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../labs/u14_lab_key.html" data-page="cs336-lab-u14-keys">Lab 14 · Keys</a></li>
+<li><a href="../interview/u05_questions.html" data-page="cs336-int-u05">Interview · U05</a></li>
+<li><a href="../labs/u15_lab.html" data-page="cs336-lab-u15">Lab 15 · Midtraining and supervised ada</a></li>
+<li><a href="../interview/u05_key.html" data-page="cs336-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../labs/u15_lab_key.html" data-page="cs336-lab-u15-keys">Lab 15 · Keys</a></li>
+<li><a href="../interview/u06_questions.html" data-page="cs336-int-u06">Interview · U06</a></li>
+<li><a href="../labs/u16_lab.html" data-page="cs336-lab-u16">Lab 16 · Preference alignment and reaso</a></li>
+<li><a href="../interview/u06_key.html" data-page="cs336-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../labs/u16_lab_key.html" data-page="cs336-lab-u16-keys">Lab 16 · Keys</a></li>
+<li><a href="../interview/u07_questions.html" data-page="cs336-int-u07">Interview · U07</a></li>
+<li><a href="../labs/u17_lab.html" data-page="cs336-lab-u17">Lab 17 · Multimodality and training-sys</a></li>
+<li><a href="../interview/u07_key.html" data-page="cs336-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../labs/u17_lab_key.html" data-page="cs336-lab-u17-keys">Lab 17 · Keys</a></li>
+<li><a href="../interview/u08_questions.html" data-page="cs336-int-u08">Interview · U08</a></li>
+<li><a href="../labs/u18_lab.html" data-page="cs336-lab-u18">Lab 18 · Guest material and final resea</a></li>
+<li><a href="../interview/u08_key.html" data-page="cs336-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../labs/u18_lab_key.html" data-page="cs336-lab-u18-keys">Lab 18 · Keys</a></li>
+<li><a href="../interview/u09_questions.html" data-page="cs336-int-u09">Interview · U09</a></li>
+<li><a href="../interview/u09_key.html" data-page="cs336-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../interview/u10_questions.html" data-page="cs336-int-u10">Interview · U10</a></li>
+<li><a href="../interview/u10_key.html" data-page="cs336-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../interview/u11_questions.html" data-page="cs336-int-u11">Interview · U11</a></li>
+<li><a href="../interview/u11_key.html" data-page="cs336-int-u11-keys">Interview · U11 keys</a></li>
+<li><a href="../interview/u12_questions.html" data-page="cs336-int-u12">Interview · U12</a></li>
+<li><a href="../interview/u12_key.html" data-page="cs336-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../interview/u13_questions.html" data-page="cs336-int-u13">Interview · U13</a></li>
+<li><a href="../interview/u13_key.html" data-page="cs336-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../interview/u14_questions.html" data-page="cs336-int-u14">Interview · U14</a></li>
+<li><a href="../interview/u14_key.html" data-page="cs336-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../interview/u15_questions.html" data-page="cs336-int-u15">Interview · U15</a></li>
+<li><a href="../interview/u15_key.html" data-page="cs336-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../interview/u16_questions.html" data-page="cs336-int-u16">Interview · U16</a></li>
+<li><a href="../interview/u16_key.html" data-page="cs336-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../interview/u17_questions.html" data-page="cs336-int-u17">Interview · U17</a></li>
+<li><a href="../interview/u17_key.html" data-page="cs336-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../interview/u18_questions.html" data-page="cs336-int-u18">Interview · U18</a></li>
+<li><a href="../interview/u18_key.html" data-page="cs336-int-u18-keys">Interview · U18 keys</a></li>
+<li><a href="../interview/oral-defenses.html" data-page="cs336-int-oral">Interview · Oral</a></li>
+<li><a href="../interview/keys-oral.html" data-page="cs336-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../interview/transfer-sets.html" data-page="cs336-int-transfer">Interview · Transfer</a></li>
+<li><a href="../interview/keys-transfer.html" data-page="cs336-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../capstones/capstone_applied.html" data-page="cs336-cap-applied">Capstone · Applied</a></li>
+<li><a href="../capstones/capstone_research.html" data-page="cs336-cap-research">Capstone · Research</a></li>
+<li><a href="../keys/diagnostic_key.html" data-page="cs336-diagnostic-keys">Diagnostic · Keys</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U10 · Scaling laws and extrapolation</nav>
+      <h1>U10 · Scaling laws and extrapolation</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u10-scaling-laws-and-extrapolation">U10 , Scaling laws and extrapolation</h1>
+<p>Prerequisites: P07, P09, P22. Bridge links in <code>../prerequisites.md</code>.
+Sessions: S09 (reported Apr 27, Scaling Laws) covers C01-C06, S11
+(reported May 4, Scaling Laws II) covers C07-C12. The split is a
+teaching decision, stated here, not a source claim. Full session map
+in <code>../course_map.md</code>.
+Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
+PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
+<h2 id="standing-note">Standing note</h2>
+<p>Every number below is computed by <code>assets/compute_u10.py</code> on this
+machine (numpy CPU, seeds fixed) or labeled a synthetic toy. The
+synthetic laws are arbitrary constants chosen to make the toy behave.
+they are not empirical claims about real models. No training run was
+performed. &ldquo;Not in source&rdquo; marks any value the scripts do not compute.</p>
+<h2 id="russian-doll-map">Russian-doll map</h2>
+<p>Shells 0-1 live in items 1-2, shells 2-3 in items 3-6, shell 4 in item
+7, shell 5 in item 8, shell 6 in item 9, shell 7 in item 11, shell 8
+in item 10, shell 9 in item 12, shell 10 in item 13(c). The depth gate
+(define, compute, justify, assume, derive, implement, debug, cost,
+compare, transfer) is checked by item 13.</p>
+<h2 id="local-remediation-fitting-in-log-space">Local remediation , fitting in log space</h2>
+<p>Read this if diagnostic items on logarithms or least squares were not
+full marks. A power law L = A x^{-a} becomes a line in log space:
+log L = log A - a log x. Fit the line with least squares, read the
+slope, negate it: that is the exponent. Toy from <code>compute_u10.py</code>:
+true a=0.34, fitted a=0.340, residual RMS 0.0031 in log space.
+Assessment: fit log L = [0.1, -0.24, -0.58] against log C =
+[44, 45, 46] by hand and report a. Key: <code>../keys/u10_answers.md</code> R1.</p>
+<hr />
+<h3 id="c01-parameterdatacompute-budgets">C01: Parameter/data/compute budgets</h3>
+<p>Leaf id <code>cs336-U10-C01</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the 6ND rule and the token-per-param ratio. Objectives:
+   compute a training FLOP budget from N and D, state the D/N rule
+   of thumb. Depends on P07, P09.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how much compute does
+   a 70B model on 1.4T tokens cost? Toy from <code>compute_u10.py</code>: C =
+   6ND = 5.88e23 FLOPs, D/N = 20.0 tokens per param. A 7B model at
+   20 tokens per param costs 5.88e21 FLOPs, exactly 100x less.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Six floating ops per parameter per token: two
+   for the forward pass, four for the backward pass. Multiply by
+   tokens. The budget is one number. N and D are the two knobs that
+   produce it.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> N: params
+   (count). D: tokens (count). C: FLOPs (count). Assumption: dense
+   transformer, backward costs 2x forward, attention FLOPs ignored.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Forward: each param participates in
+   one multiply-add per token, 2 FLOPs. Backward: grads wrt
+   activations and wrt weights, about 4 FLOPs. Total 6ND.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u10.py</code> (executed
+   2026-10-06): 70B, 1.4T tokens: 5.88e23 FLOPs. 7B at 20 tok/param:
+   5.88e21 FLOPs.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>budget(N, D)</code>:
+   return 6<em>N</em>D. Three lines with the D/N ratio.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Doubling N doubles C.
+   Doubling both N and D quadruples C. Check against the two toy
+   values above.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The formula omits attention (matters at long T),
+   embeddings, and recomputation. It is a planning number, not a
+   meter reading.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Measured FLOP
+    counters (U06) for real runs. Use 6ND for planning, counters for
+    billing.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A 7B model at T=128k: the
+    attention term 12<em>L</em>d*T^2 per token rivals 6N. The assumption
+    &ldquo;attention is negligible&rdquo; breaks at long context, add the term.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    Chinchilla paper (Hoffmann et al., 2022, primary). Extension:
+    predict C for three (N, D) pairs, then verify with the formula.
+    hypothesis: exact match to 3 figures.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: state the 6ND rule and the 2x/4x
+    split. (b) Oral ladder: define the budget, compute the 70B toy,
+    justify the 6, implement <code>budget</code>, compare with measured
+    counters, debug the long-context case, critique the dense
+    assumption, design the three-pair check. (c) Transfer: MoE with
+    70B total, 7B active params. Which N enters 6ND for FLOPs, which
+    for memory? Answers: <code>../keys/u10_answers.md</code> A1.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U10 task 1 computes budgets.
+    See <code>../labs/u10_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure, the budget table is a computed
+    table in the lab key. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c02-loss-floors">C02: Loss floors</h3>
+<p>Leaf id <code>cs336-U10-C02</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the irreducible term E in L = E + A x^{-a}. Objectives:
+   explain why loss never reaches zero, estimate E from a fit.
+   Depends on P07.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: if compute grew
+   forever, would loss hit zero? Toy: the synthetic law uses E =
+   1.69. At C = 1e22 the excess term is 0.104, the floor is 1.69,
+   and the floor dominates.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> E is the entropy of the data the model cannot
+   remove: noise, ambiguity, genuinely unpredictable tokens. Scale
+   shrinks the reducible part, never the floor.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> E: nats per
+   token. Assumption: the power-law form holds and E is constant
+   across the fitted range.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> As x -&gt; infinity, A x^{-a} -&gt; 0, so
+   L -&gt; E. Fit with E free and the data decides the floor, fix E
+   too early and the exponent absorbs the error.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u10.py</code> (executed
+   2026-10-06): at C = 1e22, excess = 0.104 against floor 1.69.
+   the 10x-extrapolated band is [1.737, 1.739].</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> Fit
+   log(L - E) for a grid of E values, pick the E with the smallest
+   residual. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> E must sit below
+   every observed loss. If the best E exceeds a data point, the
+   grid is wrong.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> An extra free parameter widens every confidence
+   interval. Small data cannot separate E from a shallow exponent.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Fix E from a
+    large-data anchor when data is scarce. Fit E freely when the
+    range spans 2+ orders of magnitude.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Data distribution shifts
+    between runs: E is a property of the data, not the model. The
+    assumption &ldquo;one E fits all runs&rdquo; breaks across data mixes, fit
+    per mix.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    Chinchilla paper, section on the parametric fit (primary).
+    Extension: fit with E free versus E fixed on the synthetic set.
+    hypothesis: free E recovers 1.69 within 0.02.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: define E and its limit behavior.
+    (b) Oral ladder: define the floor, compute the 1e22 toy, justify
+    the limit, implement the E grid, compare free versus fixed E,
+    debug the E-above-data case, critique the constant-E
+    assumption, design the recovery test. (c) Transfer: two data
+    mixes give E = 1.69 and E = 2.10. A run on mix 2 reports loss
+    2.05. Is the model better than the mix-1 run at 1.90?
+    Answers: <code>../keys/u10_answers.md</code> A2.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U10 task 2 estimates E on the toy.
+    See <code>../labs/u10_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u10_fig01 shows the fit approaching the
+    floor. Source: original. Render: <code>assets/render_u10.py</code>.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c03-power-law-fitting">C03: Power-law fitting</h3>
+<p>Leaf id <code>cs336-U10-C03</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: least-squares fit of the exponent in log space.
+   Objectives: run the fit, report the residual, state what the
+   residual means. Depends on P07, P09.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: given 24 noisy loss
+   points, what is the exponent? Toy from <code>compute_u10.py</code>: true
+   a = 0.34, fitted a = 0.340, A_hat = 0.499, residual RMS 0.0031
+   in log space.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The log transform turns the curve into a
+   line. Least squares finds the line closest to the points. The
+   slope is the negative exponent. The residual measures how far
+   the world deviates from a pure power law.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> a:
+   dimensionless exponent. Residual RMS: log-space units.
+   Assumption: the noise is multiplicative and small, E is known.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> log(L - E) = log A - a log(C/C0).
+   With x = log C and y = log(L - E), the normal equations give
+   slope -a and intercept log A + a log C0.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u10.py</code> (executed
+   2026-10-06): fitted a = 0.340, A_hat = 0.499, RMS 0.0031.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> Build the design
+   matrix [1, x], solve with <code>lstsq</code>, negate the slope. About 8
+   lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> On noiseless
+   synthetic data the fit recovers a to machine precision. With
+   seed 0 noise it recovers 0.340. Residual near the injected 0.02
+   noise level.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Log-space least squares weights small losses more
+   than direct nonlinear fit. With heteroscedastic noise the two
+   fits disagree.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Direct
+    nonlinear least squares on L (better when E is uncertain).
+    Log-linear when E is fixed and noise is multiplicative.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> E unknown and guessed too
+    high: y = log(L - E) distorts, the slope biases downward. The
+    assumption &ldquo;E is known&rdquo; breaks, fit E jointly or grid it (C02).</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    Chinchilla appendix on fitting (primary). Extension: refit with
+    E perturbed by +-0.05, hypothesis: the exponent shifts by more
+    than the bootstrap CI width.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the log transform and the slope
+    reading. (b) Oral ladder: define the fit, compute the toy,
+    justify the log, implement <code>lstsq</code>, compare log-linear with
+    nonlinear, debug the wrong-E case, critique the noise model,
+    design the E-perturbation test. (c) Transfer: 6 points only,
+    spanning half an order of magnitude. Fit and report the
+    exponent with its honest uncertainty. Answers:
+    <code>../keys/u10_answers.md</code> A3.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U10 task 3 runs the fit.
+    See <code>../labs/u10_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u10_fig01: the synthetic points and the
+    fitted line. Source: original. Render: <code>assets/render_u10.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u10_fig01" src="../assets/u10_fig01.png"><figcaption>the synthetic points and the fitted line. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c04-isoflop-curves">C04: Isoflop curves</h3>
+<p>Leaf id <code>cs336-U10-C04</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: loss against N at fixed C, the minima line. Objectives:
+   read an isoFLOP curve, locate the optimal N for a budget.
+   Depends on C01, C03.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: at fixed compute,
+   is a bigger model or more data better? Toy from
+   <code>compute_u10.py</code>: 6 isoFLOP curves, minima marked, the minima
+   line fits N_opt exponent 0.449 against the toy analytic 0.500.
+   max deviation of the noisy minima from analytic is 0.277.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Fix C, sweep N, set D = C/(6N). Small N
+   starves capacity, large N starves data. The curve is U-shaped.
+   the bottom is the optimal split for that budget.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> N_opt(C):
+   params. Assumption: the joint toy law, noise sigma 0.01, 16
+   N values per curve.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Minimize the joint law
+   L(N) = E + AN(N0/N)^a + AD(D0 6N/C)^a over N. The first-order
+   condition gives N^2 = (N0/D0)(C/6) for the symmetric toy, hence
+   N_opt proportional to C^{0.5}.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u10.py</code> (executed
+   2026-10-06): fitted exponent 0.449, analytic 0.500, the gap
+   comes from the coarse 16-point N grid plus noise, an honest toy
+   miss.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> For each C: grid N,
+   compute noisy synthetic loss, take argmin. Fit log N_star
+   against log C. About 15 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Noiseless minima
+   match the analytic line exactly. With noise they scatter around
+   it within the grid spacing.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Each curve point is a full training run in reality.
+   The toy uses 16 points per curve, real isoFLOP studies use far
+   fewer and interpolate.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> The parametric
+    joint fit (one surface, all points) against per-curve minima
+    (no functional form assumed). Minima are stable, the surface
+    extrapolates.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Curves that never turn up
+    within the swept N range: the minimum lies outside the grid
+    and the argmin is a boundary artifact. The assumption &ldquo;the
+    grid brackets the optimum&rdquo; breaks, widen the sweep.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    Chinchilla isoFLOP figures (primary). Extension: double the N
+    grid density on the toy, hypothesis: the fitted exponent moves
+    toward 0.500.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: what an isoFLOP curve holds fixed.
+    (b) Oral ladder: define the curve, read the toy minima, derive
+    the 0.5 exponent, implement the sweep, compare minima with the
+    surface fit, debug the boundary-minimum case, critique the
+    16-point grid, design the density test. (c) Transfer: C =
+    1e24, the fitted exponent 0.449. Predict N_opt and state the
+    grid risk. Answers: <code>../keys/u10_answers.md</code> A4.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U10 task 4 builds one isoFLOP
+    curve. See <code>../labs/u10_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u10_fig02: three isoFLOP curves with
+    minima. Source: original. Render: <code>assets/render_u10.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u10_fig02" src="../assets/u10_fig02.png"><figcaption>three isoFLOP curves with minima. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c05-modeldata-allocation">C05: Model/data allocation</h3>
+<p>Leaf id <code>cs336-U10-C05</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: turning N_opt(C) into a training plan. Objectives: split
+   a FLOP budget into params and tokens, state the tokens-per-param
+   ratio. Depends on C04.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: C = 5.88e23, how big
+   a model and how much data? Toy from <code>compute_u10.py</code>: N =
+   7.00e10, D = 1.40e12, D/N = 20.0 tokens per param.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The budget is fixed. The isoFLOP minimum says
+   where to sit. In the symmetric toy the split is even in log
+   space: N and D each scale as C^{0.5}, and the ratio D/N stays
+   constant at 20.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> D/N: tokens
+   per param. Assumption: the symmetric toy law, real laws give a
+   nearby but different constant.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> From C04: N_opt = sqrt((N0/D0)(C/6)),
+   D_opt = C/(6 N_opt). The ratio D_opt/N_opt = D0/N0 = 20 in the
+   toy by construction of the constants.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u10.py</code> (executed
+   2026-10-06): N = 7.00e10, D = 1.40e12, ratio 20.0.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>allocate(C)</code>:
+   N = sqrt((N0/D0)(C/6)), D = C/(6N). Five lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> N<em>D</em>6 reproduces C.
+   D/N equals 20.0 at every C in the toy.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The allocation ignores inference cost (C09), data
+   availability, and memory limits. It answers the training-loss
+   question only.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Overtrain a
+    small model (C11) when inference dominates. Follow the
+    allocation when training loss per FLOP is the objective.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Data runs out: D_opt
+    exceeds the available corpus. The assumption &ldquo;data is
+    unlimited&rdquo; breaks, the constrained optimum sits at the data
+    boundary with a smaller N.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    Chinchilla section on compute-optimal training (primary).
+    Extension: impose D &lt;= 5e11 on the toy, hypothesis: the
+    constrained N_opt falls below 7.00e10.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the 20 tokens-per-param rule and
+    what it optimizes. (b) Oral ladder: define the allocation,
+    compute the toy, derive the constant ratio, implement
+    <code>allocate</code>, compare with overtraining, debug the data-limit
+    case, critique the symmetric toy, design the constrained test.
+    (c) Transfer: C = 1e22, corpus cap D = 2e11. Allocate and
+    defend. Answers: <code>../keys/u10_answers.md</code> A5.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U10 task 5 allocates budgets.
+    See <code>../labs/u10_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u10_fig02 carries the allocation minima.
+    No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c06-hyperparameter-transfer">C06: Hyperparameter transfer</h3>
+<p>Leaf id <code>cs336-U10-C06</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: carrying tuned hyperparameters across widths. Objectives:
+   state the width scaling rule for the learning rate, apply it to
+   a toy. Depends on P09.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the small run liked
+   lr = 3e-4 at width 256. What lr for width 1024? Toy from
+   <code>compute_u10.py</code>: lr scales as 1/width for hidden layers, so
+   3.0e-04 becomes 7.5e-05.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Wider layers sum more terms, keep the update
+   size per coordinate stable by shrinking the step. The toy rule
+   is lr proportional to 1/fan-in for the hidden matrices.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> lr:
+   dimensionless step size. Assumption: the toy 1/width rule, real
+   parameterizations (muP) assign per-tensor rules.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The update to a hidden weight is
+   lr times the gradient, the gradient variance grows with fan-in
+   under the toy init. Holding the update scale fixed gives
+   lr_1 = lr_0 * w_0 / w_1.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u10.py</code> (executed
+   2026-10-06): 256 -&gt; 1024, 3.0e-04 -&gt; 7.5e-05.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>transfer_lr(lr0,
+   w0, w1)</code>: return lr0 * w0 / w1. Two lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> w1 = w0 returns lr0.
+   Doubling width halves lr.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> One rule for all tensors mis-scales embeddings and
+   the output head. Per-tensor rules cost bookkeeping but transfer
+   better.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Retune from
+    scratch at target width (expensive, exact). Transfer rules
+    (cheap, approximate) for the first large run.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Depth changes too: the
+    width rule says nothing about depth scaling. The assumption
+    &ldquo;width is the only change&rdquo; breaks, and transferred depth
+    hyperparameters can diverge.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    muP paper (Yang et al., 2022, primary). Extension: apply the
+    toy rule at widths 256, 512, 1024 on a synthetic quadratic.
+    hypothesis: optimal lr follows 1/width within 20 percent.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the 1/width toy rule and its
+    scope. (b) Oral ladder: define transfer, compute the toy,
+    justify the inverse width, implement <code>transfer_lr</code>, compare
+    with retuning, debug the depth-change case, critique the
+    single-rule choice, design the quadratic test. (c) Transfer:
+    width 4096, base lr 3e-4 at 256, but the run also doubles
+    depth. State the lr and the residual risk. Answers:
+    <code>../keys/u10_answers.md</code> A6.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U10 task 6 transfers the lr.
+    See <code>../labs/u10_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure, the rule is one line of
+    arithmetic. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c07-fit-residuals">C07: Fit residuals</h3>
+<p>Leaf id <code>cs336-U10-C07</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: reading what the fit left behind. Objectives: compute
+   residuals, distinguish noise from model misspecification.
+   Depends on C03, P07.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the fit looks good,
+   but is the law right? Toy from <code>compute_u10.py</code>: residual RMS
+   0.0031 in log space against injected noise sigma 0.02 on the
+   excess. The residual sits well below the noise: the law fits.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Residuals are the fit&rsquo;s confession. Random
+   scatter means noise. A smile or frown means the functional form
+   is wrong. Compare the RMS against the known noise level before
+   believing the exponent.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Residual:
+   log(L_obs) - log(L_pred). Assumption: multiplicative noise,
+   correct E.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> If the model is right, residuals
+   scatter with variance near the noise variance. A quadratic
+   trend in residuals against log C signals a missing curvature
+   term.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u10.py</code> (executed
+   2026-10-06): RMS 0.0031. The injected noise was 0.02 on the
+   excess term, which maps to far less in log-loss space at these
+   loss values, the fit is consistent.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>residuals(C, L,
+   E, a, logA)</code>: return log(L) - log(pred). Four lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> On noiseless data
+   the RMS is ~1e-15. Shuffling residuals against log C shows no
+   trend in the toy.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> A residual plot costs one figure and catches what
+   R^2 hides. R^2 near 1.0 with a curved residual still means a
+   wrong law.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Formal
+    goodness-of-fit tests (need a noise model). The residual plot
+    (needs only eyes) for the first check.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Correlated runs (same
+    data, shared seeds): residuals look small but are not
+    independent. The assumption &ldquo;iid noise&rdquo; breaks, and the
+    exponent CI is too narrow.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    Chinchilla residual discussion (primary). Extension: inject a
+    quadratic term into the synthetic law, refit the pure power
+    law, hypothesis: residuals show a visible smile.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: what a residual plot diagnoses.
+    (b) Oral ladder: define residuals, compute the toy RMS,
+    justify the noise comparison, implement <code>residuals</code>, compare
+    with R^2, debug the correlated-runs case, critique the iid
+    assumption, design the quadratic-injection test. (c) Transfer:
+    RMS 0.05 with noise sigma 0.01. Diagnose. Answers:
+    <code>../keys/u10_answers.md</code> A7.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U10 task 7 plots residuals.
+    See <code>../labs/u10_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u10_fig01 shows the fit, the residual
+    check is a lab figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c08-uncertain-extrapolation">C08: Uncertain extrapolation</h3>
+<p>Leaf id <code>cs336-U10-C08</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: bootstrap intervals on the exponent and the prediction
+   band. Objectives: quantify how much a 10x extrapolation can
+   move. Depends on C03, P07.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the fit says a =
+   0.340, but the next run is 10x bigger. How wide is the honest
+   band? Toy from <code>compute_u10.py</code>: 200 bootstraps give a 95% CI
+   of [0.337, 0.343], the 10x loss band is [1.737, 1.739], width
+   0.002.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Resample the points, refit, collect
+   exponents. The spread is the fit&rsquo;s own uncertainty. Push each
+   resampled law 10x out: the band is the honest prediction, not
+   the median line.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> CI:
+   dimensionless band on a. Assumption: the toy noise is iid and
+   the law holds out of range.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The bootstrap approximates the
+   sampling distribution of the estimator. The prediction band
+   maps exponent uncertainty through the power law: width grows
+   with extrapolation distance.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u10.py</code> (executed
+   2026-10-06): CI [0.337, 0.343], band [1.737, 1.739].</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> Resample indices
+   with replacement 200 times, refit each, take percentiles.
+   About 12 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> The bootstrap mean
+   sits near 0.340. More resamples narrow the Monte Carlo error,
+   not the band.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The band in this calm toy is tiny because the noise
+   is tiny and iid. Real bands are wider: fewer points, correlated
+   runs, E uncertainty.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Analytic
+    standard errors from the least-squares covariance (fast, needs
+    the linear model to be right). Bootstrap (slower, fewer
+    assumptions).</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Extrapolating 100x with
+    a law fitted over 1 order of magnitude: the band explodes and
+    the law itself may change form (new bottlenecks appear). The
+    assumption &ldquo;the law holds out of range&rdquo; breaks, cap claims at
+    the fitted range plus a small multiple.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    Chinchilla uncertainty discussion (primary). Extension:
+    widen the toy noise to 0.10, hypothesis: the 10x band width
+    grows roughly 5x.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: what the bootstrap CI covers.
+    (b) Oral ladder: define the band, compute the toy, justify
+    resampling, implement the loop, compare with analytic SE,
+    debug the 100x case, critique the iid assumption, design the
+    noise-widening test. (c) Transfer: CI [0.30, 0.38] on a real
+    fit, 10x extrapolation. Compute the band and state the
+    planning risk. Answers: <code>../keys/u10_answers.md</code> A8.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U10 task 8 bootstraps the fit.
+    See <code>../labs/u10_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u10_fig03: the extrapolation band.
+    Source: original. Render: <code>assets/render_u10.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u10_fig03" src="../assets/u10_fig03.png"><figcaption>the extrapolation band. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c09-training-versus-inference-optimal-choice">C09: Training versus inference-optimal choice</h3>
+<p>Leaf id <code>cs336-U10-C09</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the two optima and when each wins. Objectives: compare
+   a compute-optimal model with an overtrained small model on
+   quality and cost. Depends on C05.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the 70B model wins
+   on loss, but you will serve a trillion tokens. Which do you
+   train? Toy from <code>compute_u10.py</code>: config A (70B at 20
+   tok/param) has toy loss 2.290 at C = 5.88e23, config B (7B at
+   200 tok/param) has toy loss 2.646 at C = 5.88e22. The quality
+   gap is 0.36 nats. B costs 10x less per inference token.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Two different objectives: minimize loss at
+   fixed training FLOPs (compute-optimal), or minimize loss plus
+   inference cost over the deployment lifetime (inference-
+   optimal). The second objective favors smaller, longer-trained
+   models.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Q: tokens
+   served (count). Assumption: inference FLOPs per token scale
+   with N, toy weight lam = 1e-12 on N in the J objective.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Total cost = C_train + Q * k * N.
+   Quality comes from the joint law. The toy objective J = L +
+   lam*N gives A = 2.360, B = 2.653: B wins once inference weight
+   is nonzero.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u10.py</code> (executed
+   2026-10-06): gap 0.36 nats, inference ratio 10x, J favors B.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>choose(Ns, Ds,
+   Q, k)</code>: compute L from the joint toy law and total cost for
+   each config, return the argmin. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> At Q = 0 the
+   compute-optimal config wins. As Q grows, the smaller model
+   takes over monotonically.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The toy ignores memory, latency, and quality
+   thresholds. A product has a minimum quality bar that can rule
+   out B regardless of cost.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Distill the
+    big model into a small one (U11-C10) instead of overtraining
+    from scratch. Overtrain when the teacher does not exist yet.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Serving volume is
+    overestimated 100x: the inference term never materializes and
+    the team paid quality for nothing. The assumption &ldquo;Q is
+    known&rdquo; breaks, plan with Q scenarios, not a point estimate.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    LLaMA overtraining discussion (Touvron et al., 2023,
+    secondary). Extension: sweep Q over 6 orders of magnitude on
+    the toy, hypothesis: the winner flips exactly once.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the two objectives and their
+    winners. (b) Oral ladder: define both optima, compute the toy,
+    justify the J objective, implement <code>choose</code>, compare with
+    distillation, debug the overestimated-Q case, critique the
+    lam choice, design the Q sweep. (c) Transfer: Q = 1e15 tokens,
+    quality bar L &lt;= 2.4. Decide between A and B. Answers:
+    <code>../keys/u10_answers.md</code> A9.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U10 task 9 runs the choice.
+    See <code>../labs/u10_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure, the tradeoff table is in
+    the lab key. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c10-preregistered-predictions">C10: Preregistered predictions</h3>
+<p>Leaf id <code>cs336-U10-C10</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: writing the prediction before the run. Objectives: state
+   a falsifiable numeric prediction with a pass band, then score
+   it. Depends on C03, P22.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how do you stop
+   yourself from moving the goalposts after the fit? Toy from
+   <code>compute_u10.py</code>: registered before the fit ran: fitted a in
+   [0.30, 0.38]. Observed: 0.340. The prediction held.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Preregistration is a contract with your
+   future self: the number, the band, and the decision rule, all
+   written before the data arrives. A held prediction is weak
+   evidence, a missed one is strong evidence that the model is
+   wrong.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Pass band:
+   an interval. Assumption: the band is chosen from prior
+   uncertainty, not from a peek at the data.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is a procedure.
+   Write the prediction, the band, the sample size, and the rule
+   (for example: &ldquo;the fitted exponent lands in the band or the
+   law is rejected for this regime&rdquo;).</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u10.py</code> (executed
+   2026-10-06): band [0.30, 0.38], observed 0.340, verdict: held.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> A text template:
+   prediction, band, n, rule, date. Five fields, no code needed.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> The band must be
+   narrower than the plausible range but wider than the expected
+   noise. A band that always passes predicts nothing.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Registration costs one paragraph. It saves the cost
+   of fooling yourself, which is unbounded.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Post-hoc
+    rationalization (free, worthless). Blind analysis (stronger,
+    needs infrastructure) for high-stakes claims.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The prediction misses
+    because the regime changed (new data mix): the miss is
+    informative, not a failure of the practice. The assumption
+    &ldquo;the regime is fixed&rdquo; breaks, re-register for the new regime.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    preregistration literature in experimental psychology
+    (secondary, practice transfer). Extension: register a band for
+    the isoFLOP exponent before running the sweep, hypothesis:
+    the honest miss rate teaches more than hits.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the five fields of a
+    registration. (b) Oral ladder: define the practice, score the
+    toy, justify the band choice, write a registration, compare
+    with blind analysis, debug the regime-change miss, critique
+    band width, design the isoFLOP registration. (c) Transfer:
+    register a prediction for the next unit&rsquo;s KV-cache number
+    before reading U11. Answers: <code>../keys/u10_answers.md</code> A10.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U10 task 10 writes and scores a
+    registration. See <code>../labs/u10_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure, the scored band is text.
+    No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c11-overtraining-small-models">C11: Overtraining small models</h3>
+<p>Leaf id <code>cs336-U10-C11</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: training past the compute-optimal data allocation.
+   Objectives: quantify the loss cost of overtraining and the
+   inference gain. Depends on C05, C09.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: what does 200
+   tokens per param buy over 20? Toy from <code>compute_u10.py</code> at N =
+   7B: 20 tok/param gives loss 3.003 at C = 5.88e21. 200
+   tok/param gives 2.646 at C = 5.88e22. Ten times the training
+   compute buys 0.357 nats.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Past the optimal ratio, each extra token
+   buys less loss reduction: the data term AD(D0/D)^a flattens.
+   You pay it anyway when inference volume dwarfs training cost.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Tokens per
+   param: the overtraining dial. Assumption: the joint toy law,
+   no data repetition effects.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Hold N fixed, raise D. The loss
+   falls as D^{-a} while C rises linearly in D. The marginal
+   nats-per-FLOP decays as D^{-(a+1)}.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u10.py</code> (executed
+   2026-10-06): 3.003 -&gt; 2.646, delta 0.357 nats for 10x compute.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> Sweep D at fixed
+   N on the joint law, record loss and C. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> At D/N = 20 the
+   loss matches the allocation optimum. Loss decreases
+   monotonically in D.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Data repetition: past one epoch of unique data the
+   toy law is optimistic. Real overtraining needs fresh or
+   repeated data with diminishing returns.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Train the
+    compute-optimal model and distill (U11-C10). Overtrain when
+    the small model itself must serve.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Repeating the same 100B
+    tokens 14 times: the model memorizes instead of generalizing.
+    The assumption &ldquo;tokens are fresh&rdquo; breaks, and the loss
+    improvement stalls or reverses.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    data-repetition studies (Muennighoff et al., 2023, secondary).
+    Extension: add a repetition penalty to the toy law, hypothesis:
+    the optimal D/N falls as the repeat count rises.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the nats bought per 10x data at
+    fixed N. (b) Oral ladder: define overtraining, compute the
+    toy, justify the flattening, implement the sweep, compare with
+    distillation, debug the repetition case, critique the fresh-
+    data assumption, design the penalty test. (c) Transfer: N =
+    1B, corpus 3T tokens. How far past 20 tok/param is sane?
+    Answers: <code>../keys/u10_answers.md</code> A11.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U10 task 11 sweeps D at fixed N.
+    See <code>../labs/u10_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure, the sweep table is in the
+    lab key. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c12-scale-transfer-limits">C12: Scale-transfer limits</h3>
+<p>Leaf id <code>cs336-U10-C12</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: what small-scale results do not survive scale-up.
+   Objectives: name three transfer failure modes, state the check
+   for each. Depends on C08, P22.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the 1D fit nailed a
+   = 0.340 on the toy. Does the joint exponent 0.449 match the
+   analytic 0.500? No: the coarse grid plus noise moved it. Small-
+   scale fits carry grid and noise artifacts that do not wash out.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Three limits: the law can change form (new
+   bottlenecks), the noise regime changes (fewer runs at scale),
+   and the optimum moves outside the searched range. Each needs
+   its own check, not hope.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Transfer
+   gap: difference between predicted and observed at scale.
+   Assumption: none, this concept is about distrust.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is an error
+   budget. List the three modes, attach a diagnostic: residual
+   trend for form change, CI width for noise, boundary check for
+   range.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u10.py</code> (executed
+   2026-10-06): fitted 0.449 against analytic 0.500, deviation up
+   to 0.277 on individual minima. The toy demonstrates the gap.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> A checklist
+   function: form check, noise check, range check. Returns
+   pass/flag per mode. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> On the toy the
+   range check flags: the true optimum sometimes sits between
+   grid points.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The checks cost extra runs at intermediate scales.
+   Skipping them costs a wrong 10x bet.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Blind faith
+    in the small fit (cheap, wrong on schedule). Staged scale-up
+    with registered checkpoints (C10) for real bets.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Emergent behavior at
+    scale (new capabilities, new failure modes) breaks every
+    extrapolation of loss alone. The assumption &ldquo;loss predicts
+    behavior&rdquo; breaks, track capability evals alongside loss
+    (U12).</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    emergent-abilities debate (Wei et al., 2022. Schaeffer et al.,
+    2023, secondary). Extension: refit the toy on the first half
+    of the C range only, predict the second half, hypothesis: the
+    band misses more often than the nominal 5 percent.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the three transfer failure modes.
+    (b) Oral ladder: define the limits, compute the toy gap,
+    justify each check, implement the checklist, compare with
+    staged scale-up, debug the emergent case, critique the
+    loss-only view, design the half-range test. (c) Transfer: a
+    vendor quotes a 100x run from a 1x fit. List the three
+    questions you ask before signing. Answers:
+    <code>../keys/u10_answers.md</code> A12.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U10 task 12 runs the transfer
+    checklist. See <code>../labs/u10_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u10_fig03 shows the honest band, beyond
+    it, no figure is drawn. No unresolved conflict.</p>
+</li>
+</ol>
+      
+      <nav class="pager"><a href="../keys/u09_answers.html"><span class="lbl">← Previous</span>U09 · Answers</a><a href="../keys/u10_answers.html"><span class="lbl">Next →</span>U10 · Answers</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
