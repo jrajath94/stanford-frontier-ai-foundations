@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U02 · Executable tensor programming and resource accounting — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Executable tensor programming and resource accounting.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-u02" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../course_map.html" data-page="cs336-course-map">Course map</a></li>
+<li><a href="../prerequisites.html" data-page="cs336-prereqs">Prerequisites</a></li>
+<li><a href="../notation_and_shapes.html" data-page="cs336-notation">Notation</a></li>
+<li><a href="../glossary.html" data-page="cs336-glossary">Glossary</a></li>
+<li><a href="../cheatsheet.html" data-page="cs336-cheatsheet">Cheatsheet</a></li>
+<li><a href="../crash-course.html" data-page="cs336-crash">Crash course</a></li>
+<li><a href="../lessons/u01_tokenization.html" data-page="cs336-u01">U01 · Text representation and tokeni</a></li>
+<li><a href="../keys/u01_answers.html" data-page="cs336-u01-answers">U01 · Answers</a></li>
+<li><a href="../lessons/u02_tensor_programming.html" data-page="cs336-u02" class="active">U02 · Executable tensor programming </a></li>
+<li><a href="../keys/u02_answers.html" data-page="cs336-u02-answers">U02 · Answers</a></li>
+<li><a href="../lessons/u03_transformer_block.html" data-page="cs336-u03">U03 · Transformer block mechanics</a></li>
+<li><a href="../keys/u03_answers.html" data-page="cs336-u03-answers">U03 · Answers</a></li>
+<li><a href="../lessons/u04_attention_moe.html" data-page="cs336-u04">U04 · Attention alternatives and exp</a></li>
+<li><a href="../keys/u04_answers.html" data-page="cs336-u04-answers">U04 · Answers</a></li>
+<li><a href="../lessons/u05_optimization.html" data-page="cs336-u05">U05 · Optimization and training corr</a></li>
+<li><a href="../keys/u05_answers.html" data-page="cs336-u05-answers">U05 · Answers</a></li>
+<li><a href="../lessons/u06_gpu_tpu.html" data-page="cs336-u06">U06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../keys/u06_answers.html" data-page="cs336-u06-answers">U06 · Answers</a></li>
+<li><a href="../lessons/u07_kernels.html" data-page="cs336-u07">U07 · Kernels and IO-aware attention</a></li>
+<li><a href="../keys/u07_answers.html" data-page="cs336-u07-answers">U07 · Answers</a></li>
+<li><a href="../lessons/u08_data_sharding.html" data-page="cs336-u08">U08 · Data and optimizer sharding</a></li>
+<li><a href="../keys/u08_answers.html" data-page="cs336-u08-answers">U08 · Answers</a></li>
+<li><a href="../lessons/u09_model_parallel.html" data-page="cs336-u09">U09 · Model and hybrid parallelism</a></li>
+<li><a href="../keys/u09_answers.html" data-page="cs336-u09-answers">U09 · Answers</a></li>
+<li><a href="../lessons/u10_scaling_laws.html" data-page="cs336-u10">U10 · Scaling laws and extrapolation</a></li>
+<li><a href="../keys/u10_answers.html" data-page="cs336-u10-answers">U10 · Answers</a></li>
+<li><a href="../labs/u01_lab.html" data-page="cs336-lab-u01">Lab 01 · Text representation and tokeni</a></li>
+<li><a href="../lessons/u11_inference.html" data-page="cs336-u11">U11 · Inference algorithms and servi</a></li>
+<li><a href="../labs/u01_lab_key.html" data-page="cs336-lab-u01-keys">Lab 01 · Keys</a></li>
+<li><a href="../keys/u11_answers.html" data-page="cs336-u11-answers">U11 · Answers</a></li>
+<li><a href="../labs/u02_lab.html" data-page="cs336-lab-u02">Lab 02 · Executable tensor programming </a></li>
+<li><a href="../lessons/u12_evaluation.html" data-page="cs336-u12">U12 · Evaluation and measurement val</a></li>
+<li><a href="../labs/u02_lab_key.html" data-page="cs336-lab-u02-keys">Lab 02 · Keys</a></li>
+<li><a href="../keys/u12_answers.html" data-page="cs336-u12-answers">U12 · Answers</a></li>
+<li><a href="../labs/u03_lab.html" data-page="cs336-lab-u03">Lab 03 · Transformer block mechanics</a></li>
+<li><a href="../lessons/u13_data_sourcing.html" data-page="cs336-u13">U13 · Data sourcing and transformati</a></li>
+<li><a href="../labs/u03_lab_key.html" data-page="cs336-lab-u03-keys">Lab 03 · Keys</a></li>
+<li><a href="../keys/u13_answers.html" data-page="cs336-u13-answers">U13 · Answers</a></li>
+<li><a href="../labs/u04_lab.html" data-page="cs336-lab-u04">Lab 04 · Attention alternatives and exp</a></li>
+<li><a href="../lessons/u14_data_mixing.html" data-page="cs336-u14">U14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../labs/u04_lab_key.html" data-page="cs336-lab-u04-keys">Lab 04 · Keys</a></li>
+<li><a href="../keys/u14_answers.html" data-page="cs336-u14-answers">U14 · Answers</a></li>
+<li><a href="../labs/u05_lab.html" data-page="cs336-lab-u05">Lab 05 · Optimization and training corr</a></li>
+<li><a href="../lessons/u15_midtraining.html" data-page="cs336-u15">U15 · Midtraining and supervised ada</a></li>
+<li><a href="../labs/u05_lab_key.html" data-page="cs336-lab-u05-keys">Lab 05 · Keys</a></li>
+<li><a href="../keys/u15_answers.html" data-page="cs336-u15-answers">U15 · Answers</a></li>
+<li><a href="../labs/u06_lab.html" data-page="cs336-lab-u06">Lab 06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../lessons/u16_alignment_rl.html" data-page="cs336-u16">U16 · Preference alignment and reaso</a></li>
+<li><a href="../labs/u06_lab_key.html" data-page="cs336-lab-u06-keys">Lab 06 · Keys</a></li>
+<li><a href="../keys/u16_answers.html" data-page="cs336-u16-answers">U16 · Answers</a></li>
+<li><a href="../labs/u07_lab.html" data-page="cs336-lab-u07">Lab 07 · Kernels and IO-aware attention</a></li>
+<li><a href="../lessons/u17_multimodal_systems.html" data-page="cs336-u17">U17 · Multimodality and training-sys</a></li>
+<li><a href="../labs/u07_lab_key.html" data-page="cs336-lab-u07-keys">Lab 07 · Keys</a></li>
+<li><a href="../keys/u17_answers.html" data-page="cs336-u17-answers">U17 · Answers</a></li>
+<li><a href="../labs/u08_lab.html" data-page="cs336-lab-u08">Lab 08 · Data and optimizer sharding</a></li>
+<li><a href="../lessons/u18_guests_defense.html" data-page="cs336-u18">U18 · Guest material and final resea</a></li>
+<li><a href="../labs/u08_lab_key.html" data-page="cs336-lab-u08-keys">Lab 08 · Keys</a></li>
+<li><a href="../keys/u18_answers.html" data-page="cs336-u18-answers">U18 · Answers</a></li>
+<li><a href="../labs/u09_lab.html" data-page="cs336-lab-u09">Lab 09 · Model and hybrid parallelism</a></li>
+<li><a href="../labs/u09_lab_key.html" data-page="cs336-lab-u09-keys">Lab 09 · Keys</a></li>
+<li><a href="../labs/u10_lab.html" data-page="cs336-lab-u10">Lab 10 · Scaling laws and extrapolation</a></li>
+<li><a href="../labs/u10_lab_key.html" data-page="cs336-lab-u10-keys">Lab 10 · Keys</a></li>
+<li><a href="../interview/u01_questions.html" data-page="cs336-int-u01">Interview · U01</a></li>
+<li><a href="../labs/u11_lab.html" data-page="cs336-lab-u11">Lab 11 · Inference algorithms and servi</a></li>
+<li><a href="../interview/u01_key.html" data-page="cs336-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../labs/u11_lab_key.html" data-page="cs336-lab-u11-keys">Lab 11 · Keys</a></li>
+<li><a href="../interview/u02_questions.html" data-page="cs336-int-u02">Interview · U02</a></li>
+<li><a href="../labs/u12_lab.html" data-page="cs336-lab-u12">Lab 12 · Evaluation and measurement val</a></li>
+<li><a href="../interview/u02_key.html" data-page="cs336-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../labs/u12_lab_key.html" data-page="cs336-lab-u12-keys">Lab 12 · Keys</a></li>
+<li><a href="../interview/u03_questions.html" data-page="cs336-int-u03">Interview · U03</a></li>
+<li><a href="../labs/u13_lab.html" data-page="cs336-lab-u13">Lab 13 · Data sourcing and transformati</a></li>
+<li><a href="../interview/u03_key.html" data-page="cs336-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../labs/u13_lab_key.html" data-page="cs336-lab-u13-keys">Lab 13 · Keys</a></li>
+<li><a href="../interview/u04_questions.html" data-page="cs336-int-u04">Interview · U04</a></li>
+<li><a href="../labs/u14_lab.html" data-page="cs336-lab-u14">Lab 14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../interview/u04_key.html" data-page="cs336-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../labs/u14_lab_key.html" data-page="cs336-lab-u14-keys">Lab 14 · Keys</a></li>
+<li><a href="../interview/u05_questions.html" data-page="cs336-int-u05">Interview · U05</a></li>
+<li><a href="../labs/u15_lab.html" data-page="cs336-lab-u15">Lab 15 · Midtraining and supervised ada</a></li>
+<li><a href="../interview/u05_key.html" data-page="cs336-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../labs/u15_lab_key.html" data-page="cs336-lab-u15-keys">Lab 15 · Keys</a></li>
+<li><a href="../interview/u06_questions.html" data-page="cs336-int-u06">Interview · U06</a></li>
+<li><a href="../labs/u16_lab.html" data-page="cs336-lab-u16">Lab 16 · Preference alignment and reaso</a></li>
+<li><a href="../interview/u06_key.html" data-page="cs336-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../labs/u16_lab_key.html" data-page="cs336-lab-u16-keys">Lab 16 · Keys</a></li>
+<li><a href="../interview/u07_questions.html" data-page="cs336-int-u07">Interview · U07</a></li>
+<li><a href="../labs/u17_lab.html" data-page="cs336-lab-u17">Lab 17 · Multimodality and training-sys</a></li>
+<li><a href="../interview/u07_key.html" data-page="cs336-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../labs/u17_lab_key.html" data-page="cs336-lab-u17-keys">Lab 17 · Keys</a></li>
+<li><a href="../interview/u08_questions.html" data-page="cs336-int-u08">Interview · U08</a></li>
+<li><a href="../labs/u18_lab.html" data-page="cs336-lab-u18">Lab 18 · Guest material and final resea</a></li>
+<li><a href="../interview/u08_key.html" data-page="cs336-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../labs/u18_lab_key.html" data-page="cs336-lab-u18-keys">Lab 18 · Keys</a></li>
+<li><a href="../interview/u09_questions.html" data-page="cs336-int-u09">Interview · U09</a></li>
+<li><a href="../interview/u09_key.html" data-page="cs336-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../interview/u10_questions.html" data-page="cs336-int-u10">Interview · U10</a></li>
+<li><a href="../interview/u10_key.html" data-page="cs336-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../interview/u11_questions.html" data-page="cs336-int-u11">Interview · U11</a></li>
+<li><a href="../interview/u11_key.html" data-page="cs336-int-u11-keys">Interview · U11 keys</a></li>
+<li><a href="../interview/u12_questions.html" data-page="cs336-int-u12">Interview · U12</a></li>
+<li><a href="../interview/u12_key.html" data-page="cs336-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../interview/u13_questions.html" data-page="cs336-int-u13">Interview · U13</a></li>
+<li><a href="../interview/u13_key.html" data-page="cs336-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../interview/u14_questions.html" data-page="cs336-int-u14">Interview · U14</a></li>
+<li><a href="../interview/u14_key.html" data-page="cs336-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../interview/u15_questions.html" data-page="cs336-int-u15">Interview · U15</a></li>
+<li><a href="../interview/u15_key.html" data-page="cs336-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../interview/u16_questions.html" data-page="cs336-int-u16">Interview · U16</a></li>
+<li><a href="../interview/u16_key.html" data-page="cs336-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../interview/u17_questions.html" data-page="cs336-int-u17">Interview · U17</a></li>
+<li><a href="../interview/u17_key.html" data-page="cs336-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../interview/u18_questions.html" data-page="cs336-int-u18">Interview · U18</a></li>
+<li><a href="../interview/u18_key.html" data-page="cs336-int-u18-keys">Interview · U18 keys</a></li>
+<li><a href="../interview/oral-defenses.html" data-page="cs336-int-oral">Interview · Oral</a></li>
+<li><a href="../interview/keys-oral.html" data-page="cs336-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../interview/transfer-sets.html" data-page="cs336-int-transfer">Interview · Transfer</a></li>
+<li><a href="../interview/keys-transfer.html" data-page="cs336-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../capstones/capstone_applied.html" data-page="cs336-cap-applied">Capstone · Applied</a></li>
+<li><a href="../capstones/capstone_research.html" data-page="cs336-cap-research">Capstone · Research</a></li>
+<li><a href="../keys/diagnostic_key.html" data-page="cs336-diagnostic-keys">Diagnostic · Keys</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U02 · Executable tensor programming and resource accounting</nav>
+      <h1>U02 · Executable tensor programming and resource accounting</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u02-executable-tensor-programming-and-resource-accounting">U02 , Executable tensor programming and resource accounting</h1>
+<p>Prerequisites: P03, P11, P12, P15. Bridge links in <code>../prerequisites.md</code>.
+Session: S02 (reported: Apr 1, PyTorch, Resource Accounting).
+Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
+PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
+<h2 id="local-remediation-shapes-flops-bytes">Local remediation , shapes, FLOPs, bytes</h2>
+<p>Read this block first if diagnostic items D4, D7, or D12 were not full
+marks.</p>
+<p>A tensor has a shape (sizes per axis), a stride (storage steps per axis),
+and a dtype (bytes per element). Element count is the product of shape
+entries. A matrix product (M,K) by (K,N) costs 2MNK FLOPs: MNK
+multiplications and MNK additions. Bytes moved for the same product are
+about 2(MK + KN + MN) for fp16 inputs and output. Arithmetic intensity
+is FLOPs divided by bytes. A roofline plot compares intensity against
+the machine balance (peak FLOP/s divided by bandwidth): below the
+balance the operation is memory-bound, above it is compute-bound.</p>
+<p>Worked check: (512,512) by (512,512) in fp16: FLOPs = 2<em>512^3 =
+268M, bytes = 2</em>3*512^2 = 1.57M, intensity = 171 FLOP/byte. On a
+100 TFLOP/s, 1 TB/s device the balance is 100, so this matmul is
+compute-bound. Assessment: repeat for a (1,512) by (512,512) product.
+Key: <code>../keys/u02_answers.md</code> R1.</p>
+<hr />
+<h3 id="c01-tensor-axes-and-shape-contracts">C01: Tensor axes and shape contracts</h3>
+<p>Leaf id <code>cs336-U02-C01</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S02 foundations.
+   Scope: reading and writing shapes for every operation in the course.
+   Objectives: state the shape contract of matmul, embedding lookup,
+   softmax, and layer norm, predict output shapes. Depends on P03, P12,
+   and the remediation block.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why do shape bugs eat hours
+   of debugging? Toy: x has shape (4, 256, 512), W has shape (512, 2048).
+   <code>x @ W</code> gives (4, 256, 2048). <code>W @ x</code> is illegal: the contract of @
+   needs the inner axes to match.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Every operation is a contract: input shapes in,
+   output shape out. Read shapes right to left for matmuls (the last two
+   axes do the work, leading axes batch). Write the contract as a comment
+   before the code, the comment is the specification the code must meet.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Axis: one dimension.
+   Rank: number of axes. Broadcasting aligns trailing axes. Assumption:
+   shapes are known statically or asserted at runtime, dynamic shapes get
+   an assert.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Matmul contract: (&hellip;, M, K) @ (&hellip;, K, N)
+   -&gt; (&hellip;, M, N), leading axes broadcast. Embedding: ids (B, T) plus
+   table (V, d) -&gt; (B, T, d). Softmax over axis -1: shape unchanged,
+   rows sum to 1. LayerNorm over the last axis: shape unchanged.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u02.py</code> (executed
+   2026-10-06): batched einsum &ldquo;bij,bjk-&gt;bik&rdquo; on (2,3,4) and (2,4,5)
+   gives (2,3,5), matching the contract prediction exactly.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>check_shapes</code>: a helper
+   that takes a tensor and an expected shape tuple with None as wildcard
+   and raises a message naming the operation, the expected contract, and
+   the actual shape. About 10 lines, used in every later lab.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Contract tests: matmul,
+   embedding, softmax, norm on the toy shapes above, each asserts the
+   predicted output shape. A deliberately wrong contract raises with the
+   operation name in the message.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Shape checks cost microseconds. A missed shape bug costs a
+   silent wrong result or a crash deep in a training run.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> einops/einsum (C02)
+    make contracts explicit in the expression itself. Use plain operators
+    with written contracts for hot paths, einops where readability
+    matters more.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Broadcasting hides a bug: (B, T,
+    d) + (d,) works, but (B, T, d) + (B, d) also &ldquo;works&rdquo; by aligning the
+    wrong axes, silently adding per-position bias. The assumption
+    &ldquo;broadcasting is safe&rdquo; breaks when trailing axes coincide by
+    accident, explicit unsqueeze prevents it.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: einops
+    documentation (primary: the notation specification). Extension:
+    instrument a small model with contract asserts and count how many
+    would-be silent bugs the asserts catch over 100 random shape
+    mutations, hypothesis: more than half.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: state the matmul, embedding, softmax,
+    and norm contracts. (b) Oral ladder: define rank, predict
+    (4,256,512) @ (512,2048), justify right-to-left reading, implement
+    check_shapes, compare with einops, debug the (B,T,d)+(B,d) bug,
+    critique static-shape assumptions, design the mutation experiment.
+    (c) Transfer: a new op takes (B,h,T,d) and returns (B,T,d). What
+    contract did it apply? Answers: <code>../keys/u02_answers.md</code> A1.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U02 task 1 implements check_shapes and
+    the contract tests. See <code>../labs/u02_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the contract table (op, in, out). No figure,
+    tabular claim per the medium ladder.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c02-einsum-and-einops">C02: einsum and einops</h3>
+<p>Leaf id <code>cs336-U02-C02</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S02. Scope: index
+   notation for tensor programs. Objectives: read and write einsum for
+   matmul, batched matmul, attention scores, and reductions. Depends on
+   C01.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how do you write attention
+   without a forest of transposes? Toy: scores = einsum(&ldquo;bhid,bhjd-&gt;bhij&rdquo;,
+   Q, K): batch b, head h, query i, key j. One line, no transpose calls.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> An einsum string names each axis with a letter.
+   Repeated letters across inputs multiply and sum, letters in only one
+   input pass through. The output lists the letters to keep, in order.
+   The string IS the shape contract.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Subscripts: axis
+   labels. Reduction: a label absent from the output is summed out.
+   Assumption: labeled axes that are multiplied have equal sizes (checked
+   at runtime).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> &ldquo;ik,kj-&gt;ij&rdquo;: for each i,j output the sum
+   over k of A[i,k]B[k,j]: matrix multiplication. &ldquo;bij,bjk-&gt;bik&rdquo;:
+   batched matmul. &ldquo;bhid,bhjd-&gt;bhij&rdquo;: attention scores per head.
+   &ldquo;bhij,bhjd-&gt;bhid&rdquo;: scores times values. Each follows from the
+   multiply-and-sum rule.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u02.py</code> (executed
+   2026-10-06): einsum(&ldquo;ik,kj-&gt;ij&rdquo;) matches A @ B to allclose on random
+   (3,4)/(4,5) inputs, the batched form gives (2,3,5) as predicted.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>attention_scores(Q, K)</code>:
+   one einsum line with a shape assert on the output. <code>attention_mix(P,
+   V)</code>: one line. Used as reference in U03.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Against @ on random
+   inputs: allclose. Shape asserts on outputs. A swapped subscript
+   (&ldquo;bhij,bhjd-&gt;bhjd&rdquo;) is caught by the shape assert.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> einsum can be slower than a hand-fused @ on some backends
+   because the optimizer may choose a naive path, for teaching and for
+   non-hot paths the clarity wins. Time the hot path before committing.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> einops rearrange/reduce
+    for readability of reshapes, plain @ for maximum kernel selection.
+    Use einsum for any expression with 3+ tensors or tricky axes.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> &ldquo;ij,jk-&gt;ik&rdquo; versus &ldquo;ij,kj-&gt;ik&rdquo;:
+    one letter differs and the second silently computes A @ B.T. The
+    assumption &ldquo;the string is obviously right&rdquo; breaks, the shape assert
+    is the backstop because both give (M,N) shapes and only values differ:
+    compare against a reference on fixed data.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the einsum
+    specification (primary: numpy documentation). Extension: benchmark
+    einsum versus @ for the attention score shapes across T in
+    {128, 1024, 8192}, hypothesis: the gap shrinks as T grows.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: state the multiply-and-sum rule.
+    (b) Oral ladder: define a subscript, write scores for one head,
+    justify why the output order matters, implement attention_mix,
+    compare with transpose-based code, debug the B.T bug, critique the
+    equal-size assumption, design the benchmark. (c) Transfer: write the
+    einsum for per-head softmax normalization over keys.
+    Answers: <code>../keys/u02_answers.md</code> A2.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U02 task 2 implements the attention
+    einsums and the reference comparison. See <code>../labs/u02_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: subscript-to-axis mapping table. No figure,
+    the notation is textual by design.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c03-views-strides-contiguity">C03: Views, strides, contiguity</h3>
+<p>Leaf id <code>cs336-U02-C03</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S02. Scope: how
+   tensors sit in memory. Objectives: predict strides, tell views from
+   copies, decide when to call contiguous. Depends on C01, P12.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why does <code>.T</code> cost nothing
+   but sometimes slow the next op 2x? Toy from <code>compute_u02.py</code>: a (4,6)
+   float32 array has strides (24,4) and is C-contiguous, its transpose
+   has shape (6,4), strides (4,24), shares memory, and is not
+   C-contiguous. The transpose only rewrote metadata.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> A tensor is metadata (shape, strides, offset) over a
+   flat storage. Stride says how many bytes to step per axis. A view
+   reuses storage with new metadata. Contiguous means the metadata
+   matches the natural walk order, which is what fast kernels expect.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Stride unit: bytes
+   (numpy) or elements (torch). C-contiguous: row-major walk is linear.
+   Assumption: element size is dtype size, padding is absent.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> For shape (4,6) float32: row stride =
+   6*4 = 24 bytes, column stride = 4 bytes. Transpose swaps shape and
+   strides: (6,4) with strides (4,24). ascontiguousarray allocates new
+   storage and copies in walk order. In-place edits through a view
+   alias the original.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u02.py</code> (executed
+   2026-10-06): C array strides (24,4), contiguous True, transpose
+   strides (4,24), contiguous False, shares_memory True, explicit copy
+   contiguous True, shares_memory False.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>is_c_contig(shape,
+   strides, itemsize)</code>: the standard walk-order check. <code>need_copy(t)</code>:
+   returns True when a kernel requiring contiguity would silently copy
+   anyway. About 12 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Stride predictions for
+   reshape, transpose, and narrow on the toy, aliasing test: write
+   through the view, read the original, copy test: no aliasing. Expected
+   outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Views are free. Copies cost memory bandwidth. A
+   non-contiguous input to a kernel that needs contiguity triggers a
+   hidden copy: the 2x slowdown in the motivating question.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Channels-last or
+    custom layouts for convolutions, for transformers, keep
+    batch-first C-contiguous and call contiguous once after transpose
+    chains, not after every op.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> In-place ReLU on a view that
+    aliases an activation needed for backward: the saved tensor is
+    corrupted and gradients are wrong. The assumption &ldquo;in-place is safe&rdquo;
+    breaks under autograd, the version-counter error is the symptom.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: PyTorch
+    memory format notes (primary: framework docs). Extension: time
+    matmul on transposed versus contiguous inputs across sizes,
+    hypothesis: the gap appears only past the cache boundary.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: define stride, view, contiguous.
+    (b) Oral ladder: define a view, predict strides of a (4,6) transpose,
+    justify why transpose is free, implement the contiguity check,
+    compare view versus copy, debug the in-place ReLU corruption,
+    critique the no-padding assumption, design the matmul timing
+    experiment. (c) Transfer: an op returns a strided slice. Where do
+    you place the contiguous call in a training step?
+    Answers: <code>../keys/u02_answers.md</code> A3.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U02 task 3 runs the stride/alias/copy
+    experiments. See <code>../labs/u02_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u02_fig01: lesson plate, stride walk on the (4,6)
+    array before and after transpose. Source: original toy. Shell 3.
+    Render: <code>assets/render_u02.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u02_fig01" src="../assets/u02_fig01.png"><figcaption>lesson plate, stride walk on the (4,6) array before and after transpose. Source: original toy. Shell 3.</figcaption></figure>
+<hr />
+<h3 id="c04-activation-memory">C04: Activation memory</h3>
+<p>Leaf id <code>cs336-U02-C04</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S02. Scope:
+   memory held by forward activations for backward. Objectives: estimate
+   activation bytes for a transformer layer, name the biggest terms.
+   Depends on C01, P11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the parameters fit, so why
+   does training run out of memory? Toy: the 41.55M-parameter model in
+   item 6 holds about 134 MB of fp16 activations at B=4, T=256, while
+   Adam state holds 665 MB. At larger B and T, activations dominate.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Backward needs the inputs of every differentiable
+   op. Each layer saves its attention inputs, scores or softmax output,
+   and FFN intermediates. Activation memory scales with B, T, L, and d,
+   attention terms scale with T^2.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Saved tensor: kept
+   from forward to backward. Unit: bytes = elements times dtype size.
+   Assumption: standard transformer, no checkpointing (checkpointing is
+   C10), fp16 activations.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Per layer, the dominant saved tensors:
+   attention input (B,T,d), QKV projections (3 x B,T,d), attention
+   weights (B,h,T,T), FFN up (B,T,dff) and gate (B,T,dff). Sum the
+   elements, multiply by L and by 2 bytes. The T^2 term is what explodes
+   at long context.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u02.py</code> (executed
+   2026-10-06): B=4, T=256, d=512, L=8, dff=2048, h=8 gives about
+   134.2 MB of fp16 activations under the stated estimate formula. The
+   formula is documented in the script, it is an estimate, not a
+   framework measurement.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>activation_estimate(B, T,
+   d, dff, h, L, bytes_per=2)</code>: sums the per-layer terms above and
+   returns bytes plus a per-term breakdown. About 15 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Scaling checks: doubling B
+   doubles the estimate, doubling T roughly quadruples the attention
+   term. The test asserts these scalings on the function output.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Activation memory is the binding constraint for long
+   sequences and large batches. It trades against recomputation (C10)
+   and against batch size (C08 in U05).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Activation
+    checkpointing (C10) trades compute for memory, smaller microbatches
+    (U08) trade throughput for memory. Estimate first, then choose.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The estimate ignores
+    fragmentation and allocator overhead, so a model that &ldquo;fits&rdquo; on
+    paper OOMs in practice. The assumption &ldquo;bytes sum to usable memory&rdquo;
+    breaks, keep a 10-20 percent margin and measure with the allocator.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: activation
+    checkpointing paper (Chen et al., 2016, primary). Extension: compare
+    the estimate against a framework memory snapshot on a tiny model,
+    hypothesis: within 25 percent before fragmentation.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: name the three biggest saved tensors.
+    (b) Oral ladder: define a saved tensor, compute the attention-weight
+    term by hand, justify the T^2 scaling, implement the estimator,
+    compare with checkpointing, debug an OOM where params fit,
+    critique the no-fragmentation assumption, design the snapshot
+    comparison. (c) Transfer: T grows 8x. Which term dominates now, and
+    what is the first mitigation? Answers: <code>../keys/u02_answers.md</code> A4.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U02 task 4 implements the estimator and
+    the scaling checks. See <code>../labs/u02_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u02_fig02: lesson plate, per-layer activation
+    terms as sized blocks, computed values. Source: original toy. Shell 2
+    (count the toy). Render: <code>assets/render_u02.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u02_fig02" src="../assets/u02_fig02.png"><figcaption>lesson plate, per-layer activation terms as sized blocks, computed values. Source: original toy. Shell 2 (count the toy).</figcaption></figure>
+<hr />
+<h3 id="c05-parameter-gradient-optimizer-memory">C05: Parameter, gradient, optimizer memory</h3>
+<p>Leaf id <code>cs336-U02-C05</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S02. Scope:
+   memory for parameters, gradients, and optimizer state. Objectives:
+   compute bytes per parameter for SGD, Adam fp32, and mixed precision.
+   Depends on C04, P11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how much memory does a 41M
+   parameter model really need to train? Toy from <code>compute_u02.py</code>: Adam
+   with fp32 master weights needs 16 bytes per parameter (4 param + 4
+   grad + 4 m + 4 v) = 664.8 MB for 41.55M params. Mixed precision also
+   totals 16 bytes per param (2 + 2 + 4 + 4 + 4): the savings are in
+   activations and compute, not optimizer state.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Count bytes per parameter, then multiply. SGD: 4
+   (param) + 4 (grad) + 4 (momentum) = 12. Adam: +4 (v) = 16. Mixed
+   precision Adam: 2 (bf16 param) + 2 (bf16 grad) + 4 (fp32 master) + 4
+   (m) + 4 (v) = 16.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Master weights: the
+   fp32 copy updated by the optimizer. Moments m, v: Adam state.
+   Assumption: no sharding (sharding is U08), one replica.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Each term is params times dtype bytes.
+   Gradients match the compute dtype (fp32) or the mixed grad dtype.
+   The master copy exists because bf16 updates would round to zero for
+   small learning rates.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u02.py</code> (executed
+   2026-10-06): 41.55M params -&gt; Adam fp32 total 664.8 MB, mixed
+   precision total 664.8 MB. Same total, different split: mixed keeps
+   activations in bf16 (C04) and computes in bf16 (C11).</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>optimizer_bytes(params,
+   mode)</code>: mode in {&ldquo;sgd&rdquo;, &ldquo;adam_fp32&rdquo;, &ldquo;adam_mixed&rdquo;}, returns the total
+   and the per-term breakdown. About 12 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Ratios: adam_fp32 is 4/3
+   of sgd (16 vs 12). Mixed equals fp32 total. The test asserts both.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Optimizer state is the largest fixed cost of training and
+   does not shrink with batch size. It is the first thing sharded (U08).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> SGD with momentum
+    (12 bytes) or 8-bit optimizers (fewer bytes, quantization risk).
+    Adam stays the default for transformers, switch only with evidence
+    the task tolerates it.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Dropping the master copy to
+    &ldquo;save memory&rdquo; in bf16 training: small updates underflow, loss stops
+    improving, and the bug looks like a bad learning rate. The assumption
+    &ldquo;bf16 params suffice&rdquo; breaks, the master copy is load-bearing.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: mixed
+    precision training paper (Micikevicius et al., 2018, primary).
+    Extension: train the toy model with and without master weights and
+    compare final loss, hypothesis: without master weights the loss
+    stalls higher.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: bytes per param for SGD, Adam, mixed.
+    (b) Oral ladder: define master weights, compute mixed bytes by hand,
+    justify why mixed totals equal fp32, implement the counter, compare
+    with 8-bit optimizers, debug stalled bf16 training, critique the
+    no-sharding assumption, design the master-weight ablation.
+    (c) Transfer: memory budget is 80 percent of the Adam total. Name
+    two levers that fit the budget and what each sacrifices.
+    Answers: <code>../keys/u02_answers.md</code> A5.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U02 task 5 implements the byte counter
+    and the ratio checks. See <code>../labs/u02_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the bytes-per-parameter table. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c06-matmul-flops">C06: Matmul FLOPs</h3>
+<p>Leaf id <code>cs336-U02-C06</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S02. Scope:
+   counting FLOPs for the operations in a transformer. Objectives: derive
+   2MNK, apply it to QKV, scores, projection, and FFN. Depends on C01,
+   P03.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: where does the compute go
+   in one layer? Toy from <code>compute_u02.py</code> (B=4, T=256, d=512, dff=2048,
+   h=8): one forward layer costs 8.858 GFLOP: QKV 1.611, scores 0.268,
+   output projection 0.537, FFN 6.443. The FFN dominates at 73 percent.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> One multiply-add is 2 FLOPs. Every linear map
+   (B,T,d_in) -&gt; (B,T,d_out) costs 2<em>B</em>T<em>d_in</em>d_out. Attention scores
+   cost 2<em>B</em>h<em>T</em>T*d_h, the mix costs the same again.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> FLOP: one op.
+   Assumption: dense matmuls, sparsity and masking are accounted
+   separately.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> (M,K)@(K,N): MNK mults + MNK adds = 2MNK.
+   QKV: three maps of 2<em>B</em>T<em>d</em>d. Scores: 2<em>B</em>h<em>T</em>T<em>d_h = 2</em>B<em>T</em>T<em>d
+   (since h</em>d_h = d). FFN (SwiGLU): three maps of 2<em>B</em>T<em>d</em>dff.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u02.py</code> (executed
+   2026-10-06): per-layer forward 8.858 GFLOP with the split above.
+   Eight layers: 70.9 GFLOP forward per batch, backward about 141.7 GFLOP.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>layer_flops(B, T, d,
+   dff, h)</code>: returns the per-op breakdown and total. About 12 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Against a FLOP counter on
+   a tiny numpy model: agreement within 1 percent. Doubling d
+   quadruples the total (d^2 terms dominate).</p>
+</li>
+<li>
+<p><strong>Costs.</strong> FLOP counts set the compute budget (U10 scaling) and the
+   roofline position (C08). They do not predict wall time alone.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Counting MACs
+    (multiply-accumulates) instead of FLOPs: half the number, same
+    information. Use FLOPs to match vendor peak figures.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Counting only the FFN and
+    forgetting attention: at T=8192 the scores term (T^2) dominates and
+    the estimate is off by an order of magnitude. The assumption
+    &ldquo;FFN always dominates&rdquo; breaks at long context.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: scaling-law
+    papers&rsquo; FLOP accounting (primary: paper appendices). Extension:
+    measure the T at which attention passes FFN for fixed d, hypothesis:
+    it tracks d*dff/T^2 crossover.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: derive 2MNK in one line. (b) Oral ladder:
+    define a MAC, compute the QKV term by hand, justify the factor 3 in
+    SwiGLU FFN, implement layer_flops, compare MAC versus FLOP counts,
+    debug an estimate missing the score term, critique the dense
+    assumption, design the crossover experiment. (c) Transfer: d
+    doubles and T halves. What happens to total FLOPs?
+    Answers: <code>../keys/u02_answers.md</code> A6.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U02 task 6 implements the FLOP counter
+    and the crossover check. See <code>../labs/u02_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the per-op FLOP table. The roofline figure
+    (u02_fig03) reuses these numbers.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c07-backward-flops">C07: Backward FLOPs</h3>
+<p>Leaf id <code>cs336-U02-C07</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S02. Scope: the
+   compute cost of the backward pass. Objectives: derive the 2x rule,
+   state where it breaks. Depends on C06, P05, P11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why is a training step
+   about 3x a forward pass? Toy: the layer from C06 costs 8.858 GFLOP
+   forward, backward costs about 17.7 GFLOP, total about 26.6 GFLOP, or
+   3x forward.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Backward through a linear map computes two matmuls:
+   gradient wrt input (dout @ W^T) and gradient wrt weight (x^T @ dout).
+   Each costs about the same as the forward matmul. Hence ~2x forward
+   for linears, attention backward is similar in structure.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> dout: upstream
+   gradient, same shape as the output. Assumption: standard
+   reverse-mode, no checkpointing (which adds a forward recompute).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> y = xW: forward 2MNK. dx = dout W^T:
+   2MNK. dW = x^T dout: 2MNK. Total for the op: 6MNK = 3x forward for
+   that op, across the network the ratio settles near 2x forward
+   because not every forward op has two backward matmuls (norms,
+   activations are cheaper).</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u02.py</code> (executed
+   2026-10-06): per-layer backward about 17.716 GFLOP versus 8.858
+   forward: ratio 2.00 by construction of the rule, the lab checks the
+   ratio on a hand-counted MLP instead.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>train_step_flops(B, T, d,
+   dff, h, L)</code>: returns forward, backward (2x), and total (3x) with the
+   per-layer split. About 10 lines on top of C06.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> On a tiny numpy autograd
+   model, count actual multiply-adds in forward and backward: ratio in
+   [1.8, 2.4]. The test asserts the band, not an exact 2.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The 3x rule converts forward FLOP estimates into training
+   budgets (U10). Checkpointing changes it to about 4x (recompute adds
+   one forward).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Exact per-op counting
+    with a profiler for the final budget, the 3x rule for planning.
+    Use the rule early, the profiler late.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Gradient checkpointing (C10)
+    without adjusting the rule: the plan undercounts by a full forward
+    pass and the job overruns its budget. The assumption &ldquo;backward is
+    2x&rdquo; breaks under recomputation.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: automatic
+    differentiation references (primary: framework docs). Extension:
+    measure the forward/backward ratio on the toy model with and without
+    checkpointing, hypothesis: about 3x and 4x totals respectively.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: state the 2x/3x rules. (b) Oral ladder:
+    define dout, derive the two backward matmuls, justify the 2x band,
+    implement the step counter, compare with checkpointing, debug a
+    budget that ignored backward, critique the no-recompute assumption,
+    design the ratio experiment. (c) Transfer: the plan uses
+    checkpointing on half the layers. What is the new total?
+    Answers: <code>../keys/u02_answers.md</code> A7.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U02 task 7 counts ops on a tiny autograd
+    model. See <code>../labs/u02_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the forward/backward/total table. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c08-arithmetic-intensity">C08: Arithmetic intensity</h3>
+<p>Leaf id <code>cs336-U02-C08</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S02. Scope:
+   FLOPs per byte as the predictor of bottlenecks. Objectives: compute
+   intensity for key shapes, place each on a roofline. Depends on C06,
+   P15.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why is decode slow even
+   though it does little compute? Toy from <code>compute_u02.py</code>: a
+   (512,512,512) matmul has intensity 170.7 FLOP/byte (compute-bound on
+   the toy device), while a (1,512,512) vector-matrix product has 1.0
+   FLOP/byte (hopelessly memory-bound). Same op family, opposite
+   bottlenecks.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Intensity = FLOPs / bytes moved. High intensity:
+   the math dominates, buy FLOPs. Low intensity: the memory traffic
+   dominates, buy bandwidth or shrink traffic. Batch size and sequence
+   length move intensity more than model size does.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Unit: FLOP/byte.
+   Bytes counted at the HBM boundary for fp16 (2 bytes/element).
+   Assumption: the traffic model counts each tensor once (no cache
+   reuse counted twice).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> 2MNK FLOPs over 2(MK+KN+MN) bytes. For
+   square N: intensity ~ N/3: it grows with matrix size. For M=1
+   (single-token decode): intensity ~ 1: every op is memory-bound.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u02.py</code> (executed
+   2026-10-06): (512,512,512): 170.7, (1024,512,512): 204.8,
+   (1,512,512): 1.0 FLOP/byte. The (1,512,512) case is the decode
+   regime.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>intensity(M, N, K,
+   bytes_per=2)</code>: returns FLOPs, bytes, and intensity. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Square scaling: doubling
+   N roughly doubles intensity. M=1 stays near 1 regardless of N. The
+   test asserts both.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Intensity decides whether kernel optimization should chase
+   FLOPs (tiling, tensor cores) or bytes (fusion, quantization of
+   traffic). Wrong diagnosis wastes the optimization budget.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Full roofline with
+    measured points (C09) for final answers, intensity arithmetic for
+    design-time reasoning. Use arithmetic early, measurement late.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Counting only HBM traffic while
+    the kernel is SRAM-bound: the intensity looks fine but the kernel
+    stalls on shared memory. The assumption &ldquo;HBM is the boundary that
+    matters&rdquo; breaks for fused kernels (U07), restate the boundary per
+    kernel.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the roofline
+    model paper (Williams et al., 2009, primary). Extension: plot
+    measured FLOP/s versus intensity for the lab shapes, hypothesis: the
+    points bend at the machine balance.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: define intensity and its unit. (b) Oral
+    ladder: define the byte count, compute the (1,512,512) case by hand,
+    justify the N/3 scaling, implement the function, compare with a
+    measured roofline, debug a traffic count that double-counts the
+    output, critique the HBM-boundary assumption, design the bend
+    experiment. (c) Transfer: batch size grows 8x in decode. How does
+    intensity move, and what changes in the optimization plan?
+    Answers: <code>../keys/u02_answers.md</code> A8.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U02 task 8 computes intensities and the
+    square-scaling checks. See <code>../labs/u02_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u02_fig03: chapter plate, roofline with the three
+    computed points placed. Source: original toy. Render:
+    <code>assets/render_u02.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u02_fig03" src="../assets/u02_fig03.png"><figcaption>chapter plate, roofline with the three computed points placed. Source: original toy. Render: assets/render_u02.py.</figcaption></figure>
+<hr />
+<h3 id="c09-peak-versus-achieved-rates">C09: Peak versus achieved rates</h3>
+<p>Leaf id <code>cs336-U02-C09</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S02. Scope: why
+   measured throughput sits below peak. Objectives: list five loss
+   sources, compute MFU from a measured rate. Depends on C08, P15.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the card says 100 TFLOP/s,
+   the job gets 40. Where did 60 go? Toy: at intensity 50 FLOP/byte on
+   the 100 TFLOP/s, 1 TB/s device, the roofline allows only 50 TFLOP/s
+   (memory-bound): half the &ldquo;loss&rdquo; is physics, not a bug.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Achieved = peak times efficiency. Losses: memory
+   bound (roofline), kernel launch overhead, low occupancy, extra
+   traffic (unfused ops), and communication. MFU (model FLOP
+   utilization) = achieved / peak, computed on the model&rsquo;s FLOP count,
+   not the kernel&rsquo;s.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> MFU: ratio, unit
+   none. Assumption: the FLOP count used is the honest model count
+   (C06), not an inflated kernel count.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Roofline cap: min(peak, intensity *
+   bandwidth). On top: efficiency factors multiply (occupancy 0.9,
+   fusion 0.8, overlap 0.95). A 40 percent MFU on a memory-bound shape
+   can be excellent, the same MFU on a compute-bound shape is a bug.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u02.py</code> (executed
+   2026-10-06): on the toy device, intensity 50 gives 50 TFLOP/s
+   (memory-bound), intensity 200 gives 100 TFLOP/s (compute-bound).
+   MFU is meaningful only against the roofline cap, not the raw peak.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>mfu(achieved_flops,
+   model_flops, seconds, peak)</code>: returns achieved rate, roofline cap
+   for a stated intensity, and MFU. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Sanity: MFU in [0, 1].
+   A reported MFU above 1 means the FLOP count is wrong, not that the
+   hardware is magic. The test asserts the band.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Chasing peak on a memory-bound workload wastes engineering
+   time. The roofline says where the ceiling is before anyone optimizes.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Hardware counters
+    (Nsight) for ground truth on one kernel, MFU for whole-job tracking.
+    Use counters to debug, MFU to manage.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Quoting kernel FLOP/s (with
+    recomputation counted twice) as model FLOP/s: MFU looks great while
+    the job is slow. The assumption &ldquo;FLOPs are FLOPs&rdquo; breaks, always
+    state which count the rate uses.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: published
+    training reports with MFU figures (primary: report methodology
+    notes). Extension: track MFU across batch sizes on the toy shapes,
+    hypothesis: MFU rises then plateaus at the roofline.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: define MFU and its denominator. (b) Oral
+    ladder: define the roofline cap, compute the intensity-50 case by
+    hand, justify cap-before-peak, implement mfu, compare with counter
+    data, debug an MFU above 1, critique the honest-count assumption,
+    design the batch-size sweep. (c) Transfer: MFU is 35 percent and the
+    shape is compute-bound. Name the first two suspects.
+    Answers: <code>../keys/u02_answers.md</code> A9.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U02 task 9 implements mfu and the
+    cap checks. See <code>../labs/u02_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the cap table (intensity, cap, regime). The
+    roofline figure (u02_fig03) carries the visual.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c10-checkpoint-resource-ledger">C10: Checkpoint resource ledger</h3>
+<p>Leaf id <code>cs336-U02-C10</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S02. Scope: the
+   full resource ledger for a training run. Objectives: build a ledger
+   with parameters, gradients, optimizer, activations, and workspace,
+   apply it to the toy model. Depends on C04, C05, C06.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: will this config fit on the
+   device? Toy ledger for the 41.55M model (B=4, T=256, fp16): params +
+   grads + Adam state 664.8 MB, activations about 134.2 MB, total about
+   799 MB plus workspace. One page, five lines, go/no-go.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The ledger is a table, not a feeling. Rows: one per
+   memory class. Each row states the formula, the inputs, and the bytes.
+   The sum plus a fragmentation margin is the verdict.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> All units bytes.
+   Assumption: single device, no sharding, margin 15 percent.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Total = optimizer_bytes (C05) +
+   activation_bytes (C04) + workspace (temporary buffers, small) +
+   input batch. Compare against device memory. If it exceeds, the ledger
+   says which row to attack (shard optimizer, checkpoint activations,
+   shrink batch).</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy model ledger (executed 2026-10-06):
+   optimizer+params+grads 664.8 MB, activations 134.2 MB, subtotal 799.0
+   MB, with 15 percent margin 918.9 MB. Verdict: fits in 1 GB with
+   margin, fails in 512 MB.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>ledger(params, B, T, d,
+   dff, h, L, V, mode)</code>: returns the row table and the verdict. About 20
+   lines on top of C04/C05 functions.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Additivity: rows sum to
+   the total. Monotonicity: raising any input never lowers the total.
+   The test asserts both.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The ledger costs minutes and prevents OOMs that cost
+   hours. It is the cheapest performance tool in the course.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Framework memory
+    snapshot for ground truth after the first run, the ledger for
+    planning before the first run. Use both, in that order.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The ledger omits the data
+    loader workers and NCCL buffers, on 8 GPUs the missing rows exceed
+    the margin and the job OOMs at scale-up. The assumption &ldquo;five rows
+    suffice&rdquo; breaks multi-GPU, U08/U09 add the missing rows.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: ZeRO paper
+    memory accounting (primary: paper tables). Extension: extend the
+    ledger with NCCL buffer estimates and validate against a 2-GPU run,
+    hypothesis: within the margin.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: name the five rows. (b) Oral ladder:
+    define the verdict, compute the toy total by hand, justify the
+    margin, implement the ledger, compare with a snapshot, debug the
+    8-GPU OOM, critique the single-device assumption, design the NCCL
+    extension. (c) Transfer: the verdict fails by 10 percent. Name the
+    cheapest row to cut and its cost. Answers: <code>../keys/u02_answers.md</code>
+    A10.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U02 task 10 builds the ledger and the
+    verdict. See <code>../labs/u02_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the ledger table itself. No figure, the table
+    is the deliverable.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c11-dtype-effects">C11: Dtype effects</h3>
+<p>Leaf id <code>cs336-U02-C11</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S02. Scope: how
+   dtype changes memory, compute, and numerics. Objectives: compare
+   fp32, fp16, bf16 on range, precision, memory, and speed. Depends on
+   C05, P12.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why bf16 and not fp16 for
+   training? Toy: fp16 maxes at 65504 with 10 mantissa bits, bf16 keeps
+   the fp32 exponent range with 7 mantissa bits. Gradients with large
+   dynamic range overflow fp16 but fit bf16, the price is coarser
+   precision.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Dtype sets three things: bytes per element (memory
+   and traffic), representable range (overflow risk), and precision
+   (rounding error). bf16 trades precision for range, fp16 trades range
+   for precision. Tensor cores accelerate fp16/bf16 matmuls.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> fp32: 4 bytes.
+   fp16/bf16: 2 bytes. Assumption: hardware with low-precision matmul
+   units, otherwise the speed claim does not hold.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Memory halves going 4 -&gt; 2 bytes.
+   Traffic halves, so memory-bound ops speed up up to 2x. Range: fp16
+   overflows past 65504, loss scaling was the historical fix, bf16
+   removes the need. Precision: bf16 rounds updates below ~2^-8
+   relative, the fp32 master copy (C05) absorbs this.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy model: activations 134.2 MB in fp16 versus
+   268.4 MB in fp32 (halved, from the C04 formula). Optimizer totals
+   from C05: mixed 664.8 MB. The lab verifies the halving on the
+   estimator output.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>dtype_bytes(dtype)</code> and
+   <code>traffic_ratio(a, b)</code>: the two-line helpers the ledger calls.
+   Overflow demo: accumulate 1e-5 a thousand times in fp16 versus fp32
+   and compare to the true sum (numpy lab).</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> The fp16 accumulation
+   stalls at 0.00390625 (true sum 0.01), fp32 reaches 0.01. Expected
+   outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Halved memory and traffic, new failure modes (overflow,
+   underflow of updates). Mixed precision is the standard answer, not
+   pure low precision.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Pure fp32 for
+    debugging numerics, fp8 for inference (training support varies).
+    Train in mixed bf16/fp32, debug in fp32.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> fp16 training without loss
+    scaling on a deep model: gradients underflow to zero in early
+    layers, the model trains only its top layers, and the loss curve
+    looks like a capacity problem. The assumption &ldquo;dtype is neutral&rdquo;
+    breaks, the symptom mimics underfitting.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    Micikevicius et al. (2018) mixed precision (primary). Extension:
+    measure the update-magnitude distribution in bf16 versus fp32 on the
+    toy model, hypothesis: the distributions match above the rounding
+    floor.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: range and precision of fp16 vs bf16.
+    (b) Oral ladder: define loss scaling, compute the activation halving
+    by hand, justify the master copy, implement the overflow demo,
+    compare bf16 with fp16, debug the underflow symptom, critique the
+    hardware assumption, design the distribution experiment.
+    (c) Transfer: a new chip lacks bf16 matmul. What changes in the
+    dtype plan? Answers: <code>../keys/u02_answers.md</code> A11.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U02 task 11 runs the dtype comparisons
+    and the accumulation demo. See <code>../labs/u02_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the dtype comparison table. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c12-cpu-correctness-path">C12: CPU correctness path</h3>
+<p>Leaf id <code>cs336-U02-C12</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S02. Scope: doing
+   honest development without a GPU. Objectives: state what CPU runs can
+   and cannot prove, build the CPU-first workflow. Depends on P02, P12.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: this build box has no GPU,
+   is any of this work real? Toy: every number in U02 was computed on
+   CPU with numpy. Shapes, strides, FLOP counts, and memory estimates
+   are exact on CPU, only wall-time claims need hardware.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Separate correctness (shapes, values, invariants)
+   from performance (rates, occupancy, overlap). CPU proves the first
+   completely and informs the second through arithmetic (rooflines),
+   never through timing.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Correctness
+   evidence: exact numerics on fixed seeds. Performance evidence:
+   measured rates on the target device. Assumption: the math is
+   device-independent (true for dense linear algebra up to round-off error).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The workflow: (a) implement in numpy,
+   (b) verify against analytical cases and finite differences, (c) port
+   the verified logic to torch, (d) measure only on the target device.
+   CPU timing of a GPU kernel proves nothing, CPU numerics prove the
+   algorithm.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> All U02 compute outputs (strides, einsum match,
+   FLOP splits, memory totals, intensities) were produced on this CPU
+   box and are cited as exact. No wall-time claim appears anywhere in
+   U02.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>assert_close(a, b, tol,
+   msg)</code>: the shared numeric assert used by every lab. Tolerance
+   defaults to 1e-5 for fp32, 1e-2 for fp16.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> The labs run the full
+   suite on CPU in seconds. Expected: all green, any red is a real bug,
+   not a hardware artifact.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> CPU development is free and fast for toys. The cost is
+   discipline: never report CPU timings as performance results.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Small GPU rentals
+    for the measurement stage, simulators for architecture exploration.
+    Develop on CPU, measure on the target, simulate for what-if.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A kernel &ldquo;optimized&rdquo; against
+    CPU timings: the ranking of variants on CPU inverts on GPU because
+    the bottleneck differs (cache vs HBM). The assumption &ldquo;faster on CPU
+    means faster on GPU&rdquo; breaks, the lesson&rsquo;s own roofline explains why.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the course
+    computational standards (primary: the prompt&rsquo;s own rules). Extension:
+    take one lab kernel through the full path (numpy, torch CPU, torch
+    GPU if available) and record which claims transferred, hypothesis:
+    numerics transfer, timings do not.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: what CPU proves and what it does not.
+    (b) Oral ladder: define the two evidence classes, classify five
+    claims, justify the port order, implement assert_close, compare with
+    GPU-first development, debug a CPU-timed &ldquo;optimization&rdquo;, critique
+    the device-independence assumption, design the transfer experiment.
+    (c) Transfer: a labmate reports a 2x speedup measured on CPU. What
+    do you ask first? Answers: <code>../keys/u02_answers.md</code> A12.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U02 task 12 is the meta-task: run the
+    whole U02 suite and classify each check as correctness or
+    performance evidence. See <code>../labs/u02_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the evidence-class table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h2 id="unit-russian-doll-ladder-u02">Unit Russian-doll ladder (U02)</h2>
+<ul>
+<li>Shell 0: what does a training step cost in FLOPs, bytes, and memory?</li>
+<li>Shell 1: one (4,6) array and its transpose, one layer at B=4, T=256.</li>
+<li>Shell 2: shapes, strides, dtypes, FLOP, byte, intensity.</li>
+<li>Shell 3: one stride rewrite, one intensity computation.</li>
+<li>Shell 4: the estimators (FLOPs, memory, ledger) in numpy.</li>
+<li>Shell 5: einsum versus @, scaling checks (double B, double T).</li>
+<li>Shell 6: change the dtype, predict the memory change, measure via the
+  estimator.</li>
+<li>Shell 7: break contiguity assumptions, break the dense assumption at
+  long T.</li>
+<li>Shell 8: estimator versus framework snapshot (method comparison).</li>
+<li>Shell 9: validate the ledger against a real run within a stated band.</li>
+<li>Shell 10: the ledger is the go/no-go gate for every training launch.</li>
+</ul>
+      
+      <nav class="pager"><a href="../keys/u01_answers.html"><span class="lbl">← Previous</span>U01 · Answers</a><a href="../keys/u02_answers.html"><span class="lbl">Next →</span>U02 · Answers</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
