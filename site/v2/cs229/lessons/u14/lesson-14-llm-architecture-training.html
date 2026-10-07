@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lesson 14 · LLM architecture, training — Machine Learning (Stanford CS229)</title>
+<meta name="description" content="Lesson: LLM architecture, training.">
+<link rel="stylesheet" href="../../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-page="cs229-u14" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../../index.html">Machine Learning (Stanford CS229)</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Machine Learning (Stanford CS229)</h3><ul>
+<li><a href="../../index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../../crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+<li><a href="../../cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../../course_map.html" data-page="cs229-course-map">CS229 · Course map</a></li>
+<li><a href="../../prerequisites.html" data-page="cs229-prereqs">CS229 · Prerequisites</a></li>
+<li><a href="../../notation_and_shapes.html" data-page="cs229-notation">CS229 · Notation</a></li>
+<li><a href="../../glossary.html" data-page="cs229-glossary">CS229 · Glossary</a></li>
+<li><a href="../../lessons/u01/lesson-01-learning-problems-risk-setup.html" data-page="cs229-u01">U01 · Learning problems, risk,</a></li>
+<li><a href="../../lessons/u01/keys.html" data-page="cs229-u01-keys">U01 · Keys</a></li>
+<li><a href="../../lessons/u02/lesson-02-linear-regression-local-weighting.html" data-page="cs229-u02">U02 · Linear regression, local</a></li>
+<li><a href="../../lessons/u02/keys.html" data-page="cs229-u02-keys">U02 · Keys</a></li>
+<li><a href="../../lessons/u03/lesson-03-classification-glm.html" data-page="cs229-u03">U03 · Classification, GLM</a></li>
+<li><a href="../../lessons/u03/keys.html" data-page="cs229-u03-keys">U03 · Keys</a></li>
+<li><a href="../../lessons/u04/lesson-04-generative-classifiers.html" data-page="cs229-u04">U04 · Generative classifiers</a></li>
+<li><a href="../../lessons/u04/keys.html" data-page="cs229-u04-keys">U04 · Keys</a></li>
+<li><a href="../../lessons/u05/lesson-05-kernels.html" data-page="cs229-u05">U05 · Kernels</a></li>
+<li><a href="../../lessons/u05/keys.html" data-page="cs229-u05-keys">U05 · Keys</a></li>
+<li><a href="../../lessons/u06/lesson-06-svm.html" data-page="cs229-u06">U06 · SVM</a></li>
+<li><a href="../../lessons/u06/keys.html" data-page="cs229-u06-keys">U06 · Keys</a></li>
+<li><a href="../../lessons/u07/lesson-07-neural-nets-backprop.html" data-page="cs229-u07">U07 · Neural nets, backprop</a></li>
+<li><a href="../../lessons/u07/keys.html" data-page="cs229-u07-keys">U07 · Keys</a></li>
+<li><a href="../../lessons/u08/lesson-08-generalization.html" data-page="cs229-u08">U08 · Generalization</a></li>
+<li><a href="../../lessons/u08/keys.html" data-page="cs229-u08-keys">U08 · Keys</a></li>
+<li><a href="../../lessons/u09/lesson-09-regularization.html" data-page="cs229-u09">U09 · Regularization</a></li>
+<li><a href="../../lessons/u09/keys.html" data-page="cs229-u09-keys">U09 · Keys</a></li>
+<li><a href="../../lessons/u10/lesson-10-clustering-em.html" data-page="cs229-u10">U10 · Clustering, EM</a></li>
+<li><a href="../../lessons/u10/keys.html" data-page="cs229-u10-keys">U10 · Keys</a></li>
+<li><a href="../../lessons/u11/lesson-11-vi-pca-ica.html" data-page="cs229-u11">U11 · VI, PCA, ICA</a></li>
+<li><a href="../../lessons/u11/keys.html" data-page="cs229-u11-keys">U11 · Keys</a></li>
+<li><a href="../../lessons/u12/lesson-12-diffusion-models.html" data-page="cs229-u12">U12 · Diffusion models</a></li>
+<li><a href="../../lessons/u12/keys.html" data-page="cs229-u12-keys">U12 · Keys</a></li>
+<li><a href="../../lessons/u13/lesson-13-foundation-models-representations.html" data-page="cs229-u13">U13 · Foundation models, repre</a></li>
+<li><a href="../../lessons/u13/keys.html" data-page="cs229-u13-keys">U13 · Keys</a></li>
+<li><a href="../../lessons/u14/lesson-14-llm-architecture-training.html" data-page="cs229-u14" class="active">U14 · LLM architecture, traini</a></li>
+<li><a href="../../lessons/u14/keys.html" data-page="cs229-u14-keys">U14 · Keys</a></li>
+<li><a href="../../lessons/u15/lesson-15-reasoning-rl-foundations.html" data-page="cs229-u15">U15 · Reasoning, RL foundation</a></li>
+<li><a href="../../lessons/u15/keys.html" data-page="cs229-u15-keys">U15 · Keys</a></li>
+<li><a href="../../lessons/u16/lesson-16-control-policy-optimization.html" data-page="cs229-u16">U16 · Control, policy optimiza</a></li>
+<li><a href="../../lessons/u16/keys.html" data-page="cs229-u16-keys">U16 · Keys</a></li>
+<li><a href="../../lessons/u17/lesson-17-appendices-synthesis.html" data-page="cs229-u17">U17 · Appendices, synthesis</a></li>
+<li><a href="../../lessons/u17/keys.html" data-page="cs229-u17-keys">U17 · Keys</a></li>
+<li><a href="../../labs/lab-01-linear-regression.html" data-page="cs229-lab-01">Lab 01 · Linear regressio</a></li>
+<li><a href="../../labs/keys-lab-01.html" data-page="cs229-lab-01-keys">Lab 01 · Keys</a></li>
+<li><a href="../../labs/lab-02-logistic-regression.html" data-page="cs229-lab-02">Lab 02 · Logistic regress</a></li>
+<li><a href="../../labs/keys-lab-02.html" data-page="cs229-lab-02-keys">Lab 02 · Keys</a></li>
+<li><a href="../../labs/lab-03-generalization-regularization.html" data-page="cs229-lab-03">Lab 03 · Generalization, </a></li>
+<li><a href="../../labs/keys-lab-03.html" data-page="cs229-lab-03-keys">Lab 03 · Keys</a></li>
+<li><a href="../../labs/lab-04-kmeans-em.html" data-page="cs229-lab-04">Lab 04 · Kmeans, EM</a></li>
+<li><a href="../../labs/keys-lab-04.html" data-page="cs229-lab-04-keys">Lab 04 · Keys</a></li>
+<li><a href="../../labs/lab-05-pca-ica.html" data-page="cs229-lab-05">Lab 05 · PCA, ICA</a></li>
+<li><a href="../../labs/keys-lab-05.html" data-page="cs229-lab-05-keys">Lab 05 · Keys</a></li>
+<li><a href="../../labs/lab-06-diffusion.html" data-page="cs229-lab-06">Lab 06 · Diffusion</a></li>
+<li><a href="../../labs/keys-lab-06.html" data-page="cs229-lab-06-keys">Lab 06 · Keys</a></li>
+<li><a href="../../labs/lab-07-representations.html" data-page="cs229-lab-07">Lab 07 · Representations</a></li>
+<li><a href="../../labs/keys-lab-07.html" data-page="cs229-lab-07-keys">Lab 07 · Keys</a></li>
+<li><a href="../../labs/lab-08-llm.html" data-page="cs229-lab-08">Lab 08 · LLM</a></li>
+<li><a href="../../labs/keys-lab-08.html" data-page="cs229-lab-08-keys">Lab 08 · Keys</a></li>
+<li><a href="../../labs/lab-09-rl-foundations.html" data-page="cs229-lab-09">Lab 09 · RL foundations</a></li>
+<li><a href="../../labs/keys-lab-09.html" data-page="cs229-lab-09-keys">Lab 09 · Keys</a></li>
+<li><a href="../../labs/lab-10-control-policy.html" data-page="cs229-lab-10">Lab 10 · Control, policy</a></li>
+<li><a href="../../labs/keys-lab-10.html" data-page="cs229-lab-10-keys">Lab 10 · Keys</a></li>
+<li><a href="../../labs/lab-11-synthesis.html" data-page="cs229-lab-11">Lab 11 · Synthesis</a></li>
+<li><a href="../../labs/keys-lab-11.html" data-page="cs229-lab-11-keys">Lab 11 · Keys</a></li>
+<li><a href="../../diagnostics/diagnostic-01-ml-foundations.html" data-page="cs229-diag-01">CS229 · Diagnostic 01</a></li>
+<li><a href="../../diagnostics/keys-01.html" data-page="cs229-diag-01-keys">CS229 · Diagnostic 01 keys</a></li>
+<li><a href="../../interview/interview-u12-questions.html" data-page="cs229-int-u12">Interview · U12</a></li>
+<li><a href="../../interview/keys-u12.html" data-page="cs229-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../../interview/interview-u13-questions.html" data-page="cs229-int-u13">Interview · U13</a></li>
+<li><a href="../../interview/keys-u13.html" data-page="cs229-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../../interview/interview-u14-questions.html" data-page="cs229-int-u14">Interview · U14</a></li>
+<li><a href="../../interview/keys-u14.html" data-page="cs229-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../../interview/interview-u15-questions.html" data-page="cs229-int-u15">Interview · U15</a></li>
+<li><a href="../../interview/keys-u15.html" data-page="cs229-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../../interview/interview-u16-questions.html" data-page="cs229-int-u16">Interview · U16</a></li>
+<li><a href="../../interview/keys-u16.html" data-page="cs229-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../../interview/interview-u17-questions.html" data-page="cs229-int-u17">Interview · U17</a></li>
+<li><a href="../../interview/keys-u17.html" data-page="cs229-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../../interview/oral-defenses.html" data-page="cs229-int-oral">Interview · Oral defenses</a></li>
+<li><a href="../../interview/keys-oral.html" data-page="cs229-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../../interview/transfer-sets.html" data-page="cs229-int-transfer">Interview · Transfer sets</a></li>
+<li><a href="../../interview/keys-transfer.html" data-page="cs229-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../../capstones/capstone-a-research.html" data-page="cs229-cap-a">Capstone A · Research</a></li>
+<li><a href="../../capstones/capstone-b-applied.html" data-page="cs229-cap-b">Capstone B · Applied</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../../index.html">Home</a> / <a href="#">Machine Learning (Stanford CS229)</a> / Lesson 14 · LLM architecture, training</nav>
+      <h1>Lesson 14 · LLM architecture, training</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Tengyu Ma and Andrew Ng</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="lesson-14-llm-architecture-and-training">Lesson 14, LLM architecture and training</h1>
+<p>Unit: cs229-U14. Leaf concepts: cs229-U14-C01 to C12
+(tokenization, autoregressive factorization,
+next-token loss, transformer, positional/mask
+structure, attention variants, MoE, in-context
+learning, zero-shot prompts, SFT, train/infer
+mismatch, resource accounting bridge).
+Date: 2026-10-06. Baseline: October 6, 2026.</p>
+<h2 id="source-mapping">Source mapping</h2>
+<p>Chapter 17 (SRC-01, PDF pages 203-219) was read
+in full on 2026-10-06: tokenization (17.1),
+autoregressive modeling and the next-token
+loss (17.2), the transformer interface (17.2),
+single-head and multi-head attention with
+masking (17.3), KV cache and memory/compute
+(17.3), attention variants (17.4), MoE
+(17.5), in-context learning (17.6), zero-shot
+prompting (17.7), and SFT (17.8). Lecture 14
+and 15 transcripts cover LLMs and attention
+variants (SRC-02), headers inspected,
+transcript content not yet read in depth.
+Two boundaries: (a) the notes explicitly
+defer positional embeddings to a future
+revision (footnotes in 17.2 and 17.3), the
+causal mask is taught from the notes, and
+positional schemes are standard background.
+(b) &ldquo;Train/infer mismatch&rdquo; and &ldquo;resource
+accounting&rdquo; are not named in the notes, they
+are taught as standard-background bridges
+(exposure bias. FLOPs/memory accounting built
+from the notes&rsquo; own complexity statements).
+Leaf rows carry SOURCE ATTRIBUTION PENDING
+until the RUN 6 pass.</p>
+<h2 id="scope-and-objectives">Scope and objectives</h2>
+<p>Scope: how a modern autoregressive LLM is
+built and trained: tokens in, next-token loss,
+transformer blocks, attention and its
+variants, MoE, and the post-training
+adaptations (ICL, prompting, SFT), plus the
+train/inference gap and the resource ledger.</p>
+<p>Objectives: the learner can (1) explain BPE
+tokenization, (2) write the autoregressive
+factorization and the training loss, (3)
+compute single-head causal attention by hand,
+(4) account for KV-cache memory and
+attention compute, (5) compare MHA/GQA/MQA,
+(6) explain MoE routing, (7) contrast ICL,
+zero-shot prompting, and SFT, and (8) state
+the train/infer mismatch and the resource
+costs.</p>
+<h2 id="dependencies">Dependencies</h2>
+<p>Prerequisites: P12, P13, P14 (shared bridges,
+linked). Unit U07 (neural nets), Unit U13
+(pretraining/transfer).</p>
+<p>Not-yet-understood list:</p>
+<ol>
+<li>Why attention needs a mask (remediated in
+   SL-04).</li>
+<li>What SFT changes versus prompting
+   (remediated in SL-08).</li>
+</ol>
+<hr />
+<h2 id="sl-01-tokenization">SL-01: Tokenization</h2>
+<p>Covers C01 (tokenization).</p>
+<h3 id="source-anchor">Source anchor</h3>
+<p>SRC-01 section 17.1, pages 202-203. A language
+model does not read raw strings. Text is
+broken into tokens: whole words, word pieces,
+punctuation, whitespace, bytes, or special
+markers such as end-of-text. A tokenizer maps
+a string to x = (x_1, &hellip;, x_T) with x_t in
+the vocabulary V. Modern models use subword
+tokenization, usually byte-pair encoding
+(BPE) [Sennrich et al., 2016].</p>
+<h3 id="bpe-intuition">BPE intuition</h3>
+<p>Start from tiny pieces (bytes or characters).
+Repeatedly add a new token for the adjacent
+pair that occurs most often in the corpus.
+After many merges, common strings (&ldquo;ing&rdquo;,
+&ldquo;tion&rdquo;, whole common words) become single
+tokens, rare words still split into pieces.
+The notes&rsquo; examples: &ldquo;glioblastoma&rdquo; becomes
+glio+blast+oma, &ldquo;LLMification&rdquo; becomes
+LL+M+ification.</p>
+<h3 id="the-compromise">The compromise</h3>
+<p>Character-level: tiny vocabulary, long
+sequences. Word-level: short sequences for
+common text, but rare words collapse to an
+unknown token. Subword sits between: the
+vocabulary |V| is on the order of 1e5 (the
+notes cite Qwen3.5 at 248,320 tokens) and the
+sequence length T stays manageable. The
+tokenizer is fixed before pretraining, and it
+shapes both |V| and T for everything after.</p>
+<h3 id="correctness-checks">Correctness checks</h3>
+<ul>
+<li>The tokenizer must be fixed before
+  training and identical at inference. A
+  different segmentation is a different
+  input distribution.</li>
+<li>Rare strings must still encode (as
+  pieces), never as unknown, for BPE.</li>
+</ul>
+<h3 id="nearest-alternative">Nearest alternative</h3>
+<p>Character-level modeling: no tokenizer at
+all. Simpler pipeline, much longer
+sequences, harder long-range modeling.</p>
+<h3 id="failure-case">Failure case</h3>
+<p>Training with one tokenizer and serving with
+another: token ids shift meaning and the
+model&rsquo;s learned embeddings misalign. Silent
+and catastrophic.</p>
+<hr />
+<h2 id="sl-02-autoregressive-factorization-and-the-loss">SL-02: Autoregressive factorization and the loss</h2>
+<p>Covers C02 (autoregressive factorization),
+C03 (next-token loss).</p>
+<h3 id="source-anchor_1">Source anchor</h3>
+<p>SRC-01 section 17.2, pages 203-207. A language
+model represents p(x_1, &hellip;, x_T). The
+support has size |V|^T: astronomical. The
+chain rule factors it:</p>
+<p>p(x_1, &hellip;, x_T) = p(x_1) p(x_2 | x_1) &hellip;
+p(x_T | x_1, &hellip;, x_{T-1}). (17.1)</p>
+<p>Each conditional has support |V|: one
+distribution over the vocabulary per
+position.</p>
+<h3 id="the-training-loss">The training loss</h3>
+<p>Maximum likelihood, normalized by length:</p>
+<p>loss = -(1/T) log p_theta(x_1, &hellip;, x_T)
+     = (1/T) sum_t l_ce(f_theta(x_0, &hellip;,
+       x_{t-1}), x_t), (17.12-17.13)</p>
+<p>the cross-entropy between the logits and the
+true next token, averaged over positions and
+then over sequences. The standard optimizer
+is AdamW [Loshchilov and Hutter, 2019] on
+mini-batches of sequences.</p>
+<h3 id="motivating-question">Motivating question</h3>
+<p>How do you train on raw text with no labels?</p>
+<h3 id="mental-model">Mental model</h3>
+<p>Every position is a classification problem
+with |V| classes, and the label is free: it
+is the next token. One long document yields T
+training examples. The model learns &ldquo;which
+sentences are plausible&rdquo; by learning to
+continue them.</p>
+<h3 id="correctness-checks_1">Correctness checks</h3>
+<ul>
+<li>The loss at position t may only use
+  x_0, &hellip;, x_{t-1}. Using x_t as input is
+  label leakage (the mask of SL-04 enforces
+  this structurally).</li>
+<li>Average over answer positions only in SFT
+  (SL-08), over all positions in
+  pretraining.</li>
+</ul>
+<h3 id="nearest-alternative_1">Nearest alternative</h3>
+<p>Masked language modeling (BERT): predict
+hidden tokens from both sides. Not
+autoregressive, different loss, different
+use (the notes flag this explicitly).</p>
+<h3 id="failure-case_1">Failure case</h3>
+<p>Training on packed documents without
+boundary tokens or masks: the model learns
+to continue across document boundaries and
+blends unrelated contexts.</p>
+<hr />
+<h2 id="sl-03-the-transformer-interface">SL-03: The transformer interface</h2>
+<p>Covers C04 (transformer).</p>
+<h3 id="source-anchor_2">Source anchor</h3>
+<p>SRC-01 sections 17.2-17.3, pages 204-208.
+Tokens become row-vector embeddings e_i in
+R^{1 x d}, stacked into E in R^{|V| x d}
+(17.2). A special beginning token x_0 is
+prepended. The transformer f_theta maps the
+embedding sequence to logit vectors
+(u_1, &hellip;, u_{T+1}) with u_t in R^{|V|}:</p>
+<p>p_theta(x_t | x_1, &hellip;, x_{t-1}) =
+softmax(f_theta(x_0, &hellip;, x_{t-1})). (17.3)</p>
+<p>Crucially, u_t depends only on x_0, &hellip;,
+x_{t-1}: the autoregressive property, built
+into the architecture by the mask.</p>
+<h3 id="blocks">Blocks</h3>
+<p>A transformer stacks blocks of multi-head
+self-attention and position-wise MLPs
+(GELU or SwiGLU activations, from section
+7.3). Two wirings: PreNorm applies layer
+norm before attention and the MLP
+(17.28-17.29). PostNorm applies it after
+each residual (17.30-17.31). Modern LLMs
+use PreNorm, usually with RMSNorm. The MLP
+acts per position with shared weights,
+attention is the only cross-position
+mixing.</p>
+<h3 id="positional-boundary">Positional boundary</h3>
+<p>Self-attention is permutation-equivariant:
+without extra signal it cannot tell token
+order. The notes state positional
+embeddings (learned absolute, sinusoidal,
+rotary) are important in practice but defer
+them to a future revision. Boundary: the
+notes teach the mask fully, positional
+schemes are standard background, not
+note-sourced.</p>
+<h3 id="correctness-checks_2">Correctness checks</h3>
+<ul>
+<li>u_t must not depend on x_t or later.
+  Test: perturb x_{t+1} and check u_t is
+  unchanged (the mask test).</li>
+<li>PreNorm vs PostNorm changes training
+  dynamics, do not mix block types without
+  intent.</li>
+</ul>
+<h3 id="nearest-alternative_2">Nearest alternative</h3>
+<p>Recurrent models: sequential state instead
+of attention. No quadratic cost, but no
+parallel training over positions.</p>
+<h3 id="failure-case_2">Failure case</h3>
+<p>Forgetting the causal mask in training:
+the model reads the answer from the future,
+training loss collapses to near zero, and
+the model is useless at generation. The
+mask test above catches it.</p>
+<hr />
+<h2 id="sl-04-attention-scaling-masking">SL-04: Attention, scaling, masking</h2>
+<p>Covers C05 (positional/mask structure).</p>
+<h3 id="source-anchor_3">Source anchor</h3>
+<p>SRC-01 section 17.3, pages 208-211.
+Single-head attention maps an input matrix
+H^in in R^{T x d} to H^out in R^{T x d_h}.
+Parameters: W^Q, W^K, W^V in R^{d x d_h}.
+Queries ask &ldquo;what am I looking for&rdquo;, keys
+advertise &ldquo;what I have&rdquo;, values carry the
+payload:</p>
+<p>q_t = h^in_t W^Q, k_t = h^in_t W^K,
+v_t = h^in_t W^V. (17.14-17.16)</p>
+<p>Scores: softmax over q_t k_j^T / c
+(17.17). Output: h^out_t = sum_j p_{t,j}
+v_j (17.18). Matrix form: H^out =
+softmax_row(Q K^T / c) V (17.20).</p>
+<h3 id="the-scaling">The scaling</h3>
+<p>c = sqrt(d_h) [Vaswani et al., 2017].
+Intuition from the notes: at initialization,
+q and k coordinates behave like independent
+mean-zero variance-1 variables, so their dot
+product has variance d_h. Without scaling,
+logits grow with head dimension and the
+softmax saturates (tiny gradients). Dividing
+by sqrt(d_h) keeps logit variance near 1.
+The notes flag this as a heuristic: real
+queries and keys are not independent.</p>
+<h3 id="the-causal-mask">The causal mask</h3>
+<p>For autoregression, position t must not see
+j &gt; t. Add a mask M in R^{T x T} before the
+softmax:</p>
+<p>H^out = softmax_row(Q K^T / c + M) V.
+(17.21)</p>
+<p>Causal mask: M_{t,j} = 0 for j &lt;= t,
+M_{t,j} = -infinity for j &gt; t. The -infinity
+entries make softmax probabilities exactly
+zero (17.22-17.23), so h^out_t = sum_{j=1}^{t}
+p_{t,j} v_j (17.24). The mask also enables
+parallel training: all positions run in one
+forward pass while each keeps the
+left-to-right rule. Other uses: padding
+tokens in batches, block-structured
+visibility.</p>
+<h3 id="computed-example">Computed example</h3>
+<p>T = 3, d_h = 2. Q rows: [1, 0], [0, 1],
+[1, 1]. K rows: [1, 0], [0, 1], [1, -1].
+Scores q_t k_j^T / sqrt(2), causal mask
+applied. Row 1: softmax([0.7071, -inf,
+-inf]) = [1, 0, 0]. Row 2: softmax([0,
+0.7071, -inf]) = [0.3302, 0.6698, 0]. Row 3:
+softmax([0.7071, 0.7071, 0]) = [0.4011,
+0.4011, 0.1978]. The script verifies these
+values and that each row sums to 1 with
+zeros above the diagonal.</p>
+<h3 id="correctness-checks_3">Correctness checks</h3>
+<ul>
+<li>Row sums are 1, entries above the diagonal
+  are exactly 0. If not, the mask is wrong.</li>
+<li>Without the /sqrt(d_h) scaling, initial
+  attention is near one-hot and gradients
+  vanish. Check gradient norms early.</li>
+</ul>
+<h3 id="nearest-alternative_3">Nearest alternative</h3>
+<p>Unmasked (bidirectional) attention: for
+encoders, not for autoregressive
+generation.</p>
+<h3 id="failure-case_3">Failure case</h3>
+<p>Mask applied after softmax instead of
+before: the -infinity never enters the
+normalization and future positions leak.
+The row-sum/zero-upper-triangle test
+catches it only if you check exact zeros,
+check both.</p>
+<hr />
+<h2 id="sl-05-multi-head-kv-cache-costs">SL-05: Multi-head, KV cache, costs</h2>
+<p>Covers C06 (attention variants: the base).</p>
+<h3 id="source-anchor_4">Source anchor</h3>
+<p>SRC-01 sections 17.3, pages 211-214. Multi-
+head attention runs n_h single-head modules
+in parallel (n_h * d_h = d in practice),
+concatenates the per-head outputs z_t, and
+applies an output projection W^O in
+R^{(n_h d_h) x d} (17.25). Different heads
+learn different token-interaction rules,
+the projection recombines them.</p>
+<h3 id="kv-cache">KV cache</h3>
+<p>Generation is sequential: each new token
+feeds back as input (17.4-17.7). Keys and
+values of the prefix are recomputed at every
+step unless cached. The KV cache stores
+K_{1:t} and V_{1:t}, at step t the output is
+softmax(q_t K_{1:t}^T / c) V_{1:t} (17.27).
+New rows append, old rows never recompute.</p>
+<h3 id="memory-and-compute">Memory and compute</h3>
+<p>Per head, training/prefill attention costs
+O(T^2 d_h) operations, n_h heads give
+O(T^2 d_h n_h). Quadratic in T: the main
+difficulty past 10K tokens, up to 1M in
+extreme cases. Generation needs the same
+order of operations but sequentially, which
+hurts GPU utilization. Memory: naive
+training materializes the T^2 score matrix
+per head. FlashAttention [Dao et al., 2022]
+streams it for O(T) memory. Decoding stores
+the KV cache: O(T d_h) per head in GPU
+memory (CPU offload is possible but slow).</p>
+<h3 id="computed-example_1">Computed example</h3>
+<p>d = 4096, n_h = 32, d_h = 128, fp16 (2
+bytes). Per layer KV cache = 2 (K and V) *
+T * d * 2 bytes. T = 8192: 2 * 8192 * 4096
+* 2 = 134,217,728 bytes = 128.0 MiB per
+layer. At 32 layers: 4.0 GiB just for the
+cache of one sequence. The script tabulates
+T in {2048, 8192, 32768} for MHA, GQA
+(n_g = 8), and MQA.</p>
+<h3 id="correctness-checks_4">Correctness checks</h3>
+<ul>
+<li>Cache shapes: per head (T, d_h) for K and
+  V. A (T, d) cache on a GQA model is a
+  shape bug.</li>
+<li>Prefill and decode must agree: the first
+  generated token with an empty cache must
+  match the prefill logits.</li>
+</ul>
+<h3 id="nearest-alternative_4">Nearest alternative</h3>
+<p>No cache (recompute): correct, slow.
+Cache offload to CPU: correct, PCIe-bound.</p>
+<h3 id="failure-case_4">Failure case</h3>
+<p>Cache not updated on a sliding window or
+wrong n_g: the model attends to stale or
+missing keys and generation degrades
+silently. Shape asserts on append catch it.</p>
+<hr />
+<h2 id="sl-06-attention-variants">SL-06: Attention variants</h2>
+<p>Covers C06 (attention variants).</p>
+<h3 id="source-anchor_5">Source anchor</h3>
+<p>SRC-01 section 17.4, pages 214-215. Three
+variants reduce KV-cache memory or stabilize
+training.</p>
+<p>MQA [Shazeer, 2019]: many query heads share
+one key head and one value head.</p>
+<p>GQA [Ainslie et al., 2023]: query heads are
+partitioned into groups, each group shares
+one key/value head. With n_h queries, n_g
+key/value heads, and tau = n_h / n_g, query
+head j uses group g(j) = floor((j-1)/tau) +
+1 (17.32-17.34). Standard MHA is n_g =
+n_h. MQA is n_g = 1. A spectrum trading
+quality against decoding efficiency: fewer
+KV heads, smaller cache.</p>
+<p>Sliding-window attention: each token attends
+only to the last w tokens. The mask is
+M_{t,j} = 0 for max(1, t-w+1) &lt;= j &lt;= t,
+-infinity otherwise (17.35). Old keys leave
+the active cache.</p>
+<p>QK-Norm [Henry et al., 2020]: normalize
+queries and keys (for example with RMSNorm)
+before the dot product, replacing q_t k_j^T
+with a scaled cosine similarity. Controls
+logit scale and training stability, adopted
+in Qwen3 and OLMo2 (cited in the notes).</p>
+<h3 id="computed-example_2">Computed example</h3>
+<p>Same dimensions as SL-05, T = 8192, fp16,
+per layer: MHA (n_g = 32) 128.0 MiB. GQA
+(n_g = 8) 32.0 MiB. MQA (n_g = 1) 4.0 MiB.
+The cache scales with n_g, not n_h. The
+script prints the table.</p>
+<h3 id="correctness-checks_5">Correctness checks</h3>
+<ul>
+<li>n_g must divide n_h. If not, the group
+  assignment (17.32) is ill-defined.</li>
+<li>With a sliding window, positions older
+  than w must have exactly zero attention
+  weight. Check the mask, not just the
+  cache size.</li>
+</ul>
+<h3 id="nearest-alternative_5">Nearest alternative</h3>
+<p>Full MHA with FlashAttention: keeps quality,
+pays the cache. The variant choice is a
+quality-vs-memory trade, not a free win.</p>
+<h3 id="failure-case_5">Failure case</h3>
+<p>Aggressive MQA on a quality-sensitive task:
+the shared key head bottlenecks distinct
+query behaviors and quality drops. The
+notes frame it as a spectrum, pick the
+point by measurement.</p>
+<hr />
+<h2 id="sl-07-mixture-of-experts">SL-07: Mixture of Experts</h2>
+<p>Covers C07 (MoE).</p>
+<h3 id="source-anchor_6">Source anchor</h3>
+<p>SRC-01 section 17.5, pages 215-216. MoE
+makes some layers sparse. Instead of one
+dense MLP per block, the layer holds m
+expert MLPs E_1, &hellip;, E_m and a router.
+For token t with hidden state h_t, the
+router computes r_t = sigma(h_t W^R) in
+R^m (softmax or per-expert sigmoid). A
+small set S_t of experts (often top-k) is
+chosen and their outputs combined with
+renormalized weights alpha_{t,s}. The
+notes&rsquo; example: DeepSeek-V3 uses 256
+routed experts per MoE layer, activates the
+top 8 per token, plus one shared expert
+applied to every token [DeepSeek-AI,
+2024].</p>
+<h3 id="motivating-question_1">Motivating question</h3>
+<p>How do you grow parameters without growing
+per-token compute?</p>
+<h3 id="mental-model_1">Mental model</h3>
+<p>Each token consults a few specialists.
+Total parameters grow with m, per-token
+compute grows with k. The shared expert is
+the common feedforward path, routed experts
+specialize by token and context. The router
+is a tiny classifier: which experts fit
+this token?</p>
+<h3 id="correctness-checks_6">Correctness checks</h3>
+<ul>
+<li>Exactly k experts active per token (plus
+  shared). If the count varies silently,
+  compute accounting is wrong.</li>
+<li>Routing weights renormalize over the
+  chosen set. Unnormalized weights change
+  the output scale.</li>
+</ul>
+<h3 id="nearest-alternative_6">Nearest alternative</h3>
+<p>Dense MLP: every token uses all
+parameters. Simpler, no routing dynamics,
+more compute per token at the same
+capacity.</p>
+<h3 id="failure-case_6">Failure case</h3>
+<p>Router collapse: every token routes to the
+same few experts and the rest starve.
+Capacity is then wasted, load-balancing
+losses exist to prevent this (standard
+background beyond the notes).</p>
+<hr />
+<h2 id="sl-08-icl-zero-shot-sft">SL-08: ICL, zero-shot, SFT</h2>
+<p>Covers C08 (in-context learning), C09
+(zero-shot prompts), C10 (SFT).</p>
+<h3 id="source-anchor_7">Source anchor</h3>
+<p>SRC-01 sections 17.6-17.8, pages 216-219.</p>
+<p>In-context learning: for few-shot settings,
+concatenate labeled examples and the test
+input into one prompt and let the
+pretrained model generate the continuation.
+The notes&rsquo; example teaches the symbol ~ as
+addition from two examples, then answers
+&ldquo;15 ~ 2&rdquo; with 17. Demonstrations teach the
+task, the label space, and the output
+format [Min et al., 2022], showing
+intermediate steps can help reasoning
+tasks [Wei et al., 2022].</p>
+<p>Zero-shot prompting: no examples, just a
+natural-language task description (&ldquo;Answer
+yes or no.&rdquo;). No training data, no
+gradient updates. Performance depends on
+the pretrained model and the wording.</p>
+<p>SFT: update parameters on prompt-completion
+pairs (x^(i), y^(i)), initialized at
+theta-hat, minimizing the conditional
+next-token loss</p>
+<p>min_theta -(1/n) sum_i sum_t log p_theta(
+y_t^(i) | x^(i), y_{&lt;t}^(i)). (17.36)</p>
+<p>Implementation: concatenate prompt and
+answer into one causal sequence z^(i) but
+apply the loss only at answer positions via
+a loss mask m_r (0 on prompt tokens, 1 on
+answer tokens) (17.37). The loss mask is
+separate from the attention mask: answer
+tokens still attend to the prompt, but
+prompt tokens do not contribute to the
+objective.</p>
+<h3 id="motivating-question_2">Motivating question</h3>
+<p>Three ways to adapt without full
+pretraining. What changes in each: the
+text, or the weights?</p>
+<h3 id="mental-model_2">Mental model</h3>
+<p>Prompting (ICL, zero-shot) changes the
+text, not the weights. SFT changes the
+weights, not the text format: it teaches
+the model the desired conditional
+distribution p(y | x). The loss mask is
+the key detail: the model learns to
+produce answers, not to predict prompts.</p>
+<h3 id="correctness-checks_7">Correctness checks</h3>
+<ul>
+<li>The loss mask must be 0 on prompt
+  tokens. If prompt tokens contribute,
+  the model wastes capacity predicting
+  the question.</li>
+<li>Zero-shot performance must be reported
+  with the exact prompt wording. Wording
+  changes are a different experiment.</li>
+</ul>
+<h3 id="nearest-alternative_7">Nearest alternative</h3>
+<p>Full finetuning with a new head (U13):
+adds parameters. SFT reuses the LM head.</p>
+<h3 id="failure-case_7">Failure case</h3>
+<p>SFT on a narrow answer style: the model
+learns the format but forgets the
+pretraining distribution (format
+overfitting). Mix SFT data with
+pretraining-style data to hold the base.</p>
+<hr />
+<h2 id="sl-09-traininfer-mismatch-and-resource-accounting">SL-09: Train/infer mismatch and resource accounting</h2>
+<p>Covers C11 (train/infer mismatch), C12
+(resource accounting bridge).</p>
+<h3 id="source-anchor_8">Source anchor</h3>
+<p>Notes sections 17.2-17.3 (decoding
+heuristics 17.8-17.11, compute/memory
+analysis pages 213-214). &ldquo;Train/infer
+mismatch&rdquo; and &ldquo;resource accounting&rdquo; are
+not named in the notes, taught here as
+standard-background bridges built on the
+notes&rsquo; own statements.</p>
+<h3 id="traininfer-mismatch">Train/infer mismatch</h3>
+<p>Training feeds ground-truth prefixes
+(teacher forcing): every position predicts
+the next token given the true history.
+Inference feeds the model&rsquo;s own outputs:
+each generated token becomes the next
+input (17.4-17.7). Errors compound: a
+small mistake early shifts the whole
+continuation distribution, and the model
+never saw its own mistakes during
+training. This is exposure bias. Decoding
+choices live at inference only:
+temperature tau (17.8-17.11, tau -&gt; 0 is
+greedy), top-k (keep the k most likely
+tokens, renormalize), top-p / nucleus
+(smallest set with total probability at
+least p, renormalize). They change the
+sampling distribution, not the model or
+the training loss. Common setting from the
+notes: top-p 0.9 with temperature 0.7-1.0.</p>
+<h3 id="computed-example_3">Computed example</h3>
+<p>Logits [2.0, 1.0, 0.5, 0.1]. Softmax at
+tau = 1: [0.5745, 0.2114, 0.1282, 0.0859].
+At tau = 0.5: [0.8282, 0.1121, 0.0412,
+0.0185] (sharper). At tau = 2.0: [0.4056,
+0.2460, 0.1916, 0.1569] (flatter). Top-p
+0.9 at tau = 1 keeps the first three
+tokens (cumulative 0.9141) and
+renormalizes to [0.6285, 0.2312, 0.1402].
+The script verifies these values.</p>
+<h3 id="resource-accounting">Resource accounting</h3>
+<p>Per layer, per sequence: attention compute
+O(T^2 d) (d = n_h d_h). KV cache 2 * T *
+d * bytes-per-element (fp16: 2 bytes).
+Generation is sequential: T steps, each
+O(T d) attention work against the cache.
+The ledger for a deployment: model
+weights (params * bytes), KV cache per
+concurrent sequence (grows with T and
+batch), and compute per token (grows with
+T^2 in prefill, T per step in decode).
+GQA/MQA and sliding windows cut the cache
+term. FlashAttention cuts the training
+memory term, none cut the quadratic
+compute term.</p>
+<h3 id="correctness-checks_8">Correctness checks</h3>
+<ul>
+<li>Prefill and decode accounting must use
+  the same d and n_g. Mixing MHA numbers
+  into a GQA deployment overprovisions
+  memory 4x (SL-06 table).</li>
+<li>Temperature and top-p are inference
+  settings: they must not appear in any
+  training-loss computation.</li>
+</ul>
+<h3 id="nearest-alternative_8">Nearest alternative</h3>
+<p>Speculative decoding / assisted generation:
+draft tokens with a small model, verify
+with the large one. Cuts latency, not the
+ledger above.</p>
+<h3 id="failure-case_8">Failure case</h3>
+<p>Provisioning KV cache for the max context
+on every request: memory exhaustion under
+concurrency. Account per sequence at its
+actual length, or cap and evict.</p>
+<hr />
+<h2 id="assessment">Assessment</h2>
+<h3 id="breadth-recall">Breadth recall</h3>
+<p>E01: What is a token, and what does BPE do?
+E02: Write the autoregressive factorization.
+E03: Write the next-token training loss.
+E04: Write single-head attention (scores and
+output).
+E05: Why divide by sqrt(d_h)?
+E06: State the causal mask and what it
+guarantees.</p>
+<h3 id="deep-oral-ladders">Deep oral ladders</h3>
+<p>L01 (attention): (1) Write (17.14)-(17.18).
+(2) Toy: the T = 3 hand computation. (3)
+Derive the matrix form (17.20) from the
+per-position rule. (4) Implement masked
+attention, check row sums and the zero
+triangle. (5) Compare causal vs
+bidirectional attention. (6) Debug: u_t
+changes when x_{t+1} is perturbed. Name the
+cause (mask missing/misplaced). (7)
+Critique: the sqrt(d_h) scaling heuristic.
+(8) Design: a mask test for a new
+attention kernel.</p>
+<p>L02 (costs and variants): (1) State the
+O(T^2 d_h) compute and O(T d_h) cache per
+head. (2) Toy: the KV-cache table. (3)
+Derive the GQA cache saving from n_g. (4)
+Implement the cache-size calculator. (5)
+Compare MHA vs GQA vs MQA vs sliding
+window. (6) Debug: OOM at 32k context on a
+GQA model provisioned with MHA numbers.
+Name the cause. (7) Critique: &ldquo;MQA is
+strictly better.&rdquo; (8) Design: choose the
+attention variant for a 128k-context
+serving system.</p>
+<h3 id="analytical-exercises">Analytical exercises</h3>
+<p>E07: From the row-vector definitions, show
+that the t-th row of softmax_row(Q K^T / c)
+is the score vector of (17.17). Answer in
+keys.
+E08: Compute the softmax of [2.0, 1.0, 0.5,
+0.1] at tau = 0.5, 1.0, 2.0, and the top-p
+0.9 kept set at tau = 1.0. Answer in keys.</p>
+<h3 id="failure-diagnosis">Failure diagnosis</h3>
+<p>E09: Training loss is near zero after one
+epoch but generated text is incoherent.
+Diagnose.</p>
+<h3 id="counterfactual-comparison">Counterfactual comparison</h3>
+<p>E10: Team A adapts with zero-shot prompting.
+Team B adapts with SFT on 5,000 pairs.
+When does each win, and what does the loss
+mask buy B?</p>
+<h3 id="research-question">Research question</h3>
+<p>E11: Measure quality vs n_g (KV heads) at
+fixed n_h on long-context tasks. State the
+falsifiable claim about where quality
+drops.</p>
+<h3 id="implementation-task">Implementation task</h3>
+<p>E12: Implement single-head causal attention
+from the equations, verify against the
+hand-computed toy, implement the KV-cache
+calculator, and verify the temperature /
+top-p numbers.</p>
+<h2 id="visual-units">Visual units</h2>
+<ul>
+<li><code>visuals/u14/u14_causal_attention.png</code>:
+  the causal mask and the computed
+  attention scores, computed.</li>
+</ul>
+<figure><img alt="u14_causal_attention.png" src="../../assets/u14/u14_causal_attention.png"><figcaption>the causal mask and the computed attention scores, computed</figcaption></figure>
+<ul>
+<li><code>visuals/u14/u14_kv_cache.png</code>: KV-cache
+  memory vs context length for MHA/GQA/MQA
+  and the quadratic compute curve,
+  computed.</li>
+</ul>
+<figure><img alt="u14_kv_cache.png" src="../../assets/u14/u14_kv_cache.png"><figcaption>KV-cache memory vs context length for MHA/GQA/MQA and the quadratic compute curve, computed</figcaption></figure>
+<h2 id="research-reading-and-extension">Research reading and extension</h2>
+<p>Read: SRC-01 chapter 17 in full. Vaswani et
+al. [2017] sections 1-3. Dao et al. [2022]
+sections 1-2. Extension: implement a tiny
+character-level transformer and verify the
+mask test (u_t invariant to future
+perturbation). Falsifiable claim: removing
+the mask drops the loss to near zero on
+training data while generation coherence
+collapses.</p>
+<h2 id="role-bridges">Role bridges</h2>
+<ul>
+<li>ML engineer: the causal mask and the KV
+  cache are the two things that must be
+  right in every serving stack. Test both.</li>
+<li>Research engineer: attention variants are
+  quality-vs-memory trades, measure, do not
+  assume.</li>
+<li>LLM engineer: SFT&rsquo;s loss mask is the
+  detail that separates answer training
+  from prompt prediction. Check it first in
+  any finetune pipeline.</li>
+</ul>
+      
+      <nav class="pager"><a href="../../lessons/u13/keys.html"><span class="lbl">← Previous</span>Lesson 13 · Keys</a><a href="../../lessons/u14/keys.html"><span class="lbl">Next →</span>Lesson 14 · Keys</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../../assets/vendor/katex.min.js"></script>
+<script src="../../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../../";</script>
+<script src="../../assets/app.js"></script>
+</body>
+</html>
