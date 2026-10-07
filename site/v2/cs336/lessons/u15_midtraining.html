@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U15 · Midtraining and supervised adaptation — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Midtraining and supervised adaptation.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-u15" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../course_map.html" data-page="cs336-course-map">Course map</a></li>
+<li><a href="../prerequisites.html" data-page="cs336-prereqs">Prerequisites</a></li>
+<li><a href="../notation_and_shapes.html" data-page="cs336-notation">Notation</a></li>
+<li><a href="../glossary.html" data-page="cs336-glossary">Glossary</a></li>
+<li><a href="../cheatsheet.html" data-page="cs336-cheatsheet">Cheatsheet</a></li>
+<li><a href="../crash-course.html" data-page="cs336-crash">Crash course</a></li>
+<li><a href="../lessons/u01_tokenization.html" data-page="cs336-u01">U01 · Text representation and tokeni</a></li>
+<li><a href="../keys/u01_answers.html" data-page="cs336-u01-answers">U01 · Answers</a></li>
+<li><a href="../lessons/u02_tensor_programming.html" data-page="cs336-u02">U02 · Executable tensor programming </a></li>
+<li><a href="../keys/u02_answers.html" data-page="cs336-u02-answers">U02 · Answers</a></li>
+<li><a href="../lessons/u03_transformer_block.html" data-page="cs336-u03">U03 · Transformer block mechanics</a></li>
+<li><a href="../keys/u03_answers.html" data-page="cs336-u03-answers">U03 · Answers</a></li>
+<li><a href="../lessons/u04_attention_moe.html" data-page="cs336-u04">U04 · Attention alternatives and exp</a></li>
+<li><a href="../keys/u04_answers.html" data-page="cs336-u04-answers">U04 · Answers</a></li>
+<li><a href="../lessons/u05_optimization.html" data-page="cs336-u05">U05 · Optimization and training corr</a></li>
+<li><a href="../keys/u05_answers.html" data-page="cs336-u05-answers">U05 · Answers</a></li>
+<li><a href="../lessons/u06_gpu_tpu.html" data-page="cs336-u06">U06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../keys/u06_answers.html" data-page="cs336-u06-answers">U06 · Answers</a></li>
+<li><a href="../lessons/u07_kernels.html" data-page="cs336-u07">U07 · Kernels and IO-aware attention</a></li>
+<li><a href="../keys/u07_answers.html" data-page="cs336-u07-answers">U07 · Answers</a></li>
+<li><a href="../lessons/u08_data_sharding.html" data-page="cs336-u08">U08 · Data and optimizer sharding</a></li>
+<li><a href="../keys/u08_answers.html" data-page="cs336-u08-answers">U08 · Answers</a></li>
+<li><a href="../lessons/u09_model_parallel.html" data-page="cs336-u09">U09 · Model and hybrid parallelism</a></li>
+<li><a href="../keys/u09_answers.html" data-page="cs336-u09-answers">U09 · Answers</a></li>
+<li><a href="../lessons/u10_scaling_laws.html" data-page="cs336-u10">U10 · Scaling laws and extrapolation</a></li>
+<li><a href="../keys/u10_answers.html" data-page="cs336-u10-answers">U10 · Answers</a></li>
+<li><a href="../labs/u01_lab.html" data-page="cs336-lab-u01">Lab 01 · Text representation and tokeni</a></li>
+<li><a href="../lessons/u11_inference.html" data-page="cs336-u11">U11 · Inference algorithms and servi</a></li>
+<li><a href="../labs/u01_lab_key.html" data-page="cs336-lab-u01-keys">Lab 01 · Keys</a></li>
+<li><a href="../keys/u11_answers.html" data-page="cs336-u11-answers">U11 · Answers</a></li>
+<li><a href="../labs/u02_lab.html" data-page="cs336-lab-u02">Lab 02 · Executable tensor programming </a></li>
+<li><a href="../lessons/u12_evaluation.html" data-page="cs336-u12">U12 · Evaluation and measurement val</a></li>
+<li><a href="../labs/u02_lab_key.html" data-page="cs336-lab-u02-keys">Lab 02 · Keys</a></li>
+<li><a href="../keys/u12_answers.html" data-page="cs336-u12-answers">U12 · Answers</a></li>
+<li><a href="../labs/u03_lab.html" data-page="cs336-lab-u03">Lab 03 · Transformer block mechanics</a></li>
+<li><a href="../lessons/u13_data_sourcing.html" data-page="cs336-u13">U13 · Data sourcing and transformati</a></li>
+<li><a href="../labs/u03_lab_key.html" data-page="cs336-lab-u03-keys">Lab 03 · Keys</a></li>
+<li><a href="../keys/u13_answers.html" data-page="cs336-u13-answers">U13 · Answers</a></li>
+<li><a href="../labs/u04_lab.html" data-page="cs336-lab-u04">Lab 04 · Attention alternatives and exp</a></li>
+<li><a href="../lessons/u14_data_mixing.html" data-page="cs336-u14">U14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../labs/u04_lab_key.html" data-page="cs336-lab-u04-keys">Lab 04 · Keys</a></li>
+<li><a href="../keys/u14_answers.html" data-page="cs336-u14-answers">U14 · Answers</a></li>
+<li><a href="../labs/u05_lab.html" data-page="cs336-lab-u05">Lab 05 · Optimization and training corr</a></li>
+<li><a href="../lessons/u15_midtraining.html" data-page="cs336-u15" class="active">U15 · Midtraining and supervised ada</a></li>
+<li><a href="../labs/u05_lab_key.html" data-page="cs336-lab-u05-keys">Lab 05 · Keys</a></li>
+<li><a href="../keys/u15_answers.html" data-page="cs336-u15-answers">U15 · Answers</a></li>
+<li><a href="../labs/u06_lab.html" data-page="cs336-lab-u06">Lab 06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../lessons/u16_alignment_rl.html" data-page="cs336-u16">U16 · Preference alignment and reaso</a></li>
+<li><a href="../labs/u06_lab_key.html" data-page="cs336-lab-u06-keys">Lab 06 · Keys</a></li>
+<li><a href="../keys/u16_answers.html" data-page="cs336-u16-answers">U16 · Answers</a></li>
+<li><a href="../labs/u07_lab.html" data-page="cs336-lab-u07">Lab 07 · Kernels and IO-aware attention</a></li>
+<li><a href="../lessons/u17_multimodal_systems.html" data-page="cs336-u17">U17 · Multimodality and training-sys</a></li>
+<li><a href="../labs/u07_lab_key.html" data-page="cs336-lab-u07-keys">Lab 07 · Keys</a></li>
+<li><a href="../keys/u17_answers.html" data-page="cs336-u17-answers">U17 · Answers</a></li>
+<li><a href="../labs/u08_lab.html" data-page="cs336-lab-u08">Lab 08 · Data and optimizer sharding</a></li>
+<li><a href="../lessons/u18_guests_defense.html" data-page="cs336-u18">U18 · Guest material and final resea</a></li>
+<li><a href="../labs/u08_lab_key.html" data-page="cs336-lab-u08-keys">Lab 08 · Keys</a></li>
+<li><a href="../keys/u18_answers.html" data-page="cs336-u18-answers">U18 · Answers</a></li>
+<li><a href="../labs/u09_lab.html" data-page="cs336-lab-u09">Lab 09 · Model and hybrid parallelism</a></li>
+<li><a href="../labs/u09_lab_key.html" data-page="cs336-lab-u09-keys">Lab 09 · Keys</a></li>
+<li><a href="../labs/u10_lab.html" data-page="cs336-lab-u10">Lab 10 · Scaling laws and extrapolation</a></li>
+<li><a href="../labs/u10_lab_key.html" data-page="cs336-lab-u10-keys">Lab 10 · Keys</a></li>
+<li><a href="../interview/u01_questions.html" data-page="cs336-int-u01">Interview · U01</a></li>
+<li><a href="../labs/u11_lab.html" data-page="cs336-lab-u11">Lab 11 · Inference algorithms and servi</a></li>
+<li><a href="../interview/u01_key.html" data-page="cs336-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../labs/u11_lab_key.html" data-page="cs336-lab-u11-keys">Lab 11 · Keys</a></li>
+<li><a href="../interview/u02_questions.html" data-page="cs336-int-u02">Interview · U02</a></li>
+<li><a href="../labs/u12_lab.html" data-page="cs336-lab-u12">Lab 12 · Evaluation and measurement val</a></li>
+<li><a href="../interview/u02_key.html" data-page="cs336-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../labs/u12_lab_key.html" data-page="cs336-lab-u12-keys">Lab 12 · Keys</a></li>
+<li><a href="../interview/u03_questions.html" data-page="cs336-int-u03">Interview · U03</a></li>
+<li><a href="../labs/u13_lab.html" data-page="cs336-lab-u13">Lab 13 · Data sourcing and transformati</a></li>
+<li><a href="../interview/u03_key.html" data-page="cs336-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../labs/u13_lab_key.html" data-page="cs336-lab-u13-keys">Lab 13 · Keys</a></li>
+<li><a href="../interview/u04_questions.html" data-page="cs336-int-u04">Interview · U04</a></li>
+<li><a href="../labs/u14_lab.html" data-page="cs336-lab-u14">Lab 14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../interview/u04_key.html" data-page="cs336-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../labs/u14_lab_key.html" data-page="cs336-lab-u14-keys">Lab 14 · Keys</a></li>
+<li><a href="../interview/u05_questions.html" data-page="cs336-int-u05">Interview · U05</a></li>
+<li><a href="../labs/u15_lab.html" data-page="cs336-lab-u15">Lab 15 · Midtraining and supervised ada</a></li>
+<li><a href="../interview/u05_key.html" data-page="cs336-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../labs/u15_lab_key.html" data-page="cs336-lab-u15-keys">Lab 15 · Keys</a></li>
+<li><a href="../interview/u06_questions.html" data-page="cs336-int-u06">Interview · U06</a></li>
+<li><a href="../labs/u16_lab.html" data-page="cs336-lab-u16">Lab 16 · Preference alignment and reaso</a></li>
+<li><a href="../interview/u06_key.html" data-page="cs336-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../labs/u16_lab_key.html" data-page="cs336-lab-u16-keys">Lab 16 · Keys</a></li>
+<li><a href="../interview/u07_questions.html" data-page="cs336-int-u07">Interview · U07</a></li>
+<li><a href="../labs/u17_lab.html" data-page="cs336-lab-u17">Lab 17 · Multimodality and training-sys</a></li>
+<li><a href="../interview/u07_key.html" data-page="cs336-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../labs/u17_lab_key.html" data-page="cs336-lab-u17-keys">Lab 17 · Keys</a></li>
+<li><a href="../interview/u08_questions.html" data-page="cs336-int-u08">Interview · U08</a></li>
+<li><a href="../labs/u18_lab.html" data-page="cs336-lab-u18">Lab 18 · Guest material and final resea</a></li>
+<li><a href="../interview/u08_key.html" data-page="cs336-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../labs/u18_lab_key.html" data-page="cs336-lab-u18-keys">Lab 18 · Keys</a></li>
+<li><a href="../interview/u09_questions.html" data-page="cs336-int-u09">Interview · U09</a></li>
+<li><a href="../interview/u09_key.html" data-page="cs336-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../interview/u10_questions.html" data-page="cs336-int-u10">Interview · U10</a></li>
+<li><a href="../interview/u10_key.html" data-page="cs336-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../interview/u11_questions.html" data-page="cs336-int-u11">Interview · U11</a></li>
+<li><a href="../interview/u11_key.html" data-page="cs336-int-u11-keys">Interview · U11 keys</a></li>
+<li><a href="../interview/u12_questions.html" data-page="cs336-int-u12">Interview · U12</a></li>
+<li><a href="../interview/u12_key.html" data-page="cs336-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../interview/u13_questions.html" data-page="cs336-int-u13">Interview · U13</a></li>
+<li><a href="../interview/u13_key.html" data-page="cs336-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../interview/u14_questions.html" data-page="cs336-int-u14">Interview · U14</a></li>
+<li><a href="../interview/u14_key.html" data-page="cs336-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../interview/u15_questions.html" data-page="cs336-int-u15">Interview · U15</a></li>
+<li><a href="../interview/u15_key.html" data-page="cs336-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../interview/u16_questions.html" data-page="cs336-int-u16">Interview · U16</a></li>
+<li><a href="../interview/u16_key.html" data-page="cs336-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../interview/u17_questions.html" data-page="cs336-int-u17">Interview · U17</a></li>
+<li><a href="../interview/u17_key.html" data-page="cs336-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../interview/u18_questions.html" data-page="cs336-int-u18">Interview · U18</a></li>
+<li><a href="../interview/u18_key.html" data-page="cs336-int-u18-keys">Interview · U18 keys</a></li>
+<li><a href="../interview/oral-defenses.html" data-page="cs336-int-oral">Interview · Oral</a></li>
+<li><a href="../interview/keys-oral.html" data-page="cs336-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../interview/transfer-sets.html" data-page="cs336-int-transfer">Interview · Transfer</a></li>
+<li><a href="../interview/keys-transfer.html" data-page="cs336-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../capstones/capstone_applied.html" data-page="cs336-cap-applied">Capstone · Applied</a></li>
+<li><a href="../capstones/capstone_research.html" data-page="cs336-cap-research">Capstone · Research</a></li>
+<li><a href="../keys/diagnostic_key.html" data-page="cs336-diagnostic-keys">Diagnostic · Keys</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U15 · Midtraining and supervised adaptation</nav>
+      <h1>U15 · Midtraining and supervised adaptation</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u15-midtraining-and-supervised-adaptation">U15 , Midtraining and supervised adaptation</h1>
+<p>Prerequisites: P11, P13, P14. Bridge links in <code>../prerequisites.md</code>.
+Session: S14 second half (reported May 13, Data: Mixing, Rewriting,
+SFT). The mixing half maps to U14, the split is a teaching decision
+stated here. Full map in <code>../course_map.md</code>.
+Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
+PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
+<h2 id="standing-note">Standing note</h2>
+<p>No model was trained on this box. Adaptation claims are arithmetic
+and numpy simulations from <code>assets/compute_u15.py</code> (executed
+2026-10-06), stated as such. Loss deltas are synthetic toys, not
+measured training results.</p>
+<h2 id="russian-doll-map">Russian-doll map</h2>
+<p>Shells 0-1 in items 1-2, shells 2-3 in items 3-6, shell 4 in item 7,
+shell 5 in item 8, shell 6 in item 9, shell 7 in item 11, shell 8 in
+item 10, shell 9 in item 12, shell 10 in item 13(c). The depth gate
+is checked by item 13.</p>
+<h2 id="local-remediation-what-sft-optimizes">Local remediation , what SFT optimizes</h2>
+<p>Read this if diagnostic items on masking were not full marks.
+Supervised fine-tuning trains on (prompt, response) pairs but
+computes loss only on the response tokens. Toy from
+<code>compute_u15.py</code>: in synthetic conversations, system 0.17, user
+0.34, assistant 0.49 of tokens, per 1M tokens, 492,356 carry
+supervision. The model learns to produce responses, not to predict
+prompts. Assessment: a batch has 2M tokens with the toy fractions.
+How many supervised tokens? Key: <code>../keys/u15_answers.md</code> R1.</p>
+<hr />
+<h3 id="c01-premidpost-training-boundaries">C01: Pre/mid/post-training boundaries</h3>
+<p>Leaf id <code>cs336-U15-C01</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the three stages and what each changes. Objectives:
+   place midtraining between pretraining and post-training, name
+   its job. Depends on P11, P13.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the base model is
+   done, but it needs longer context and new data. Is that
+   post-training? Midtraining: continued pretraining on a new
+   data mix (often longer context, new domains) with the
+   pretraining objective, before any instruction tuning.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Pretraining builds the base. Midtraining
+   adapts the base: new context length, new knowledge cutoff,
+   new domains. Post-training (SFT, RL) teaches behavior.
+   Different objectives, different data, different evals.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Stage
+   boundaries by objective and data. Assumption: the standard
+   three-stage vocabulary.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is a taxonomy.
+   The objective function and the data mix define the stage, not
+   the calendar date.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy ledger: pretrain 5.88e21 FLOPs,
+   midtrain 10% more on long-context data, SFT 1% on
+   instructions. The FLOP ratios mark the stages.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> A stage checklist:
+   objective, data, evals. Text.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Each stage has a
+   distinct eval suite that moves.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Blurred boundaries (SFT data in midtraining) make
+   ablations uninterpretable.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Skip
+    midtraining (fine when the base already fits). Add it for
+    context extension or domain shifts.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Midtraining on narrow
+    data with the full pretraining LR: the model forgets the
+    broad distribution (C10). The assumption &ldquo;more training only
+    helps&rdquo; breaks, lower the LR and mix in base data.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    midtraining reports (secondary). Extension: define stage
+    membership for 6 toy runs by objective, hypothesis: the
+    taxonomy classifies all six.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the three stages.
+    (b) Oral ladder: define each, place the toy, justify the
+    objective criterion, write the checklist, compare skip with
+    add, debug the forgetting case, critique the taxonomy,
+    design the classification test. (c) Transfer: a run uses
+    instruction data with the LM objective. Which stage?
+    Answers: <code>../keys/u15_answers.md</code> A1.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U15 task 1 classifies stages.
+    See <code>../labs/u15_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c02-long-context-adaptation">C02: Long-context adaptation</h3>
+<p>Leaf id <code>cs336-U15-C02</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: extending context length after pretraining.
+   Objectives: state the RoPE theta change, compute the
+   wavelength shift. Depends on C01, U03-C10.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the model was
+   trained at 4k context, you need 128k. What changes? Toy from
+   <code>compute_u15.py</code>: RoPE theta 1e4 -&gt; 5e5 moves the slowest
+   wavelength from 6.28e4 to 3.14e6, ratio 50x.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> RoPE encodes position as rotation, the
+   slowest dimension sets the longest distance the model can
+   distinguish. Raising theta stretches the ruler. Then train on
+   long documents so the model learns to use the new range.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Theta,
+   wavelength = 2<em>pi</em>theta. Assumption: the toy thetas.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The RoPE angle for dimension pair
+   i is pos / theta^{2i/d}. The i=0 pair has wavelength
+   2<em>pi</em>theta. Longer wavelength means positions further apart
+   stay distinguishable.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u15.py</code> (executed
+   2026-10-06): 6.28e4 -&gt; 3.14e6, ratio 50.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>wavelength
+   (theta)</code>: return 2<em>pi</em>theta. One line.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Ratio matches
+   theta ratio 50 exactly.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Long-context training is quadratic in attention
+   (U07). Data with real long-range dependencies is scarce.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Train from
+    scratch at long context (expensive). Adapt (cheap) when the
+    base is good.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Theta raised but no
+    long training data: the model has the ruler but never
+    learned to read it. The assumption &ldquo;theta is enough&rdquo; breaks,
+    train on long documents.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    RoPE-scaling papers (NTK-aware, secondary). Extension: sweep
+    theta on the toy, hypothesis: wavelength scales linearly.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the theta mechanism.
+    (b) Oral ladder: define the adaptation, compute the toy,
+    justify the wavelength, implement <code>wavelength</code>, compare with
+    from-scratch, debug the no-data case, critique the toy,
+    design the sweep. (c) Transfer: target 1M context from 8k
+    base. Set theta and the data plan. Answers:
+    <code>../keys/u15_answers.md</code> A2.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U15 task 2 scales theta.
+    See <code>../labs/u15_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c03-conversation-templates">C03: Conversation templates</h3>
+<p>Leaf id <code>cs336-U15-C03</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: formatting multi-turn data. Objectives: write a
+   template, state why exactness matters. Depends on P13.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the raw data is
+   (user, assistant) pairs. What does the model actually see? A
+   template: system header, turn markers, role tags. The exact
+   bytes must match between training and inference.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The template is a protocol both sides
+   speak. Train on template A, serve with template B, and the
+   model reads the conversation as gibberish roles.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Template
+   tokens: headers, role tags. Assumption: a fixed template
+   version.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is a format
+   spec. Special tokens mark roles, the loss mask (C04) uses the
+   same boundaries.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy template: &ldquo;&lt;|system|&gt;&hellip;&lt;|user|&gt;
+   &hellip;&lt;|assistant|&gt;&hellip;&rdquo; with token counts from the C-fractions
+   toy (0.17/0.34/0.49).</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>apply_template
+   (turns)</code>: concatenate with markers. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Round-trip: parse
+   the templated text back to turns.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Template tokens consume context (17% system in the
+   toy). Verbose templates tax every request.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> No template
+    (raw pairs, the model must infer roles). Templated for
+    reliable role separation.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The serving template
+    drifts from training (U11-C09): role confusion, the model
+    answers as the user. The assumption &ldquo;templates match&rdquo;
+    breaks, version and test.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    chat-template documentation (secondary). Extension: train a
+    toy n-gram model on two templates, hypothesis: cross-
+    template loss is much higher.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the protocol rule.
+    (b) Oral ladder: define the template, work the toy, justify
+    exactness, implement <code>apply_template</code>, compare with raw
+    pairs, debug the drift case, critique the token cost, design
+    the n-gram test. (c) Transfer: multi-modal turns (U17).
+    Extend the template. Answers: <code>../keys/u15_answers.md</code> A3.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U15 task 3 applies templates.
+    See <code>../labs/u15_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c04-loss-masks">C04: Loss masks</h3>
+<p>Leaf id <code>cs336-U15-C04</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: which tokens train. Objectives: build the mask,
+   compute the supervised fraction. Depends on C03.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: should the model
+   learn to predict the user&rsquo;s prompt? No: mask it. Toy from
+   <code>compute_u15.py</code>: assistant fraction 0.49, so 492,356 of 1M
+   tokens carry loss.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The mask is a binary switch per token: 1
+   for tokens the model should learn to generate, 0 for context
+   it only reads. SFT sets 1 on assistant tokens.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Mask in
+   {0,1}^T. Assumption: the toy fractions.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Loss = mean over masked tokens of
+   -log p. Unmasked tokens contribute nothing to the gradient.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u15.py</code> (executed
+   2026-10-06): 0.49 supervised, 492,356 per 1M.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>make_mask
+   (roles)</code>: 1 where role == assistant. Three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Mask sums to the
+   assistant token count. All-system batch gives mask sum 0
+   (degenerate, flag it).</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Masking throws away half the tokens&rsquo; signal.
+   Unmasked pretraining-style loss on prompts teaches prompt
+   prediction, usually unwanted.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Full loss on
+    all tokens (pretraining style). Masked loss for instruction
+    tuning.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The mask includes the
+    system prompt by bug: the model learns to emit system
+    instructions. The assumption &ldquo;the mask is right&rdquo; breaks,
+    unit-test the mask on fixtures.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    SFT practice reports (secondary). Extension: flip the mask
+    on the toy, hypothesis: the supervised count becomes
+    507,644.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the mask rule.
+    (b) Oral ladder: define the mask, compute the toy, justify
+    masking prompts, implement <code>make_mask</code>, compare with full
+    loss, debug the system-leak case, critique the toy, design
+    the flip test. (c) Transfer: tool-call turns (C06). Which
+    tokens get mask 1? Answers: <code>../keys/u15_answers.md</code> A4.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U15 task 4 builds masks.
+    See <code>../labs/u15_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c05-instruction-traces">C05: Instruction traces</h3>
+<p>Leaf id <code>cs336-U15-C05</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: what makes a good SFT example. Objectives: name the
+   quality axes, state the filtering rule. Depends on C04.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: 1M instruction
+   pairs exist. Are they all worth training on? Quality axes:
+   correctness of the response, difficulty (not trivial, not
+   impossible), diversity of tasks, cleanliness of format.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> SFT teaches behavior by example. Bad
+   examples teach bad behavior confidently. A small clean set
+   beats a large noisy one.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Quality
+   axes, keep rule. Assumption: human or model-graded labels.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is curation.
+   Filter by the axes, dedup near-identical prompts, balance
+   task types.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: 1M pairs, correctness filter
+   keeps 600k, difficulty filter keeps 300k, dedup keeps 250k.
+   The funnel is the product of the axes.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>curate(pairs)</code>:
+   the funnel. About 10 lines of pseudocode.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Kept set covers
+   all task types. No prompt appears twice.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Curation costs annotation or strong-model grading.
+   Skipping it costs behavior quality.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Train on all
+    (cheap, noisy). Curate (expensive, clean) for the final SFT.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The grader is the same
+    weak model being trained: it keeps what it already likes.
+    The assumption &ldquo;the grader is better&rdquo; breaks, use a stronger
+    grader or humans.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    data-quality studies (LIMA, secondary). Extension: ablate
+    the difficulty filter on a toy, hypothesis: the kept set
+    shrinks but proxy quality rises.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the four axes.
+    (b) Oral ladder: define curation, work the toy, justify the
+    funnel, sketch <code>curate</code>, compare all with curated, debug the
+    weak-grader case, critique the toy, design the ablation.
+    (c) Transfer: 10k pairs budget. Allocate across axes.
+    Answers: <code>../keys/u15_answers.md</code> A5.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U15 task 5 curates the toy.
+    See <code>../labs/u15_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c06-tool-call-data">C06: Tool-call data</h3>
+<p>Leaf id <code>cs336-U15-C06</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: training the model to call tools. Objectives: format
+   a tool-call trace, state what the loss covers. Depends on
+   C03, C04.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how does the model
+   learn JSON tool calls? Traces interleave assistant text, tool
+   calls (JSON), and tool results. The mask covers the
+   assistant&rsquo;s tool calls, not the tool&rsquo;s returned text.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The tool result is environment observation,
+   like a user message: read it, do not learn to emit it. The
+   call itself is the behavior being taught.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Call JSON,
+   result text, mask. Assumption: the C03 template extended
+   with tool roles.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Mask = 1 on assistant tokens
+   including the call JSON, 0 on tool-result tokens. The model
+   learns when and how to call, not what tools return.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy trace: 200 tokens, 60 call JSON
+   (masked 1), 80 result text (masked 0), 60 prose (masked 1).
+   Supervised: 120.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> Extend
+   <code>make_mask</code> (C04) with the tool role. About 6 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Result tokens
+   never carry loss. Malformed JSON in training is flagged.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Bad traces teach bad calls. Trace validation
+   (schema check, execution check) is the real cost.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> RL on tool
+    use (U16, needs a sandbox). SFT traces for the base skill.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Tool results contain
+    injected instructions, the model learns to obey them
+    because they look like assistant text. The assumption &ldquo;mask
+    0 is enough&rdquo; breaks when results leak into the call, and
+    the security boundary needs design (P21).</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    tool-use training reports (secondary). Extension: flip
+    result tokens to mask 1 on the toy, hypothesis: the model
+    starts emitting fake results.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the mask rule for tools.
+    (b) Oral ladder: define the trace, work the toy, justify the
+    mask, extend the mask code, compare with RL, debug the
+    injection case, critique the toy, design the flip test.
+    (c) Transfer: multi-step traces with 5 calls. What can go
+    wrong in the mask? Answers: <code>../keys/u15_answers.md</code> A6.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U15 task 6 masks tool traces.
+    See <code>../labs/u15_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c07-data-quality">C07: Data quality</h3>
+<p>Leaf id <code>cs336-U15-C07</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: quality control for adaptation data. Objectives:
+   apply the U14 quality lens to SFT data. Depends on U14-C01,
+   C05.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: does the U14
+   filtering story change for SFT? The axes change (correctness
+   matters more than volume), but the machinery is the same:
+   score, threshold, audit.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> SFT data is small and precious: each
+   example is seen many times. One bad example repeated 100x is
+   100 bad lessons. Quality bars rise as data shrinks.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Keep rates,
+   repeat counts. Assumption: the C05 funnel numbers.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Effective exposure = keep count
+   x epochs. The quality bar scales with exposure.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: 250k kept pairs, 3 epochs:
+   750k exposures. A 1% bad rate means 7,500 bad lessons.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> Reuse the U14
+   <code>filter</code> with SFT-specific scorers. Reference, not rebuild.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> The bad-rate
+   estimate comes with a CI from the audit sample.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Human review of the full set is ideal and
+   unaffordable, review the failures and the boundary.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Model-graded
+    filtering (cheap, biased). Human spot-checks (expensive,
+    trusted) on the risky slices.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Near-dup prompts with
+    contradictory answers: the model learns inconsistency. The
+    assumption &ldquo;dedup is enough&rdquo; breaks, check answer
+    agreement within dup clusters.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    SFT data studies (secondary). Extension: inject
+    contradictory pairs into the toy, hypothesis: proxy
+    behavior degrades on those prompts.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the exposure arithmetic.
+    (b) Oral ladder: define the bar, work the toy, justify the
+    scaling, reuse the filter, compare the graders, debug the
+    contradiction case, critique the toy, design the injection
+    test. (c) Transfer: 5k pairs, 10 epochs. Set the quality
+    bar. Answers: <code>../keys/u15_answers.md</code> A7.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U15 task 7 computes exposure.
+    See <code>../labs/u15_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c08-packingpadding">C08: Packing/padding</h3>
+<p>Leaf id <code>cs336-U15-C08</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: fitting variable-length sequences into batches.
+   Objectives: compute padding waste, pack sequences, mask the
+   boundaries. Depends on P11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: sequences run 64
+   to 2048 tokens, the batch is 2048. How much compute is pad?
+   Toy from <code>compute_u15.py</code>: 512 sequences, pad-to-2048 waste
+   47.6%, greedy packing into 2048-bins: 22.0% waste over 344
+   bins.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Padding pays for nothing. Packing
+   concatenates short sequences into full bins and masks
+   attention at the boundaries so sequences never see each
+   other.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Waste
+   fraction, bin count. Assumption: the synthetic length
+   distribution, greedy packing.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Waste_pad = (T<em>n - sum)/(T</em>n).
+   Packing is bin-packing (NP-hard), greedy by descending length
+   is the practical choice. The attention mask blocks
+   cross-document attention.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u15.py</code> (executed
+   2026-10-06): 47.6% vs 22.0%, 344 bins.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>pack(seqs, T)</code>:
+   sort descending, first-fit. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> All tokens
+   placed, no bin overflows. Attention masks verified on a toy.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Packing needs the boundary mask, a bug leaks
+   context across documents (C06 of U13).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Padding
+    (simple, wastes half). Packing (efficient, needs the mask)
+    whenever lengths vary.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The mask is wrong and
+    documents attend to each other: the model learns spurious
+    cross-document links. The assumption &ldquo;the mask is right&rdquo;
+    breaks, test it with canary tokens.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    packing practice notes (secondary). Extension: compare
+    greedy with optimal on the toy, hypothesis: greedy is within
+    a few bins of optimal.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the waste numbers.
+    (b) Oral ladder: define packing, compute the toy, justify
+    the mask, implement <code>pack</code>, compare with padding, debug the
+    mask bug, critique the greedy choice, design the canary
+    test. (c) Transfer: one 100k-token document among 1k-token
+    ones. Pack or not? Answers: <code>../keys/u15_answers.md</code> A8.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U15 task 8 packs the toy.
+    See <code>../labs/u15_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u15_fig01: waste bars. Source: original.
+    Render: <code>assets/render_u15.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u15_fig01" src="../assets/u15_fig01.png"><figcaption>waste bars. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c09-lorafull-adaptation">C09: LoRA/full adaptation</h3>
+<p>Leaf id <code>cs336-U15-C09</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: parameter-efficient vs full fine-tuning. Objectives:
+   compute the LoRA parameter count, state the tradeoff.
+   Depends on P11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: full SFT updates
+   7B params. LoRA updates how many? Toy from <code>compute_u15.py</code>:
+   d=4096, r=16: one adapted pair is 131,072 params vs
+   16,777,216 full (0.78%). Adapting q and v in all 32 layers:
+   8.39M vs 1074M.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> LoRA freezes W and learns a low-rank
+   delta BA. The update lives in a small subspace: cheap to
+   store, fast to swap, limited in expressivity.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> r: rank.
+   B in R^{d x r}, A in R^{r x d}. Assumption: q,v adapted.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Params per pair = 2dr. Forward:
+   Wx + BAx. Only A,B get gradients. W stays frozen.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u15.py</code> (executed
+   2026-10-06): 131,072 vs 16,777,216. 8.39M vs 1074M.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>lora_params(d,
+   r, n_pairs)</code>: return 2<em>d</em>r*n_pairs. Two lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> r=d recovers the
+   full count. r=0 gives 0.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Rank caps what the adapter can learn. Merging BA
+   into W at inference removes the overhead.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Full
+    fine-tuning (maximal change, needs full optimizer states).
+    LoRA for cheap multi-task adapters.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The task needs a big
+    distribution shift (new language): rank 16 cannot carry it
+    and underperforms full tuning badly. The assumption &ldquo;small
+    delta suffices&rdquo; breaks, raise r or go full.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    LoRA paper (Hu et al., 2022, primary). Extension: sweep r on
+    a synthetic low-rank task, hypothesis: loss plateaus past
+    the true rank.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the count formula.
+    (b) Oral ladder: define LoRA, compute the toy, justify the
+    2dr, implement the counter, compare with full, debug the
+    new-language case, critique the q,v choice, design the rank
+    sweep. (c) Transfer: 10 tasks, one base model. LoRA or
+    full? Answers: <code>../keys/u15_answers.md</code> A9.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U15 task 9 counts params.
+    See <code>../labs/u15_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u15_fig02: LoRA vs full bars (log).
+    Source: original. Render: <code>assets/render_u15.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u15_fig02" src="../assets/u15_fig02.png"><figcaption>LoRA vs full bars (log). Source: original.</figcaption></figure>
+<hr />
+<h3 id="c10-forgetting">C10: Forgetting</h3>
+<p>Leaf id <code>cs336-U15-C10</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: what adaptation erases. Objectives: measure old-task
+   loss rise, name the mitigations. Depends on C01.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: after midtraining,
+   is the base capability intact? Toy from <code>compute_u15.py</code>
+   (synthetic deltas): old-task loss rises [0.05, 0.12, 0.30,
+   0.28, 0.10, 0.06] across 6 checkpoints, mean 0.15 nats.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> New gradients overwrite old knowledge.
+   Forgetting is measured, not assumed: track base evals through
+   the run. Mitigations: replay base data, lower LR, freeze
+   parts.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Loss delta
+   in nats. Assumption: the synthetic deltas.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is a
+   measurement protocol. Evaluate the base suite at every
+   checkpoint.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u15.py</code> (executed
+   2026-10-06): mean rise 0.15 nats.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>forgetting</code>:
+   base loss after minus before, per checkpoint. About 6 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Deltas near 0
+   with replay, large without.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Replay costs base-data tokens in the mix. Lower LR
+   slows adaptation.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Accept the
+    forgetting (fine when the old capability is unneeded).
+    Mitigate when the base must stay general.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Forgetting is silent on
+    untested capabilities: the suite looks fine, users find the
+    hole. The assumption &ldquo;the suite covers everything&rdquo; breaks,
+    keep the suite broad.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    continual-learning literature (secondary). Extension: vary
+    the replay fraction on a synthetic two-task setup.
+    hypothesis: forgetting falls monotonically.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the measurement protocol.
+    (b) Oral ladder: define forgetting, read the toy, justify
+    the protocol, implement the measure, compare the
+    mitigations, debug the silent case, critique the toy,
+    design the replay sweep. (c) Transfer: old-task loss rises
+    0.5 nats. Ship or fix? Answers: <code>../keys/u15_answers.md</code>
+    A10.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U15 task 10 measures forgetting.
+    See <code>../labs/u15_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u15_fig03: the delta bars. Source:
+    original. Render: <code>assets/render_u15.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u15_fig03" src="../assets/u15_fig03.png"><figcaption>the delta bars. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c11-evaluation-slices">C11: Evaluation slices</h3>
+<p>Leaf id <code>cs336-U15-C11</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: evals that separate stage effects. Objectives: assign
+   each eval to its stage, read the slice table. Depends on C01,
+   U12-C10.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: SFT improved the
+   chat score but did pretraining knowledge survive? Slices:
+   base knowledge (pretrain), long-context (midtraining),
+   instruction following (SFT). Each stage owns slices that must
+   not regress.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> One suite per stage, run at every
+   checkpoint. A stage&rsquo;s success is its slices rising without
+   others falling.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Slice
+   scores with CIs. Assumption: the U12-C10 interval rules.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is a reporting
+   discipline. The slice table is the stage&rsquo;s report card.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: after SFT, instruction slice
+   +0.10, base slice -0.02 (inside CI), long-context flat. SFT
+   did its job without damage.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>stage_report</code>:
+   slice scores with CIs, regression flags. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Flags fire only
+   outside the CI band.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Running all suites at every checkpoint costs
+   eval compute. Sample checkpoints for the expensive suites.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> One blended
+    score (hides stage effects). Sliced reporting for stage
+    accountability.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Slices overlap in what
+    they test: &ldquo;instruction following&rdquo; items also test base
+    knowledge. The assumption &ldquo;slices are pure&rdquo; breaks, read
+    cross-slice patterns.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    eval-slice practices (secondary). Extension: correlate toy
+    slice scores, hypothesis: base and instruction slices
+    correlate positively.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the slice assignment.
+    (b) Oral ladder: define the discipline, read the toy, justify
+    the flags, implement <code>stage_report</code>, compare with blended
+    scores, debug the overlap case, critique the cost, design
+    the correlation test. (c) Transfer: base slice drops 0.05
+    after midtraining. Diagnose. Answers: <code>../keys/u15_answers.md</code>
+    A11.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U15 task 11 reports slices.
+    See <code>../labs/u15_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c12-checkpoint-compatibility">C12: Checkpoint compatibility</h3>
+<p>Leaf id <code>cs336-U15-C12</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: resuming and converting across stages. Objectives:
+   state what a checkpoint must contain, compute the state size.
+   Depends on U05-C11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: can SFT resume
+   from the midtraining checkpoint? Yes if the checkpoint holds
+   weights, optimizer state, RNG, and data position. Toy from
+   <code>compute_u15.py</code>: AdamW fp32 states for 7B are 84.0 GB.
+   bf16 params alone 14.0 GB.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> A checkpoint is the full training state,
+   not just weights. Optimizer moments, RNG, and loader position
+   decide whether the resume is exact.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> State
+   bytes. Assumption: AdamW, fp32 moments, 7B.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> States = N x (4 param + 4 m + 4
+   v) bytes. Dropping moments is a warm restart, not a resume.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u15.py</code> (executed
+   2026-10-06): 84.0 GB full, 14.0 GB weights-only.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>state_bytes(N)</code>:
+   12*N. One line.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Resumed loss
+   matches the uninterrupted run within noise.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Full states cost 6x the weights in storage and
+   transfer. Sharded checkpoints (U08) split the bill.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Weights-only
+    restart (cheap, loses optimizer history). Full resume for
+    mid-run stage transitions.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Architecture change
+    between stages (new head): shapes mismatch and the load
+    fails. The assumption &ldquo;shapes match&rdquo; breaks, write a
+    conversion map.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    checkpointing practices (U05-C11). Extension: resume the toy
+    with and without moments, hypothesis: the moment-less run
+    diverges for a few hundred steps.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the state contents.
+    (b) Oral ladder: define compatibility, compute the toy,
+    justify the 12 bytes, implement <code>state_bytes</code>, compare the
+    two restarts, debug the shape-mismatch case, critique the
+    toy, design the resume test. (c) Transfer: LoRA adapter
+    trained on base v1, base moves to v2. Compatible? Answers:
+    <code>../keys/u15_answers.md</code> A12.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U15 task 12 checks resumes.
+    See <code>../labs/u15_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+      
+      <nav class="pager"><a href="../labs/u05_lab.html"><span class="lbl">← Previous</span>Lab 05 · Optimization and training correctness</a><a href="../labs/u05_lab_key.html"><span class="lbl">Next →</span>Lab 05 · Keys</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
