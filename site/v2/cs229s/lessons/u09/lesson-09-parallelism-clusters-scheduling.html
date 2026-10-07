@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Unit 09 · Parallelism, clusters, and scheduling — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Parallelism, clusters, and scheduling.">
+<link rel="stylesheet" href="../../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-page="cs229s-u09" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Systems for Machine Learning (Stanford CS229S)</h3><ul>
+<li><a href="../../index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../../crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../../cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../../course_map.html" data-page="cs229s-course-map">CS229S · Course map</a></li>
+<li><a href="../../prerequisites.html" data-page="cs229s-prereqs">CS229S · Prerequisites</a></li>
+<li><a href="../../notation_and_shapes.html" data-page="cs229s-notation">CS229S · Notation</a></li>
+<li><a href="../../glossary.html" data-page="cs229s-glossary">CS229S · Glossary</a></li>
+<li><a href="../../lessons/u01/lesson-01-sequence-transformer-workload.html" data-page="cs229s-u01">U01 · Sequence models and tran</a></li>
+<li><a href="../../lessons/u01/keys.html" data-page="cs229s-u01-keys">U01 · Keys</a></li>
+<li><a href="../../lessons/u02/lesson-02-hardware-compilers.html" data-page="cs229s-u02">U02 · Hardware-aware design an</a></li>
+<li><a href="../../lessons/u02/keys.html" data-page="cs229s-u02-keys">U02 · Keys</a></li>
+<li><a href="../../lessons/u03/lesson-03-accounting-speculative.html" data-page="cs229s-u03">U03 · Transformer accounting a</a></li>
+<li><a href="../../lessons/u03/keys.html" data-page="cs229s-u03-keys">U03 · Keys</a></li>
+<li><a href="../../lessons/u04/lesson-04-cuda-efficient-attention.html" data-page="cs229s-u04">U04 · CUDA and efficient atten</a></li>
+<li><a href="../../lessons/u04/keys.html" data-page="cs229s-u04-keys">U04 · Keys</a></li>
+<li><a href="../../lessons/u05/lesson-05-quantization-sparsity.html" data-page="cs229s-u05">U05 · Quantization, sparsity, </a></li>
+<li><a href="../../lessons/u05/keys.html" data-page="cs229s-u05-keys">U05 · Keys</a></li>
+<li><a href="../../lessons/u06/lesson-06-adaptation-data-pipelines.html" data-page="cs229s-u06">U06 · Training, adaptation, an</a></li>
+<li><a href="../../lessons/u06/keys.html" data-page="cs229s-u06-keys">U06 · Keys</a></li>
+<li><a href="../../lessons/u07/lesson-07-linear-attention-ssm-fft.html" data-page="cs229s-u07">U07 · Linear attention, SSMs, </a></li>
+<li><a href="../../lessons/u07/keys.html" data-page="cs229s-u07-keys">U07 · Keys</a></li>
+<li><a href="../../lessons/u08/lesson-08-serving-moe.html" data-page="cs229s-u08">U08 · Serving and sparse MoE</a></li>
+<li><a href="../../lessons/u08/keys.html" data-page="cs229s-u08-keys">U08 · Keys</a></li>
+<li><a href="../../lessons/u09/lesson-09-parallelism-clusters-scheduling.html" data-page="cs229s-u09" class="active">U09 · Parallelism, clusters, a</a></li>
+<li><a href="../../lessons/u09/keys.html" data-page="cs229s-u09-keys">U09 · Keys</a></li>
+<li><a href="../../lessons/u10/lesson-10-retrieval-guests-synthesis.html" data-page="cs229s-u10">U10 · Retrieval systems, guest</a></li>
+<li><a href="../../lessons/u10/keys.html" data-page="cs229s-u10-keys">U10 · Keys</a></li>
+<li><a href="../../labs/lab-01-sequence-workload.html" data-page="cs229s-lab-01">Lab 01 · Sequence workload</a></li>
+<li><a href="../../labs/keys-lab-01.html" data-page="cs229s-lab-01-keys">Lab 01 · Keys</a></li>
+<li><a href="../../labs/lab-02-roofline.html" data-page="cs229s-lab-02">Lab 02 · Roofline</a></li>
+<li><a href="../../labs/keys-lab-02.html" data-page="cs229s-lab-02-keys">Lab 02 · Keys</a></li>
+<li><a href="../../labs/lab-03-kvcache-speculative.html" data-page="cs229s-lab-03">Lab 03 · KV cache, speculativ</a></li>
+<li><a href="../../labs/keys-lab-03.html" data-page="cs229s-lab-03-keys">Lab 03 · Keys</a></li>
+<li><a href="../../labs/lab-04-tiling-softmax.html" data-page="cs229s-lab-04">Lab 04 · Tiling, softmax</a></li>
+<li><a href="../../labs/keys-lab-04.html" data-page="cs229s-lab-04-keys">Lab 04 · Keys</a></li>
+<li><a href="../../labs/lab-05-quant-prune.html" data-page="cs229s-lab-05">Lab 05 · Quantization, prunin</a></li>
+<li><a href="../../labs/keys-lab-05.html" data-page="cs229s-lab-05-keys">Lab 05 · Keys</a></li>
+<li><a href="../../labs/lab-06-adaptation-pipelines.html" data-page="cs229s-lab-06">Lab 06 · Adaptation, pipeline</a></li>
+<li><a href="../../labs/keys-lab-06.html" data-page="cs229s-lab-06-keys">Lab 06 · Keys</a></li>
+<li><a href="../../labs/lab-07-ssm-fft.html" data-page="cs229s-lab-07">Lab 07 · SSM, FFT</a></li>
+<li><a href="../../labs/keys-lab-07.html" data-page="cs229s-lab-07-keys">Lab 07 · Keys</a></li>
+<li><a href="../../labs/lab-08-serving-moe.html" data-page="cs229s-lab-08">Lab 08 · Serving, MoE</a></li>
+<li><a href="../../labs/keys-lab-08.html" data-page="cs229s-lab-08-keys">Lab 08 · Keys</a></li>
+<li><a href="../../labs/lab-09-parallelism-scheduling.html" data-page="cs229s-lab-09">Lab 09 · Parallelism, schedul</a></li>
+<li><a href="../../labs/keys-lab-09.html" data-page="cs229s-lab-09-keys">Lab 09 · Keys</a></li>
+<li><a href="../../labs/lab-10-retrieval-synthesis.html" data-page="cs229s-lab-10">Lab 10 · Retrieval, synthesis</a></li>
+<li><a href="../../labs/keys-lab-10.html" data-page="cs229s-lab-10-keys">Lab 10 · Keys</a></li>
+<li><a href="../../diagnostics/diagnostic-cs229s.html" data-page="cs229s-diag">CS229S · Diagnostic</a></li>
+<li><a href="../../diagnostics/keys-cs229s.html" data-page="cs229s-diag-keys">CS229S · Diagnostic keys</a></li>
+<li><a href="../../interview/interview-u01-questions.html" data-page="cs229s-int-u01">Interview · U01</a></li>
+<li><a href="../../interview/keys-u01.html" data-page="cs229s-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../../interview/interview-u02-questions.html" data-page="cs229s-int-u02">Interview · U02</a></li>
+<li><a href="../../interview/keys-u02.html" data-page="cs229s-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../../interview/interview-u03-questions.html" data-page="cs229s-int-u03">Interview · U03</a></li>
+<li><a href="../../interview/keys-u03.html" data-page="cs229s-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../../interview/interview-u04-questions.html" data-page="cs229s-int-u04">Interview · U04</a></li>
+<li><a href="../../interview/keys-u04.html" data-page="cs229s-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../../interview/interview-u05-questions.html" data-page="cs229s-int-u05">Interview · U05</a></li>
+<li><a href="../../interview/keys-u05.html" data-page="cs229s-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../../interview/interview-u06-questions.html" data-page="cs229s-int-u06">Interview · U06</a></li>
+<li><a href="../../interview/keys-u06.html" data-page="cs229s-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../../interview/interview-u07-questions.html" data-page="cs229s-int-u07">Interview · U07</a></li>
+<li><a href="../../interview/keys-u07.html" data-page="cs229s-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../../interview/interview-u08-questions.html" data-page="cs229s-int-u08">Interview · U08</a></li>
+<li><a href="../../interview/keys-u08.html" data-page="cs229s-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../../interview/interview-u09-questions.html" data-page="cs229s-int-u09">Interview · U09</a></li>
+<li><a href="../../interview/keys-u09.html" data-page="cs229s-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../../interview/interview-u10-questions.html" data-page="cs229s-int-u10">Interview · U10</a></li>
+<li><a href="../../interview/keys-u10.html" data-page="cs229s-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../../interview/oral-defenses.html" data-page="cs229s-int-oral">Interview · Oral defenses</a></li>
+<li><a href="../../interview/keys-oral.html" data-page="cs229s-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../../interview/transfer-sets.html" data-page="cs229s-int-transfer">Interview · Transfer sets</a></li>
+<li><a href="../../interview/keys-transfer.html" data-page="cs229s-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../../capstones/capstone-a-ssm-replication.html" data-page="cs229s-cap-a">Capstone A · SSM replication</a></li>
+<li><a href="../../capstones/capstone-b-rag-serving.html" data-page="cs229s-cap-b">Capstone B · RAG serving</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../../index.html">Home</a> / <a href="#">Systems for Machine Learning (Stanford CS229S)</a> / Unit 09 · Parallelism, clusters, and scheduling</nav>
+      <h1>Unit 09 · Parallelism, clusters, and scheduling</h1>
+      <p class="meta-line">2026-10-06</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="lesson-09-parallelism-clusters-and-scheduling">Lesson 09: Parallelism, clusters, and scheduling</h1>
+<p>Unit: cs229s-U09. Concepts: cs229s-U09-C01 to C12.
+Date: 2026-10-06. Baseline: October 6, 2026.
+Claim class for every leaf: PLANNED / SOURCE ATTRIBUTION PENDING.
+Family anchor: CALENDAR-ANCHORED, Week 7, Oct 25,
+&ldquo;Parallelism Fundamentals&rdquo; (presented by Azalia): Data
+Parallelism (All-Reduce, Ring All-Reduce, ZeRO, PyTorch
+FSDP), Tensor Parallelism, Pipeline Parallelism, Automatic
+Parallelization (Alpa), Comparisons, Pros and Cons of Each
+Strategy. Also Oct 30 guest talk by Deepak Narayanan on
+parallelism, Nov 15 &ldquo;Parallelism&rdquo;, and Nov 18 &ldquo;Cluster
+Scheduling&rdquo;. All cluster numbers are lesson toys computed
+here, not vendor benchmarks. Shared bridges: P15 (hardware
+and computer architecture), P16 (distributed systems and
+networking), at <code>v2-pack/shared/prerequisites/</code>.</p>
+<hr />
+<h2 id="c01-datatensorpipelineexpert-splits">C01: data/tensor/pipeline/expert splits</h2>
+<h3 id="source-scope-objectives-dependencies">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 7, Oct 25, &ldquo;Parallelism
+Fundamentals&rdquo; (all four splits named). Scope: the four
+ways to cut a model across GPUs. Objective: compute
+per-GPU memory for each split on a toy. Depends on P15,
+P16.</p>
+<h3 id="motivating-question-and-tiny-toy">Motivating question and tiny toy</h3>
+<p>Question: the model is 20 GB and a GPU holds 40 GB.
+Four ways to split it across 8 GPUs: which puts what
+where? Toy: 10B params, fp16 = 20 GB. 8 GPUs.</p>
+<h3 id="mental-model">Mental model</h3>
+<p>Data parallel: 8 full copies, different data. Tensor
+parallel: one layer sliced 8 ways, every GPU does a
+piece of every matmul. Pipeline parallel: the model
+cut into 8 stages, each GPU owns whole layers.
+Expert parallel: each GPU owns whole experts, tokens
+travel (U08).</p>
+<h3 id="objects-shapes-assumptions">Objects, shapes, assumptions</h3>
+<ul>
+<li>P params, b bytes each. N GPUs.</li>
+<li>DP: P<em>b per GPU. TP-n: P</em>b/n. PP-n: P<em>b/n per
+  stage. EP-n: P</em>b/n plus dispatch.</li>
+<li>Assumption: even splits, no optimizer state in
+  the toy (C06 adds it).</li>
+</ul>
+<h3 id="derivation">Derivation</h3>
+<p>P*b = 20 GB. DP: 20 GB per GPU (8 copies). TP-8:
+2.5 GB per GPU, but every matmul needs an
+all-reduce (C02). PP-8: 2.5 GB per stage, but
+stages idle in bubbles (C05). EP-8: 2.5 GB per
+GPU of experts plus token dispatch (U08 C09).</p>
+<h3 id="computed-example">Computed example</h3>
+<p>Toy above: DP 20 GB/GPU, TP 2.5 GB/GPU, PP 2.5
+GB/stage, EP 2.5 GB/GPU. The memory is identical
+for the last three. The bills differ: TP pays in
+collectives, PP in bubbles, EP in dispatch.
+Lab-09 asserts the four numbers.</p>
+<h3 id="implementation-and-checks">Implementation and checks</h3>
+<pre><code class="language-python">P, b, n = 10e9, 2, 8
+dp = P * b
+tp = P * b / n
+assert dp == 20e9
+assert tp == 2.5e9
+</code></pre>
+<p>Check: units are bytes. Lab-09 asserts all four.</p>
+<h3 id="complexity-and-costs">Complexity and costs</h3>
+<p>The split is free to choose. Each charges a
+different tax every step.</p>
+<h3 id="nearest-alternative-and-selection-boundary">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: 3D parallelism (mix all).
+Selection boundary: DP when the model fits one
+GPU. TP within a node (fast links). PP across
+nodes. EP for MoE.</p>
+<h3 id="failure-case-and-counterexample">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;splits compose cleanly.&rdquo;
+Counterexample: TP-8 across two nodes: the
+all-reduce crosses the thin inter-node link and
+the step time doubles (C03).</p>
+<h3 id="research-reading-and-falsifiable-extension">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 25 parallelism session.
+Falsifiable extension: benchmark the four splits
+on a fixed toy model. Hypothesis: measured step
+times rank by their tax (collective vs bubble vs
+dispatch). Report all four.</p>
+<h3 id="exercises">Exercises</h3>
+<ul>
+<li>E01 (recall): name the four splits and what
+  each replicates vs shards.</li>
+<li>E02 (numerical): toy above. Compute per-GPU
+  bytes for all four.</li>
+<li>E03 (failure diagnosis): TP-8 is slow across
+  two nodes. Name the tax.</li>
+<li>E04 (counterfactual): the model is 100 GB.
+  Which splits still run on 40 GB GPUs?</li>
+<li>E05 (research): state the four-split benchmark
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units">Visual units</h3>
+<ul>
+<li>Figure <code>u09_c01_splits.png</code>: four split
+  diagrams with GB labels. Source: original toy.
+  Shell 1.</li>
+</ul>
+<figure><img alt="u09_c01_splits.png" src="../../assets/u09/u09_c01_splits.png"><figcaption>four split diagrams with GB labels</figcaption></figure>
+<ul>
+<li>Audit: <code>u09c01</code> to <code>f01</code>. Before: 20 GB model.
+  After: four layouts. One rule: cut somewhere.</li>
+</ul>
+<hr />
+<h2 id="c02-collective-cost">C02: collective cost</h2>
+<h3 id="source-scope-objectives-dependencies_1">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 7, Oct 25, &ldquo;Data Parallelism
+(All-Reduce, Ring All-Reduce, ZeRO, PyTorch FSDP)&rdquo;.
+Scope: the all-reduce bill. Objective: compute ring
+all-reduce time on a toy. Depends on C01, P16.</p>
+<h3 id="motivating-question-and-tiny-toy_1">Motivating question and tiny toy</h3>
+<p>Question: data parallel must average 8 gradient
+copies every step. How long does the averaging
+take? Toy: S = 20 GB of gradients, n = 8, link
+100 GB/s (labeled toy).</p>
+<h3 id="mental-model_1">Mental model</h3>
+<p>Ring all-reduce is a bucket brigade around a
+circle: each GPU passes its chunk to the next,
+twice around (reduce-scatter then all-gather).
+Time = 2*(n-1)/n * S / BW: the 2 is the two
+passes, the (n-1)/n is the ring efficiency.</p>
+<h3 id="objects-shapes-assumptions_1">Objects, shapes, assumptions</h3>
+<ul>
+<li>S bytes, n GPUs, BW bytes/s.</li>
+<li>t = 2*(n-1)/n * S/BW.</li>
+<li>Assumption: full-duplex ring, no congestion.</li>
+</ul>
+<h3 id="derivation_1">Derivation</h3>
+<p>2*7/8 = 1.75. S/BW = 20/100 = 0.2 s. T = 0.35 s
+per sync. At 2 s steps, the sync is 17.5% of the
+step: the DP tax. Halve S (fp16 vs fp32
+gradients): 0.175 s.</p>
+<h3 id="computed-example_1">Computed example</h3>
+<p>Toy above: 0.35 s per all-reduce. N = 64: 2 *
+63/64 = 1.97: barely worse per byte (the ring
+scales). The pain at 64 is latency of 126 hops,
+not bytes. Lab-09 asserts the 0.35.</p>
+<h3 id="implementation-and-checks_1">Implementation and checks</h3>
+<pre><code class="language-python">def ring_ar(S, n, BW):
+    return 2 * (n - 1) / n * S / BW
+assert abs(ring_ar(20, 8, 100) - 0.35) &lt; 1e-9
+assert abs(ring_ar(20, 64, 100) - 0.39375) &lt; 1e-9
+</code></pre>
+<p>Check: n=64 costs 1.97 * 0.2 = 0.39375. Lab-09
+asserts both.</p>
+<h3 id="complexity-and-costs_1">Complexity and costs</h3>
+<p>O(S) bytes per GPU, nearly independent of n.
+Latency grows with n.</p>
+<h3 id="nearest-alternative-and-selection-boundary_1">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: tree all-reduce (better
+latency, same bytes). Selection boundary: ring
+for big S. Tree for small S and many GPUs.</p>
+<h3 id="failure-case-and-counterexample_1">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;full duplex, no congestion.&rdquo;
+Counterexample: a shared switch with incast: the
+measured time is multiples of 0.35 s.</p>
+<h3 id="research-reading-and-falsifiable-extension_1">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 25 data-parallelism session.
+Falsifiable extension: measure all-reduce time
+vs S. Hypothesis: linear with slope 1.75/BW.
+Report the fit.</p>
+<h3 id="exercises_1">Exercises</h3>
+<ul>
+<li>E06 (recall): write the ring formula and name
+  the two passes.</li>
+<li>E07 (numerical): toy above. Compute t at n=8
+  and n=64.</li>
+<li>E08 (failure diagnosis): sync takes 3x the
+  formula. Name two causes.</li>
+<li>E09 (counterfactual): gradients compress 4x.
+  What happens to t?</li>
+<li>E10 (research): state the linear-fit
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_1">Visual units</h3>
+<ul>
+<li>Figure <code>u09_c02_ring.png</code>: 8 GPUs in a ring,
+  two passes labeled. Source: original toy.
+  Shell 3.</li>
+</ul>
+<figure><img alt="u09_c02_ring.png" src="../../assets/u09/u09_c02_ring.png"><figcaption>8 GPUs in a ring, two passes labeled</figcaption></figure>
+<ul>
+<li>Audit: <code>u09c02</code> to <code>f02</code>. Before: 8 copies.
+  After: one average. One rule: two passes.</li>
+</ul>
+<hr />
+<h2 id="c03-interconnect-placement">C03: interconnect placement</h2>
+<h3 id="source-scope-objectives-dependencies_2">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 7, Oct 25, &ldquo;Comparisons, Pros
+and Cons of Each Strategy&rdquo;, and the Oct 30 guest
+talk. Scope: where the wires are fast. Objective:
+compare intra- vs inter-node cost on a toy.
+Depends on C02, P16.</p>
+<h3 id="motivating-question-and-tiny-toy_2">Motivating question and tiny toy</h3>
+<p>Question: 8 GPUs in one node vs 8 across two
+nodes. Same count, different wires. Toy:
+intra-node 600 GB/s, inter-node 50 GB/s (labeled
+toy values, not specs).</p>
+<h3 id="mental-model_2">Mental model</h3>
+<p>A node is a neighborhood with fast streets. The
+cluster is a city with slow highways. Collectives
+that stay in the neighborhood fly. Ones that
+cross town crawl. Placement is urban planning for
+bytes.</p>
+<h3 id="objects-shapes-assumptions_2">Objects, shapes, assumptions</h3>
+<ul>
+<li>BW_in, BW_out. A collective crossing nodes pays
+  BW_out.</li>
+<li>Assumption: the toy bandwidths are labeled.</li>
+</ul>
+<h3 id="derivation_2">Derivation</h3>
+<p>All-reduce of 20 GB inside one node: 1.75 * 20 /
+600 = 0.058 s. Split 4+4 across two nodes: the
+ring crosses the thin link: 1.75 * 20 / 50 =
+0.70 s: 12x slower. Rule: keep TP groups inside
+the node. Let DP (fewer, bigger syncs) cross
+nodes.</p>
+<h3 id="computed-example_2">Computed example</h3>
+<p>Toy above: 0.058 s vs 0.70 s. A TP-8 job split
+across nodes pays 0.70 s per matmul sync: dead.
+A DP job with the same split pays 0.70 s once
+per step: alive. Lab-09 asserts the 12x.</p>
+<h3 id="implementation-and-checks_2">Implementation and checks</h3>
+<pre><code class="language-python">def t_ar(S, n, BW):
+    return 2 * (n - 1) / n * S / BW
+assert abs(t_ar(20, 8, 600) - 0.0583) &lt; 0.001
+assert abs(t_ar(20, 8, 50) - 0.70) &lt; 0.01
+</code></pre>
+<p>Check: ratio 12.0. Lab-09 asserts the ratio.</p>
+<h3 id="complexity-and-costs_2">Complexity and costs</h3>
+<p>Placement is decided once. The tax is paid every
+step.</p>
+<h3 id="nearest-alternative-and-selection-boundary_2">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: hierarchical collectives.
+Selection boundary: place TP intra-node always. 
+use DP or PP across nodes.</p>
+<h3 id="failure-case-and-counterexample_2">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;the scheduler knows the
+topology.&rdquo; Counterexample: the job lands striped
+across 8 nodes (one GPU each): every collective
+crosses thin links and nothing in the formula
+warned you.</p>
+<h3 id="research-reading-and-falsifiable-extension_2">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 30 guest session. Falsifiable
+extension: run the same all-reduce intra-node vs
+split. Hypothesis: the ratio matches BW_in /
+BW_out. Report both.</p>
+<h3 id="exercises_2">Exercises</h3>
+<ul>
+<li>E11 (recall): state the placement rule.</li>
+<li>E12 (numerical): toy above. Compute both times
+  and the ratio.</li>
+<li>E13 (failure diagnosis): TP job is 12x slower
+  than expected. What is the placement?</li>
+<li>E14 (counterfactual): BW_out = BW_in. What
+  changes?</li>
+<li>E15 (research): state the ratio hypothesis.</li>
+</ul>
+<h3 id="visual-units_2">Visual units</h3>
+<ul>
+<li>Figure <code>u09_c03_wires.png</code>: fast streets vs
+  slow highway, 0.058 vs 0.70 s. Source:
+  original toy. Shell 8.</li>
+</ul>
+<figure><img alt="u09_c03_wires.png" src="../../assets/u09/u09_c03_wires.png"><figcaption>fast streets vs slow highway, 0.058 vs 0.70 s</figcaption></figure>
+<ul>
+<li>Audit: <code>u09c03</code> to <code>f03</code>. Before: 8 GPUs.
+  After: two placements. One rule: mind the
+  thin link.</li>
+</ul>
+<hr />
+<h2 id="c04-stragglers">C04: stragglers</h2>
+<h3 id="source-scope-objectives-dependencies_3">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 9, Nov 18, &ldquo;Cluster
+Scheduling&rdquo; (stragglers as a scheduling fact).
+Scope: the slowest worker sets the step. Objective:
+compute the straggler tax on a toy. Depends on P16.</p>
+<h3 id="motivating-question-and-tiny-toy_3">Motivating question and tiny toy</h3>
+<p>Question: 7 workers finish in 10 s, one takes 14
+s. How long is the step? Toy: times [10, 10, 10,
+10, 10, 10, 10, 14].</p>
+<h3 id="mental-model_3">Mental model</h3>
+<p>Synchronous training is a group hike: the group
+moves at the slowest hiker&rsquo;s pace. One slow GPU
+(a hot chip, a noisy neighbor, a bad disk) taxes
+everyone. The fix is detection plus action:
+reassign, replicate, or go asynchronous.</p>
+<h3 id="objects-shapes-assumptions_3">Objects, shapes, assumptions</h3>
+<ul>
+<li>Step time = max(worker times).</li>
+<li>Straggler tax = (max - median) / median.</li>
+<li>Assumption: synchronous step (bulk barrier).</li>
+</ul>
+<h3 id="derivation_3">Derivation</h3>
+<p>Step = 14 s. Median = 10 s. Tax = 40%. Seven
+GPUs idle 4 s each: 28 GPU-seconds wasted per
+step. Over 1000 steps: 7.8 GPU-hours burned on
+waiting.</p>
+<h3 id="computed-example_3">Computed example</h3>
+<p>Toy above: 40% tax, 28 GPU-s per step. Drop the
+straggler (7 workers): step 10 s, throughput up
+14/10 = 1.4x on 7/8 of the GPUs: net win if the
+work rebalances. Lab-09 asserts the 40%.</p>
+<h3 id="implementation-and-checks_3">Implementation and checks</h3>
+<pre><code class="language-python">ts = [10]*7 + [14]
+step = max(ts)
+tax = (step - sorted(ts)[3]) / sorted(ts)[3]
+assert step == 14
+assert abs(tax - 0.4) &lt; 1e-9
+</code></pre>
+<p>Check: median of 8 values averages positions 3
+and 4: both 10. Lab-09 asserts the tax.</p>
+<h3 id="complexity-and-costs_3">Complexity and costs</h3>
+<p>Detection is a heartbeat and a timer. The cost of
+ignoring it is the tax, every step.</p>
+<h3 id="nearest-alternative-and-selection-boundary_3">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: asynchronous updates (no
+barrier). Selection boundary: sync with
+straggler handling at scale. Async when staleness
+is cheaper than waiting.</p>
+<h3 id="failure-case-and-counterexample_3">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;workers are identical.&rdquo;
+Counterexample: mixed GPU generations in one
+job: the older cards are permanent stragglers
+and the tax never clears.</p>
+<h3 id="research-reading-and-falsifiable-extension_3">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 18 scheduling session.
+Falsifiable extension: log per-worker step times
+for a day. Hypothesis: a small set of workers
+explains most of the tail. Report the split.</p>
+<h3 id="exercises_3">Exercises</h3>
+<ul>
+<li>E16 (recall): write the step-time rule.</li>
+<li>E17 (numerical): toy above. Compute step,
+  tax, and wasted GPU-seconds per step.</li>
+<li>E18 (failure diagnosis): step time climbs
+  over a week with no code change. What do you
+  check?</li>
+<li>E19 (counterfactual): barrier removed. What
+  new problem appears?</li>
+<li>E20 (research): state the tail-attribution
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_3">Visual units</h3>
+<ul>
+<li>Figure <code>u09_c04_hike.png</code>: 8 hikers, one
+  behind, 40% label. Source: original toy.
+  Shell 7.</li>
+</ul>
+<figure><img alt="u09_c04_hike.png" src="../../assets/u09/u09_c04_hike.png"><figcaption>8 hikers, one behind, 40% label</figcaption></figure>
+<ul>
+<li>Audit: <code>u09c04</code> to <code>f04</code>. Before: 8 times.
+  After: max rules. One rule: wait for the
+  slowest.</li>
+</ul>
+<hr />
+<h2 id="c05-bubbles">C05: bubbles</h2>
+<h3 id="source-scope-objectives-dependencies_4">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 7, Oct 25, &ldquo;Pipeline
+Parallelism&rdquo;. Scope: idle stages in a pipeline.
+Objective: compute the bubble fraction on a toy.
+Depends on C01, P16.</p>
+<h3 id="motivating-question-and-tiny-toy_4">Motivating question and tiny toy</h3>
+<p>Question: 4 pipeline stages, 8 microbatches. How
+much of the time do stages sit idle? Toy: each
+microbatch takes 1 unit per stage.</p>
+<h3 id="mental-model_4">Mental model</h3>
+<p>A pipeline is a car wash with 4 stations. At the
+start, stations 2-4 wait for the first car. At
+the end, stations 1-3 wait for the last car to
+clear. The idle time is the bubble. More cars
+(microbatches) shrink it.</p>
+<h3 id="objects-shapes-assumptions_4">Objects, shapes, assumptions</h3>
+<ul>
+<li>p stages, m microbatches.</li>
+<li>Bubble fraction = (p - 1) / (m + p - 1).</li>
+<li>Assumption: equal stage times, no stragglers.</li>
+</ul>
+<h3 id="derivation_4">Derivation</h3>
+<p>Total steps: m + p - 1 = 11. Ideal: m = 8.
+Bubble = 3/11 = 27.3%. Double microbatches to
+16: 3/19 = 15.8%. 1F1B (one forward, one
+backward) keeps the same bubble with less
+activation memory.</p>
+<h3 id="computed-example_4">Computed example</h3>
+<p>Toy above: 27.3% bubble at m=8, 15.8% at m=16.
+Memory per stage holds p microbatch activations
+in the naive schedule vs ~1 in 1F1B. Lab-09
+asserts both fractions.</p>
+<h3 id="implementation-and-checks_4">Implementation and checks</h3>
+<pre><code class="language-python">def bubble(p, m):
+    return (p - 1) / (m + p - 1)
+assert abs(bubble(4, 8) - 0.2727) &lt; 0.001
+assert abs(bubble(4, 16) - 0.1579) &lt; 0.001
+</code></pre>
+<p>Check: more microbatches, smaller bubble.
+Lab-09 asserts both.</p>
+<h3 id="complexity-and-costs_4">Complexity and costs</h3>
+<p>The bubble is idle GPUs: pure waste, set by the
+schedule.</p>
+<h3 id="nearest-alternative-and-selection-boundary_4">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: interleaved pipeline (more
+stages than GPUs). Selection boundary: more
+microbatches when memory allows. Interleaving
+when it does not.</p>
+<h3 id="failure-case-and-counterexample_4">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;stages are equal.&rdquo; Counterexample:
+one stage holds the big embedding table: it runs
+2x the others and the bubble formula
+understates the idle time.</p>
+<h3 id="research-reading-and-falsifiable-extension_4">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 25 pipeline session. Falsifiable
+extension: measure stage idle time vs m.
+Hypothesis: idle fraction follows (p-1)/(m+p-1).
+Report the fit.</p>
+<h3 id="exercises_4">Exercises</h3>
+<ul>
+<li>E21 (recall): write the bubble formula.</li>
+<li>E22 (numerical): toy above. Compute the
+  bubble at m=8 and m=16.</li>
+<li>E23 (failure diagnosis): measured bubble is
+  2x the formula. What is uneven?</li>
+<li>E24 (counterfactual): m = 1. What is the
+  pipeline?</li>
+<li>E25 (research): state the idle-fit hypothesis.</li>
+</ul>
+<h3 id="visual-units_4">Visual units</h3>
+<ul>
+<li>Figure <code>u09_c05_bubble.png</code>: Gantt with idle
+  gaps shaded. Source: original toy. Shell 1.</li>
+</ul>
+<figure><img alt="u09_c05_bubble.png" src="../../assets/u09/u09_c05_bubble.png"><figcaption>Gantt with idle gaps shaded</figcaption></figure>
+<ul>
+<li>Audit: <code>u09c05</code> to <code>f05</code>. Before: empty pipe.
+  After: flowing pipe. One rule: fill the pipe.</li>
+</ul>
+<hr />
+<h2 id="c06-sharding">C06: sharding</h2>
+<h3 id="source-scope-objectives-dependencies_5">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 7, Oct 25, &ldquo;Data Parallelism
+(All-Reduce, Ring All-Reduce, ZeRO, PyTorch FSDP)&rdquo;.
+Scope: sharding params, gradients, optimizer
+state. Objective: compute per-GPU bytes under
+ZeRO-3 on a toy. Depends on C01, C02.</p>
+<h3 id="motivating-question-and-tiny-toy_5">Motivating question and tiny toy</h3>
+<p>Question: data parallel copies everything 8
+times. What if the 8 GPUs share one copy? Toy:
+10B params, 8 GPUs. Adam optimizer.</p>
+<h3 id="mental-model_5">Mental model</h3>
+<p>ZeRO is a shared apartment: params, gradients,
+and optimizer states are split across roommates
+instead of duplicated. ZeRO-1 shards optimizer
+states, ZeRO-2 adds gradients, ZeRO-3 adds
+params. The rent (memory) falls. The chore
+(communication) rises: params must be gathered
+before each use.</p>
+<h3 id="objects-shapes-assumptions_5">Objects, shapes, assumptions</h3>
+<ul>
+<li>Params fp16: 2 bytes. Grads fp16: 2 bytes. Adam
+  states fp32: 4 + 4 + 4 = 12 bytes per param
+  (master copy, m, v).</li>
+<li>ZeRO-3 per GPU: 16 bytes * P / n.</li>
+<li>Assumption: even shards.</li>
+</ul>
+<h3 id="derivation_5">Derivation</h3>
+<p>16 bytes * 10e9 = 160 GB total. /8 = 20.0 GB
+per GPU. Vs DP: 20 GB params + 20 GB grads +
+120 GB states = 160 GB per GPU (OOM on 40 GB).
+ZeRO-3 fits with room. The tax: all-gather
+params per layer per step.</p>
+<h3 id="computed-example_5">Computed example</h3>
+<p>Toy above: 20.0 GB/GPU under ZeRO-3 vs 160
+GB/GPU under plain DP. FSDP is the PyTorch
+form of the same idea. Lab-09 asserts the 20.0.</p>
+<h3 id="implementation-and-checks_5">Implementation and checks</h3>
+<pre><code class="language-python">P, n = 10e9, 8
+zero3 = 16 * P / n
+dp = 16 * P
+assert zero3 == 20e9
+assert dp == 160e9
+</code></pre>
+<p>Check: bytes. Lab-09 asserts both.</p>
+<h3 id="complexity-and-costs_5">Complexity and costs</h3>
+<p>Memory falls by n. Communication rises (gather
+per layer).</p>
+<h3 id="nearest-alternative-and-selection-boundary_5">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: plain DP (no sharding).
+Selection boundary: ZeRO when states do not fit. 
+plain DP when they do (simpler, less comm).</p>
+<h3 id="failure-case-and-counterexample_5">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;gather is cheap.&rdquo;
+Counterexample: tiny layers, many GPUs: the
+gather latency dominates and ZeRO-3 runs slower
+than ZeRO-2.</p>
+<h3 id="research-reading-and-falsifiable-extension_5">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 25 ZeRO session. Falsifiable
+extension: profile ZeRO-1/2/3 on one model.
+Hypothesis: memory falls 1/2/3 stages, step time
+rises at stage 3 for small layers. Report all.</p>
+<h3 id="exercises_5">Exercises</h3>
+<ul>
+<li>E26 (recall): name the three ZeRO stages.</li>
+<li>E27 (numerical): toy above. Compute per-GPU
+  bytes for ZeRO-3 and plain DP.</li>
+<li>E28 (failure diagnosis): ZeRO-3 is slower
+  than ZeRO-2 on small layers. Why?</li>
+<li>E29 (counterfactual): optimizer is SGD (no
+  states). What does ZeRO-1 save?</li>
+<li>E30 (research): state the stage-profile
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_5">Visual units</h3>
+<ul>
+<li>Figure <code>u09_c06_shard.png</code>: 160 GB whole vs 8
+  shards. Source: original toy. Shell 3.</li>
+</ul>
+<figure><img alt="u09_c06_shard.png" src="../../assets/u09/u09_c06_shard.png"><figcaption>160 GB whole vs 8 shards</figcaption></figure>
+<ul>
+<li>Audit: <code>u09c06</code> to <code>f06</code>. Before: 8 copies.
+  After: 8 shards. One rule: share, do not copy.</li>
+</ul>
+<hr />
+<h2 id="c07-checkpointing">C07: checkpointing</h2>
+<h3 id="source-scope-objectives-dependencies_6">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 9, Nov 18, &ldquo;Cluster
+Scheduling&rdquo; (checkpoints as the recovery unit).
+Scope: how often to save. Objective: compute the
+overhead and the recovery cost on a toy. Depends
+on P16.</p>
+<h3 id="motivating-question-and-tiny-toy_6">Motivating question and tiny toy</h3>
+<p>Question: saving takes 30 s. Save every 100
+steps of a 1000-step run? Toy: step time 10 s.</p>
+<h3 id="mental-model_6">Mental model</h3>
+<p>Checkpoints are save points in a game. Save too
+often and the game stutters. Save too rarely and
+a crash replays hours. The optimal interval
+balances save cost against expected rework.</p>
+<h3 id="objects-shapes-assumptions_6">Objects, shapes, assumptions</h3>
+<ul>
+<li>Save cost c, interval k steps, run N steps.</li>
+<li>Overhead = (N/k) * c. Rework on crash &lt;= k
+  steps.</li>
+<li>Assumption: crashes are rare in the toy.</li>
+</ul>
+<h3 id="derivation_6">Derivation</h3>
+<p>10 saves * 30 s = 300 s overhead on a 10,000 s
+run: 3%. Crash at step 950: resume from 900,
+replay 50 steps = 500 s of rework. Interval 500:
+2 saves (60 s, 0.6%) but crash at 950 replays
+450 steps (4500 s). The interval prices risk.</p>
+<h3 id="computed-example_6">Computed example</h3>
+<p>Toy above: k=100 costs 3% overhead, caps rework
+at 1000 s. K=500 costs 0.6%, caps rework at
+5000 s. Lab-09 asserts both overheads.</p>
+<h3 id="implementation-and-checks_6">Implementation and checks</h3>
+<pre><code class="language-python">def overhead(N, k, c):
+    return (N / k) * c
+assert overhead(1000, 100, 30) == 300
+assert overhead(1000, 500, 30) == 60
+</code></pre>
+<p>Check: seconds. Lab-09 asserts both.</p>
+<h3 id="complexity-and-costs_6">Complexity and costs</h3>
+<p>Checkpointing is pure overhead until the crash. 
+then it is everything.</p>
+<h3 id="nearest-alternative-and-selection-boundary_6">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: no checkpoints (restart
+from scratch). Selection boundary: checkpoint
+whenever the run costs more than the saves.</p>
+<h3 id="failure-case-and-counterexample_6">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;the checkpoint loads.&rdquo;
+Counterexample: the checkpoint saves the model
+but not the data-loader state: resume replays
+the wrong data order and the run silently
+diverges.</p>
+<h3 id="research-reading-and-falsifiable-extension_6">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 18 scheduling session.
+Falsifiable extension: measure save cost vs
+shard count. Hypothesis: sharded saves scale
+down per-GPU time. Report the curve.</p>
+<h3 id="exercises_6">Exercises</h3>
+<ul>
+<li>E31 (recall): write the overhead formula.</li>
+<li>E32 (numerical): toy above. Compute overhead
+  and max rework for k=100 and k=500.</li>
+<li>E33 (failure diagnosis): resume diverges from
+  the pre-crash trajectory. What was not saved?</li>
+<li>E34 (counterfactual): save cost = 0. What is
+  the best interval?</li>
+<li>E35 (research): state the sharded-save
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_6">Visual units</h3>
+<ul>
+<li>Figure <code>u09_c07_savepoint.png</code>: timeline with
+  save ticks and a crash arrow. Source: original
+  toy. Shell 5.</li>
+</ul>
+<figure><img alt="u09_c07_savepoint.png" src="../../assets/u09/u09_c07_savepoint.png"><figcaption>timeline with save ticks and a crash arrow</figcaption></figure>
+<ul>
+<li>Audit: <code>u09c07</code> to <code>f07</code>. Before: no saves.
+  After: 10 ticks. One rule: price the risk.</li>
+</ul>
+<hr />
+<h2 id="c08-resource-allocation">C08: resource allocation</h2>
+<h3 id="source-scope-objectives-dependencies_7">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 9, Nov 18, &ldquo;Cluster
+Scheduling&rdquo;. Scope: packing jobs onto GPUs.
+Objective: schedule a toy queue. Depends on P16.</p>
+<h3 id="motivating-question-and-tiny-toy_7">Motivating question and tiny toy</h3>
+<p>Question: one 8-GPU node, jobs need 4, 4, 2, 2
+GPUs. Who runs when? Toy: each job takes 1 hour,
+FIFO order.</p>
+<h3 id="mental-model_7">Mental model</h3>
+<p>Scheduling is Tetris with GPUs: jobs are blocks,
+the node is the well. FIFO runs job1+job2 (4+4)
+in hour 1, job3+job4 (2+2, wasting 4) in hour
+2. Backfill slides small jobs into gaps: a
+smarter order finishes sooner.</p>
+<h3 id="objects-shapes-assumptions_7">Objects, shapes, assumptions</h3>
+<ul>
+<li>Node 8 GPUs, jobs with GPU counts and 1h each.</li>
+<li>FIFO: in arrival order.</li>
+<li>Assumption: jobs are rigid (no shrinking).</li>
+</ul>
+<h3 id="derivation_7">Derivation</h3>
+<p>FIFO hour 1: jobs 1,2 (8 GPUs, no waste). Hour
+2: jobs 3,4 (4 GPUs, 4 idle). Makespan 2 h, waste
+4 GPU-h. A rigid FIFO cannot do better here. The
+waste is structural to the job sizes. The
+scheduler&rsquo;s job is to minimize waste without
+starving anyone.</p>
+<h3 id="computed-example_7">Computed example</h3>
+<p>Toy above: FIFO makespan 2 h, 4 GPU-h wasted in
+hour 2. The scheduler&rsquo;s job is to minimize waste
+without starving anyone. Lab-09 asserts the
+makespan.</p>
+<h3 id="implementation-and-checks_7">Implementation and checks</h3>
+<pre><code class="language-python">def fifo_makespan(jobs, node):
+    t, free = 0, node
+    for j in jobs:
+        if j &gt; free:
+            t += 1
+            free = node
+        free -= j
+    return t + 1
+assert fifo_makespan([4, 4, 2, 2], 8) == 2
+</code></pre>
+<p>Check: hours. Lab-09 asserts the makespan.</p>
+<h3 id="complexity-and-costs_7">Complexity and costs</h3>
+<p>Scheduling is NP-hard in general. The cluster
+uses heuristics.</p>
+<h3 id="nearest-alternative-and-selection-boundary_7">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: one job per node (no
+sharing). Selection boundary: share when jobs
+are small. Isolate when interference hurts.</p>
+<h3 id="failure-case-and-counterexample_7">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;jobs are rigid.&rdquo; Counterexample:
+an elastic job could shrink to 2 GPUs and fill
+hour 2&rsquo;s gap: rigidity wastes.</p>
+<h3 id="research-reading-and-falsifiable-extension_7">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 18 scheduling session.
+Falsifiable extension: replay a week of jobs
+under FIFO vs backfill. Hypothesis: backfill
+cuts mean wait. Report both.</p>
+<h3 id="exercises_7">Exercises</h3>
+<ul>
+<li>E36 (recall): define makespan and waste.</li>
+<li>E37 (numerical): toy above. Compute FIFO
+  makespan and wasted GPU-hours.</li>
+<li>E38 (failure diagnosis): small jobs wait
+  forever. What policy causes it?</li>
+<li>E39 (counterfactual): jobs are elastic. What
+  changes?</li>
+<li>E40 (research): state the backfill hypothesis.</li>
+</ul>
+<h3 id="visual-units_7">Visual units</h3>
+<ul>
+<li>Figure <code>u09_c08_tetris.png</code>: two-hour Gantt,
+  idle gap shaded. Source: original toy. Shell 1.</li>
+</ul>
+<figure><img alt="u09_c08_tetris.png" src="../../assets/u09/u09_c08_tetris.png"><figcaption>two-hour Gantt, idle gap shaded</figcaption></figure>
+<ul>
+<li>Audit: <code>u09c08</code> to <code>f08</code>. Before: queue.
+  After: schedule. One rule: pack the well.</li>
+</ul>
+<hr />
+<h2 id="c09-preemption">C09: preemption</h2>
+<h3 id="source-scope-objectives-dependencies_8">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 9, Nov 18, &ldquo;Cluster
+Scheduling&rdquo;. Scope: losing GPUs mid-run. Objective:
+price a preemption on a toy. Depends on C07, C08.</p>
+<h3 id="motivating-question-and-tiny-toy_8">Motivating question and tiny toy</h3>
+<p>Question: spot GPUs cost 60% less (labeled
+hypothetical) but can vanish. When is the discount
+worth it? Toy: 8 GPUs, 10 h run, checkpoint every
+30 min (1800 s), resume costs 5 min.</p>
+<h3 id="mental-model_8">Mental model</h3>
+<p>Preemption is an eviction notice: the cluster
+reclaims your GPUs, your job restarts from the
+last checkpoint. The discount pays for the
+expected rework. Checkpoint often, and evictions
+sting less.</p>
+<h3 id="objects-shapes-assumptions_8">Objects, shapes, assumptions</h3>
+<ul>
+<li>Discount d, preemption rate rate per hour
+  (toy: 0.1/hr).</li>
+<li>Expected preemptions = rate * hours.</li>
+<li>Rework per preemption &lt;= checkpoint interval.</li>
+<li>Assumption: the toy rate is labeled.</li>
+</ul>
+<h3 id="derivation_8">Derivation</h3>
+<p>Expected preemptions: 0.1 * 10 = 1. Rework: up
+to 30 min lost + 5 min resume = 35 min. Extra
+cost: 35/600 = 5.8% of the run. Discount 60%
+dwarfs 5.8%: spot wins by a mile. Break-even:
+discount = rework fraction. At rate = 2/hr
+(20 preemptions): rework 20*35 min = 700 min &gt;
+600 min run: spot loses.</p>
+<h3 id="computed-example_8">Computed example</h3>
+<p>Toy above: 1 expected preemption, 5.8% rework
+vs 60% discount: spot wins. At 2 preemptions/hr
+the rework (11.7%) still beats the discount, but
+at 20/hr it does not. Lab-09 asserts the 5.8%.</p>
+<h3 id="implementation-and-checks_8">Implementation and checks</h3>
+<pre><code class="language-python">def rework_frac(rate, hours, interval_min,
+                resume_min):
+    n = rate * hours
+    return n * (interval_min + resume_min) / (
+        hours * 60)
+assert abs(rework_frac(0.1, 10, 30, 5) - 0.0583) &lt; 0.001
+</code></pre>
+<p>Check: fraction of the run. Lab-09 asserts the
+break-even logic.</p>
+<h3 id="complexity-and-costs_8">Complexity and costs</h3>
+<p>The price is complexity: the job must resume
+cleanly, every time.</p>
+<h3 id="nearest-alternative-and-selection-boundary_8">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: on-demand (no preemption).
+Selection boundary: spot when discount exceeds
+expected rework. On-demand for deadline jobs.</p>
+<h3 id="failure-case-and-counterexample_8">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;preemptions are independent.&rdquo;
+Counterexample: a zone-wide reclaim takes all
+your GPUs at once, repeatedly: the rate spikes
+and the resume queue is full.</p>
+<h3 id="research-reading-and-falsifiable-extension_8">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 18 scheduling session.
+Falsifiable extension: log preemptions for a
+month, fit the rate. Hypothesis: the rate is
+bursty, not Poisson. Report the fit.</p>
+<h3 id="exercises_8">Exercises</h3>
+<ul>
+<li>E41 (recall): write the rework-fraction
+  formula.</li>
+<li>E42 (numerical): toy above. Compute expected
+  preemptions and rework fraction.</li>
+<li>E43 (failure diagnosis): spot job never
+  finishes. What does the rate look like?</li>
+<li>E44 (counterfactual): checkpoint interval =
+  run length. What is the risk?</li>
+<li>E45 (research): state the burstiness
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_8">Visual units</h3>
+<ul>
+<li>Figure <code>u09_c09_eviction.png</code>: timeline with
+  an eviction arrow and replay segment. Source:
+  original toy. Shell 5.</li>
+</ul>
+<figure><img alt="u09_c09_eviction.png" src="../../assets/u09/u09_c09_eviction.png"><figcaption>timeline with an eviction arrow and replay segment</figcaption></figure>
+<ul>
+<li>Audit: <code>u09c09</code> to <code>f09</code>. Before: steady run.
+  After: evict and replay. One rule: price the
+  discount against rework.</li>
+</ul>
+<hr />
+<h2 id="c10-fairness">C10: fairness</h2>
+<h3 id="source-scope-objectives-dependencies_9">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 9, Nov 18, &ldquo;Cluster
+Scheduling&rdquo;. Scope: dividing GPUs among users.
+Objective: compute dominant shares on a toy.
+Depends on P16.</p>
+<h3 id="motivating-question-and-tiny-toy_9">Motivating question and tiny toy</h3>
+<p>Question: user A wants GPUs, user B wants RAM.
+Who gets what? Toy: cluster (8 GPUs, 64 GB RAM).
+A wants (4 GPUs, 16 GB). B wants (2 GPUs, 32 GB).</p>
+<h3 id="mental-model_9">Mental model</h3>
+<p>Dominant Resource Fairness: each user&rsquo;s share is
+measured on the resource they want most
+(relatively). A&rsquo;s dominant share: max(4/8,
+16/64) = 0.5 (GPUs). B&rsquo;s: max(2/8, 32/64) = 0.5
+(RAM). Equal dominant shares: fair. The rule
+stops GPU-hogs from starving RAM-hogs and vice
+versa.</p>
+<h3 id="objects-shapes-assumptions_9">Objects, shapes, assumptions</h3>
+<ul>
+<li>Demand vectors, cluster totals.</li>
+<li>Dominant share = max over resources of
+  demand/total.</li>
+<li>Assumption: demands are fixed per task.</li>
+</ul>
+<h3 id="derivation_9">Derivation</h3>
+<p>A: (0.5, 0.25) -&gt; 0.5. B: (0.25, 0.5) -&gt; 0.5.
+Tie: split evenly. If a third user C wants (8
+GPUs, 8 GB): dominant 1.0: C alone saturates
+GPUs. A and B wait. Max-min fairness on the
+dominant shares decides.</p>
+<h3 id="computed-example_9">Computed example</h3>
+<p>Toy above: both 0.5, fair split. Add C: shares
+(0.5, 0.5, 1.0): the scheduler equalizes at the
+bottleneck: nobody exceeds the fair share of
+their dominant resource. Lab-09 asserts the
+shares.</p>
+<h3 id="implementation-and-checks_9">Implementation and checks</h3>
+<pre><code class="language-python">def dom_share(demand, total):
+    return max(d / t for d, t in zip(demand,
+                                     total))
+assert dom_share((4, 16), (8, 64)) == 0.5
+assert dom_share((2, 32), (8, 64)) == 0.5
+assert dom_share((8, 8), (8, 64)) == 1.0
+</code></pre>
+<p>Check: exact. Lab-09 asserts all three.</p>
+<h3 id="complexity-and-costs_9">Complexity and costs</h3>
+<p>DRF is O(users * resources) per decision:
+trivial.</p>
+<h3 id="nearest-alternative-and-selection-boundary_9">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: strict FIFO (no fairness).
+Selection boundary: DRF on shared clusters. 
+FIFO on single-team clusters.</p>
+<h3 id="failure-case-and-counterexample_9">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;demands are truthful.&rdquo;
+Counterexample: a user inflates RAM demand to
+raise their dominant share and grab more GPUs:
+strategy-proofness fails in practice.</p>
+<h3 id="research-reading-and-falsifiable-extension_9">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 18 scheduling session.
+Falsifiable extension: simulate DRF vs FIFO on
+a mixed workload. Hypothesis: DRF cuts the max
+wait. Report both.</p>
+<h3 id="exercises_9">Exercises</h3>
+<ul>
+<li>E46 (recall): define the dominant share.</li>
+<li>E47 (numerical): toy above. Compute all three
+  shares.</li>
+<li>E48 (failure diagnosis): a user grabs GPUs by
+  inflating another demand. Name the game.</li>
+<li>E49 (counterfactual): one resource only. What
+  is DRF?</li>
+<li>E50 (research): state the DRF-vs-FIFO
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_9">Visual units</h3>
+<ul>
+<li>Figure <code>u09_c10_shares.png</code>: two users&rsquo; bars
+  with dominant shares marked. Source: original
+  toy. Shell 2.</li>
+</ul>
+<figure><img alt="u09_c10_shares.png" src="../../assets/u09/u09_c10_shares.png"><figcaption>two users' bars with dominant shares marked</figcaption></figure>
+<ul>
+<li>Audit: <code>u09c10</code> to <code>f10</code>. Before: demands.
+  After: shares. One rule: max the ratios.</li>
+</ul>
+<hr />
+<h2 id="c11-utilization">C11: utilization</h2>
+<h3 id="source-scope-objectives-dependencies_10">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 9, Nov 18, &ldquo;Cluster
+Scheduling&rdquo; (utilization as the cluster KPI).
+Scope: how much of the iron does useful work.
+Objective: compute MFU on a toy. Depends on P15.</p>
+<h3 id="motivating-question-and-tiny-toy_10">Motivating question and tiny toy</h3>
+<p>Question: the GPUs are 100% busy. Are they doing
+useful work? Toy: achieved 150 TFLOP/s per GPU,
+peak 312 TFLOP/s (labeled toy peak).</p>
+<h3 id="mental-model_10">Mental model</h3>
+<p>Utilization has two faces: busy (the GPU is not
+idle) and useful (the FLOPs count toward the
+goal). Model FLOPs Utilization = achieved /
+peak. 48% MFU with 100% busy means the GPU
+works hard on the wrong things: communication,
+bubbles, tiny kernels.</p>
+<h3 id="objects-shapes-assumptions_10">Objects, shapes, assumptions</h3>
+<ul>
+<li>MFU = achieved FLOP/s / peak FLOP/s.</li>
+<li>Assumption: the peak is the labeled toy peak.</li>
+</ul>
+<h3 id="derivation_10">Derivation</h3>
+<p>150/312 = 48.1%. The missing 52% is the sum of
+every tax in this unit: collectives (C02),
+bubbles (C05), stragglers (C04), dispatch (U08).
+MFU is the scoreboard. The unit is the playbook
+for raising it.</p>
+<h3 id="computed-example_10">Computed example</h3>
+<p>Toy above: 48.1% MFU. Kill the 27% bubble
+(C05): MFU rises toward 48/(1-0.27) = 65.8% if
+nothing else binds. Lab-09 asserts the 48.1.</p>
+<h3 id="implementation-and-checks_10">Implementation and checks</h3>
+<pre><code class="language-python">mfu = 150 / 312
+assert abs(mfu - 0.4808) &lt; 0.001
+</code></pre>
+<p>Check: fraction. Lab-09 asserts it.</p>
+<h3 id="complexity-and-costs_10">Complexity and costs</h3>
+<p>MFU is free to compute from counters. Raising
+it costs the engineering in this unit.</p>
+<h3 id="nearest-alternative-and-selection-boundary_10">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: hardware utilization
+(busy %). Selection boundary: MFU always. Busy
+% never alone.</p>
+<h3 id="failure-case-and-counterexample_10">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;FLOPs are the goal.&rdquo;
+Counterexample: recomputation inflates FLOP/s
+while slowing the run: MFU rises, time-to-loss
+falls.</p>
+<h3 id="research-reading-and-falsifiable-extension_10">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 18 scheduling session.
+Falsifiable extension: attribute the MFU gap:
+profile one run. Hypothesis: the top two taxes
+explain &gt;50% of the gap. Report the split.</p>
+<h3 id="exercises_10">Exercises</h3>
+<ul>
+<li>E51 (recall): define MFU.</li>
+<li>E52 (numerical): toy above. Compute MFU and
+  the bubble-free projection.</li>
+<li>E53 (failure diagnosis): MFU rises but the
+  run slows. What inflated the numerator?</li>
+<li>E54 (counterfactual): peak doubles. What
+  happens to MFU at fixed achieved?</li>
+<li>E55 (research): state the attribution
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_10">Visual units</h3>
+<ul>
+<li>Figure <code>u09_c11_mfu.png</code>: bar at 48% with the
+  tax stack. Source: original toy. Shell 5.</li>
+</ul>
+<figure><img alt="u09_c11_mfu.png" src="../../assets/u09/u09_c11_mfu.png"><figcaption>bar at 48% with the tax stack</figcaption></figure>
+<ul>
+<li>Audit: <code>u09c11</code> to <code>f11</code>. Before: peak. After:
+  achieved. One rule: divide.</li>
+</ul>
+<hr />
+<h2 id="c12-failure-recovery">C12: failure recovery</h2>
+<h3 id="source-scope-objectives-dependencies_11">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 9, Nov 18, &ldquo;Cluster
+Scheduling&rdquo; (failures at scale). Scope: mean time
+between failures for a fleet. Objective: compute
+cluster MTBF on a toy. Depends on C07, P16.</p>
+<h3 id="motivating-question-and-tiny-toy_11">Motivating question and tiny toy</h3>
+<p>Question: one GPU fails every 3 years. What about
+256 of them? Toy: per-GPU MTBF 3 years = 26,280
+hours. 256 GPUs.</p>
+<h3 id="mental-model_11">Mental model</h3>
+<p>A fleet fails like a chain of 256 links: any
+link breaks the run. Cluster MTBF = per-GPU MTBF
+/ GPU count. At 256 GPUs the math says a failure
+every 4.3 days: recovery is not exceptional, it
+is the schedule.</p>
+<h3 id="objects-shapes-assumptions_11">Objects, shapes, assumptions</h3>
+<ul>
+<li>Cluster MTBF = per-GPU MTBF / n.</li>
+<li>Assumption: independent failures, any failure
+  kills the run.</li>
+</ul>
+<h3 id="derivation_11">Derivation</h3>
+<p>26,280 / 256 = 102.7 hours = 4.28 days. A
+30-day run expects 7 failures. Each costs resume
++ rework (C07, C09): with 30-min checkpoints,
+~35 min each: 4 hours of a 720-hour run: 0.6%.
+At 4096 GPUs: MTBF 6.4 hours: checkpointing
+dominates the design.</p>
+<h3 id="computed-example_11">Computed example</h3>
+<p>Toy above: 4.28 days MTBF, ~7 failures per
+30-day run. This is why C07 exists: at scale,
+recovery is routine. Lab-09 asserts the 102.7.</p>
+<h3 id="implementation-and-checks_11">Implementation and checks</h3>
+<pre><code class="language-python">mtbf = 3 * 365 * 24 / 256
+assert abs(mtbf - 102.66) &lt; 0.1
+</code></pre>
+<p>Check: hours. Lab-09 asserts the days.</p>
+<h3 id="complexity-and-costs_11">Complexity and costs</h3>
+<p>The formula is trivial. The engineering
+(checkpoint, resume, elastic restart) is not.</p>
+<h3 id="nearest-alternative-and-selection-boundary_11">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: redundancy (spare GPUs).
+Selection boundary: checkpoint-restart (standard). 
+spares when resume cost exceeds idle spares.</p>
+<h3 id="failure-case-and-counterexample_11">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;failures are independent.&rdquo;
+Counterexample: a rack power event takes 32 GPUs
+at once: correlated, and the MTBF math
+understates the pain.</p>
+<h3 id="research-reading-and-falsifiable-extension_11">Research reading and falsifiable extension</h3>
+<p>Reading: the Nov 18 scheduling session.
+Falsifiable extension: fit failure logs.
+Hypothesis: correlated failures exceed the
+independent prediction. Report both.</p>
+<h3 id="exercises_11">Exercises</h3>
+<ul>
+<li>E56 (recall): write the cluster MTBF formula.</li>
+<li>E57 (numerical): toy above. Compute MTBF in
+  hours and days, and expected failures in 30
+  days.</li>
+<li>E58 (failure diagnosis): failures cluster in
+  time. What assumption broke?</li>
+<li>E59 (counterfactual): n = 4096. What is the
+  MTBF?</li>
+<li>E60 (research): state the correlation
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_11">Visual units</h3>
+<ul>
+<li>Figure <code>u09_c12_mtbf.png</code>: MTBF vs GPU count
+  curve, 256 marked. Source: original toy.
+  Shell 6.</li>
+</ul>
+<figure><img alt="u09_c12_mtbf.png" src="../../assets/u09/u09_c12_mtbf.png"><figcaption>MTBF vs GPU count curve, 256 marked</figcaption></figure>
+<ul>
+<li>Audit: <code>u09c12</code> to <code>f12</code>. Before: one GPU.
+  After: the fleet. One rule: divide by n.</li>
+</ul>
+<hr />
+<h2 id="u09-chapter-plate">U09 chapter plate</h2>
+<p>Figure <code>u09_chapter.png</code>: the cluster stack:
+split -&gt; collectives -&gt; pipeline -&gt; schedule -&gt;
+recover. Source: original.</p>
+<figure><img alt="u09_chapter.png" src="../../assets/u09/u09_chapter.png"><figcaption>the cluster stack: split -&gt; collectives -&gt; pipeline -&gt; schedule -&gt; recover. Source: original</figcaption></figure>
+<h2 id="unit-scope-replication-proposal-proposed-not-executed">Unit-scope replication proposal (PROPOSED, not executed)</h2>
+<p>Course-level capstones live in <code>capstones/</code>. This
+unit proposes: measure all-reduce time vs bytes
+to fit the ring slope, then simulate pipeline
+bubbles vs microbatch count and compare to the
+formula. See lab-09.</p>
+      
+      <nav class="pager"><a href="../../lessons/u08/keys.html"><span class="lbl">← Previous</span>Unit 08 · Keys</a><a href="../../lessons/u09/keys.html"><span class="lbl">Next →</span>Unit 09 · Keys</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../../assets/vendor/katex.min.js"></script>
+<script src="../../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../../";</script>
+<script src="../../assets/app.js"></script>
+</body>
+</html>
