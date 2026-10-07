@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U09 · Model and hybrid parallelism — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Model and hybrid parallelism.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-u09" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../course_map.html" data-page="cs336-course-map">Course map</a></li>
+<li><a href="../prerequisites.html" data-page="cs336-prereqs">Prerequisites</a></li>
+<li><a href="../notation_and_shapes.html" data-page="cs336-notation">Notation</a></li>
+<li><a href="../glossary.html" data-page="cs336-glossary">Glossary</a></li>
+<li><a href="../cheatsheet.html" data-page="cs336-cheatsheet">Cheatsheet</a></li>
+<li><a href="../crash-course.html" data-page="cs336-crash">Crash course</a></li>
+<li><a href="../lessons/u01_tokenization.html" data-page="cs336-u01">U01 · Text representation and tokeni</a></li>
+<li><a href="../keys/u01_answers.html" data-page="cs336-u01-answers">U01 · Answers</a></li>
+<li><a href="../lessons/u02_tensor_programming.html" data-page="cs336-u02">U02 · Executable tensor programming </a></li>
+<li><a href="../keys/u02_answers.html" data-page="cs336-u02-answers">U02 · Answers</a></li>
+<li><a href="../lessons/u03_transformer_block.html" data-page="cs336-u03">U03 · Transformer block mechanics</a></li>
+<li><a href="../keys/u03_answers.html" data-page="cs336-u03-answers">U03 · Answers</a></li>
+<li><a href="../lessons/u04_attention_moe.html" data-page="cs336-u04">U04 · Attention alternatives and exp</a></li>
+<li><a href="../keys/u04_answers.html" data-page="cs336-u04-answers">U04 · Answers</a></li>
+<li><a href="../lessons/u05_optimization.html" data-page="cs336-u05">U05 · Optimization and training corr</a></li>
+<li><a href="../keys/u05_answers.html" data-page="cs336-u05-answers">U05 · Answers</a></li>
+<li><a href="../lessons/u06_gpu_tpu.html" data-page="cs336-u06">U06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../keys/u06_answers.html" data-page="cs336-u06-answers">U06 · Answers</a></li>
+<li><a href="../lessons/u07_kernels.html" data-page="cs336-u07">U07 · Kernels and IO-aware attention</a></li>
+<li><a href="../keys/u07_answers.html" data-page="cs336-u07-answers">U07 · Answers</a></li>
+<li><a href="../lessons/u08_data_sharding.html" data-page="cs336-u08">U08 · Data and optimizer sharding</a></li>
+<li><a href="../keys/u08_answers.html" data-page="cs336-u08-answers">U08 · Answers</a></li>
+<li><a href="../lessons/u09_model_parallel.html" data-page="cs336-u09" class="active">U09 · Model and hybrid parallelism</a></li>
+<li><a href="../keys/u09_answers.html" data-page="cs336-u09-answers">U09 · Answers</a></li>
+<li><a href="../lessons/u10_scaling_laws.html" data-page="cs336-u10">U10 · Scaling laws and extrapolation</a></li>
+<li><a href="../keys/u10_answers.html" data-page="cs336-u10-answers">U10 · Answers</a></li>
+<li><a href="../labs/u01_lab.html" data-page="cs336-lab-u01">Lab 01 · Text representation and tokeni</a></li>
+<li><a href="../lessons/u11_inference.html" data-page="cs336-u11">U11 · Inference algorithms and servi</a></li>
+<li><a href="../labs/u01_lab_key.html" data-page="cs336-lab-u01-keys">Lab 01 · Keys</a></li>
+<li><a href="../keys/u11_answers.html" data-page="cs336-u11-answers">U11 · Answers</a></li>
+<li><a href="../labs/u02_lab.html" data-page="cs336-lab-u02">Lab 02 · Executable tensor programming </a></li>
+<li><a href="../lessons/u12_evaluation.html" data-page="cs336-u12">U12 · Evaluation and measurement val</a></li>
+<li><a href="../labs/u02_lab_key.html" data-page="cs336-lab-u02-keys">Lab 02 · Keys</a></li>
+<li><a href="../keys/u12_answers.html" data-page="cs336-u12-answers">U12 · Answers</a></li>
+<li><a href="../labs/u03_lab.html" data-page="cs336-lab-u03">Lab 03 · Transformer block mechanics</a></li>
+<li><a href="../lessons/u13_data_sourcing.html" data-page="cs336-u13">U13 · Data sourcing and transformati</a></li>
+<li><a href="../labs/u03_lab_key.html" data-page="cs336-lab-u03-keys">Lab 03 · Keys</a></li>
+<li><a href="../keys/u13_answers.html" data-page="cs336-u13-answers">U13 · Answers</a></li>
+<li><a href="../labs/u04_lab.html" data-page="cs336-lab-u04">Lab 04 · Attention alternatives and exp</a></li>
+<li><a href="../lessons/u14_data_mixing.html" data-page="cs336-u14">U14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../labs/u04_lab_key.html" data-page="cs336-lab-u04-keys">Lab 04 · Keys</a></li>
+<li><a href="../keys/u14_answers.html" data-page="cs336-u14-answers">U14 · Answers</a></li>
+<li><a href="../labs/u05_lab.html" data-page="cs336-lab-u05">Lab 05 · Optimization and training corr</a></li>
+<li><a href="../lessons/u15_midtraining.html" data-page="cs336-u15">U15 · Midtraining and supervised ada</a></li>
+<li><a href="../labs/u05_lab_key.html" data-page="cs336-lab-u05-keys">Lab 05 · Keys</a></li>
+<li><a href="../keys/u15_answers.html" data-page="cs336-u15-answers">U15 · Answers</a></li>
+<li><a href="../labs/u06_lab.html" data-page="cs336-lab-u06">Lab 06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../lessons/u16_alignment_rl.html" data-page="cs336-u16">U16 · Preference alignment and reaso</a></li>
+<li><a href="../labs/u06_lab_key.html" data-page="cs336-lab-u06-keys">Lab 06 · Keys</a></li>
+<li><a href="../keys/u16_answers.html" data-page="cs336-u16-answers">U16 · Answers</a></li>
+<li><a href="../labs/u07_lab.html" data-page="cs336-lab-u07">Lab 07 · Kernels and IO-aware attention</a></li>
+<li><a href="../lessons/u17_multimodal_systems.html" data-page="cs336-u17">U17 · Multimodality and training-sys</a></li>
+<li><a href="../labs/u07_lab_key.html" data-page="cs336-lab-u07-keys">Lab 07 · Keys</a></li>
+<li><a href="../keys/u17_answers.html" data-page="cs336-u17-answers">U17 · Answers</a></li>
+<li><a href="../labs/u08_lab.html" data-page="cs336-lab-u08">Lab 08 · Data and optimizer sharding</a></li>
+<li><a href="../lessons/u18_guests_defense.html" data-page="cs336-u18">U18 · Guest material and final resea</a></li>
+<li><a href="../labs/u08_lab_key.html" data-page="cs336-lab-u08-keys">Lab 08 · Keys</a></li>
+<li><a href="../keys/u18_answers.html" data-page="cs336-u18-answers">U18 · Answers</a></li>
+<li><a href="../labs/u09_lab.html" data-page="cs336-lab-u09">Lab 09 · Model and hybrid parallelism</a></li>
+<li><a href="../labs/u09_lab_key.html" data-page="cs336-lab-u09-keys">Lab 09 · Keys</a></li>
+<li><a href="../labs/u10_lab.html" data-page="cs336-lab-u10">Lab 10 · Scaling laws and extrapolation</a></li>
+<li><a href="../labs/u10_lab_key.html" data-page="cs336-lab-u10-keys">Lab 10 · Keys</a></li>
+<li><a href="../interview/u01_questions.html" data-page="cs336-int-u01">Interview · U01</a></li>
+<li><a href="../labs/u11_lab.html" data-page="cs336-lab-u11">Lab 11 · Inference algorithms and servi</a></li>
+<li><a href="../interview/u01_key.html" data-page="cs336-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../labs/u11_lab_key.html" data-page="cs336-lab-u11-keys">Lab 11 · Keys</a></li>
+<li><a href="../interview/u02_questions.html" data-page="cs336-int-u02">Interview · U02</a></li>
+<li><a href="../labs/u12_lab.html" data-page="cs336-lab-u12">Lab 12 · Evaluation and measurement val</a></li>
+<li><a href="../interview/u02_key.html" data-page="cs336-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../labs/u12_lab_key.html" data-page="cs336-lab-u12-keys">Lab 12 · Keys</a></li>
+<li><a href="../interview/u03_questions.html" data-page="cs336-int-u03">Interview · U03</a></li>
+<li><a href="../labs/u13_lab.html" data-page="cs336-lab-u13">Lab 13 · Data sourcing and transformati</a></li>
+<li><a href="../interview/u03_key.html" data-page="cs336-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../labs/u13_lab_key.html" data-page="cs336-lab-u13-keys">Lab 13 · Keys</a></li>
+<li><a href="../interview/u04_questions.html" data-page="cs336-int-u04">Interview · U04</a></li>
+<li><a href="../labs/u14_lab.html" data-page="cs336-lab-u14">Lab 14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../interview/u04_key.html" data-page="cs336-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../labs/u14_lab_key.html" data-page="cs336-lab-u14-keys">Lab 14 · Keys</a></li>
+<li><a href="../interview/u05_questions.html" data-page="cs336-int-u05">Interview · U05</a></li>
+<li><a href="../labs/u15_lab.html" data-page="cs336-lab-u15">Lab 15 · Midtraining and supervised ada</a></li>
+<li><a href="../interview/u05_key.html" data-page="cs336-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../labs/u15_lab_key.html" data-page="cs336-lab-u15-keys">Lab 15 · Keys</a></li>
+<li><a href="../interview/u06_questions.html" data-page="cs336-int-u06">Interview · U06</a></li>
+<li><a href="../labs/u16_lab.html" data-page="cs336-lab-u16">Lab 16 · Preference alignment and reaso</a></li>
+<li><a href="../interview/u06_key.html" data-page="cs336-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../labs/u16_lab_key.html" data-page="cs336-lab-u16-keys">Lab 16 · Keys</a></li>
+<li><a href="../interview/u07_questions.html" data-page="cs336-int-u07">Interview · U07</a></li>
+<li><a href="../labs/u17_lab.html" data-page="cs336-lab-u17">Lab 17 · Multimodality and training-sys</a></li>
+<li><a href="../interview/u07_key.html" data-page="cs336-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../labs/u17_lab_key.html" data-page="cs336-lab-u17-keys">Lab 17 · Keys</a></li>
+<li><a href="../interview/u08_questions.html" data-page="cs336-int-u08">Interview · U08</a></li>
+<li><a href="../labs/u18_lab.html" data-page="cs336-lab-u18">Lab 18 · Guest material and final resea</a></li>
+<li><a href="../interview/u08_key.html" data-page="cs336-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../labs/u18_lab_key.html" data-page="cs336-lab-u18-keys">Lab 18 · Keys</a></li>
+<li><a href="../interview/u09_questions.html" data-page="cs336-int-u09">Interview · U09</a></li>
+<li><a href="../interview/u09_key.html" data-page="cs336-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../interview/u10_questions.html" data-page="cs336-int-u10">Interview · U10</a></li>
+<li><a href="../interview/u10_key.html" data-page="cs336-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../interview/u11_questions.html" data-page="cs336-int-u11">Interview · U11</a></li>
+<li><a href="../interview/u11_key.html" data-page="cs336-int-u11-keys">Interview · U11 keys</a></li>
+<li><a href="../interview/u12_questions.html" data-page="cs336-int-u12">Interview · U12</a></li>
+<li><a href="../interview/u12_key.html" data-page="cs336-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../interview/u13_questions.html" data-page="cs336-int-u13">Interview · U13</a></li>
+<li><a href="../interview/u13_key.html" data-page="cs336-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../interview/u14_questions.html" data-page="cs336-int-u14">Interview · U14</a></li>
+<li><a href="../interview/u14_key.html" data-page="cs336-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../interview/u15_questions.html" data-page="cs336-int-u15">Interview · U15</a></li>
+<li><a href="../interview/u15_key.html" data-page="cs336-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../interview/u16_questions.html" data-page="cs336-int-u16">Interview · U16</a></li>
+<li><a href="../interview/u16_key.html" data-page="cs336-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../interview/u17_questions.html" data-page="cs336-int-u17">Interview · U17</a></li>
+<li><a href="../interview/u17_key.html" data-page="cs336-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../interview/u18_questions.html" data-page="cs336-int-u18">Interview · U18</a></li>
+<li><a href="../interview/u18_key.html" data-page="cs336-int-u18-keys">Interview · U18 keys</a></li>
+<li><a href="../interview/oral-defenses.html" data-page="cs336-int-oral">Interview · Oral</a></li>
+<li><a href="../interview/keys-oral.html" data-page="cs336-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../interview/transfer-sets.html" data-page="cs336-int-transfer">Interview · Transfer</a></li>
+<li><a href="../interview/keys-transfer.html" data-page="cs336-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../capstones/capstone_applied.html" data-page="cs336-cap-applied">Capstone · Applied</a></li>
+<li><a href="../capstones/capstone_research.html" data-page="cs336-cap-research">Capstone · Research</a></li>
+<li><a href="../keys/diagnostic_key.html" data-page="cs336-diagnostic-keys">Diagnostic · Keys</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U09 · Model and hybrid parallelism</nav>
+      <h1>U09 · Model and hybrid parallelism</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u09-model-and-hybrid-parallelism">U09 , Model and hybrid parallelism</h1>
+<p>Prerequisites: P16, P17, P18. Bridge links in <code>../prerequisites.md</code>.
+Session: cross-cutting branch (distributed training reported across
+course sessions, exact mapping in <code>../course_map.md</code>).
+Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
+PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
+<h2 id="standing-note">Standing note</h2>
+<p>No cluster on this box. Parallelism strategies are studied as
+layouts, time models, and numpy simulations, every number is computed
+from stated assumptions. Reference model: d=4096, L=32, 7B params,
+microbatch (b=2, T=2048), bf16.</p>
+<h2 id="local-remediation-the-three-axes">Local remediation , the three axes</h2>
+<p>Read this if diagnostic items D10 or D12 were not full marks. Three
+ways to split a model: data (U08, split the batch), tensor (split
+each layer across GPUs), pipeline (split the layers across GPUs).
+Tensor parallelism (TP) splits matrix multiplies and all-reduces per
+layer: 67.1 MB per layer on the reference (from
+<code>assets/compute_u09.py</code>, executed 2026-10-06). Pipeline parallelism
+(PP) assigns layer ranges and pays a bubble: 42.9 percent at p=4, m=4.
+Assessment: with TP=4, what are the per-GPU fp16 params of the 7B
+model? Key: <code>../keys/u09_answers.md</code> R1.</p>
+<hr />
+<h3 id="c01-tensor-parallelism">C01: Tensor parallelism</h3>
+<p>Leaf id <code>cs336-U09-C01</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: Megatron-style intra-layer split. Objectives: describe the
+   column/row split, count the all-reduces. Depends on P16, P17.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: a single layer exceeds
+   one GPU. How is it split? Toy from <code>compute_u09.py</code>: TP all-
+   reduce 67.1 MB per layer, 2.1 GB per 32-layer step.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Split attention heads across ranks (each rank
+   holds d/tp of QKV and the output projection&rsquo;s rows), split the
+   MLP column-wise then row-wise. Each needs one all-reduce per
+   sublayer to sum partial outputs: 2 per layer.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> tp: degree.
+   MB per all-reduce. Assumption: the reference shapes.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Y = XW with W split by columns: each
+   rank computes Y_i = XW_i (no comm). The next layer&rsquo;s row-split
+   needs the full Y: all-reduce sums the partial products before
+   it.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u09.py</code> (executed
+   2026-10-06): 67.1 MB per layer, 2.1 GB per step.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The split simulator:
+   column split, partial products, all-reduce sum. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Split products sum to
+   the unsharded result exactly. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> 2 all-reduces per layer per step, latency-sensitive,
+   so TP stays within a node (fast links).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> ZeRO-3 (U08)
+    for memory without per-layer comm. TP for layers that exceed
+    one GPU or for inference latency.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> TP=8 across slow links: the
+    2.1 GB per step at 200 GB/s is fine, but latency per all-reduce
+    (64 per step) dominates small batches. The assumption &ldquo;TP
+    scales&rdquo; breaks across nodes, keep TP intra-node.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    Megatron paper (Shoeybi et al., 2020, primary). Extension:
+    simulate tp=2,4,8 products, hypothesis: exact sums.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the column/row pattern. (b) Oral
+    ladder: define the split, compute the comm, justify the two
+    all-reduces, implement, compare with ZeRO-3, debug the cross-
+    node case, critique the reference shapes, design the tp sweep.
+    (c) Transfer: d=8192, tp=8. Recompute the per-layer comm.
+    Answers: <code>../keys/u09_answers.md</code> A1.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U09 task 1 simulates the TP split.
+    See <code>../labs/u09_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u09_fig01: lesson plate, the column/row
+    split. Source: original. Render: <code>assets/render_u09.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u09_fig01" src="../assets/u09_fig01.png"><figcaption>lesson plate, the column/row split. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c02-pipeline-parallelism">C02: Pipeline parallelism</h3>
+<p>Leaf id <code>cs336-U09-C02</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: splitting layers across stages. Objectives: describe the
+   stage layout, define the bubble. Depends on P16, P17.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: 32 layers, 4 GPUs:
+   who holds what? Toy from <code>compute_u09.py</code>: 8 layers/GPU, bubble
+   42.9 percent at m=4, 8.6 percent at m=32.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Stage i holds layers [8i, 8i+8). Microbatches
+   flow through: stage 0 processes microbatch 0, passes activations
+   to stage 1, and so on. Communication is point-to-point
+   (activations/grads), not collective.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> p stages, m
+   microbatches. Assumption: even layer split.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The pipeline fills in p-1 steps and
+   drains in p-1 steps: bubble fraction = (p-1)/(m+p-1).</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u09.py</code> (executed
+   2026-10-06): 42.9 percent (p=4,m=4), 8.6 percent (p=4,m=32).</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The pipeline
+   schedule simulator: stage timelines. About 15 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Total time matches
+   (m+p-1) stage-times, gradients match the unsharded run.
+   Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The bubble, point-to-point comm per microbatch per
+   boundary.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> TP (no bubble,
+    more comm). PP for deep models across nodes.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> m &lt; p: the bubble exceeds
+    50 percent and most stages idle most of the time. The assumption
+    &ldquo;pipeline is efficient&rdquo; breaks without enough microbatches,
+    keep m &gt;&gt; p.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: GPipe
+    (Huang et al., 2019, primary). Extension: sweep m in the
+    simulator, hypothesis: bubble falls as 1/m.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the stage layout. (b) Oral ladder:
+    define the bubble, compute the toy, justify p2p comm,
+    implement, compare with TP, debug the m&lt;p case, critique the
+    even split, design the m sweep. (c) Transfer: p=8, m=16. Bubble
+    and verdict? Answers: <code>../keys/u09_answers.md</code> A2.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U09 task 2 simulates the pipeline.
+    See <code>../labs/u09_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u09_fig02: lesson plate, the pipeline
+    schedule with the bubble. Source: original. Render:
+    <code>assets/render_u09.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u09_fig02" src="../assets/u09_fig02.png"><figcaption>lesson plate, the pipeline schedule with the bubble. Source: original. Render: assets/render_u09.py.</figcaption></figure>
+<hr />
+<h3 id="c03-the-pipeline-bubble">C03: The pipeline bubble</h3>
+<p>Leaf id <code>cs336-U09-C03</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: quantifying idle time. Objectives: derive the bubble
+   formula, state how to shrink it. Depends on C02.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how much throughput
+   does the bubble cost? Toy from <code>compute_u09.py</code>: (p=4,m=4):
+   42.9%, (p=8,m=8): 46.7%.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Bubble = (p-1)/(m+p-1). Three levers: more
+   microbatches (m), fewer stages (p), better schedules (C04).</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Percent.
+   Assumption: uniform stage times.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Ideal time = m stage-times, actual =
+   m+p-1. The ratio gives the formula.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u09.py</code> (executed
+   2026-10-06): 42.9 and 46.7 percent.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>bubble(p, m)</code>: two
+   lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> p=1 -&gt; 0, m -&gt; inf
+   -&gt; 0. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Shrinking via m costs activation memory (more
+   microbatches in flight).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Interleaved
+    schedules (C04). The formula bounds the naive schedule.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Doubling m to halve the
+    bubble doubles activation memory and OOMs. The assumption &ldquo;m is
+    free&rdquo; breaks, the memory-bubble tradeoff is the real decision.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: GPipe
+    analysis (primary). Extension: verify the formula in the
+    simulator, hypothesis: exact.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the formula. (b) Oral ladder: define
+    the fill/drain, compute the toy, justify the levers, implement,
+    compare with 1F1B, debug the OOM, critique uniformity, design
+    the verification. (c) Transfer: bubble must be &lt; 10 percent at
+    p=8. Minimum m? Answers: <code>../keys/u09_answers.md</code> A3.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U09 task 3 computes bubbles.
+    See <code>../labs/u09_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the bubble table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c04-interleaved-and-1f1b-schedules">C04: Interleaved and 1F1B schedules</h3>
+<p>Leaf id <code>cs336-U09-C04</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: better pipeline schedules. Objectives: describe 1F1B and
+   interleaving, state the memory cost. Depends on C02, C03.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: can the bubble shrink
+   without more microbatches? Toy from <code>compute_u09.py</code>: 1F1B at
+   p=4, m=32: ~9.4 percent bubble with ~4 microbatches of activation
+   memory.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> 1F1B (one forward, one backward): each stage
+   alternates, keeping the pipeline full in steady state and
+   limiting in-flight activations to ~p microbatches. Interleaved:
+   each stage holds multiple layer chunks, shrinking the bubble
+   further at the cost of more p2p comm.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Schedule steps.
+   Assumption: the backward takes ~2x the forward.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> 1F1B&rsquo;s steady state overlaps forward
+   of microbatch i+1 with backward of i. The bubble concentrates at
+   the start/end: ~(p-1)/m.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u09.py</code> (executed
+   2026-10-06): 9.4 percent, ~4 in flight.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The 1F1B schedule
+   simulator. About 15 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Matches the analytic
+   bubble, activation count bounded by p. Expected outputs in the
+   lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Schedule complexity, interleaving adds comm.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> GPipe (simple,
+    more memory). 1F1B is the standard.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> 1F1B with uneven stages:
+    the slow stage sets the pace and the bubble formula
+    underestimates. The assumption &ldquo;uniform stages&rdquo; breaks, balance
+    first (C07).</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    PipeDream-Flush (Narayanan et al., 2021, primary). Extension:
+    simulate uneven stages, hypothesis: bubble exceeds formula.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the 1F1B pattern. (b) Oral ladder:
+    define steady state, compute the toy, justify the memory bound,
+    implement, compare with GPipe, debug the uneven case, critique
+    the 2x assumption, design the simulation. (c) Transfer: memory
+    allows 2 in flight, p=4. Options? Answers:
+    <code>../keys/u09_answers.md</code> A4.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U09 task 4 simulates 1F1B.
+    See <code>../labs/u09_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the schedule comparison table. No
+    figure, tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c05-hybrid-dptppp">C05: Hybrid DP/TP/PP</h3>
+<p>Leaf id <code>cs336-U09-C05</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: combining the axes. Objectives: factor N into (tp, pp,
+   dp), state the ordering rules. Depends on C01, C02, U08-C01.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: 64 GPUs: what
+   (tp,pp,dp)? Toy from <code>compute_u09.py</code>: (8,2,4), (4,4,4),
+   (2,8,4) all cover 64.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> tp<em>pp</em>dp = N. Rules: TP innermost (fast links,
+   per-layer comm), PP next (p2p across nodes ok), DP outermost
+   (all-reduce grads, most tolerant). Memory per GPU divides by
+   tp*pp (params) and dp (batch).</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> The triple.
+   Assumption: a 3-tier network.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Each axis divides one dimension:
+   params by tp (and pp for layers), batch by dp, optimizer by dp
+   with ZeRO. The product covers N.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u09.py</code> (executed
+   2026-10-06): the three factorizations of 64.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>factorize(N)</code>:
+   enumerate triples with the ordering rules. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Products equal N,
+   tp &lt;= node size enforced. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Tuning the triple is the distributed design problem.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Pure DP+ZeRO
+    (simpler, fails when layers exceed memory). Hybrid when needed.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> tp spanning slow links:
+    per-layer latency kills throughput. The assumption &ldquo;any
+    factorization works&rdquo; breaks, respect the link tiers.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    large-run system papers (primary). Extension: score the three
+    factorizations by comm, hypothesis: (8,2,4) wins intra-node.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the ordering rules. (b) Oral ladder:
+    define each axis, factor 64, justify TP-innermost, implement,
+    compare with pure DP, debug the cross-node TP, critique the
+    3-tier assumption, design the scoring. (c) Transfer: N=256,
+    node=8. Propose a triple and defend it. Answers:
+    <code>../keys/u09_answers.md</code> A5.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U09 task 5 factorizes and scores.
+    See <code>../labs/u09_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the factorization table. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c06-communication-per-strategy">C06: Communication per strategy</h3>
+<p>Leaf id <code>cs336-U09-C06</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: comparing comm volumes. Objectives: tabulate bytes per
+   step per strategy. Depends on C01, C02, U08-C02.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: which axis costs the
+   most comm? Toy: TP 2.1 GB/step (collective, latency-sensitive),
+   PP p2p per boundary, DP one all-reduce of grads per step.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> TP: 2 all-reduces/layer (many small). PP:
+   activations per microbatch per boundary (p2p). DP: grads once
+   per step (one large). The pattern (not just bytes) decides the
+   link requirement.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> GB/step and
+   message counts. Assumption: the reference model.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> TP: 2<em>L messages of B</em>T<em>d</em>bytes.
+   PP: 2<em>m</em>(p-1) messages of microbatch activations. DP: 1 message
+   of grad bytes (bucketed).</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: the three rows of the table for the
+   reference.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>comm_table(...)</code>:
+   the three formulas. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Sums match the
+   per-strategy simulators. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The table drives placement (C05).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Measurement
+    (needs hardware). The table is the planning tool.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Counting bytes but not
+    messages: TP&rsquo;s 64 small all-reduces hurt more than DP&rsquo;s one
+    large one at equal bytes. The assumption &ldquo;bytes are bytes&rdquo;
+    breaks, latency matters.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: system
+    papers&rsquo; comm analyses (primary). Extension: add message counts,
+    hypothesis: TP dominates latency.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the three patterns. (b) Oral ladder:
+    define each, compute the toy, justify the latency claim,
+    implement, compare, debug the bytes-only view, critique the
+    reference, design the message-count extension. (c) Transfer:
+    links are fast but high-latency. Which axis suffers most?
+    Answers: <code>../keys/u09_answers.md</code> A6.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U09 task 6 builds the comm table.
+    See <code>../labs/u09_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u09_fig03: lesson plate, comm per strategy
+    bars. Source: original. Render: <code>assets/render_u09.py</code>.</p>
+</li>
+</ol>
+<hr />
+<figure><img alt="u09_fig03" src="../assets/u09_fig03.png"><figcaption>lesson plate, comm per strategy bars. Source: original. Render: assets/render_u09.py. ---</figcaption></figure>
+<h3 id="c07-partition-balance">C07: Partition balance</h3>
+<p>Leaf id <code>cs336-U09-C07</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: even stage splits. Objectives: explain why the embedding
+   and head unbalance PP, state the fix. Depends on C02.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: 32 layers over 4
+   stages, but stage 0 also holds the embedding. Toy: the lab shows
+   stage times 10/8/8/9 ms and the 25 percent slowdown of the naive
+   split.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The pipeline runs at the slowest stage&rsquo;s pace.
+   The embedding, the LM head, and uneven layer costs unbalance a
+   naive contiguous split. Fix: profile per-layer times and split
+   by cost, not by count.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> ms per stage.
+   Assumption: the toy times.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Throughput = 1/max(stage times).
+   Balance = max/mean, the goal is ~1.0.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: naive 10/8/8/9 -&gt; balance 1.14,
+   rebalanced 8.75 each -&gt; 1.00.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>balance(costs, p)</code>:
+   greedy partition by cumulative cost. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Balanced max &lt;= naive
+   max, covers all layers. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> One profiling run, the alternative is a permanent
+   slowdown.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Manual tuning
+    (slower). The greedy split is automatic.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Balancing by parameter
+    count: attention and MLP have different FLOP/param ratios, so
+    the &ldquo;balanced&rdquo; split is not. The assumption &ldquo;params = cost&rdquo;
+    breaks, profile time, not params.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    pipeline partition papers (primary). Extension: balance by
+    measured times, hypothesis: beats param-count split.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the balance metric. (b) Oral ladder:
+    define the pace-setter, compute the toy, justify cost-based
+    split, implement, compare with param split, debug the
+    embedding case, critique greediness, design the measurement.
+    (c) Transfer: one stage is 2x slow and cannot move. Options?
+    Answers: <code>../keys/u09_answers.md</code> A7.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U09 task 7 balances a toy pipeline.
+    See <code>../labs/u09_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the balance table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c08-activation-checkpointing-interplay">C08: Activation checkpointing interplay</h3>
+<p>Leaf id <code>cs336-U09-C08</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: recomputation meets pipeline. Objectives: state how
+   checkpointing changes the PP memory math. Depends on C04, U02-C09.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: 1F1B bounds in-flight
+   activations, but each is still large. Toy: the lab shows
+   checkpointing cutting the per-microbatch activation memory by
+   ~sqrt at 33 percent more compute.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Checkpointing (rematerialization) stores only
+   layer inputs and recomputes the rest in backward. In a pipeline
+   it multiplies the affordable m: the bubble lever (C03) gets
+   cheaper.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Memory per
+   microbatch. Assumption: the toy layer sizes.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Memory per microbatch drops from
+   O(L) to O(sqrt(L)) with selective checkpointing, the freed
+   memory funds more microbatches.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: the memory numbers for the reference
+   microbatch with and without checkpointing.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The memory model:
+   two lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Recomputed activations
+   match exactly, memory drops. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> ~33 percent more compute for the memory.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> CPU offload
+    (slower). Checkpointing is the standard.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Checkpointing inside the
+    1F1B steady state without accounting: recompute competes with
+    the overlapped schedule and the bubble grows. The assumption
+    &ldquo;memory is the only effect&rdquo; breaks, model the compute too.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    checkpointing papers (primary). Extension: measure the
+    tradeoff on the toy, hypothesis: memory wins, compute +33%.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the tradeoff. (b) Oral ladder:
+    define rematerialization, compute the toy, justify the sqrt,
+    implement the model, compare with offload, debug the schedule
+    clash, critique the 33 percent, design the measurement.
+    (c) Transfer: memory still binds at max m. Next lever?
+    Answers: <code>../keys/u09_answers.md</code> A8.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U09 task 8 models the tradeoff.
+    See <code>../labs/u09_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the memory table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c09-inference-parallelism">C09: Inference parallelism</h3>
+<p>Leaf id <code>cs336-U09-C09</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: TP for decode. Objectives: explain why inference uses TP
+   and not PP. Depends on C01, U04-C01.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: serving a 70B model at
+   low latency: TP or PP? Toy: the lab shows TP splitting the
+   per-token GEMMs (latency-bound) while PP would serialize tokens
+   through stages.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Decode is memory-bound per token: TP splits the
+   weight reads across GPUs, cutting per-token latency. PP keeps
+   full weights per stage but adds stage-to-stage latency per
+   token: good for throughput, bad for latency.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> ms/token.
+   Assumption: single-request latency matters.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Per-token time ~= weight bytes /
+   aggregate bandwidth under TP, under PP it is the stage sum plus
+   p2p hops.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: toy latency model for TP=4 vs PP=4 on
+   the reference.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The latency model:
+   two formulas.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> TP latency falls with
+   tp, PP latency rises with p. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> TP&rsquo;s per-layer comm at batch 1 (latency-sensitive).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> PP for
+    throughput-oriented serving. TP for latency.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> PP=8 for a chatbot: each
+    token pays 8 stage hops and the p99 latency misses the SLO. The
+    assumption &ldquo;serving = training parallelism&rdquo; breaks, the
+    objective differs.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    serving system papers (primary). Extension: model both at
+    batch 32, hypothesis: PP catches up on throughput.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the latency argument. (b) Oral
+    ladder: define the per-token bound, compute the toy, justify
+    TP, implement the model, compare, debug the SLO miss, critique
+    the batch-1 assumption, design the batch-32 check. (c) Transfer:
+    SLO is throughput, not latency. Choice? Answers:
+    <code>../keys/u09_answers.md</code> A9.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U09 task 9 models inference latency.
+    See <code>../labs/u09_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the latency table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c10-optimizer-sharding-across-hybrid">C10: Optimizer sharding across hybrid</h3>
+<p>Leaf id <code>cs336-U09-C10</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: ZeRO over DP groups in a hybrid. Objectives: state which
+   group shards what. Depends on C05, U08-C03.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: with (tp=8,pp=2,dp=4),
+   what does ZeRO shard over? Toy: the lab computes per-GPU bytes:
+   params shard over tp*pp, optimizer over dp.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Each axis shards its own dimension: TP shards
+   layer params within the layer, PP shards layers, DP+ZeRO shards
+   optimizer states and grads across the dp group. The per-GPU total
+   is the product of the divisions.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> GB/GPU.
+   Assumption: the (8,2,4) triple on the 7B model.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Params/GPU = P/(tp<em>pp), grads and
+   optimizer shard over dp (and tp</em>pp for the param shards they
+   cover).</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: (8,2,4): params 14/16 = 0.875 GB fp16
+   per GPU, optimizer states shard over dp=4: 56/4 = 14 GB/GPU.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>hybrid_bytes(tp, pp,
+   dp, P)</code>: the formula. About 6 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Product of divisions
+   covers the total, dp=1 recovers the non-DP numbers. Expected
+   outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Bookkeeping, the alternative is OOM.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Full replication
+    (simpler, fails at scale). Shard everything.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Sharding optimizer over tp
+    instead of dp: the all-reduce groups mismatch and updates are
+    wrong. The assumption &ldquo;any group shards&rdquo; breaks, the shard
+    group must match the reduction group.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: hybrid
+    sharding docs (primary). Extension: compute the (4,4,4) table,
+    hypothesis: params 0.875, optim 14.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: which group shards what. (b) Oral
+    ladder: define the divisions, compute the toy, justify the
+    group matching, implement, compare triples, debug the mismatch,
+    critique the even assumption, design the (4,4,4) check.
+    (c) Transfer: dp=1. What changes? Answers:
+    <code>../keys/u09_answers.md</code> A10.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U09 task 10 computes hybrid bytes.
+    See <code>../labs/u09_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the hybrid bytes table. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c11-failure-modes">C11: Failure modes</h3>
+<p>Leaf id <code>cs336-U09-C11</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: what goes wrong. Objectives: name the three failure modes
+   and their signatures. Depends on C03, C07, C05.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the hybrid run is
+   slow. Which axis is at fault? Toy: the lab injects imbalance,
+   bubble, and cross-node TP and shows each signature.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Three modes: (1) imbalance: one stage slow,
+   all wait (signature: stage-time skew), (2) bubble: too few
+   microbatches (signature: idle gaps at fill/drain), (3) wrong
+   tier: TP across slow links (signature: comm-dominated step).</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Signatures as
+   measurements. Assumption: per-stage timers exist.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Each mode has a distinct profile:
+   skew vs gaps vs comm fraction. Diagnose from the profile, not
+   from the config.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: the three injected signatures on the
+   toy simulator.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The diagnosis
+   checklist: ordered measurements. Written.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Each injection trips
+   its signature only. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Diagnosis time, the alternative is blind tuning.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Expert review.
+    The checklist is the first pass.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> &ldquo;Fixing&rdquo; a bubble by adding
+    GPUs: more stages can worsen the bubble. The assumption &ldquo;more
+    hardware helps&rdquo; breaks, the fix is m or schedule.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: system
+    debugging guides (primary). Extension: inject each mode,
+    hypothesis: distinct signatures.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the three modes and signatures.
+    (b) Oral ladder: define each, derive the signature, justify the
+    checklist order, write it, compare with expert review, debug the
+    more-GPUs &ldquo;fix&rdquo;, critique the timer assumption, design the
+    injection. (c) Transfer: profile shows idle gaps at fill/drain.
+    Fix? Answers: <code>../keys/u09_answers.md</code> A11.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U09 task 11 injects the modes.
+    See <code>../labs/u09_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the failure-mode table. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c12-parallelism-planning-invariants">C12: Parallelism planning invariants</h3>
+<p>Leaf id <code>cs336-U09-C12</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: pre-flight checks. Objectives: state the invariants any
+   plan must satisfy. Depends on C05, C10.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: before launching on
+   64 GPUs, what is verified? Toy: the lab checks five invariants
+   on a proposed triple.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Invariants: (1) tp<em>pp</em>dp = N, (2) tp &lt;= node
+   size, (3) per-GPU bytes &lt; HBM, (4) m &gt;&gt; p, (5) the shard group
+   matches the reduction group. Violations are caught on paper, not
+   on the cluster.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> The five
+   checks. Assumption: the byte models.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Each invariant is a necessary
+   condition from the earlier concepts, together they are the
+   pre-flight gate.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: (8,2,4) on 64 passes all five, (16,2,2)
+   fails invariant 2.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>check_plan(tp, pp,
+   dp, N, node, hbm)</code>: the five asserts. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Passes the good plan,
+   each bad plan fails exactly the right invariant. Expected
+   outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Minutes, saves allocations.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Trial runs
+    (expensive). Invariants first.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> All invariants pass but the
+    run is slow: the invariants are necessary, not sufficient
+    (balance, overlap still need tuning). The assumption &ldquo;gates
+    guarantee speed&rdquo; breaks, they guarantee feasibility.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: system
+    design docs (primary). Extension: propose three plans and gate
+    them, hypothesis: one passes.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the five invariants. (b) Oral ladder:
+    define each, derive the HBM check, justify the gate order,
+    implement, compare with trial runs, debug the slow-but-valid
+    plan, critique sufficiency, design the three-plan gate.
+    (c) Transfer: a new cluster has 2-tier links. Which invariant
+    changes? Answers: <code>../keys/u09_answers.md</code> A12.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U09 task 12 implements the gate.
+    See <code>../labs/u09_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the invariant checklist. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h2 id="unit-russian-doll-ladder-u09">Unit Russian-doll ladder (U09)</h2>
+<ul>
+<li>Shell 0: how does the model itself split across GPUs?</li>
+<li>Shell 1: one TP split, one bubble, one hybrid triple.</li>
+<li>Shell 2: ranks, stages, microbatches, shards, links.</li>
+<li>Shell 3: one all-reduce pair, one stage, one reshard.</li>
+<li>Shell 4: the TP simulator, the pipeline simulator, the plan gate.</li>
+<li>Shell 5: 67.1 MB, 42.9 percent, (8,2,4).</li>
+<li>Shell 6: change tp, predict the comm, observe.</li>
+<li>Shell 7: unbalance the stages, shrink m, span the slow tier.</li>
+<li>Shell 8: TP vs PP, GPipe vs 1F1B, hybrid vs pure DP.</li>
+<li>Shell 9: failure-mode injection, triple scoring.</li>
+<li>Shell 10: the parallelism plan is the production scale contract.</li>
+</ul>
+      
+      <nav class="pager"><a href="../keys/u08_answers.html"><span class="lbl">← Previous</span>U08 · Answers</a><a href="../keys/u09_answers.html"><span class="lbl">Next →</span>U09 · Answers</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
