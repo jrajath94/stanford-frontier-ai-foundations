@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U07 · Kernels and IO-aware attention — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Kernels and IO-aware attention.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-u07" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../course_map.html" data-page="cs336-course-map">Course map</a></li>
+<li><a href="../prerequisites.html" data-page="cs336-prereqs">Prerequisites</a></li>
+<li><a href="../notation_and_shapes.html" data-page="cs336-notation">Notation</a></li>
+<li><a href="../glossary.html" data-page="cs336-glossary">Glossary</a></li>
+<li><a href="../cheatsheet.html" data-page="cs336-cheatsheet">Cheatsheet</a></li>
+<li><a href="../crash-course.html" data-page="cs336-crash">Crash course</a></li>
+<li><a href="../lessons/u01_tokenization.html" data-page="cs336-u01">U01 · Text representation and tokeni</a></li>
+<li><a href="../keys/u01_answers.html" data-page="cs336-u01-answers">U01 · Answers</a></li>
+<li><a href="../lessons/u02_tensor_programming.html" data-page="cs336-u02">U02 · Executable tensor programming </a></li>
+<li><a href="../keys/u02_answers.html" data-page="cs336-u02-answers">U02 · Answers</a></li>
+<li><a href="../lessons/u03_transformer_block.html" data-page="cs336-u03">U03 · Transformer block mechanics</a></li>
+<li><a href="../keys/u03_answers.html" data-page="cs336-u03-answers">U03 · Answers</a></li>
+<li><a href="../lessons/u04_attention_moe.html" data-page="cs336-u04">U04 · Attention alternatives and exp</a></li>
+<li><a href="../keys/u04_answers.html" data-page="cs336-u04-answers">U04 · Answers</a></li>
+<li><a href="../lessons/u05_optimization.html" data-page="cs336-u05">U05 · Optimization and training corr</a></li>
+<li><a href="../keys/u05_answers.html" data-page="cs336-u05-answers">U05 · Answers</a></li>
+<li><a href="../lessons/u06_gpu_tpu.html" data-page="cs336-u06">U06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../keys/u06_answers.html" data-page="cs336-u06-answers">U06 · Answers</a></li>
+<li><a href="../lessons/u07_kernels.html" data-page="cs336-u07" class="active">U07 · Kernels and IO-aware attention</a></li>
+<li><a href="../keys/u07_answers.html" data-page="cs336-u07-answers">U07 · Answers</a></li>
+<li><a href="../lessons/u08_data_sharding.html" data-page="cs336-u08">U08 · Data and optimizer sharding</a></li>
+<li><a href="../keys/u08_answers.html" data-page="cs336-u08-answers">U08 · Answers</a></li>
+<li><a href="../lessons/u09_model_parallel.html" data-page="cs336-u09">U09 · Model and hybrid parallelism</a></li>
+<li><a href="../keys/u09_answers.html" data-page="cs336-u09-answers">U09 · Answers</a></li>
+<li><a href="../lessons/u10_scaling_laws.html" data-page="cs336-u10">U10 · Scaling laws and extrapolation</a></li>
+<li><a href="../keys/u10_answers.html" data-page="cs336-u10-answers">U10 · Answers</a></li>
+<li><a href="../labs/u01_lab.html" data-page="cs336-lab-u01">Lab 01 · Text representation and tokeni</a></li>
+<li><a href="../lessons/u11_inference.html" data-page="cs336-u11">U11 · Inference algorithms and servi</a></li>
+<li><a href="../labs/u01_lab_key.html" data-page="cs336-lab-u01-keys">Lab 01 · Keys</a></li>
+<li><a href="../keys/u11_answers.html" data-page="cs336-u11-answers">U11 · Answers</a></li>
+<li><a href="../labs/u02_lab.html" data-page="cs336-lab-u02">Lab 02 · Executable tensor programming </a></li>
+<li><a href="../lessons/u12_evaluation.html" data-page="cs336-u12">U12 · Evaluation and measurement val</a></li>
+<li><a href="../labs/u02_lab_key.html" data-page="cs336-lab-u02-keys">Lab 02 · Keys</a></li>
+<li><a href="../keys/u12_answers.html" data-page="cs336-u12-answers">U12 · Answers</a></li>
+<li><a href="../labs/u03_lab.html" data-page="cs336-lab-u03">Lab 03 · Transformer block mechanics</a></li>
+<li><a href="../lessons/u13_data_sourcing.html" data-page="cs336-u13">U13 · Data sourcing and transformati</a></li>
+<li><a href="../labs/u03_lab_key.html" data-page="cs336-lab-u03-keys">Lab 03 · Keys</a></li>
+<li><a href="../keys/u13_answers.html" data-page="cs336-u13-answers">U13 · Answers</a></li>
+<li><a href="../labs/u04_lab.html" data-page="cs336-lab-u04">Lab 04 · Attention alternatives and exp</a></li>
+<li><a href="../lessons/u14_data_mixing.html" data-page="cs336-u14">U14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../labs/u04_lab_key.html" data-page="cs336-lab-u04-keys">Lab 04 · Keys</a></li>
+<li><a href="../keys/u14_answers.html" data-page="cs336-u14-answers">U14 · Answers</a></li>
+<li><a href="../labs/u05_lab.html" data-page="cs336-lab-u05">Lab 05 · Optimization and training corr</a></li>
+<li><a href="../lessons/u15_midtraining.html" data-page="cs336-u15">U15 · Midtraining and supervised ada</a></li>
+<li><a href="../labs/u05_lab_key.html" data-page="cs336-lab-u05-keys">Lab 05 · Keys</a></li>
+<li><a href="../keys/u15_answers.html" data-page="cs336-u15-answers">U15 · Answers</a></li>
+<li><a href="../labs/u06_lab.html" data-page="cs336-lab-u06">Lab 06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../lessons/u16_alignment_rl.html" data-page="cs336-u16">U16 · Preference alignment and reaso</a></li>
+<li><a href="../labs/u06_lab_key.html" data-page="cs336-lab-u06-keys">Lab 06 · Keys</a></li>
+<li><a href="../keys/u16_answers.html" data-page="cs336-u16-answers">U16 · Answers</a></li>
+<li><a href="../labs/u07_lab.html" data-page="cs336-lab-u07">Lab 07 · Kernels and IO-aware attention</a></li>
+<li><a href="../lessons/u17_multimodal_systems.html" data-page="cs336-u17">U17 · Multimodality and training-sys</a></li>
+<li><a href="../labs/u07_lab_key.html" data-page="cs336-lab-u07-keys">Lab 07 · Keys</a></li>
+<li><a href="../keys/u17_answers.html" data-page="cs336-u17-answers">U17 · Answers</a></li>
+<li><a href="../labs/u08_lab.html" data-page="cs336-lab-u08">Lab 08 · Data and optimizer sharding</a></li>
+<li><a href="../lessons/u18_guests_defense.html" data-page="cs336-u18">U18 · Guest material and final resea</a></li>
+<li><a href="../labs/u08_lab_key.html" data-page="cs336-lab-u08-keys">Lab 08 · Keys</a></li>
+<li><a href="../keys/u18_answers.html" data-page="cs336-u18-answers">U18 · Answers</a></li>
+<li><a href="../labs/u09_lab.html" data-page="cs336-lab-u09">Lab 09 · Model and hybrid parallelism</a></li>
+<li><a href="../labs/u09_lab_key.html" data-page="cs336-lab-u09-keys">Lab 09 · Keys</a></li>
+<li><a href="../labs/u10_lab.html" data-page="cs336-lab-u10">Lab 10 · Scaling laws and extrapolation</a></li>
+<li><a href="../labs/u10_lab_key.html" data-page="cs336-lab-u10-keys">Lab 10 · Keys</a></li>
+<li><a href="../interview/u01_questions.html" data-page="cs336-int-u01">Interview · U01</a></li>
+<li><a href="../labs/u11_lab.html" data-page="cs336-lab-u11">Lab 11 · Inference algorithms and servi</a></li>
+<li><a href="../interview/u01_key.html" data-page="cs336-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../labs/u11_lab_key.html" data-page="cs336-lab-u11-keys">Lab 11 · Keys</a></li>
+<li><a href="../interview/u02_questions.html" data-page="cs336-int-u02">Interview · U02</a></li>
+<li><a href="../labs/u12_lab.html" data-page="cs336-lab-u12">Lab 12 · Evaluation and measurement val</a></li>
+<li><a href="../interview/u02_key.html" data-page="cs336-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../labs/u12_lab_key.html" data-page="cs336-lab-u12-keys">Lab 12 · Keys</a></li>
+<li><a href="../interview/u03_questions.html" data-page="cs336-int-u03">Interview · U03</a></li>
+<li><a href="../labs/u13_lab.html" data-page="cs336-lab-u13">Lab 13 · Data sourcing and transformati</a></li>
+<li><a href="../interview/u03_key.html" data-page="cs336-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../labs/u13_lab_key.html" data-page="cs336-lab-u13-keys">Lab 13 · Keys</a></li>
+<li><a href="../interview/u04_questions.html" data-page="cs336-int-u04">Interview · U04</a></li>
+<li><a href="../labs/u14_lab.html" data-page="cs336-lab-u14">Lab 14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../interview/u04_key.html" data-page="cs336-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../labs/u14_lab_key.html" data-page="cs336-lab-u14-keys">Lab 14 · Keys</a></li>
+<li><a href="../interview/u05_questions.html" data-page="cs336-int-u05">Interview · U05</a></li>
+<li><a href="../labs/u15_lab.html" data-page="cs336-lab-u15">Lab 15 · Midtraining and supervised ada</a></li>
+<li><a href="../interview/u05_key.html" data-page="cs336-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../labs/u15_lab_key.html" data-page="cs336-lab-u15-keys">Lab 15 · Keys</a></li>
+<li><a href="../interview/u06_questions.html" data-page="cs336-int-u06">Interview · U06</a></li>
+<li><a href="../labs/u16_lab.html" data-page="cs336-lab-u16">Lab 16 · Preference alignment and reaso</a></li>
+<li><a href="../interview/u06_key.html" data-page="cs336-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../labs/u16_lab_key.html" data-page="cs336-lab-u16-keys">Lab 16 · Keys</a></li>
+<li><a href="../interview/u07_questions.html" data-page="cs336-int-u07">Interview · U07</a></li>
+<li><a href="../labs/u17_lab.html" data-page="cs336-lab-u17">Lab 17 · Multimodality and training-sys</a></li>
+<li><a href="../interview/u07_key.html" data-page="cs336-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../labs/u17_lab_key.html" data-page="cs336-lab-u17-keys">Lab 17 · Keys</a></li>
+<li><a href="../interview/u08_questions.html" data-page="cs336-int-u08">Interview · U08</a></li>
+<li><a href="../labs/u18_lab.html" data-page="cs336-lab-u18">Lab 18 · Guest material and final resea</a></li>
+<li><a href="../interview/u08_key.html" data-page="cs336-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../labs/u18_lab_key.html" data-page="cs336-lab-u18-keys">Lab 18 · Keys</a></li>
+<li><a href="../interview/u09_questions.html" data-page="cs336-int-u09">Interview · U09</a></li>
+<li><a href="../interview/u09_key.html" data-page="cs336-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../interview/u10_questions.html" data-page="cs336-int-u10">Interview · U10</a></li>
+<li><a href="../interview/u10_key.html" data-page="cs336-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../interview/u11_questions.html" data-page="cs336-int-u11">Interview · U11</a></li>
+<li><a href="../interview/u11_key.html" data-page="cs336-int-u11-keys">Interview · U11 keys</a></li>
+<li><a href="../interview/u12_questions.html" data-page="cs336-int-u12">Interview · U12</a></li>
+<li><a href="../interview/u12_key.html" data-page="cs336-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../interview/u13_questions.html" data-page="cs336-int-u13">Interview · U13</a></li>
+<li><a href="../interview/u13_key.html" data-page="cs336-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../interview/u14_questions.html" data-page="cs336-int-u14">Interview · U14</a></li>
+<li><a href="../interview/u14_key.html" data-page="cs336-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../interview/u15_questions.html" data-page="cs336-int-u15">Interview · U15</a></li>
+<li><a href="../interview/u15_key.html" data-page="cs336-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../interview/u16_questions.html" data-page="cs336-int-u16">Interview · U16</a></li>
+<li><a href="../interview/u16_key.html" data-page="cs336-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../interview/u17_questions.html" data-page="cs336-int-u17">Interview · U17</a></li>
+<li><a href="../interview/u17_key.html" data-page="cs336-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../interview/u18_questions.html" data-page="cs336-int-u18">Interview · U18</a></li>
+<li><a href="../interview/u18_key.html" data-page="cs336-int-u18-keys">Interview · U18 keys</a></li>
+<li><a href="../interview/oral-defenses.html" data-page="cs336-int-oral">Interview · Oral</a></li>
+<li><a href="../interview/keys-oral.html" data-page="cs336-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../interview/transfer-sets.html" data-page="cs336-int-transfer">Interview · Transfer</a></li>
+<li><a href="../interview/keys-transfer.html" data-page="cs336-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../capstones/capstone_applied.html" data-page="cs336-cap-applied">Capstone · Applied</a></li>
+<li><a href="../capstones/capstone_research.html" data-page="cs336-cap-research">Capstone · Research</a></li>
+<li><a href="../keys/diagnostic_key.html" data-page="cs336-diagnostic-keys">Diagnostic · Keys</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U07 · Kernels and IO-aware attention</nav>
+      <h1>U07 · Kernels and IO-aware attention</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u07-kernels-and-io-aware-attention">U07 , Kernels and IO-aware attention</h1>
+<p>Prerequisites: P06, P07, P14, P15. Bridge links in <code>../prerequisites.md</code>.
+Session: cross-cutting branch (kernel work reported across course
+sessions, exact mapping in <code>../course_map.md</code>).
+Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
+PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
+<h2 id="standing-note">Standing note</h2>
+<p>No GPU on this box. Kernel algorithms are studied as numpy tiled
+reference implementations on CPU, every number is computed, and the
+lesson states the hardware assumptions (100 KB toy SRAM budget) where
+used. Triton code is read and written as pseudocode, not executed.</p>
+<h2 id="local-remediation-tiling-and-the-memory-wall">Local remediation , tiling and the memory wall</h2>
+<p>Read this if diagnostic items D9 or D12 were not full marks. Fast
+memory (SRAM) is small, slow memory (HBM) is large. A kernel that
+streams data once from HBM and reuses it in SRAM beats one that
+re-reads it, even with identical FLOPs. Tiling splits the work into
+blocks that fit in SRAM, the online softmax lets attention tile over
+the sequence.</p>
+<p>Worked check: materializing (B=2,h=8,T=4096) bf16 scores moves 537
+MB, streaming Q/K/V once moves 25.2 MB (from
+<code>assets/compute_u07.py</code>, executed 2026-10-06).
+Assessment: with a 100 KB SRAM budget, dh=64, bf16, and 4 tiles
+(Q,K,V,O) resident, what block size fits? Key: <code>../keys/u07_answers.md</code>
+R1.</p>
+<hr />
+<h3 id="c01-tiling-for-the-memory-hierarchy">C01: Tiling for the memory hierarchy</h3>
+<p>Leaf id <code>cs336-U07-C01</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: blocking computation for SRAM. Objectives: size a tile from
+   the SRAM budget, count HBM passes. Depends on P06, U06-C02.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how big a block fits?
+   Toy from <code>compute_u07.py</code>: 100 KB SRAM, dh=64, bf16, 4 resident
+   tiles -&gt; Bc = 200, T=4096 needs 21 blocks.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> SRAM holds the working tiles, HBM holds the
+   matrices. The tile size is the largest block with all live tiles
+   fitting: 4<em>Bc</em>dh*bytes &lt;= SRAM. Bigger tiles mean fewer HBM
+   passes and better reuse.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Bc, Br: block
+   sizes. Assumption: the 100 KB toy budget.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Bytes resident = tiles * Bc * dh *
+   bytes. Solve for Bc. The loop nest streams K/V blocks for each Q
+   block, total HBM reads scale with the block count.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
+   2026-10-06): Bc=200, 21 blocks for T=4096.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>tile_size(sram, dh,
+   bytes, tiles)</code>: integer division. About 3 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Bc<em>4</em>dh*bytes &lt;=
+   SRAM, Bc+1 violates it. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Tiling is pure win on memory-bound ops, the cost is
+   code complexity.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> No tiling (simple,
+    slow). Every fast kernel tiles.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Tiles sized for the wrong
+    SRAM: silent spilling to slower memory, 2-5x slower with correct
+    results. The assumption &ldquo;the budget is right&rdquo; breaks across
+    devices, query it, do not hardcode.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: tiled
+    GEMM literature (primary: vendor guides). Extension: recompute
+    Bc for dh=128, hypothesis: halves to 100.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the tile-size formula. (b) Oral ladder:
+    define the resident set, compute Bc, justify the 4 tiles,
+    implement, compare with no tiling, debug the spill, critique the
+    fixed budget, design the dh=128 check. (c) Transfer: SRAM
+    doubles. What changes, and what does not? Answers:
+    <code>../keys/u07_answers.md</code> A1.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U07 task 1 sizes tiles and counts
+    blocks. See <code>../labs/u07_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u07_fig01: lesson plate, tiles moving between
+    HBM and SRAM. Source: original. Render: <code>assets/render_u07.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u07_fig01" src="../assets/u07_fig01.png"><figcaption>lesson plate, tiles moving between HBM and SRAM. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c02-online-softmax">C02: Online softmax</h3>
+<p>Leaf id <code>cs336-U07-C02</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the rescaling trick. Objectives: derive the online update,
+   prove equivalence. Depends on P05, U05-C01.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: softmax needs the max
+   first, so how can it stream? Toy from <code>compute_u07.py</code>: blocks
+   [1,2],[3,4] give m=4.0, l=1.5530, exactly matching the full
+   computation.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Keep a running max m and normalizer l. A new
+   block with max mb rescales: m&rsquo; = max(m, mb), l&rsquo; = l*exp(m-m&rsquo;) +
+   sum(exp(block-m&rsquo;)). The rescaling corrects the old terms to the
+   new max.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> m: scalar, l:
+   scalar. Assumption: exact arithmetic (fp32 accumulation, C11).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> exp(x-m&rsquo;) = exp(x-m)*exp(m-m&rsquo;): the
+   alpha factor rescales both the accumulator and the normalizer.
+   Induction over blocks gives the exact softmax.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
+   2026-10-06): m=4.0, l=1.5530, match True.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>online_softmax(
+   blocks)</code>: the loop. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Matches the naive
+   softmax for any block split, including block size 1. Expected
+   outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> O(T) extra exp calls for the rescaling, negligible.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Two-pass softmax
+    (needs the full row in SRAM). Online is the streaming answer.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Accumulating l in fp16:
+    the rescaling underflows and rows go to nan. The assumption
+    &ldquo;any dtype works&rdquo; breaks, the statistics stay in fp32.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    online-softmax derivation (primary: FlashAttention paper
+    sections). Extension: verify block-size-1 equivalence,
+    hypothesis: exact.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the update equations. (b) Oral ladder:
+    define the rescaling, hand-run the toy, justify alpha,
+    implement, compare with two-pass, debug the fp16 l, critique the
+    exactness claim, design the block-1 check. (c) Transfer: the row
+    has 1M elements. What changes? Answers: <code>../keys/u07_answers.md</code>
+    A2.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U07 task 2 implements online softmax
+    and the equivalence checks. See <code>../labs/u07_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the rescaling diagram (two blocks, alpha
+    arrow). No figure, tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c03-flashattention-forward">C03: FlashAttention forward</h3>
+<p>Leaf id <code>cs336-U07-C03</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the tiled forward pass. Objectives: write the algorithm,
+   state the HBM savings. Depends on C01, C02.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: attention without the
+   T^2 matrix? Toy from <code>compute_u07.py</code>: the tiled forward matches
+   naive to 3.33e-16, traffic 537 MB -&gt; 25.2 MB.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Outer loop over Q blocks (each fits in SRAM).
+   Inner loop over K/V blocks: compute scores, update the online
+   softmax statistics, accumulate O. Never materialize the full
+   scores. Output rescaling happens once at the end per row.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Q,K,V,O tiles:
+   (Bc,dh). m,l per row. Assumption: fp32 accumulators.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The inner loop is exactly the online
+   softmax with the V-weighted sum folded in: acc&rsquo; = acc*alpha +
+   exp(S-m&rsquo;)V. Dividing by l at the end gives softmax(S)V.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
+   2026-10-06): match True, max deviation 3.33e-16, 537 MB versus
+   25.2 MB.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>flash_attn_fwd(Q,K,V,
+   Bc)</code>: the nested loops. About 15 lines of numpy.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Matches naive for
+   random small inputs, causal variant matches the masked naive.
+   Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Same FLOPs as naive, HBM traffic O(T) instead of
+   O(T^2). SRAM-sized tiles bound the inner loop.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Naive attention
+    (simple, memory-bound), linear attention (U04, approximate).
+    FlashAttention is exact and IO-aware.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Forgetting the final
+    division by l: outputs are scaled by the row normalizer and the
+    model trains on garbage. The assumption &ldquo;acc is the answer&rdquo;
+    breaks, the division is load-bearing.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    FlashAttention paper (Dao et al., 2022, primary). Extension:
+    verify the causal variant, hypothesis: matches masked naive.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the loop nest. (b) Oral ladder:
+    define the tile roles, trace one inner step, justify the
+    rescaling, implement, compare traffic, debug the missing
+    division, critique the fp32 assumption, design the causal check.
+    (c) Transfer: T=128k. What dominates, and what breaks?
+    Answers: <code>../keys/u07_answers.md</code> A3.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U07 task 3 implements the tiled
+    forward and the traffic comparison. See <code>../labs/u07_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u07_fig02: lesson plate, the tiled forward
+    loop nest. Source: original. Render: <code>assets/render_u07.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u07_fig02" src="../assets/u07_fig02.png"><figcaption>lesson plate, the tiled forward loop nest. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c04-flashattention-backward">C04: FlashAttention backward</h3>
+<p>Leaf id <code>cs336-U07-C04</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: the tiled backward pass. Objectives: explain
+   recomputation, state the stored statistics. Depends on C03, P11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the forward never
+   stored the scores, so what does backward use? Answer: it stores
+   only m and l per row (O(T)) and recomputes the scores tiles in
+   the backward pass.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Backward needs dO, then per tile: recompute S,
+   P=softmax(S) from stored m/l, accumulate dQ += P^T dV-ish terms
+   and dK, dV. Recomputation trades FLOPs (cheap) for HBM (the
+   bottleneck).</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Stored: m, l
+   (T floats each), O, dO. Assumption: recompute is cheaper than
+   storing.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> dV = P^T dO, dP = dO V^T, dS =
+   P<em>(dP - rowsum(dP</em>P)), dQ = dS K, dK = dS^T Q. Each tiled with
+   the same blocking.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: tiled-style dQ matches finite
+   differences to 3.41e-07 max relative error on the toy.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>flash_attn_bwd(...)</code>:
+   the tiled loops. About 25 lines of numpy.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Matches finite-
+   difference gradients (U05-C12) on the toy. Expected outputs in
+   the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> ~2.5x the forward FLOPs (recompute), HBM stays O(T).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Storing scores
+    (simple, O(T^2) memory). Recompute is the IO-aware answer.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Storing m/l in fp16:
+    recomputed P mismatches and gradients are wrong. The assumption
+    &ldquo;statistics are cheap to store&rdquo; needs the fp32 qualifier.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    FlashAttention backward derivation (primary). Extension: check
+    dK against finite differences, hypothesis: passes.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: what is stored and what is
+    recomputed. (b) Oral ladder: define the tradeoff, write the dV
+    line, justify recompute, implement, compare memory, debug the
+    fp16 statistics, critique the cheap-recompute assumption,
+    design the dK check. (c) Transfer: SRAM halves. What changes in
+    backward? Answers: <code>../keys/u07_answers.md</code> A4.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U07 task 4 implements the tiled
+    backward and checks it. See <code>../labs/u07_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the stored-vs-recomputed table. No
+    figure, tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c05-block-sparse-patterns">C05: Block-sparse patterns</h3>
+<p>Leaf id <code>cs336-U07-C05</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: skipping blocks. Objectives: define a block mask, state
+   the savings condition. Depends on C03, U04-C02.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: what if most blocks
+   are masked anyway? Toy: a sliding-window mask at block
+   granularity skips (21-3)/21 of the inner loop for Bc=200, T=4096.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The mask becomes a block mask: fully-masked
+   blocks are skipped entirely (no loads, no math). Savings need
+   coarse structure, random sparsity does not tile well.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Block mask:
+   (T/Bc, T/Bc) booleans. Assumption: the pattern is block-aligned.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Skipped fraction = masked blocks /
+   total blocks. The inner loop checks the block mask before
+   loading.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: window w=3 blocks of 21: 18 skipped,
+   6x fewer inner iterations (causal + window).</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The block-mask check
+   inside the tiled forward. About 5 added lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Matches the dense
+   masked naive on the unmasked entries. Expected outputs in the lab
+   key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Savings proportional to skipped blocks, the mask check
+   is free.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Dense tiled
+    (simpler), custom sparse kernels (more general). Block-sparse
+    for structured patterns.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A checkerboard mask at
+    element granularity: no block is fully masked, zero savings,
+    plus mask overhead. The assumption &ldquo;sparsity helps&rdquo; breaks
+    without block structure.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    block-sparse attention papers (primary). Extension: measure the
+    skip fraction for strided patterns, hypothesis: poor.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the block-mask rule. (b) Oral ladder:
+    define block alignment, compute the skip fraction, justify the
+    load skip, implement, compare with dense, debug the
+    checkerboard, critique the structure assumption, design the
+    strided check. (c) Transfer: the mask is data-dependent. What
+    breaks? Answers: <code>../keys/u07_answers.md</code> A5.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U07 task 5 implements block skipping.
+    See <code>../labs/u07_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the pattern table (pattern, skip
+    fraction). No figure, tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c06-kernel-fusion">C06: Kernel fusion</h3>
+<p>Leaf id <code>cs336-U07-C06</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: merging elementwise passes. Objectives: compute the
+   traffic savings, state the fusion rule. Depends on U06-C03.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: dropout, add, norm:
+   three passes or one? Toy from <code>compute_u07.py</code>: 101 MB separate
+   versus 34 MB fused for (B=2,T=4096,d=2048) bf16.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Elementwise chains are memory-bound: each pass
+   streams the tensor. Fusing them into one kernel streams it once.
+   The rule: fuse while the working set fits in SRAM and the ops
+   stay elementwise.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Bytes per pass.
+   Assumption: the fused working set fits.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Traffic = passes * elements * bytes.
+   Fusing n passes into 1 divides traffic by n.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
+   2026-10-06): 101 MB versus 34 MB.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The fused loop
+   pseudocode: load tile, apply the chain, store. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Fused matches
+   sequential within fp tolerance. Expected outputs in the
+   lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> 3x traffic cut here, compile/code complexity.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Framework
+    fusion (torch.compile) versus hand fusion. Hand fusion for the
+    hot path.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Fusing a reduction across
+    the sequence with an elementwise op: the reduction needs the
+    whole row, breaking the tile-at-a-time pattern. The assumption
+    &ldquo;any chain fuses&rdquo; breaks at reductions, they need their own
+    blocking (C02).</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading:
+    compiler fusion literature (primary: framework docs).
+    Extension: fuse the toy chain in numpy and compare, hypothesis:
+    matches.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the fusion rule. (b) Oral ladder:
+    define the traffic model, compute the toy, justify the SRAM
+    condition, sketch the fused loop, compare with torch.compile,
+    debug the reduction case, critique the always-fuse instinct,
+    design the numpy check. (c) Transfer: the chain includes a
+    softmax. What changes? Answers: <code>../keys/u07_answers.md</code> A6.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U07 task 6 fuses a toy chain.
+    See <code>../labs/u07_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the pass-count table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c07-triton-programming-model">C07: Triton programming model</h3>
+<p>Leaf id <code>cs336-U07-C07</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: the tile programming model. Objectives: read a Triton
+   kernel, map blocks to program ids. Depends on C01, P14.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how do you write a
+   tiled kernel without CUDA? Toy: a Triton-style vectorized add
+   expressed as numpy blocks, annotated line by line.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Triton: each program instance handles one tile,
+   <code>tl.arange</code> builds indices, <code>tl.load/store</code> move tiles, the
+   compiler handles the rest. The program id maps to the tile index:
+   the grid is the loop over tiles.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> BLOCK: tile
+   size (power of two). Assumption: the model, not execution (no
+   Triton on this box).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> pid = tl.program_id(0), offs =
+   pid*BLOCK + tl.arange(0, BLOCK), x = tl.load(ptr+offs, mask=&hellip;).
+   The mask handles the tail.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: the numpy-block add with mask,
+   annotated against the Triton lines.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> Pseudocode only (not
+   executed): the add kernel in 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> The numpy analog
+   matches plain add including the tail. Expected outputs in the lab
+   key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> None on this box, on device, the compiler&rsquo;s tiling
+   choices.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> CUDA (full
+    control, more code), torch.compile (no kernel code). Triton for
+    custom tiled ops.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A BLOCK that is not a power
+    of two: the compiler pads and the mask logic silently covers
+    garbage. The assumption &ldquo;any BLOCK works&rdquo; breaks, powers of two
+    are the contract.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    Triton tutorial (primary). Extension: annotate a softmax kernel,
+    hypothesis: the online form appears.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the pid-to-tile mapping. (b) Oral
+    ladder: define the grid, trace the mask, justify the power of
+    two, annotate, compare with CUDA, debug the tail, critique the
+    no-execution limit, design the softmax annotation. (c) Transfer:
+    the kernel needs two tiles resident. What changes?
+    Answers: <code>../keys/u07_answers.md</code> A7.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U07 task 7 annotates the numpy analog.
+    See <code>../labs/u07_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the pid mapping table. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c08-correctness-against-a-reference">C08: Correctness against a reference</h3>
+<p>Leaf id <code>cs336-U07-C08</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: verifying tiled code. Objectives: state the reference-
+   comparison protocol. Depends on U05-C12.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the tiled kernel runs,
+   is it right? Toy: the tiled forward matches naive to 3.33e-16
+   (from <code>compute_u07.py</code>).</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Every tiled kernel gets a naive reference on
+   small random inputs. Compare with allclose at a stated tolerance.
+   Test the tails (non-divisible T), the causal variant, and
+   block-size 1.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Tolerance
+   (1e-5 fp32, tighter fp64). Assumption: the naive reference is
+   itself correct (checked by hand on tiny inputs).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The protocol: (1) tiny hand case,
+   (2) random small vs naive, (3) edge shapes, (4) dtype variants.
+   Each layer catches different bugs.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
+   2026-10-06): max deviation 3.33e-16 on the toy.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>check_kernel(tiled,
+   naive, shapes)</code>: the loop. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Passes on correct
+   code, the lab&rsquo;s broken variant (missing rescale) fails loudly.
+   Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Minutes on CPU, the alternative is wrong kernels.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Device-side
+    printf debugging (slower). Reference comparison is the first
+    tool.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Comparing in fp16 with a
+    1e-8 tolerance: fails on correct code. The assumption &ldquo;tight is
+    better&rdquo; breaks, the tolerance must match the dtype.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: testing
+    guides (primary: framework docs). Extension: break the rescale
+    deliberately, hypothesis: the check catches it.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the four protocol layers. (b) Oral
+    ladder: define the tolerance, run the toy, justify the tails,
+    implement, compare with device debugging, debug the fp16
+    tolerance, critique the reference assumption, design the break
+    test. (c) Transfer: the kernel passes fp32 but fails bf16. What
+    next? Answers: <code>../keys/u07_answers.md</code> A8.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U07 task 8 runs the protocol.
+    See <code>../labs/u07_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the protocol checklist. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c09-benchmark-claims-as-source-verification-branches">C09: Benchmark claims as source-verification branches</h3>
+<p>Leaf id <code>cs336-U07-C09</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: kernel speedup claims. Objectives: apply the verification
+   protocol to a &ldquo;Nx faster&rdquo; claim. Depends on U06-C05, U06-C09.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: &ldquo;3x faster attention&rdquo;:
+   faster than what? Toy: the lab dissects the claim into baseline,
+   shapes, dtype, and conditions.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> A speedup claim is a ratio: optimized over
+   baseline under conditions. Verify the baseline (is it the naive
+   or the best known?), the shapes (long or short context?), and the
+   dtype. The 537-&gt;25.2 MB traffic ratio bounds the plausible
+   speedup.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Ratios with
+   conditions. Assumption: none unchecked.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The protocol from U06-C09 applied to
+   kernels: quote, reproduce conditions, measure, explain the gap.
+   The traffic ratio gives the memory-bound speedup ceiling.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: the toy claim &ldquo;21x less traffic&rdquo;
+   (537/25.2) with the stated shapes.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The claim template
+   filled for the traffic ratio. Written exercise.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Every ratio carries
+   its shapes and dtype. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> An hour of checking beats misallocated tuning.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Independent
+    reproduction (stronger, slower). The template is the first
+    pass.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A claim measured against an
+    unoptimized baseline: the ratio is real and meaningless. The
+    assumption &ldquo;faster means better&rdquo; breaks, the baseline defines
+    the claim.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    FlashAttention benchmarks as primary sources for conditions.
+    Extension: fill the template for one published claim,
+    hypothesis: the shapes explain the ratio.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the ratio anatomy. (b) Oral ladder:
+    define the baseline, dissect the toy, justify the traffic
+    ceiling, fill the template, compare with reproduction, debug
+    the weak baseline, critique the template, design the fill.
+    (c) Transfer: a vendor claims 2x on your shapes. What do you
+    ask? Answers: <code>../keys/u07_answers.md</code> A9.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U07 task 9 fills the claim template.
+    See <code>../labs/u07_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the claim template. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c10-sram-sizing-math">C10: SRAM sizing math</h3>
+<p>Leaf id <code>cs336-U07-C10</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: the SRAM budget equation. Objectives: solve for block size
+   under multi-tile residency. Depends on C01.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the kernel needs Q, K,
+   V, O, and statistics resident: what Bc? Toy: 5 tiles at dh=64
+   bf16 in 100 KB -&gt; Bc = 160.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The budget equation: tiles<em>Bc</em>dh*bytes +
+   stats &lt;= SRAM. More resident tiles shrink Bc, smaller Bc means
+   more blocks and more passes.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> The equation
+   terms. Assumption: the 100 KB toy budget.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Bc = (SRAM - stats) //
+   (tiles<em>dh</em>bytes). The lab tabulates Bc for 3, 4, 5 resident
+   tiles.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: 4 tiles -&gt; 200, 5 tiles -&gt; 160,
+   dh=128, 4 tiles -&gt; 100.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>sram_blocks(sram,
+   tiles, dh, bytes)</code>: two lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Monotonic in tiles
+   and dh, the table matches hand division. Expected outputs in the
+   lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Free arithmetic, wrong Bc wastes the kernel.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Autotuning
+    (searches Bc empirically). The math narrows the search.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Ignoring the statistics
+    (m, l, accumulators): the kernel spills mid-loop. The
+    assumption &ldquo;tiles are the whole story&rdquo; breaks, count everything
+    resident.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: kernel
+    design notes (primary: paper appendices). Extension: add the
+    accumulator tile, hypothesis: Bc drops further.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the budget equation. (b) Oral ladder:
+    define residency, compute the 5-tile case, justify the floor,
+    implement, compare with autotuning, debug the spill, critique
+    the toy budget, design the accumulator check. (c) Transfer: dh
+    doubles and tiles stay 4. New Bc? Answers:
+    <code>../keys/u07_answers.md</code> A10.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U07 task 10 tabulates Bc.
+    See <code>../labs/u07_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u07_fig03: lesson plate, Bc versus resident
+    tiles (computed). Source: original. Render:
+    <code>assets/render_u07.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u07_fig03" src="../assets/u07_fig03.png"><figcaption>lesson plate, Bc versus resident tiles (computed). Source: original. Render: assets/render_u07.py.</figcaption></figure>
+<hr />
+<h3 id="c11-numerical-differences-in-low-precision">C11: Numerical differences in low precision</h3>
+<p>Leaf id <code>cs336-U07-C11</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: fp32 accumulators and friends. Objectives: state the
+   precision rules for tiled kernels. Depends on P08, C02.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the tiled kernel
+   disagrees with naive in bf16. Why? Toy: the lab shows the
+   deviation shrinking when accumulators move to fp32.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Tiled kernels reorder floating-point sums, in
+   low precision the order matters. The rules: statistics (m, l) in
+   fp32, accumulators in fp32, inputs/outputs in the working dtype.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> dtypes per
+   tensor. Assumption: the working dtype is bf16 or fp16.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Error bounds grow with the number of
+   reordered terms, fp32 accumulators keep the tiled result within
+   1e-5 of naive in bf16.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: bf16 tiled vs naive max deviation with
+   fp16 versus fp32 accumulators.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The dtype annotation
+   on the tiled forward. About 5 lines of casts.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Deviation within the
+   stated tolerance, the check fails if accumulators are fp16.
+   Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> fp32 accumulators cost registers, the alternative is
+   wrong answers.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Full fp32
+    (slower, simpler). Mixed precision is the standard.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> fp16 accumulators on long
+    sequences: the running sum saturates and attention collapses to
+    uniform. The assumption &ldquo;accumulator dtype is a detail&rdquo; breaks
+    at scale.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: mixed-
+    precision guides (primary: framework docs). Extension: sweep T
+    and plot the deviation, hypothesis: grows with T in fp16.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the three dtype rules. (b) Oral
+    ladder: define the reorder error, run the toy, justify fp32
+    stats, annotate, compare with full fp32, debug the saturation,
+    critique the tolerance, design the sweep. (c) Transfer: the
+    device lacks fp32 accumulate. What is the fallback?
+    Answers: <code>../keys/u07_answers.md</code> A11.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U07 task 11 tests accumulator dtype.
+    See <code>../labs/u07_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the dtype table. No figure, tabular
+    claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c12-kernel-testing-invariants">C12: Kernel testing invariants</h3>
+<p>Leaf id <code>cs336-U07-C12</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+   Scope: cheap alarms for kernels. Objectives: state the invariants,
+   implement them. Depends on C08, U05-C12.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: what cheap checks catch
+   kernel bugs before the reference comparison? Toy: row sums of P
+   equal 1, outputs are convex combos of V rows.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Invariants: attention rows sum to 1, outputs lie
+   in the convex hull of V, causal outputs at t do not depend on
+   future inputs, block-size changes do not change results.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Tolerances per
+   dtype. Assumption: the kernel claims exactness.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Each invariant follows from the math:
+   softmax rows sum to 1, softmax(S)V is a convex combination, the
+   online rescaling is block-size independent.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab: all four invariants on the tiled toy,
+   the broken variant (missing alpha) fails invariant 4.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>kernel_invariants(
+   tiled_fn)</code>: the four asserts. About 12 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Pass on the correct
+   toy, each injected bug fails exactly one invariant. Expected
+   outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Seconds, run before the expensive comparisons.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Full reference
+    comparison (stronger, slower). Invariants are the smoke test.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Invariants pass but the
+    kernel is still wrong: a permuted-block bug preserves all four.
+    The assumption &ldquo;invariants suffice&rdquo; breaks, they complement,
+    not replace, the reference.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: property-
+    based testing references (primary). Extension: inject the
+    permutation bug, hypothesis: invariants pass, reference fails.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the four invariants. (b) Oral ladder:
+    define each, derive the convex hull, justify block-size
+    independence, implement, compare with reference, debug the
+    permutation, critique sufficiency, design the injection.
+    (c) Transfer: a new kernel adds dropout. Which invariants
+    survive? Answers: <code>../keys/u07_answers.md</code> A12.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U07 task 12 implements the invariants.
+    See <code>../labs/u07_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the invariant checklist. No figure,
+    tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h2 id="unit-russian-doll-ladder-u07">Unit Russian-doll ladder (U07)</h2>
+<ul>
+<li>Shell 0: how does attention avoid the T^2 memory?</li>
+<li>Shell 1: one tiled forward, one traffic ratio, one tile size.</li>
+<li>Shell 2: SRAM, HBM, tiles, statistics, accumulators.</li>
+<li>Shell 3: one online softmax, one block skip, one fusion.</li>
+<li>Shell 4: the forward loops, the backward loops, the invariant
+  checks.</li>
+<li>Shell 5: Bc=200, 537 vs 25.2 MB, 3.33e-16.</li>
+<li>Shell 6: change Bc, predict the traffic, observe.</li>
+<li>Shell 7: remove the rescale, shrink the accumulators, unalign the
+  mask.</li>
+<li>Shell 8: tiled vs naive, fused vs separate, fp16 vs fp32 accum.</li>
+<li>Shell 9: benchmark-claim dissection, permutation-bug injection.</li>
+<li>Shell 10: the kernel is the production attention contract.</li>
+</ul>
+      
+      <nav class="pager"><a href="../keys/u06_answers.html"><span class="lbl">← Previous</span>U06 · Answers</a><a href="../keys/u07_answers.html"><span class="lbl">Next →</span>U07 · Answers</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
