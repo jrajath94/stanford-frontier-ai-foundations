@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lesson 02 · Linear regression, local weighting — Machine Learning (Stanford CS229)</title>
+<meta name="description" content="Lesson: Linear regression, local weighting.">
+<link rel="stylesheet" href="../../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-page="cs229-u02" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../../index.html">Machine Learning (Stanford CS229)</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Machine Learning (Stanford CS229)</h3><ul>
+<li><a href="../../index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../../crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+<li><a href="../../cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../../course_map.html" data-page="cs229-course-map">CS229 · Course map</a></li>
+<li><a href="../../prerequisites.html" data-page="cs229-prereqs">CS229 · Prerequisites</a></li>
+<li><a href="../../notation_and_shapes.html" data-page="cs229-notation">CS229 · Notation</a></li>
+<li><a href="../../glossary.html" data-page="cs229-glossary">CS229 · Glossary</a></li>
+<li><a href="../../lessons/u01/lesson-01-learning-problems-risk-setup.html" data-page="cs229-u01">U01 · Learning problems, risk,</a></li>
+<li><a href="../../lessons/u01/keys.html" data-page="cs229-u01-keys">U01 · Keys</a></li>
+<li><a href="../../lessons/u02/lesson-02-linear-regression-local-weighting.html" data-page="cs229-u02" class="active">U02 · Linear regression, local</a></li>
+<li><a href="../../lessons/u02/keys.html" data-page="cs229-u02-keys">U02 · Keys</a></li>
+<li><a href="../../lessons/u03/lesson-03-classification-glm.html" data-page="cs229-u03">U03 · Classification, GLM</a></li>
+<li><a href="../../lessons/u03/keys.html" data-page="cs229-u03-keys">U03 · Keys</a></li>
+<li><a href="../../lessons/u04/lesson-04-generative-classifiers.html" data-page="cs229-u04">U04 · Generative classifiers</a></li>
+<li><a href="../../lessons/u04/keys.html" data-page="cs229-u04-keys">U04 · Keys</a></li>
+<li><a href="../../lessons/u05/lesson-05-kernels.html" data-page="cs229-u05">U05 · Kernels</a></li>
+<li><a href="../../lessons/u05/keys.html" data-page="cs229-u05-keys">U05 · Keys</a></li>
+<li><a href="../../lessons/u06/lesson-06-svm.html" data-page="cs229-u06">U06 · SVM</a></li>
+<li><a href="../../lessons/u06/keys.html" data-page="cs229-u06-keys">U06 · Keys</a></li>
+<li><a href="../../lessons/u07/lesson-07-neural-nets-backprop.html" data-page="cs229-u07">U07 · Neural nets, backprop</a></li>
+<li><a href="../../lessons/u07/keys.html" data-page="cs229-u07-keys">U07 · Keys</a></li>
+<li><a href="../../lessons/u08/lesson-08-generalization.html" data-page="cs229-u08">U08 · Generalization</a></li>
+<li><a href="../../lessons/u08/keys.html" data-page="cs229-u08-keys">U08 · Keys</a></li>
+<li><a href="../../lessons/u09/lesson-09-regularization.html" data-page="cs229-u09">U09 · Regularization</a></li>
+<li><a href="../../lessons/u09/keys.html" data-page="cs229-u09-keys">U09 · Keys</a></li>
+<li><a href="../../lessons/u10/lesson-10-clustering-em.html" data-page="cs229-u10">U10 · Clustering, EM</a></li>
+<li><a href="../../lessons/u10/keys.html" data-page="cs229-u10-keys">U10 · Keys</a></li>
+<li><a href="../../lessons/u11/lesson-11-vi-pca-ica.html" data-page="cs229-u11">U11 · VI, PCA, ICA</a></li>
+<li><a href="../../lessons/u11/keys.html" data-page="cs229-u11-keys">U11 · Keys</a></li>
+<li><a href="../../lessons/u12/lesson-12-diffusion-models.html" data-page="cs229-u12">U12 · Diffusion models</a></li>
+<li><a href="../../lessons/u12/keys.html" data-page="cs229-u12-keys">U12 · Keys</a></li>
+<li><a href="../../lessons/u13/lesson-13-foundation-models-representations.html" data-page="cs229-u13">U13 · Foundation models, repre</a></li>
+<li><a href="../../lessons/u13/keys.html" data-page="cs229-u13-keys">U13 · Keys</a></li>
+<li><a href="../../lessons/u14/lesson-14-llm-architecture-training.html" data-page="cs229-u14">U14 · LLM architecture, traini</a></li>
+<li><a href="../../lessons/u14/keys.html" data-page="cs229-u14-keys">U14 · Keys</a></li>
+<li><a href="../../lessons/u15/lesson-15-reasoning-rl-foundations.html" data-page="cs229-u15">U15 · Reasoning, RL foundation</a></li>
+<li><a href="../../lessons/u15/keys.html" data-page="cs229-u15-keys">U15 · Keys</a></li>
+<li><a href="../../lessons/u16/lesson-16-control-policy-optimization.html" data-page="cs229-u16">U16 · Control, policy optimiza</a></li>
+<li><a href="../../lessons/u16/keys.html" data-page="cs229-u16-keys">U16 · Keys</a></li>
+<li><a href="../../lessons/u17/lesson-17-appendices-synthesis.html" data-page="cs229-u17">U17 · Appendices, synthesis</a></li>
+<li><a href="../../lessons/u17/keys.html" data-page="cs229-u17-keys">U17 · Keys</a></li>
+<li><a href="../../labs/lab-01-linear-regression.html" data-page="cs229-lab-01">Lab 01 · Linear regressio</a></li>
+<li><a href="../../labs/keys-lab-01.html" data-page="cs229-lab-01-keys">Lab 01 · Keys</a></li>
+<li><a href="../../labs/lab-02-logistic-regression.html" data-page="cs229-lab-02">Lab 02 · Logistic regress</a></li>
+<li><a href="../../labs/keys-lab-02.html" data-page="cs229-lab-02-keys">Lab 02 · Keys</a></li>
+<li><a href="../../labs/lab-03-generalization-regularization.html" data-page="cs229-lab-03">Lab 03 · Generalization, </a></li>
+<li><a href="../../labs/keys-lab-03.html" data-page="cs229-lab-03-keys">Lab 03 · Keys</a></li>
+<li><a href="../../labs/lab-04-kmeans-em.html" data-page="cs229-lab-04">Lab 04 · Kmeans, EM</a></li>
+<li><a href="../../labs/keys-lab-04.html" data-page="cs229-lab-04-keys">Lab 04 · Keys</a></li>
+<li><a href="../../labs/lab-05-pca-ica.html" data-page="cs229-lab-05">Lab 05 · PCA, ICA</a></li>
+<li><a href="../../labs/keys-lab-05.html" data-page="cs229-lab-05-keys">Lab 05 · Keys</a></li>
+<li><a href="../../labs/lab-06-diffusion.html" data-page="cs229-lab-06">Lab 06 · Diffusion</a></li>
+<li><a href="../../labs/keys-lab-06.html" data-page="cs229-lab-06-keys">Lab 06 · Keys</a></li>
+<li><a href="../../labs/lab-07-representations.html" data-page="cs229-lab-07">Lab 07 · Representations</a></li>
+<li><a href="../../labs/keys-lab-07.html" data-page="cs229-lab-07-keys">Lab 07 · Keys</a></li>
+<li><a href="../../labs/lab-08-llm.html" data-page="cs229-lab-08">Lab 08 · LLM</a></li>
+<li><a href="../../labs/keys-lab-08.html" data-page="cs229-lab-08-keys">Lab 08 · Keys</a></li>
+<li><a href="../../labs/lab-09-rl-foundations.html" data-page="cs229-lab-09">Lab 09 · RL foundations</a></li>
+<li><a href="../../labs/keys-lab-09.html" data-page="cs229-lab-09-keys">Lab 09 · Keys</a></li>
+<li><a href="../../labs/lab-10-control-policy.html" data-page="cs229-lab-10">Lab 10 · Control, policy</a></li>
+<li><a href="../../labs/keys-lab-10.html" data-page="cs229-lab-10-keys">Lab 10 · Keys</a></li>
+<li><a href="../../labs/lab-11-synthesis.html" data-page="cs229-lab-11">Lab 11 · Synthesis</a></li>
+<li><a href="../../labs/keys-lab-11.html" data-page="cs229-lab-11-keys">Lab 11 · Keys</a></li>
+<li><a href="../../diagnostics/diagnostic-01-ml-foundations.html" data-page="cs229-diag-01">CS229 · Diagnostic 01</a></li>
+<li><a href="../../diagnostics/keys-01.html" data-page="cs229-diag-01-keys">CS229 · Diagnostic 01 keys</a></li>
+<li><a href="../../interview/interview-u12-questions.html" data-page="cs229-int-u12">Interview · U12</a></li>
+<li><a href="../../interview/keys-u12.html" data-page="cs229-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../../interview/interview-u13-questions.html" data-page="cs229-int-u13">Interview · U13</a></li>
+<li><a href="../../interview/keys-u13.html" data-page="cs229-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../../interview/interview-u14-questions.html" data-page="cs229-int-u14">Interview · U14</a></li>
+<li><a href="../../interview/keys-u14.html" data-page="cs229-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../../interview/interview-u15-questions.html" data-page="cs229-int-u15">Interview · U15</a></li>
+<li><a href="../../interview/keys-u15.html" data-page="cs229-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../../interview/interview-u16-questions.html" data-page="cs229-int-u16">Interview · U16</a></li>
+<li><a href="../../interview/keys-u16.html" data-page="cs229-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../../interview/interview-u17-questions.html" data-page="cs229-int-u17">Interview · U17</a></li>
+<li><a href="../../interview/keys-u17.html" data-page="cs229-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../../interview/oral-defenses.html" data-page="cs229-int-oral">Interview · Oral defenses</a></li>
+<li><a href="../../interview/keys-oral.html" data-page="cs229-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../../interview/transfer-sets.html" data-page="cs229-int-transfer">Interview · Transfer sets</a></li>
+<li><a href="../../interview/keys-transfer.html" data-page="cs229-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../../capstones/capstone-a-research.html" data-page="cs229-cap-a">Capstone A · Research</a></li>
+<li><a href="../../capstones/capstone-b-applied.html" data-page="cs229-cap-b">Capstone B · Applied</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../../index.html">Home</a> / <a href="#">Machine Learning (Stanford CS229)</a> / Lesson 02 · Linear regression, local weighting</nav>
+      <h1>Lesson 02 · Linear regression, local weighting</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Tengyu Ma and Andrew Ng</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="lesson-02-linear-regression-and-local-weighting">Lesson 02, Linear regression and local weighting</h1>
+<p>Unit: cs229-U02. Leaf concepts: cs229-U02-C01 to C12.
+Date: 2026-10-06. Baseline: October 6, 2026.</p>
+<h2 id="source-mapping">Source mapping</h2>
+<p>Chapter 1 of the notes (SRC-01, PDF pages 10-20) was read in full
+on 2026-10-06. Section 1.1 gives LMS, batch, and stochastic
+gradient descent with the housing example. Section 1.2 gives the
+normal equations via matrix derivatives. Section 1.3 gives the
+Gaussian-noise probabilistic interpretation. Section 1.4 gives
+locally weighted linear regression and the over/underfit
+figures. The pseudoinverse, conditioning, and stable solves are
+bridge content built from the note&rsquo;s footnote on singular X^T X.
+Leaf rows carry SOURCE ATTRIBUTION PENDING until the RUN 6
+adversarial pass.</p>
+<h2 id="scope-and-objectives">Scope and objectives</h2>
+<p>Scope: fitting a line (and a weighted line) to data, three ways
+to compute the fit, and the probabilistic story that justifies
+the squared error.</p>
+<p>Objectives: the learner can (1) write the LMS update and explain
+each term, (2) derive the normal equations, (3) explain the
+projection reading of least squares, (4) diagnose rank
+deficiency and pick a stable solve, (5) derive least squares
+from Gaussian noise via maximum likelihood, (6) fit and tune a
+locally weighted regression.</p>
+<h2 id="dependencies">Dependencies</h2>
+<p>Prerequisites: P04, P05, P07, P09 (shared bridges, linked).</p>
+<p>Not-yet-understood list:</p>
+<ol>
+<li>Gradient descent as hill-climbing in reverse (remediated in
+   SL-01).</li>
+<li>Matrix calculus for the normal equations (remediated in
+   SL-02).</li>
+<li>Maximum likelihood (remediated in SL-04).</li>
+<li>Kernel weighting (remediated in SL-05).</li>
+</ol>
+<hr />
+<h2 id="sl-01-lms-batch-gradients-stochastic-gradients">SL-01: LMS, batch gradients, stochastic gradients</h2>
+<p>Covers C01 (LMS/SGD/batch gradients).</p>
+<h3 id="source-anchor">Source anchor</h3>
+<p>SRC-01 section 1.1, pages 10-13. The housing example: living
+area in square feet predicts price in thousands of dollars.
+Batch gradient descent on the data gave theta_0 = 71.27 and
+theta_1 = 0.1345 (notes page 13).</p>
+<h3 id="motivating-question">Motivating question</h3>
+<p>You start with a random line through the data. How do you move
+it toward a better line, one small step at a time?</p>
+<h3 id="tiny-toy">Tiny toy</h3>
+<p>Data: (1, 2), (2, 3), (3, 4). Start: theta = [0, 0], so
+h(x) = 0. Learning rate alpha = 0.1.</p>
+<h3 id="mental-model">Mental model</h3>
+<p>Gradient descent looks at the slope of the cost under its feet
+and steps downhill. LMS is gradient descent on the squared
+error. Batch mode averages the slope over all examples before
+stepping. Stochastic mode steps on one example at a time.</p>
+<h3 id="objects-symbols-shapes-assumptions">Objects, symbols, shapes, assumptions</h3>
+<ul>
+<li>Cost: J(theta) = (1/2m) sum_i (h_theta(x^{(i)}) - y^{(i)})^2.
+  Scalar. The 1/2 cancels a factor of 2 in the derivative.</li>
+<li>Gradient: dJ/d theta_j, the slope of the cost along dial j.</li>
+<li>Update (batch): theta_j := theta_j - alpha * dJ/d theta_j.</li>
+<li>Update (LMS, one example): theta_j := theta_j + alpha *
+  (y^{(i)} - h_theta(x^{(i)})) * x^{(i)}_j.</li>
+<li>Assumption: alpha is small enough that steps do not overshoot.
+  The cost J is convex, so one global minimum exists.</li>
+</ul>
+<h3 id="derivation">Derivation</h3>
+<p>For one example, J = (1/2)(h - y)^2 with h = sum_j theta_j x_j.
+Chain rule:</p>
+<p>dJ/d theta_j = (h - y) * dh/d theta_j = (h - y) * x_j.</p>
+<p>Gradient descent subtracts alpha times this:</p>
+<p>theta_j := theta_j - alpha * (h - y) * x_j
+        = theta_j + alpha * (y - h) * x_j.</p>
+<p>That is the LMS update. The batch rule sums this over all m
+examples and divides by m. The stochastic rule applies it to
+one example, then moves to the next.</p>
+<h3 id="computed-example">Computed example</h3>
+<p>Toy data, theta = [0, 0], alpha = 0.1. First stochastic step on
+(1, 2): h = 0, error = 2 - 0 = 2. With x_0 = 1, x_1 = 1:</p>
+<p>theta_0 := 0 + 0.1 * 2 * 1 = 0.2
+theta_1 := 0 + 0.1 * 2 * 1 = 0.2</p>
+<p>New line: h(x) = 0.2 + 0.2x. Error on (1, 2) drops from 2 to
+1.6. The step size scales with the error and with the feature
+value, exactly as the notes point out (page 11).</p>
+<h3 id="minimal-implementation">Minimal implementation</h3>
+<pre><code class="language-python">import numpy as np
+
+X = np.array([[1.0, 1.0], [1.0, 2.0], [1.0, 3.0]])  # x0 = 1 folded in
+y = np.array([2.0, 3.0, 4.0])
+theta = np.zeros(2)
+alpha = 0.1
+
+for step in range(200):          # batch gradient descent
+    err = X @ theta - y          # shape (3,)
+    grad = X.T @ err / len(y)    # shape (2,)
+    theta = theta - alpha * grad
+
+print(theta)  # expect near [1.0, 1.0]
+</code></pre>
+<p>Expected output: theta close to [1, 1], the true line
+y = 1 + x shifted? No: the data is exactly y = 1 + x, so the
+fit recovers theta = [1, 1]. Check: X @ [1,1] = [2, 3, 4] = y.</p>
+<h3 id="correctness-checks">Correctness checks</h3>
+<ul>
+<li>The gradient has the same shape as theta. If not, the code is
+  wrong.</li>
+<li>Cost must decrease on most steps. If it explodes, alpha is
+  too large.</li>
+<li>At convergence the gradient norm is near zero.</li>
+</ul>
+<h3 id="complexity-memory-cost">Complexity, memory, cost</h3>
+<p>Batch: O(mn) per step, one step per full pass. Stochastic:
+O(n) per step, m steps per pass. Memory: O(mn) for the data
+in both. Stochastic reaches a good answer faster on large m,
+but it never fully settles. It oscillates around the minimum
+(notes page 13). Shrinking alpha to zero over time fixes the
+oscillation (notes footnote, page 14).</p>
+<h3 id="nearest-alternatives">Nearest alternatives</h3>
+<p>The normal equations (SL-02) solve the same problem in closed
+form. Gradient descent wins when X^T X is too big to form.
+Newton&rsquo;s method (U03) converges in fewer steps but needs the
+Hessian.</p>
+<h3 id="failure-case">Failure case</h3>
+<p>Alpha = 1.5 on the toy: theta overshoots, the cost grows, the
+line swings wildly. Diagnosis: alpha above the stability
+limit 2 / lambda_max. Fix: shrink alpha or normalize features.</p>
+<h3 id="russian-doll-ladder-for-lms">Russian-doll ladder for LMS</h3>
+<ul>
+<li>Shell 0: Question: how do we move a bad line toward the data?
+  Observable: the cost falls step by step.</li>
+<li>Shell 1: Toy: three points on y = 1 + x, start at zero.</li>
+<li>Shell 2: Objects: cost, gradient, learning rate.</li>
+<li>Shell 3: Rule: step against the gradient. The update scales with
+  error times feature.</li>
+<li>Shell 4: Derive: chain rule on (1/2)(h - y)^2.</li>
+<li>Shell 5: Invariant: batch gradient equals the mean of the
+  per-example gradients.</li>
+<li>Shell 6: Change one factor: raise alpha from 0.1 to 1.5.
+  Predict divergence, then run and observe it.</li>
+<li>Shell 7: Counterexample: a cost with two valleys (not this
+  one) breaks the &ldquo;one global minimum&rdquo; claim. This cost is
+  convex, so the claim holds here.</li>
+<li>Shell 8: Compare: batch vs stochastic on m = 100,000
+  synthetic points under equal wall-clock budget.</li>
+<li>Shell 9: Extension: measure steps to 1e-6 cost for
+  geometrically spaced alphas. Falsifiable claim: the best
+  alpha sits just below 2 / lambda_max of X^T X / m.</li>
+<li>Shell 10: Production: a streaming price model uses
+  stochastic updates. The decisions are the alpha schedule and
+  the monitoring of cost drift.</li>
+</ul>
+<hr />
+<h2 id="sl-02-normal-equations-and-the-projection-reading">SL-02: Normal equations and the projection reading</h2>
+<p>Covers C02 (normal equations), C03 (projection).</p>
+<h3 id="source-anchor_1">Source anchor</h3>
+<p>SRC-01 section 1.2, pages 14-16. The notes define the design
+matrix X, derive grad J = X^T X theta - X^T y, and state the
+normal equations X^T X theta = X^T y with the footnote that
+X^T X must be invertible.</p>
+<h3 id="motivating-question_1">Motivating question</h3>
+<p>Gradient descent walks to the answer. Can we jump straight to
+it?</p>
+<h3 id="tiny-toy_1">Tiny toy</h3>
+<p>Same three points: (1, 2), (2, 3), (3, 4).</p>
+<h3 id="mental-model_1">Mental model</h3>
+<p>The best line makes the leftover errors orthogonal to every
+feature. Geometrically, the prediction vector X theta is the
+shadow the target vector y casts onto the column space of X.
+That shadow is the closest point in the space, and closeness
+means the difference y - X theta sticks straight out of the
+space.</p>
+<h3 id="derivation_1">Derivation</h3>
+<p>J(theta) = (1/2)(X theta - y)^T (X theta - y). Expand:</p>
+<p>J = (1/2)(theta^T X^T X theta - 2 y^T X theta + y^T y).</p>
+<p>Matrix derivatives (notes page 16): grad_theta theta^T A theta
+= 2 A theta for symmetric A, grad_theta b^T theta = b. With
+A = X^T X and b = 2 X^T y:</p>
+<p>grad J = (1/2)(2 X^T X theta - 2 X^T y) = X^T X theta - X^T y.</p>
+<p>Set to zero: X^T X theta = X^T y. If X^T X is invertible,
+theta = (X^T X)^{-1} X^T y.</p>
+<h3 id="computed-example_1">Computed example</h3>
+<p>X = [[1,1],[1,2],[1,3]], y = [2,3,4].</p>
+<p>X^T X = [[3, 6], [6, 14]]. X^T y = [9, 20].</p>
+<p>Solve: det = 3*14 - 36 = 6. Inverse = (1/6)[[14,-6],[-6,3]].
+theta = (1/6)[[14,-6],[-6,3]] @ [9,20] = (1/6)[126-120,
+-54+60] = (1/6)[6, 6] = [1, 1]. Matches the gradient descent
+answer.</p>
+<p>Projection check: residuals r = y - X theta = [0,0,0]. Zero
+vector is orthogonal to everything. For a noisy case the
+residuals would be nonzero but orthogonal to each column of X:
+X^T r = 0 is exactly the normal equations.</p>
+<h3 id="correctness-checks_1">Correctness checks</h3>
+<ul>
+<li>Residual orthogonality: X^T (y - X theta) must be near zero.
+  This is the strongest check of any least-squares code.</li>
+<li>Symmetry: X^T X is symmetric by construction. A nonsymmetric
+  Gram matrix means a bug.</li>
+<li>Shapes: X (m,n), theta (n,), y (m,). X^T X (n,n).</li>
+</ul>
+<h3 id="complexity">Complexity</h3>
+<p>Form X^T X: O(m n^2). Solve: O(n^3). Memory: O(n^2). Wins over
+gradient descent when n is small (say below a few thousand)
+and m is large.</p>
+<h3 id="nearest-alternative">Nearest alternative</h3>
+<p>QR decomposition of X avoids squaring the condition number
+(SL-03). Gradient descent avoids forming X^T X at all.</p>
+<h3 id="failure-case_1">Failure case</h3>
+<p>Duplicate a feature column: X^T X is singular, the inverse
+does not exist, and the formula breaks. The next sublesson
+repairs this.</p>
+<hr />
+<h2 id="sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves">SL-03: Rank deficiency, pseudoinverse, conditioning, stable solves</h2>
+<p>Covers C04 (rank deficiency), C05 (pseudoinverse), C10
+(conditioning), C11 (stable solve).</p>
+<h3 id="source-anchor_2">Source anchor</h3>
+<p>Notes page 16 footnote: if fewer independent examples exist
+than features, or features are not independent, X^T X is not
+invertible. The repair below is bridge content.</p>
+<h3 id="motivating-question_2">Motivating question</h3>
+<p>Two features are identical (square feet and square meters).
+What breaks, and how do we fit anyway?</p>
+<h3 id="mental-model_2">Mental model</h3>
+<p>Rank deficiency means some dial does nothing new: two columns
+point the same way, so infinite parameter settings give the
+same predictions. The pseudoinverse picks the smallest such
+setting. Conditioning measures how much noise gets amplified:
+a long thin valley in the cost means tiny data changes swing
+theta wildly.</p>
+<h3 id="objects-and-assumptions">Objects and assumptions</h3>
+<ul>
+<li>Rank: number of independent columns of X.</li>
+<li>X^T X singular iff rank &lt; n.</li>
+<li>Moore-Penrose pseudoinverse X^+: the least-squares solution
+  with minimum norm.</li>
+<li>Condition number kappa = lambda_max / lambda_min of X^T X.
+  Error amplification scales with kappa.</li>
+</ul>
+<h3 id="computed-example_2">Computed example</h3>
+<p>X = [[1, 1], [1, 2], [1, 3]] with a duplicated second column
+X2 = [[1, 1, 1], [1, 2, 2], [1, 3, 3]]. X^T X for X2 is
+singular (columns 2 and 3 match). numpy pinv returns theta
+with the duplicated weight split evenly: the minimum-norm
+choice.</p>
+<p>Conditioning toy: X^T X = [[1, 0], [0, 1e-6]]. kappa = 1e6.
+A 1e-6 change in y can move theta_1 by 1. Diagnosis: features
+on wildly different scales.</p>
+<h3 id="stable-solves-in-order-of-preference">Stable solves, in order of preference</h3>
+<ol>
+<li>Standardize features (zero mean, unit variance), then use
+   the normal equations. Often enough.</li>
+<li>QR solve: theta = lstsq(X, y). Never forms X^T X, so it
+   does not square the condition number.</li>
+<li>SVD/pseudoinverse: pinv(X) @ y. Handles rank deficiency
+   gracefully and exposes the singular values for diagnosis.</li>
+<li>Ridge (U09): adds lambda * I, guarantees invertibility.</li>
+</ol>
+<h3 id="correctness-checks_2">Correctness checks</h3>
+<ul>
+<li>lstsq and pinv must agree with the normal equations on
+  well-conditioned full-rank data.</li>
+<li>Singular values of X printed before solving: a cliff to
+  near-zero flags deficiency.</li>
+<li>After standardizing, kappa should drop by orders of
+  magnitude on scale-mismatched data.</li>
+</ul>
+<h3 id="failure-case_2">Failure case</h3>
+<p>Solving with the explicit inverse on a kappa = 1e12 matrix:
+theta comes out as garbage with huge entries. The inverse
+formula is correct math and bad numerics. This is why the
+course never ships inv(X.T @ X) @ X.T @ y in labs.</p>
+<h3 id="nearest-alternative_1">Nearest alternative</h3>
+<p>Gradient descent never inverts anything, so it is immune to
+this failure mode. It pays with iteration count instead.</p>
+<hr />
+<h2 id="sl-04-the-gaussian-noise-likelihood-story">SL-04: The Gaussian-noise likelihood story</h2>
+<p>Covers C06 (Gaussian-noise likelihood).</p>
+<h3 id="source-anchor_3">Source anchor</h3>
+<p>SRC-01 section 1.3, pages 16-18. The notes assume
+y^{(i)} = theta^T x^{(i)} + eps^{(i)} with eps IID N(0,
+sigma^2), write the likelihood, take logs, and recover J.</p>
+<h3 id="motivating-question_3">Motivating question</h3>
+<p>Why squared error? Why not absolute error, or something else?</p>
+<h3 id="mental-model_3">Mental model</h3>
+<p>Squared error is not a law of nature. It is the consequence of
+one specific belief: the errors are Gaussian noise. If you
+believe that, maximum likelihood hands you least squares. If
+you believe Laplace noise, you get absolute error instead.
+The loss encodes a noise belief.</p>
+<h3 id="derivation_2">Derivation</h3>
+<p>Model: y given x follows N(theta^T x, sigma^2), with theta as parameters. Likelihood:</p>
+<p>L(theta) = prod_i (1/sqrt(2 pi sigma^2)) *
+           exp(-(y^{(i)} - theta^T x^{(i)})^2 / (2 sigma^2)).</p>
+<p>Log likelihood:</p>
+<p>l(theta) = m log(1/sqrt(2 pi sigma^2))
+           - (1/(2 sigma^2)) sum_i (y^{(i)} - theta^T x^{(i)})^2.</p>
+<p>The first term does not involve theta. Maximizing l over
+theta is the minimizer of sum_i (y^{(i)} - theta^T x^{(i)})^2, which
+is J up to the 1/2m factor. So least squares = maximum
+likelihood under Gaussian noise. Note sigma^2 never enters the
+choice of theta (notes page 18).</p>
+<h3 id="computed-example_3">Computed example</h3>
+<p>One point: x = 1, y = 2.2, theta = [0, 2] so prediction 2.0,
+sigma = 0.5. Density: (1/sqrt(2 pi * 0.25)) *
+exp(-(0.2)^2/(2*0.25)) = 0.7979 * exp(-0.08) = 0.7979 * 0.9231
+= 0.7365. Log likelihood: log(0.7365) = -0.3059. A worse
+theta = [0, 1] gives prediction 1.0, density 0.7979 *
+exp(-(1.2)^2/0.5) = 0.7979 * exp(-2.88) = 0.0447, log
+likelihood -3.107. Likelihood maximization picks the closer
+line, same as least squares.</p>
+<h3 id="correctness-checks_3">Correctness checks</h3>
+<ul>
+<li>Log likelihood increases as predictions approach targets.</li>
+<li>Doubling sigma scales all densities but keeps the argmax
+  theta fixed. Test this in code: fit with sigma = 1 and
+  sigma = 10, theta must match.</li>
+</ul>
+<h3 id="nearest-alternative_2">Nearest alternative</h3>
+<p>Laplace noise p(eps) ~ exp(-|eps|/b) gives the absolute-error
+objective. It resists outliers but has no closed form.</p>
+<h3 id="failure-case_3">Failure case</h3>
+<p>Heavy-tailed real noise (one corrupted sensor reading of
+1e9): Gaussian belief says this is nearly impossible, so the
+fit bends over backward to accommodate it. The squared loss
+is the wrong belief here. Fix: change the noise model or the
+loss.</p>
+<hr />
+<h2 id="sl-05-locally-weighted-regression">SL-05: Locally weighted regression</h2>
+<p>Covers C07 (local weighting kernels), C08 (bandwidth), C09
+(parametric/nonparametric distinction).</p>
+<h3 id="source-anchor_4">Source anchor</h3>
+<p>SRC-01 section 1.4, pages 18-20. The notes fit weighted least
+squares per query point with weights
+w^{(i)} = exp(-(x^{(i)} - x)^2 / (2 tau^2)).</p>
+<h3 id="motivating-question_4">Motivating question</h3>
+<p>The data curves. A straight line underfits, a degree-5
+polynomial overfits (notes page 19 figures). Can we fit a line
+that is only responsible for its neighborhood?</p>
+<h3 id="mental-model_4">Mental model</h3>
+<p>For each query point x, solve a weighted least squares where
+nearby training points count more. The weights come from a
+kernel: a bump centered at x with width tau (the bandwidth).
+Small tau: only close neighbors matter, the fit wiggles.
+Large tau: all points count nearly equally, the fit is the
+global line. The parameters theta are recomputed per query,
+so the model has no fixed dial count: it is nonparametric.</p>
+<h3 id="objects-symbols-assumptions">Objects, symbols, assumptions</h3>
+<ul>
+<li>Weight: w^{(i)} = exp(-(x^{(i)} - x)^2 / (2 tau^2)). Scalar
+  in (0, 1].</li>
+<li>Weighted normal equations:
+  theta = (X^T W X)^{-1} X^T W y, W = diag(w).</li>
+<li>Bandwidth tau: the one knob. Assumption: enough data near
+  each query point.</li>
+</ul>
+<h3 id="computed-example_4">Computed example</h3>
+<p>Query x = 2.0, tau = 0.5. Training x: 1.0, 2.0, 3.0.
+Weights: exp(-(1)^2/(2*0.25)) = exp(-2) = 0.1353 for x = 1
+and x = 3. exp(0) = 1.0 for x = 2. The query point dominates
+its own fit. With tau = 10: weights are exp(-1/200) = 0.995
+for all three: nearly the global fit.</p>
+<h3 id="minimal-implementation_1">Minimal implementation</h3>
+<pre><code class="language-python">import numpy as np
+
+def lwlr_predict(xq, X, y, tau):
+    d = X[:, 1] - xq                      # distance on the feature
+    w = np.exp(-(d ** 2) / (2 * tau ** 2))
+    W = np.diag(w)
+    XtWX = X.T @ W @ X
+    theta = np.linalg.solve(XtWX, X.T @ W @ y)
+    xq_vec = np.array([1.0, xq])
+    return float(xq_vec @ theta)
+
+X = np.column_stack([np.ones(6), np.arange(6.0)])
+y = np.array([1.0, 2.1, 2.9, 4.2, 4.8, 6.1])
+print(lwlr_predict(2.5, X, y, tau=0.5))   # local fit near 2.5
+print(lwlr_predict(2.5, X, y, tau=10.0))  # near-global fit
+</code></pre>
+<p>Expected: the tau = 0.5 prediction tracks the local points
+(about 3.6), the tau = 10 prediction tracks the global line
+(about 3.5 on this near-linear data. The difference shows on
+curved data).</p>
+<h3 id="parametric-vs-nonparametric">Parametric vs nonparametric</h3>
+<p>Parametric (linear regression): fixed dial count n, chosen
+before seeing data. After fitting, the data can be thrown
+away: theta is the whole model. Nonparametric (LWLR): the
+dial count grows with the data. The training set must be
+kept at prediction time. Cost per query: O(m n^2 + n^3).</p>
+<h3 id="correctness-checks_4">Correctness checks</h3>
+<ul>
+<li>tau -&gt; infinity: LWLR must reproduce the global least
+  squares fit. Test this.</li>
+<li>tau -&gt; 0: prediction must approach the nearest training
+  y (with a linear model it approaches the local tangent).</li>
+<li>Weights at the query point equal 1. Far weights decay.</li>
+</ul>
+<h3 id="nearest-alternative_3">Nearest alternative</h3>
+<p>k-nearest neighbors: hard cutoff instead of smooth weights.
+Kernel ridge regression (U05): the same idea in dual form.</p>
+<h3 id="failure-case_4">Failure case</h3>
+<p>Query far from all data: every weight is near zero, X^T W X
+is near-singular, the prediction is garbage with high
+confidence. Diagnosis: check the weight sum. Refuse to
+predict when it is tiny.</p>
+<hr />
+<h2 id="sl-06-overfitting-and-underfitting">SL-06: Overfitting and underfitting</h2>
+<p>Covers C12 (over/underfit).</p>
+<h3 id="source-anchor_5">Source anchor</h3>
+<p>SRC-01 page 19: the three figures (line, quadratic, degree-5
+polynomial) with the underfit/overfit labels.</p>
+<h3 id="mental-model_5">Mental model</h3>
+<p>Underfit: the hypothesis class cannot bend enough to catch
+the pattern. Both train and test error are high. Overfit:
+the class bends to the noise. Train error is low, test error
+is high. The degree-5 polynomial through 6 points has zero
+train error and wild swings between points.</p>
+<h3 id="computed-example_5">Computed example</h3>
+<p>Six points from y = 2x + 1 + noise (sd 0.3). Fit degrees 1,
+2, 5. Typical numbers: degree 1 train MSE 0.09, test MSE
+0.10. Degree 5 train MSE 0.00, test MSE 2.4. The degree-5
+train score is a lie about the future.</p>
+<h3 id="nearest-alternative_4">Nearest alternative</h3>
+<p>Model selection (U09) picks the degree by validation, not by
+train error. Regularization (U09) keeps the degree but
+shrinks the coefficients.</p>
+<h3 id="failure-case_5">Failure case</h3>
+<p>Judging by train error alone always picks the most complex
+model. This is the central trap of the whole unit.</p>
+<hr />
+<h2 id="assessment">Assessment</h2>
+<h3 id="breadth-recall">Breadth recall</h3>
+<p>E01: Write the LMS update and name each factor.
+E02: State the normal equations and the invertibility
+condition.
+E03: What does X^T (y - X theta) = 0 say in words?
+E04: Name two causes of rank deficiency.
+E05: Why does least squares follow from Gaussian noise?
+E06: Write the LWLR weight formula and the role of tau.</p>
+<h3 id="deep-oral-ladders">Deep oral ladders</h3>
+<p>L01 (optimization): (1) Define the least-squares cost. (2) Toy:
+three points, one LMS step by hand. (3) Derive the LMS update
+from the chain rule. (4) Implement batch GD and check cost
+decrease. (5) Compare batch vs stochastic per-step cost and
+convergence behavior. (6) Debug: cost explodes. Name the cause
+and the fix. (7) Critique: when is the convexity claim false?
+(8) Design: choose batch vs SGD for m = 1e9, n = 100.</p>
+<p>L02 (closed form): (1) State the normal equations. (2) Toy: the
+2x2 solve above. (3) Derive grad J with matrix calculus.
+(4) Implement and verify residual orthogonality. (5) Compare
+normal equations vs QR vs SVD on a kappa = 1e8 matrix.
+(6) Debug: LinAlgError on a singular matrix. Name two repairs.
+(7) Critique: the pseudoinverse picks minimum norm. When is
+that the wrong prior? (8) Design: a solve pipeline that logs
+kappa and refuses below a threshold.</p>
+<h3 id="analytical-exercises">Analytical exercises</h3>
+<p>E07: X = [[1,1],[1,2]], y = [3,5]. Solve the normal equations
+by hand. Answer in keys.
+E08: One example, theta = [0,0], alpha = 0.5, (x, y) = ((1,2),
+5) with x_0 folded. One LMS step. Answer in keys.</p>
+<h3 id="failure-diagnosis">Failure diagnosis</h3>
+<p>E09: After adding a feature in meters alongside feet, theta
+entries blow up to 1e7 and -1e7. Diagnose and fix.</p>
+<h3 id="counterfactual-comparison">Counterfactual comparison</h3>
+<p>E10: Team A uses the explicit inverse on n = 50, kappa = 1e3.
+Team B uses lstsq on n = 50, kappa = 1e13. Who is safer and
+why? What should team A check before shipping?</p>
+<h3 id="research-question">Research question</h3>
+<p>E11: On synthetic data with known rank r &lt; n, compare the
+test error of the pseudoinverse solution against ridge with
+tuned lambda. State the falsifiable claim about which wins
+and when.</p>
+<h3 id="implementation-task">Implementation task</h3>
+<p>E12: Write lwlr_predict for vector x (not scalar) and verify
+the tau -&gt; infinity limit equals lstsq on the same data.</p>
+<h2 id="visual-units">Visual units</h2>
+<ul>
+<li><code>visuals/u02/u02_gd_trajectory.png</code>: gradient descent steps
+  on a quadratic bowl (source: original, computed).</li>
+</ul>
+<figure><img alt="u02_gd_trajectory.png" src="../../assets/u02/u02_gd_trajectory.png"><figcaption>gradient descent steps on a quadratic bowl</figcaption></figure>
+<ul>
+<li><code>visuals/u02/u02_bandwidth.png</code>: LWLR fits for three tau
+  values on curved data (source: original, computed).</li>
+</ul>
+<figure><img alt="u02_bandwidth.png" src="../../assets/u02/u02_bandwidth.png"><figcaption>LWLR fits for three tau values on curved data</figcaption></figure>
+<h2 id="research-reading-and-extension">Research reading and extension</h2>
+<p>Read: SRC-01 sections 1.1-1.4 in full. Extension: implement
+LWLR on the notes&rsquo; housing-style curved toy and plot test
+error vs tau. Falsifiable claim: test error is U-shaped in
+tau, minimized at an interior point, and the minimizer moves
+right as noise grows.</p>
+      
+      <nav class="pager"><a href="../../lessons/u01/keys.html"><span class="lbl">← Previous</span>Lesson 01 · Keys</a><a href="../../lessons/u02/keys.html"><span class="lbl">Next →</span>Lesson 02 · Keys</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../../assets/vendor/katex.min.js"></script>
+<script src="../../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../../";</script>
+<script src="../../assets/app.js"></script>
+</body>
+</html>
