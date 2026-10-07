@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Unit 04 · CUDA and efficient attention — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: CUDA and efficient attention.">
+<link rel="stylesheet" href="../../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-page="cs229s-u04" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Systems for Machine Learning (Stanford CS229S)</h3><ul>
+<li><a href="../../index.html" data-page="cs229s-index">CS229S · Overview</a></li>
+<li><a href="../../crash-course.html" data-page="cs229s-crash">CS229S · Crash course</a></li>
+<li><a href="../../cheatsheet.html" data-page="cs229s-cheatsheet">CS229S · Cheatsheet</a></li>
+<li><a href="../../course_map.html" data-page="cs229s-course-map">CS229S · Course map</a></li>
+<li><a href="../../prerequisites.html" data-page="cs229s-prereqs">CS229S · Prerequisites</a></li>
+<li><a href="../../notation_and_shapes.html" data-page="cs229s-notation">CS229S · Notation</a></li>
+<li><a href="../../glossary.html" data-page="cs229s-glossary">CS229S · Glossary</a></li>
+<li><a href="../../lessons/u01/lesson-01-sequence-transformer-workload.html" data-page="cs229s-u01">U01 · Sequence models and tran</a></li>
+<li><a href="../../lessons/u01/keys.html" data-page="cs229s-u01-keys">U01 · Keys</a></li>
+<li><a href="../../lessons/u02/lesson-02-hardware-compilers.html" data-page="cs229s-u02">U02 · Hardware-aware design an</a></li>
+<li><a href="../../lessons/u02/keys.html" data-page="cs229s-u02-keys">U02 · Keys</a></li>
+<li><a href="../../lessons/u03/lesson-03-accounting-speculative.html" data-page="cs229s-u03">U03 · Transformer accounting a</a></li>
+<li><a href="../../lessons/u03/keys.html" data-page="cs229s-u03-keys">U03 · Keys</a></li>
+<li><a href="../../lessons/u04/lesson-04-cuda-efficient-attention.html" data-page="cs229s-u04" class="active">U04 · CUDA and efficient atten</a></li>
+<li><a href="../../lessons/u04/keys.html" data-page="cs229s-u04-keys">U04 · Keys</a></li>
+<li><a href="../../lessons/u05/lesson-05-quantization-sparsity.html" data-page="cs229s-u05">U05 · Quantization, sparsity, </a></li>
+<li><a href="../../lessons/u05/keys.html" data-page="cs229s-u05-keys">U05 · Keys</a></li>
+<li><a href="../../lessons/u06/lesson-06-adaptation-data-pipelines.html" data-page="cs229s-u06">U06 · Training, adaptation, an</a></li>
+<li><a href="../../lessons/u06/keys.html" data-page="cs229s-u06-keys">U06 · Keys</a></li>
+<li><a href="../../lessons/u07/lesson-07-linear-attention-ssm-fft.html" data-page="cs229s-u07">U07 · Linear attention, SSMs, </a></li>
+<li><a href="../../lessons/u07/keys.html" data-page="cs229s-u07-keys">U07 · Keys</a></li>
+<li><a href="../../lessons/u08/lesson-08-serving-moe.html" data-page="cs229s-u08">U08 · Serving and sparse MoE</a></li>
+<li><a href="../../lessons/u08/keys.html" data-page="cs229s-u08-keys">U08 · Keys</a></li>
+<li><a href="../../lessons/u09/lesson-09-parallelism-clusters-scheduling.html" data-page="cs229s-u09">U09 · Parallelism, clusters, a</a></li>
+<li><a href="../../lessons/u09/keys.html" data-page="cs229s-u09-keys">U09 · Keys</a></li>
+<li><a href="../../lessons/u10/lesson-10-retrieval-guests-synthesis.html" data-page="cs229s-u10">U10 · Retrieval systems, guest</a></li>
+<li><a href="../../lessons/u10/keys.html" data-page="cs229s-u10-keys">U10 · Keys</a></li>
+<li><a href="../../labs/lab-01-sequence-workload.html" data-page="cs229s-lab-01">Lab 01 · Sequence workload</a></li>
+<li><a href="../../labs/keys-lab-01.html" data-page="cs229s-lab-01-keys">Lab 01 · Keys</a></li>
+<li><a href="../../labs/lab-02-roofline.html" data-page="cs229s-lab-02">Lab 02 · Roofline</a></li>
+<li><a href="../../labs/keys-lab-02.html" data-page="cs229s-lab-02-keys">Lab 02 · Keys</a></li>
+<li><a href="../../labs/lab-03-kvcache-speculative.html" data-page="cs229s-lab-03">Lab 03 · KV cache, speculativ</a></li>
+<li><a href="../../labs/keys-lab-03.html" data-page="cs229s-lab-03-keys">Lab 03 · Keys</a></li>
+<li><a href="../../labs/lab-04-tiling-softmax.html" data-page="cs229s-lab-04">Lab 04 · Tiling, softmax</a></li>
+<li><a href="../../labs/keys-lab-04.html" data-page="cs229s-lab-04-keys">Lab 04 · Keys</a></li>
+<li><a href="../../labs/lab-05-quant-prune.html" data-page="cs229s-lab-05">Lab 05 · Quantization, prunin</a></li>
+<li><a href="../../labs/keys-lab-05.html" data-page="cs229s-lab-05-keys">Lab 05 · Keys</a></li>
+<li><a href="../../labs/lab-06-adaptation-pipelines.html" data-page="cs229s-lab-06">Lab 06 · Adaptation, pipeline</a></li>
+<li><a href="../../labs/keys-lab-06.html" data-page="cs229s-lab-06-keys">Lab 06 · Keys</a></li>
+<li><a href="../../labs/lab-07-ssm-fft.html" data-page="cs229s-lab-07">Lab 07 · SSM, FFT</a></li>
+<li><a href="../../labs/keys-lab-07.html" data-page="cs229s-lab-07-keys">Lab 07 · Keys</a></li>
+<li><a href="../../labs/lab-08-serving-moe.html" data-page="cs229s-lab-08">Lab 08 · Serving, MoE</a></li>
+<li><a href="../../labs/keys-lab-08.html" data-page="cs229s-lab-08-keys">Lab 08 · Keys</a></li>
+<li><a href="../../labs/lab-09-parallelism-scheduling.html" data-page="cs229s-lab-09">Lab 09 · Parallelism, schedul</a></li>
+<li><a href="../../labs/keys-lab-09.html" data-page="cs229s-lab-09-keys">Lab 09 · Keys</a></li>
+<li><a href="../../labs/lab-10-retrieval-synthesis.html" data-page="cs229s-lab-10">Lab 10 · Retrieval, synthesis</a></li>
+<li><a href="../../labs/keys-lab-10.html" data-page="cs229s-lab-10-keys">Lab 10 · Keys</a></li>
+<li><a href="../../diagnostics/diagnostic-cs229s.html" data-page="cs229s-diag">CS229S · Diagnostic</a></li>
+<li><a href="../../diagnostics/keys-cs229s.html" data-page="cs229s-diag-keys">CS229S · Diagnostic keys</a></li>
+<li><a href="../../interview/interview-u01-questions.html" data-page="cs229s-int-u01">Interview · U01</a></li>
+<li><a href="../../interview/keys-u01.html" data-page="cs229s-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../../interview/interview-u02-questions.html" data-page="cs229s-int-u02">Interview · U02</a></li>
+<li><a href="../../interview/keys-u02.html" data-page="cs229s-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../../interview/interview-u03-questions.html" data-page="cs229s-int-u03">Interview · U03</a></li>
+<li><a href="../../interview/keys-u03.html" data-page="cs229s-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../../interview/interview-u04-questions.html" data-page="cs229s-int-u04">Interview · U04</a></li>
+<li><a href="../../interview/keys-u04.html" data-page="cs229s-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../../interview/interview-u05-questions.html" data-page="cs229s-int-u05">Interview · U05</a></li>
+<li><a href="../../interview/keys-u05.html" data-page="cs229s-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../../interview/interview-u06-questions.html" data-page="cs229s-int-u06">Interview · U06</a></li>
+<li><a href="../../interview/keys-u06.html" data-page="cs229s-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../../interview/interview-u07-questions.html" data-page="cs229s-int-u07">Interview · U07</a></li>
+<li><a href="../../interview/keys-u07.html" data-page="cs229s-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../../interview/interview-u08-questions.html" data-page="cs229s-int-u08">Interview · U08</a></li>
+<li><a href="../../interview/keys-u08.html" data-page="cs229s-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../../interview/interview-u09-questions.html" data-page="cs229s-int-u09">Interview · U09</a></li>
+<li><a href="../../interview/keys-u09.html" data-page="cs229s-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../../interview/interview-u10-questions.html" data-page="cs229s-int-u10">Interview · U10</a></li>
+<li><a href="../../interview/keys-u10.html" data-page="cs229s-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../../interview/oral-defenses.html" data-page="cs229s-int-oral">Interview · Oral defenses</a></li>
+<li><a href="../../interview/keys-oral.html" data-page="cs229s-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../../interview/transfer-sets.html" data-page="cs229s-int-transfer">Interview · Transfer sets</a></li>
+<li><a href="../../interview/keys-transfer.html" data-page="cs229s-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../../capstones/capstone-a-ssm-replication.html" data-page="cs229s-cap-a">Capstone A · SSM replication</a></li>
+<li><a href="../../capstones/capstone-b-rag-serving.html" data-page="cs229s-cap-b">Capstone B · RAG serving</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../../index.html">Home</a> / <a href="#">Systems for Machine Learning (Stanford CS229S)</a> / Unit 04 · CUDA and efficient attention</nav>
+      <h1>Unit 04 · CUDA and efficient attention</h1>
+      <p class="meta-line">2026-10-06</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="lesson-04-cuda-and-efficient-attention">Lesson 04: CUDA and efficient attention</h1>
+<p>Unit: cs229s-U04. Concepts: cs229s-U04-C01 to C12.
+Date: 2026-10-06. Baseline: October 6, 2026.
+Claim class for every leaf: PLANNED / SOURCE ATTRIBUTION PENDING.
+Family anchor: CALENDAR-ANCHORED, Week 3, Oct 07,
+&ldquo;Hardware Aware Algorithm Design&rdquo; (presented by Simran):
+CUDA and GPU Programming for AI, Understanding the Scaling
+Bottlenecks of Standard Attention, Main Ideas in Efficient
+Attention Algorithms (Sparsity, Low Rank, Kernelization),
+Motivating Hardware Aware Design, Profiling Standard
+Attention and Computing Arithmetic Intensity, Reviewing the
+GPU execution model, How is attention executed on GPUs,
+Reviewing Three Key Ideas: Fusion, Tiling, Caching vs.
+Recompute, Detailed Walkthrough of FlashAttention v1 and
+v2. Also Oct 11, &ldquo;Efficient Attention&rdquo;: Attention
+Bottlenecks and Attention Approximations to Improve
+Efficiency, I/O Aware Algorithms: FlashAttention.</p>
+<h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p>Same 15-item contract as U01, in compact form. Shared
+symbols follow <code>notation_and_shapes.md</code>. CUDA specifics
+are taught from the public programming model, no GPU is
+needed for the labs (CPU emulation). FlashAttention is
+taught from Dao et al. (2022, 2023), not as lecture
+content.</p>
+<hr />
+<h2 id="c01-threadswarpsblocks">C01: threads/warps/blocks</h2>
+<h3 id="source-scope-objectives-dependencies">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 3, Oct 07, &ldquo;Reviewing the GPU
+execution model&rdquo;. Scope: the three-level execution
+hierarchy. Objective: map a problem to threads, warps,
+blocks. Depends on P15, U02 C02.</p>
+<h3 id="motivating-question-and-tiny-toy">Motivating question and tiny toy</h3>
+<p>Question: 32 threads always move together. What is that
+group, and why 32? Toy: add 1024 numbers, 256 threads
+per block.</p>
+<h3 id="mental-model">Mental model</h3>
+<p>A marching band. A warp is one row of 32 marchers who
+step in lockstep (SIMT). A block is the whole band
+section on one field (SM). The grid is all sections.
+If one marcher takes a different step (divergence), the
+row does both steps and waits.</p>
+<h3 id="objects-shapes-assumptions">Objects, shapes, assumptions</h3>
+<ul>
+<li>Thread: one lane of execution.</li>
+<li>Warp: 32 threads, lockstep. 256-thread block = 8
+  warps.</li>
+<li>Block: runs on one SM, with shared memory.</li>
+<li>Grid: all blocks.</li>
+<li>Assumption: NVIDIA model (warp = 32). Other vendors
+  differ (64), the ideas transfer.</li>
+</ul>
+<h3 id="derivation">Derivation</h3>
+<p>1024 elements, 256 threads/block: 4 blocks, 32 warps
+total. Warp <code>w</code> in block <code>b</code> covers elements
+<code>(b*8 + w)*32 + lane</code>. Divergence: an <code>if</code> that splits
+a warp runs both paths serially, halving throughput
+for that warp.</p>
+<h3 id="computed-example">Computed example</h3>
+<p>Toy: 8 warps per block, 4 blocks. A branch taken by 1
+lane of a warp: the warp executes both sides, ~2x the
+time for those instructions. Lab-04 emulates warp
+voting on a CPU toy.</p>
+<h3 id="implementation-and-checks">Implementation and checks</h3>
+<pre><code class="language-python">WARP = 32
+def warp_of(tid):
+    return tid // WARP, tid % WARP
+
+assert warp_of(700) == (21, 28)
+assert warp_of(0) == (0, 0)
+</code></pre>
+<p>Check: lane in [0, 32). Warp count = ceil(threads/32).
+Lab-04 checks the mapping.</p>
+<h3 id="complexity-and-costs">Complexity and costs</h3>
+<p>The warp is the scheduling quantum. Think in warps,
+not threads, when estimating occupancy and divergence.</p>
+<h3 id="nearest-alternative-and-selection-boundary">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: think in threads only.
+Selection boundary: thread view for indexing, warp
+view for performance. Both are needed.</p>
+<h3 id="failure-case-and-counterexample">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;threads are independent.&rdquo; They
+are not inside a warp. Counterexample: a shuffle or
+vote intrinsic assumes warp lockstep, scattering
+those threads across warps gives wrong answers.</p>
+<h3 id="research-reading-and-falsifiable-extension">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 07 execution model session.
+Falsifiable extension: microbenchmark a divergent vs
+uniform branch at warp granularity. Hypothesis: the
+divergent version costs ~2x the uniform one. Report
+both.</p>
+<h3 id="exercises">Exercises</h3>
+<ul>
+<li>E01 (recall): define warp, block, grid in one line
+  each.</li>
+<li>E02 (numerical): 1000 threads. Warps? Blocks of
+  256?</li>
+<li>E03 (failure diagnosis): kernel with heavy
+  divergence is slow. Name the mechanism.</li>
+<li>E04 (counterfactual): warp size were 1. What
+  breaks and what gets simpler?</li>
+<li>E05 (research): state the divergence-cost
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units">Visual units</h3>
+<ul>
+<li>Figure <code>u04_c01_warps.png</code>: 8 warps of 32 lanes,
+  one warp highlighted with a split branch.
+  Source: original toy. Shell 1.</li>
+</ul>
+<figure><img alt="u04_c01_warps.png" src="../../assets/u04/u04_c01_warps.png"><figcaption>8 warps of 32 lanes, one warp highlighted with a split branch</figcaption></figure>
+<ul>
+<li>Audit: <code>u04c01</code> to <code>f01</code>. Before: threads. After:
+  warps. One rule: group by 32.</li>
+</ul>
+<hr />
+<h2 id="c02-coalescing">C02: coalescing</h2>
+<h3 id="source-scope-objectives-dependencies_1">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 3, Oct 07 (GPU execution model
+family). Scope: coalesced memory access. Objective:
+compute transactions for a warp&rsquo;s access pattern.
+Depends on U02 C06.</p>
+<h3 id="motivating-question-and-tiny-toy_1">Motivating question and tiny toy</h3>
+<p>Question: 32 threads read 32 floats. When is that one
+transaction, and when 32? Toy: fp32, 128-byte lines.</p>
+<h3 id="mental-model_1">Mental model</h3>
+<p>A bus stop. 32 riders (threads) boarding one bus
+(one 128-byte transaction) when they stand together
+(adjacent addresses). Scattered riders need 32 buses.
+The hardware merges only adjacent requests.</p>
+<h3 id="objects-shapes-assumptions_1">Objects, shapes, assumptions</h3>
+<ul>
+<li>Coalesced: thread <code>i</code> reads address <code>base + i</code>.
+  32 fp32 = 128 bytes = 1 transaction.</li>
+<li>Strided: thread <code>i</code> reads <code>base + i*stride</code>.
+  Stride 32: 32 transactions.</li>
+<li>Assumption: 128-byte cache lines, fp32.</li>
+</ul>
+<h3 id="derivation_1">Derivation</h3>
+<p>Warp reads 32 adjacent fp32: bytes [base, base+128),
+exactly one line: 1 transaction. Stride-32 access:
+addresses base, base+128, &hellip;: 32 different lines: 32
+transactions. Bandwidth used: 128 bytes wanted vs
+4096 moved, 32x waste.</p>
+<h3 id="computed-example_1">Computed example</h3>
+<p>Toy: 1024 fp32, 32 warps. Coalesced: 32 transactions.
+Stride-32: 1024 transactions. At 2 TB/s, the
+coalesced read takes ~64 ns of transfer, the strided
+read ~2 us. Lab-04 emulates the counting.</p>
+<h3 id="implementation-and-checks_1">Implementation and checks</h3>
+<pre><code class="language-python">def transactions(stride, nthreads=32, line=128, bpe=4):
+    addrs = { (i * stride * bpe) // line for i in range(nthreads) }
+    return len(addrs)
+
+assert transactions(1) == 1
+assert transactions(32) == 32
+</code></pre>
+<p>Check: stride 1 always coalesces for fp32. The lab
+sweeps strides.</p>
+<h3 id="complexity-and-costs_1">Complexity and costs</h3>
+<p>Coalescing is a 32x lever on memory-bound kernels.
+It costs nothing but index math.</p>
+<h3 id="nearest-alternative-and-selection-boundary_1">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: shared-memory staging (load
+strided, then read coalesced from shared). Selection
+boundary: fix the index math when possible, stage
+when the pattern is inherent (transpose via shared).</p>
+<h3 id="failure-case-and-counterexample_1">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;any pattern coalesces if the
+data is contiguous.&rdquo; Only warp-adjacent patterns
+merge. Counterexample: each thread reads a random
+element of a contiguous array: 32 transactions.
+Contiguity of data is not enough, contiguity of
+access is what matters.</p>
+<h3 id="research-reading-and-falsifiable-extension_1">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 07 session. Falsifiable extension:
+microbenchmark copy at strides 1..32. Hypothesis:
+time steps up at each new line touched, ~32x at
+stride 32. Report the curve.</p>
+<h3 id="exercises_1">Exercises</h3>
+<ul>
+<li>E06 (recall): define coalesced access in one line.</li>
+<li>E07 (numerical): fp16, stride 8. Transactions per
+  warp?</li>
+<li>E08 (failure diagnosis): kernel moves 32x the
+  expected bytes. Name the pattern.</li>
+<li>E09 (counterfactual): lines were 32 bytes. Stride
+  1 fp32 transactions?</li>
+<li>E10 (research): state the stride-curve hypothesis.</li>
+</ul>
+<h3 id="visual-units_1">Visual units</h3>
+<ul>
+<li>Figure <code>u04_c02_coal.png</code>: one bus (1 transaction)
+  vs 32 buses (32 transactions). Source: original
+  toy. Shell 3.</li>
+</ul>
+<figure><img alt="u04_c02_coal.png" src="../../assets/u04/u04_c02_coal.png"><figcaption>one bus (1 transaction) vs 32 buses (32 transactions)</figcaption></figure>
+<ul>
+<li>Audit: <code>u04c02</code> to <code>f02</code>. Before: scattered. After:
+  adjacent. One rule: align the warp.</li>
+</ul>
+<hr />
+<h2 id="c03-tiling">C03: tiling</h2>
+<h3 id="source-scope-objectives-dependencies_2">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 3, Oct 07, &ldquo;Reviewing Three Key
+Ideas: Fusion, Tiling, Caching vs. Recompute&rdquo;. Scope:
+blocking for on-chip memory. Objective: tile a matmul.
+Depends on U02 C01, C04.</p>
+<h3 id="motivating-question-and-tiny-toy_2">Motivating question and tiny toy</h3>
+<p>Question: a (1024, 1024) matmul does not fit on chip.
+How do we still get reuse? Toy: 64x64 tiles, fp16.</p>
+<h3 id="mental-model_2">Mental model</h3>
+<p>Floor tiles. You cannot lift the whole floor, so you
+work one tile at a time: load a tile of A and a tile
+of B into shared memory, multiply, accumulate, move
+to the next tile. Each element is loaded O(n/tile)
+times instead of O(n).</p>
+<h3 id="objects-shapes-assumptions_2">Objects, shapes, assumptions</h3>
+<ul>
+<li>Tile (Tm, Tn, Tk): block of the output and the k
+  loop.</li>
+<li>Shared memory holds one A tile + one B tile.</li>
+<li>Assumption: tiles fit in shared memory, the k loop
+  is the reduction axis.</li>
+</ul>
+<h3 id="derivation_2">Derivation</h3>
+<p>Naive: each A element read n times from HBM. Tiled
+with Tk: each A tile loaded once per output tile row,
+so A reads drop by ~Tk. For 64-wide tiles on 1024:
+HBM reads of A drop ~16x.</p>
+<h3 id="computed-example_2">Computed example</h3>
+<p>Toy: (64, 64, 64), tile 32. A (64x64) read from HBM:
+naive 64 times (once per k), tiled: 2 times (two k
+tiles). Lab-04 counts HBM reads for tiled vs naive
+on a CPU emulation.</p>
+<h3 id="implementation-and-checks_2">Implementation and checks</h3>
+<pre><code class="language-python">def hbm_reads(n, tile):
+    # A matrix (n,n), tiled along k
+    return (n // tile)  # times each A tile is loaded
+
+assert hbm_reads(64, 32) == 2
+assert hbm_reads(1024, 64) == 16
+</code></pre>
+<p>Check: reads scale as n/tile. Bigger tiles mean
+fewer reads but more shared memory.</p>
+<h3 id="complexity-and-costs_2">Complexity and costs</h3>
+<p>Tiling does not change FLOPs. It converts HBM reads
+into shared-memory reads, raising intensity.</p>
+<h3 id="nearest-alternative-and-selection-boundary_2">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: no tiling (stream from HBM).
+Selection boundary: tile when the working set
+exceeds on-chip memory and reuse exists. Skip when
+the whole problem fits in registers.</p>
+<h3 id="failure-case-and-counterexample_2">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;bigger tiles are always better.&rdquo;
+Tiles are capped by shared memory. Counterexample:
+a 256x256 fp16 tile pair needs 256 KB &gt; shared
+memory, the kernel fails to launch. Size to the
+machine.</p>
+<h3 id="research-reading-and-falsifiable-extension_2">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 07 tiling session. Falsifiable
+extension: time tiled matmul vs tile size.
+Hypothesis: time falls with tile size until shared
+memory caps it, then launch fails. Report the best
+tile.</p>
+<h3 id="exercises_2">Exercises</h3>
+<ul>
+<li>E11 (recall): define tiling in one line.</li>
+<li>E12 (numerical): (1024,1024,1024), tile 64. A
+  HBM reads vs naive.</li>
+<li>E13 (failure diagnosis): tiled kernel fails to
+  launch. Name the resource.</li>
+<li>E14 (counterfactual): shared memory were infinite.
+  Best tile?</li>
+<li>E15 (research): state the tile-size hypothesis.</li>
+</ul>
+<h3 id="visual-units_2">Visual units</h3>
+<ul>
+<li>Figure <code>u04_c03_tiling.png</code>: matrix with tile
+  grid, one A tile + one B tile highlighted moving
+  along k. Source: original toy. Shell 3.</li>
+</ul>
+<figure><img alt="u04_c03_tiling.png" src="../../assets/u04/u04_c03_tiling.png"><figcaption>matrix with tile grid, one A tile + one B tile highlighted moving along k</figcaption></figure>
+<ul>
+<li>Audit: <code>u04c03</code> to <code>f03</code>. Before: whole matrix.
+  After: tiles. One rule: block the working set.</li>
+</ul>
+<hr />
+<h2 id="c04-synchronization">C04: synchronization</h2>
+<h3 id="source-scope-objectives-dependencies_3">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 3, Oct 07 (GPU execution model
+family). Scope: barriers and fences. Objective: place
+__syncthreads correctly. Depends on C01.</p>
+<h3 id="motivating-question-and-tiny-toy_3">Motivating question and tiny toy</h3>
+<p>Question: thread 0 writes shared memory, thread 1
+reads it. Who guarantees the order? Toy: 64 threads,
+one shared array.</p>
+<h3 id="mental-model_3">Mental model</h3>
+<p>A roll call. __syncthreads() is the teacher calling
+&ldquo;everyone stop until all are here.&rdquo; No thread passes
+the barrier until every thread in the block reaches
+it. Without the call, reads race writes.</p>
+<h3 id="objects-shapes-assumptions_3">Objects, shapes, assumptions</h3>
+<ul>
+<li>__syncthreads(): block-wide barrier.</li>
+<li>Memory fence: orders memory visibility (weaker
+  than a barrier).</li>
+<li>Assumption: all threads in the block reach the
+  barrier (divergent barriers deadlock).</li>
+</ul>
+<h3 id="derivation_3">Derivation</h3>
+<p>Tile load: each thread loads one element to shared.
+Barrier. Compute: each thread reads the full tile.
+Without the barrier, a fast thread reads a tile
+element before its loader wrote it: wrong answers,
+nondeterministically.</p>
+<h3 id="computed-example_3">Computed example</h3>
+<p>Toy: 64 threads load 64 elements. With barrier: all
+reads see all writes. Without: races. Lab-04
+emulates the race on CPU with a deliberately racy
+schedule and shows wrong sums.</p>
+<h3 id="implementation-and-checks_3">Implementation and checks</h3>
+<pre><code class="language-python"># CPU emulation of the barrier contract
+def tiled_sum_ok(nthreads=64):
+    import threading
+    a = [0] * nthreads
+    barrier = threading.Barrier(nthreads)
+    out = [0] * nthreads
+    def w(i):
+        a[i] = i
+        barrier.wait()
+        out[i] = sum(a)
+    ts = [threading.Thread(target=w, args=(i,)) for i in range(nthreads)]
+    [t.start() for t in ts]
+[t.join() for t in ts]
+    return all(v == sum(range(nthreads)) for v in out)
+
+assert tiled_sum_ok()
+</code></pre>
+<p>Check: all threads see the full array only with the
+barrier. Remove it and the test flakes.</p>
+<h3 id="complexity-and-costs_3">Complexity and costs</h3>
+<p>Barriers cost ~10-20 cycles when converged. The cost
+is correctness, not speed: missing barriers are
+bugs, extra barriers are small stalls.</p>
+<h3 id="nearest-alternative-and-selection-boundary_3">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: warp-level primitives
+(__syncwarp) for warp-only sharing. Selection
+boundary: block barrier for shared memory across
+warps, warp sync for warp-local exchange.</p>
+<h3 id="failure-case-and-counterexample_3">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;barriers are free to sprinkle.&rdquo;
+A barrier inside divergent control flow deadlocks:
+threads that never reach it wait forever.
+Counterexample: guard the <code>__syncthreads()</code> call with
+<code>if (tid &lt; 16)</code> and it hangs.</p>
+<h3 id="research-reading-and-falsifiable-extension_3">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 07 session. Falsifiable extension:
+remove barriers one by one from a tiled kernel and
+record wrong-answer rate. Hypothesis: loads feeding
+shared reads fail first. Report which barrier.</p>
+<h3 id="exercises_3">Exercises</h3>
+<ul>
+<li>E16 (recall): what does __syncthreads guarantee?</li>
+<li>E17 (numerical): 64 threads, barrier cost 20
+  cycles, 1e6 barriers. Total cycles.</li>
+<li>E18 (failure diagnosis): kernel hangs. A barrier
+  sits inside an if. Explain.</li>
+<li>E19 (counterfactual): only warp sync existed. How
+  do blocks share data?</li>
+<li>E20 (research): state the barrier-removal
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_3">Visual units</h3>
+<ul>
+<li>Figure <code>u04_c04_sync.png</code>: timeline with threads
+  arriving, barrier line, then all proceeding.
+  Source: original toy. Shell 1.</li>
+</ul>
+<figure><img alt="u04_c04_sync.png" src="../../assets/u04/u04_c04_sync.png"><figcaption>timeline with threads arriving, barrier line, then all proceeding</figcaption></figure>
+<ul>
+<li>Audit: <code>u04c04</code> to <code>f04</code>. Before: racy reads.
+  After: ordered. One rule: wait for all.</li>
+</ul>
+<hr />
+<h2 id="c05-occupancy">C05: occupancy</h2>
+<h3 id="source-scope-objectives-dependencies_4">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 3, Oct 07 (GPU execution model
+family). Scope: what occupancy is and what limits it.
+Objective: compute the occupancy bound. Depends on
+C01.</p>
+<h3 id="motivating-question-and-tiny-toy_4">Motivating question and tiny toy</h3>
+<p>Question: the GPU can hold 64 warps per SM but your
+kernel runs 8. What ate the slots? Toy: 256-thread
+blocks, 48 KB shared per block.</p>
+<h3 id="mental-model_4">Mental model</h3>
+<p>Hotel rooms. An SM holds a fixed set of rooms (warp slots,
+registers, shared memory). Each block books rooms.
+Occupancy is the fraction booked. A block that books
+too much shared memory leaves rooms empty.</p>
+<h3 id="objects-shapes-assumptions_4">Objects, shapes, assumptions</h3>
+<ul>
+<li>Occupancy = active warps / max warps per SM.</li>
+<li>Limits: threads/SM, registers/thread, shared
+  memory/block.</li>
+<li>Toy: max 64 warps/SM, 256 threads = 8 warps/block.</li>
+<li>Assumption: the kernel is not launch-bound.</li>
+</ul>
+<h3 id="derivation_4">Derivation</h3>
+<p>Blocks per SM = min over resources. Toy: shared 48
+KB/block, SM has 100 KB: at most 2 blocks. 2 blocks
+x 8 warps = 16 warps. Occupancy = 16/64 = 25%.
+Cutting shared to 24 KB/block allows 4 blocks: 50%.</p>
+<h3 id="computed-example_4">Computed example</h3>
+<p>Toy above: 25% -&gt; 50% by halving shared use.
+Lab-04 computes occupancy for a small table of
+(block size, shared KB, registers).</p>
+<h3 id="implementation-and-checks_4">Implementation and checks</h3>
+<pre><code class="language-python">import math
+def occupancy(block_threads, shared_kb, regs_per_thread,
+              max_warps=64, sm_shared_kb=100,
+              sm_regs=65536, max_threads=2048):
+    warps = block_threads // 32
+    by_threads = max_threads // block_threads
+    by_shared = sm_shared_kb // shared_kb if shared_kb else 10**9
+    by_regs = sm_regs // (regs_per_thread * block_threads)
+    blocks = min(by_threads, by_shared, by_regs)
+    return blocks * warps / max_warps
+
+assert abs(occupancy(256, 48, 32) - 0.25) &lt; 1e-9
+assert abs(occupancy(256, 24, 32) - 0.50) &lt; 1e-9
+</code></pre>
+<p>Check: each limiter can bind. The lab finds which
+binds.</p>
+<h3 id="complexity-and-costs_4">Complexity and costs</h3>
+<p>Occupancy is a means, not a goal: it enables latency
+hiding. Past ~50%, more occupancy rarely helps.</p>
+<h3 id="nearest-alternative-and-selection-boundary_4">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: ignore occupancy, maximize ILP
+per thread. Selection boundary: raise occupancy when
+the kernel is latency-bound, trade it for registers
+(ILP) when compute-bound.</p>
+<h3 id="failure-case-and-counterexample_4">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;100% occupancy is the goal.&rdquo;
+A kernel at 25% with high ILP can beat one at 100%
+with stalls. Counterexample: the toy at 25% with
+unrolled math vs 50% spilling registers. Measure,
+do not worship.</p>
+<h3 id="research-reading-and-falsifiable-extension_4">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 07 session. Falsifiable extension:
+vary shared memory per block, measure occupancy and
+time. Hypothesis: time improves to ~50% occupancy
+then flattens. Report the knee.</p>
+<h3 id="exercises_4">Exercises</h3>
+<ul>
+<li>E21 (recall): define occupancy.</li>
+<li>E22 (numerical): toy above. Occupancy at 12 KB/
+  block?</li>
+<li>E23 (failure diagnosis): occupancy 100% but slow.
+  Name two other suspects.</li>
+<li>E24 (counterfactual): registers were infinite.
+  What limits now?</li>
+<li>E25 (research): state the knee hypothesis.</li>
+</ul>
+<h3 id="visual-units_4">Visual units</h3>
+<ul>
+<li>Figure <code>u04_c05_occ.png</code>: hotel rooms: 64 slots,
+  16 filled at 48 KB, 32 at 24 KB. Source: original
+  toy. Shell 6 (change shared KB).</li>
+</ul>
+<figure><img alt="u04_c05_occ.png" src="../../assets/u04/u04_c05_occ.png"><figcaption>hotel rooms: 64 slots, 16 filled at 48 KB, 32 at 24 KB. (change shared KB)</figcaption></figure>
+<ul>
+<li>Audit: <code>u04c05</code> to <code>f05</code>. Before: 25%. After: 50%.
+  One rule: shrink the booking.</li>
+</ul>
+<hr />
+<h2 id="c06-reductions">C06: reductions</h2>
+<h3 id="source-scope-objectives-dependencies_5">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 3, Oct 07 (GPU execution model
+family). Scope: parallel reduction. Objective: write
+the tree reduction. Depends on C01, C04.</p>
+<h3 id="motivating-question-and-tiny-toy_5">Motivating question and tiny toy</h3>
+<p>Question: sum 1024 numbers with 256 threads. Toy:
+values 0..1023.</p>
+<h3 id="mental-model_5">Mental model</h3>
+<p>A tournament bracket. Pairs sum, winners advance:
+1024 -&gt; 512 -&gt; &hellip; -&gt; 1 in 10 rounds. Each round
+halves the field. The final is one number.</p>
+<h3 id="objects-shapes-assumptions_5">Objects, shapes, assumptions</h3>
+<ul>
+<li>Rounds: log2(N). 1024 needs 10 rounds.</li>
+<li>Shared memory holds the bracket.</li>
+<li>Assumption: N is a power of 2 (pad otherwise).</li>
+</ul>
+<h3 id="derivation_5">Derivation</h3>
+<p>Round r: thread i adds a[2i] + a[2i+1] into the next
+level. Work per round halves: total work 2N, span
+log N. Barriers between rounds (or warp shuffles in
+the last warp).</p>
+<h3 id="computed-example_5">Computed example</h3>
+<p>Toy: sum(0..1023) = 523776. 10 rounds. Lab-04 runs
+the tree on CPU and checks against sum().</p>
+<h3 id="implementation-and-checks_5">Implementation and checks</h3>
+<pre><code class="language-python">def tree_sum(a):
+    a = list(a)
+    while len(a) &gt; 1:
+        if len(a) % 2:
+            a.append(0)
+        a = [a[i] + a[i + 1] for i in range(0, len(a), 2)]
+    return a[0]
+
+assert tree_sum(range(1024)) == 523776
+</code></pre>
+<p>Check: padding preserves the sum. Rounds =
+ceil(log2(N)).</p>
+<h3 id="complexity-and-costs_5">Complexity and costs</h3>
+<p>Work O(N), span O(log N). Reductions are
+bandwidth-bound: the tree is about moving data, not
+math.</p>
+<h3 id="nearest-alternative-and-selection-boundary_5">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: serial sum (span O(N)).
+Selection boundary: tree when N is large and
+parallel, serial within a warp (shuffle) for the
+tail.</p>
+<h3 id="failure-case-and-counterexample_5">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;fewer rounds are always faster.&rdquo;
+Unrolling too far wastes shared memory and hurts
+occupancy. Counterexample: fully unrolled 1024-sum
+uses 4 KB shared for no gain over 2 elements per
+thread.</p>
+<h3 id="research-reading-and-falsifiable-extension_5">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 07 session. Falsifiable extension:
+time reduction vs elements-per-thread. Hypothesis:
+2-4 per thread is best, 1 wastes launch, 16 wastes
+registers. Report the best.</p>
+<h3 id="exercises_5">Exercises</h3>
+<ul>
+<li>E26 (recall): rounds for N = 4096?</li>
+<li>E27 (numerical): sum(0..4095) via the tree.
+  Value?</li>
+<li>E28 (failure diagnosis): sum is wrong for odd N.
+  Name the fix.</li>
+<li>E29 (counterfactual): no shared memory. How to
+  reduce?</li>
+<li>E30 (research): state the elements-per-thread
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_5">Visual units</h3>
+<ul>
+<li>Figure <code>u04_c06_reduce.png</code>: bracket 8 -&gt; 4 -&gt; 2
+  -&gt; 1 with sums. Source: original toy. Shell 1.</li>
+</ul>
+<figure><img alt="u04_c06_reduce.png" src="../../assets/u04/u04_c06_reduce.png"><figcaption>bracket 8 -&gt; 4 -&gt; 2 -&gt; 1 with sums</figcaption></figure>
+<ul>
+<li>Audit: <code>u04c06</code> to <code>f06</code>. Before: 8 values. After:
+  1 sum. One rule: halve each round.</li>
+</ul>
+<hr />
+<h2 id="c07-attention-bottleneck">C07: attention bottleneck</h2>
+<h3 id="source-scope-objectives-dependencies_6">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 3, Oct 07, &ldquo;Understanding the
+Scaling Bottlenecks of Standard Attention&rdquo;. Scope: why
+standard attention is slow. Objective: name the memory
+wall with numbers. Depends on U01 C10, U02 C05.</p>
+<h3 id="motivating-question-and-tiny-toy_6">Motivating question and tiny toy</h3>
+<p>Question: attention FLOPs look fine, but the kernel
+is slow. Where does the time go? Toy: T = 4096,
+n = 64, h = 1, fp16.</p>
+<h3 id="mental-model_6">Mental model</h3>
+<p>A library with no desk. Standard attention writes the
+whole T x T score matrix to HBM (the warehouse),
+reads it back for softmax, writes it again, reads it
+for the values multiply. Four warehouse trips for one
+idea. The desk (SRAM) could hold a tile, but the
+naive code never uses it.</p>
+<h3 id="objects-shapes-assumptions_6">Objects, shapes, assumptions</h3>
+<ul>
+<li>Scores: T^2 numbers. T = 4096: 16.7M numbers,
+  33.5 MB fp16 per head.</li>
+<li>Trips: write scores, read for softmax, write
+  probs, read for AV: ~4 x 33.5 = 134 MB per head.</li>
+<li>Assumption: naive three-kernel implementation.</li>
+</ul>
+<h3 id="derivation_6">Derivation</h3>
+<p>HBM traffic per layer per head: ~4T^2 bytes (fp16:
+2 bytes x 2 for read+write x 2 passes). FLOPs:
+4T^2n. Intensity: (4T^2n)/(4T^2) = n = 64 FLOP/byte
+&lt; ridge 150: memory-bound. The bottleneck is bytes,
+not math.</p>
+<h3 id="computed-example_6">Computed example</h3>
+<p>Toy: 134 MB traffic per head at 2 TB/s = 67 us per
+head just for scores. Real: T = 8192, h = 32:
+scores 32 x 134 MB = 4.3 GB traffic per layer, 2.1
+ms per layer at 2 TB/s. Lab-04 computes this table.</p>
+<h3 id="implementation-and-checks_6">Implementation and checks</h3>
+<pre><code class="language-python">def attn_traffic(T, h, bpe=2, passes=4):
+    return passes * T * T * h * bpe
+
+assert attn_traffic(4096, 1) == 134217728
+</code></pre>
+<p>Check: traffic scales as T^2. The lab plots it.</p>
+<h3 id="complexity-and-costs_6">Complexity and costs</h3>
+<p>O(T^2) HBM traffic is the wall. FLOPs are a
+distraction here.</p>
+<h3 id="nearest-alternative-and-selection-boundary_6">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: approximate attention (C08).
+Selection boundary: exact IO-aware (FlashAttention)
+when exactness matters, approximations when some
+error is acceptable.</p>
+<h3 id="failure-case-and-counterexample_6">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;attention is compute-bound.&rdquo;
+At n = 64 the intensity is 64 &lt; 150: memory-bound.
+Counterexample: a profiler showing 90% DRAM
+bandwidth on the attention kernel. Believe the
+profiler.</p>
+<h3 id="research-reading-and-falsifiable-extension_6">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 07 bottleneck session.
+Falsifiable extension: profile standard attention
+vs T. Hypothesis: time scales as T^2 and DRAM
+bandwidth saturates. Report both.</p>
+<h3 id="exercises_6">Exercises</h3>
+<ul>
+<li>E31 (recall): name the four HBM trips.</li>
+<li>E32 (numerical): T = 8192, h = 32, fp16. Score
+  traffic bytes.</li>
+<li>E33 (failure diagnosis): attention at 90% DRAM
+  bandwidth. What is the fix direction?</li>
+<li>E34 (counterfactual): scores computed on the fly
+  and never stored. Traffic now?</li>
+<li>E35 (research): state the T^2-time hypothesis.</li>
+</ul>
+<h3 id="visual-units_6">Visual units</h3>
+<ul>
+<li>Figure <code>u04_c07_bottleneck.png</code>: four warehouse
+  trips for the score matrix vs one desk. Source:
+  original toy. Shell 3.</li>
+</ul>
+<figure><img alt="u04_c07_bottleneck.png" src="../../assets/u04/u04_c07_bottleneck.png"><figcaption>four warehouse trips for the score matrix vs one desk</figcaption></figure>
+<ul>
+<li>Audit: <code>u04c07</code> to <code>f07</code>. Before: 4 trips. After:
+  (FlashAttention) 0. One rule: never materialize.</li>
+</ul>
+<hr />
+<h2 id="c08-approximation-versus-exact-io-savings">C08: approximation versus exact IO savings</h2>
+<h3 id="source-scope-objectives-dependencies_7">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 3, Oct 07, &ldquo;Main Ideas in
+Efficient Attention Algorithms (Sparsity, Low Rank,
+Kernelization)&rdquo;, Oct 11, &ldquo;Attention Bottlenecks and
+Attention Approximations to Improve Efficiency&rdquo;.
+Scope: the two families. Objective: compare them on
+exactness, complexity, and IO. Depends on C07.</p>
+<h3 id="motivating-question-and-tiny-toy_7">Motivating question and tiny toy</h3>
+<p>Question: two fixes exist: change the math
+(approximate) or change the memory plan (exact IO).
+Which do you pick? Toy: T = 4096.</p>
+<h3 id="mental-model_7">Mental model</h3>
+<p>Two ways to shorten a commute: move closer
+(approximation: sparse/low-rank/kernel attention
+changes what you compute) or take the express lane
+(exact IO: FlashAttention computes the same thing
+with fewer trips). Moving closer changes where you
+live (the model&rsquo;s math). The express lane keeps your
+address.</p>
+<h3 id="objects-shapes-assumptions_7">Objects, shapes, assumptions</h3>
+<ul>
+<li>Sparse: attend to a subset (e.g. local window w):
+  O(T w) work, approximate.</li>
+<li>Low-rank: project keys to rank r: O(T r), approx.</li>
+<li>Kernel: feature-map linearization: O(T), approx.</li>
+<li>FlashAttention: O(T^2) FLOPs, O(T) HBM traffic,
+  exact.</li>
+<li>Assumption: exactness means bit-identical outputs
+  up to float round-off.</li>
+</ul>
+<h3 id="derivation_7">Derivation</h3>
+<p>Sparse window w: each query touches w keys: work
+2Twd vs 2T^2d: ratio w/T. FlashAttention: same
+2T^2d FLOPs but HBM traffic O(Td): it recomputes
+tiles instead of storing. The FLOP count does not
+change, the byte count does.</p>
+<h3 id="computed-example_7">Computed example</h3>
+<p>Toy T = 4096, w = 256: sparse work ratio 256/4096 =
+1/16. FlashAttention: FLOPs unchanged, traffic from
+134 MB to ~2 MB per head (Q,K,V,O only). Lab-04
+tabulates all four.</p>
+<h3 id="implementation-and-checks_7">Implementation and checks</h3>
+<pre><code class="language-python">def costs(T, d, w=256, r=256):
+    dense = 2 * T * T * d
+    sparse = 2 * T * w * d
+    lowrank = 2 * T * r * d
+    return dense, sparse, lowrank
+
+dn, sp, lr = costs(4096, 64)
+assert sp == dn // 16 and lr == dn // 16
+</code></pre>
+<p>Check: ratios match w/T and r/T. Exactness is a
+separate column, not a number.</p>
+<h3 id="complexity-and-costs_7">Complexity and costs</h3>
+<p>Approximations cut FLOPs and traffic but change the
+function. Exact IO cuts traffic only. The choice is
+about error tolerance, not speed alone.</p>
+<h3 id="nearest-alternative-and-selection-boundary_7">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: keep standard attention.
+Selection boundary: exact IO when the model must not
+change, approximations when quality tests pass and
+more speed is needed.</p>
+<h3 id="failure-case-and-counterexample_7">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;sparse is always safe.&rdquo; Local
+windows break long-range dependencies the task needs.
+Counterexample: a copying task over 4K distance
+fails with w = 256 but passes with exact attention.
+Test the task, not just perplexity.</p>
+<h3 id="research-reading-and-falsifiable-extension_7">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 07 and Oct 11 sessions.
+Falsifiable extension: run a long-range retrieval
+task under sparse, low-rank, and FlashAttention.
+Hypothesis: exact matches dense accuracy, sparse
+degrades with distance. Report accuracy vs distance.</p>
+<h3 id="exercises_7">Exercises</h3>
+<ul>
+<li>E36 (recall): name the three approximation
+  families and one&rsquo;s complexity.</li>
+<li>E37 (numerical): T = 8192, w = 512. Sparse work
+  ratio.</li>
+<li>E38 (failure diagnosis): sparse model fails a
+  long-range test. Explain.</li>
+<li>E39 (counterfactual): error budget is zero. Which
+  family survives?</li>
+<li>E40 (research): state the distance-degradation
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_7">Visual units</h3>
+<ul>
+<li>Figure <code>u04_c08_families.png</code>: four cards (sparse,
+  low-rank, kernel, FlashAttention) with work,
+  traffic, exactness rows. Source: original toy.
+  Shell 8 (compare).</li>
+</ul>
+<figure><img alt="u04_c08_families.png" src="../../assets/u04/u04_c08_families.png"><figcaption>four cards (sparse, low-rank, kernel, FlashAttention) with work, traffic, exactness rows. (compare)</figcaption></figure>
+<ul>
+<li>Audit: <code>u04c08</code> to <code>f08</code>. Before: dense. After:
+  four options. One rule: pick by error budget.</li>
+</ul>
+<hr />
+<h2 id="c09-online-softmax">C09: online softmax</h2>
+<h3 id="source-scope-objectives-dependencies_8">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 3, Oct 07, &ldquo;Detailed Walkthrough
+of FlashAttention v1 and v2&rdquo;. Scope: the streaming
+softmax. Objective: derive the rescaling update.
+Depends on P12.</p>
+<h3 id="motivating-question-and-tiny-toy_8">Motivating question and tiny toy</h3>
+<p>Question: softmax needs the row max, but the row
+arrives in blocks. How do you avoid two passes? Toy:
+row [1, 2, 3, 100], blocks of 2.</p>
+<h3 id="mental-model_8">Mental model</h3>
+<p>A running high score. Keep the max so far (m) and the
+running sum (l). A new block arrives: the new max is
+max(old max, block max). Rescale the old sum by how
+much the max moved, then add the block&rsquo;s sum. One
+pass, exact answer.</p>
+<h3 id="objects-shapes-assumptions_8">Objects, shapes, assumptions</h3>
+<ul>
+<li>m: running row max. l: running normalizer.</li>
+<li>Block x: m_b = max(x), l_b = sum(exp(x - m_b)).</li>
+<li>Update: m&rsquo; = max(m, m_b), l&rsquo; = l<em>exp(m - m&rsquo;) +
+  l_b</em>exp(m_b - m&rsquo;).</li>
+<li>Assumption: exp of shifted values never overflows
+  (the shift guarantees it).</li>
+</ul>
+<h3 id="derivation_8">Derivation</h3>
+<p>softmax(x) = exp(x - m&rsquo;)/l&rsquo; for the true max m&rsquo;. For
+two blocks with maxima m1, m2: m&rsquo; = max(m1, m2).
+l&rsquo; = sum(exp(x - m&rsquo;)) = l1<em>exp(m1 - m&rsquo;) +
+l2</em>exp(m2 - m&rsquo;). Induction over blocks. The output
+accumulator rescales the same way: o&rsquo; = (o<em>l</em>exp(m -
+m&rsquo;) + block_out<em>l_b</em>exp(m_b - m&rsquo;)) / l&rsquo;.</p>
+<h3 id="computed-example_8">Computed example</h3>
+<p>Toy: [1, 2] then [3, 100]. Block 1: m = 2,
+l = e^-1 + e^0 = 1.368. Block 2: m_b = 100,
+l_b = e^-97 + 1 ~ 1.0. m&rsquo; = 100. l&rsquo; =
+1.368*e^(2-100) + 1.0 ~ 1.0. softmax ~ [0, 0, 0, 1].
+Lab-04 checks against the two-pass softmax.</p>
+<h3 id="implementation-and-checks_8">Implementation and checks</h3>
+<pre><code class="language-python">import numpy as np
+
+def online_softmax(blocks):
+    m = -np.inf
+    l = 0.0
+    for x in blocks:
+        mb = x.max()
+        lb = np.exp(x - mb).sum()
+        m_new = max(m, mb)
+        l = l * np.exp(m - m_new) + lb * np.exp(mb - m_new)
+        m = m_new
+    return m, l
+
+def ref(x):
+    x = np.concatenate(x)
+    m = x.max()
+    return m, np.exp(x - m).sum()
+
+blocks = [np.array([1.0, 2.0]), np.array([3.0, 100.0])]
+assert np.allclose(online_softmax(blocks), ref(blocks))
+</code></pre>
+<p>Check: matches the two-pass reference. Also check
+the rescaled output accumulator identity in lab-04.</p>
+<h3 id="complexity-and-costs_8">Complexity and costs</h3>
+<p>O(T) memory for the row (m, l scalars), one pass.
+The trick that makes tiling exact.</p>
+<h3 id="nearest-alternative-and-selection-boundary_8">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: two-pass softmax (needs the full
+row). Selection boundary: online whenever rows are
+tiled or streamed, two-pass only for tiny rows.</p>
+<h3 id="failure-case-and-counterexample_8">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;the update is associative in any
+order.&rdquo; It is associative, but dropping the rescale
+(exp(m - m&rsquo;)) is the classic bug. Counterexample:
+forgetting the rescale gives l = 2.368 instead of
+1.0 for the toy: probabilities sum wrong. Test
+against the reference.</p>
+<h3 id="research-reading-and-falsifiable-extension_8">Research reading and falsifiable extension</h3>
+<p>Reading: the FlashAttention papers&rsquo; softmax section.
+Falsifiable extension: stress with extreme values
+(1e3 apart). Hypothesis: online matches reference to
+1e-6, the naive unshifted exp overflows. Report max
+error.</p>
+<h3 id="exercises_8">Exercises</h3>
+<ul>
+<li>E41 (recall): write the (m, l) update.</li>
+<li>E42 (numerical): blocks [1,2],[3,100]. m&rsquo; and l&rsquo;.</li>
+<li>E43 (failure diagnosis): probabilities do not sum
+  to 1. Name the missing factor.</li>
+<li>E44 (counterfactual): blocks arrive in reverse.
+  Does the answer change?</li>
+<li>E45 (research): state the extreme-value
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_8">Visual units</h3>
+<ul>
+<li>Figure <code>u04_c09_online.png</code>: two blocks, running
+  (m, l) updated with rescale arrows. Source:
+  original toy. Shell 4 (derive the update).</li>
+</ul>
+<figure><img alt="u04_c09_online.png" src="../../assets/u04/u04_c09_online.png"><figcaption>two blocks, running (m, l) updated with rescale arrows. (derive the update)</figcaption></figure>
+<ul>
+<li>Audit: <code>u04c09</code> to <code>f09</code>. Before: block stats.
+  After: merged stats. One rule: rescale by the max
+  move.</li>
+</ul>
+<hr />
+<h2 id="c10-flashattention">C10: FlashAttention</h2>
+<h3 id="source-scope-objectives-dependencies_9">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 3, Oct 07 and Oct 11,
+&ldquo;Detailed Walkthrough of FlashAttention v1 and v2&rdquo;,
+&ldquo;I/O Aware Algorithms: FlashAttention&rdquo;. Scope: the
+full algorithm. Objective: trace one tile update.
+Depends on C03, C09.</p>
+<h3 id="motivating-question-and-tiny-toy_9">Motivating question and tiny toy</h3>
+<p>Question: how do tiling and online softmax combine
+into exact attention with O(T) HBM traffic? Toy:
+T = 4, block 2, d = 2, one head.</p>
+<h3 id="mental-model_9">Mental model</h3>
+<p>An assembly line with a notebook. The line processes
+K/V tiles one at a time (outer loop). For each, it
+processes Q tiles (inner loop), computes a score
+block on chip, and updates the running (m, l, o)
+notebook with the online rule. The T x T matrix is
+never written down, only the notebook survives.</p>
+<h3 id="objects-shapes-assumptions_9">Objects, shapes, assumptions</h3>
+<ul>
+<li>Outer loop over K/V blocks (size Bc), inner over Q
+  blocks (size Br).</li>
+<li>On chip per step: Q block (Br, d), K/V blocks
+  (Bc, d), scores (Br, Bc).</li>
+<li>Running: m (Br,), l (Br,), o (Br, d).</li>
+<li>Assumption: blocks fit in SRAM, causal masking
+  applied per block.</li>
+</ul>
+<h3 id="derivation_9">Derivation</h3>
+<p>For query block i and key block j: S = Q_i K_j^T /
+sqrt(d) on chip. Block softmax via the online update
+(C09): (m_i, l_i, o_i) absorb block j. After all j:
+o_i = attention(Q_i, K, V) exactly. HBM traffic: K/V
+blocks load once per Q block, so traffic scales as
+T^2 d / Br block-loads. The paper&rsquo;s accounting: HBM
+accesses go from Theta(T^2) (the score matrix) to
+Theta(T^2 d^2 / M) with SRAM size M. For d = 64 and
+M ~ 1e5, d^2 / M ~ 0.04: a ~25x traffic cut, and the
+O(T^2) storage disappears entirely.</p>
+<h3 id="computed-example_9">Computed example</h3>
+<p>Toy: T = 4, Br = Bc = 2, d = 2. Q blocks: 2, K/V
+blocks: 2. Steps: 4 block pairs. Each step holds
+(2,2) scores on chip. Final o matches the naive
+attention to 1e-6. Lab-04 runs this toy.</p>
+<h3 id="implementation-and-checks_9">Implementation and checks</h3>
+<pre><code class="language-python">import numpy as np
+rng = np.random.default_rng(3)
+
+def flash_toy(Q, K, V, Br=2, Bc=2):
+    T, d = Q.shape
+    O = np.zeros((T, d))
+    m = np.full(T, -np.inf)
+    l = np.zeros(T)
+    for i in range(0, T, Br):
+        qi = Q[i:i+Br]
+        oi = np.zeros((Br, d))
+mi = np.full(Br, -np.inf)
+        li = np.zeros(Br)
+        for j in range(0, T, Bc):
+            S = qi @ K[j:j+Bc].T / np.sqrt(d)
+            mb = S.max(axis=1)
+lb = np.exp(S - mb[:, None]).sum(axis=1)
+            m_new = np.maximum(mi, mb)
+            li = li * np.exp(mi - m_new) + lb * np.exp(mb - m_new)
+            oi = oi * np.exp(mi - m_new)[:, None] + (
+                np.exp(S - mb[:, None]) @ V[j:j+Bc]) * np.exp(mb - m_new)[:, None]
+            mi = m_new
+        O[i:i+Br] = oi / li[:, None]
+    return O
+
+T, d = 4, 2
+Q, K, V = (rng.standard_normal((T, d)) for _ in range(3))
+S = Q @ K.T / np.sqrt(d)
+A = np.exp(S - S.max(axis=1, keepdims=True))
+A = A / A.sum(axis=1, keepdims=True)
+ref = A @ V
+assert np.allclose(flash_toy(Q, K, V), ref, atol=1e-6)
+</code></pre>
+<p>Check: matches naive attention. Lab-04 runs this.</p>
+<h3 id="complexity-and-costs_9">Complexity and costs</h3>
+<p>FLOPs unchanged O(T^2 d). HBM traffic drops from
+O(T^2) to O(Td)-ish (tiled). The win is memory, not
+math.</p>
+<h3 id="nearest-alternative-and-selection-boundary_9">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: standard attention (simpler,
+fine at small T). Selection boundary: FlashAttention
+at long T or whenever the score matrix threatens
+memory, standard for tiny T in tests.</p>
+<h3 id="failure-case-and-counterexample_9">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;FlashAttention is always
+faster.&rdquo; At tiny T the tiling overhead exceeds the
+saving. Counterexample: T = 16: naive is one kernel,
+tiled is many small blocks. Measure the crossover
+(~T = 128-512 depending on hardware).</p>
+<h3 id="research-reading-and-falsifiable-extension_9">Research reading and falsifiable extension</h3>
+<p>Reading: Dao et al. 2022 (v1), 2023 (v2).
+Falsifiable extension: time naive vs FlashAttention
+over T. Hypothesis: FlashAttention wins past a
+crossover T<em>, below it naive wins. Report T</em>.</p>
+<h3 id="exercises_9">Exercises</h3>
+<ul>
+<li>E46 (recall): name the two loops and what each
+  streams.</li>
+<li>E47 (numerical): T = 4, Br = Bc = 2. Block pairs?</li>
+<li>E48 (failure diagnosis): outputs match at T = 64
+  but not at T = 65. Name the suspect.</li>
+<li>E49 (counterfactual): SRAM were infinite. What
+  would the loops do?</li>
+<li>E50 (research): state the crossover hypothesis.</li>
+</ul>
+<h3 id="visual-units_9">Visual units</h3>
+<ul>
+<li>Figure <code>u04_c10_flash.png</code>: outer K/V loop, inner
+  Q loop, on-chip score block, running notebook.
+  Source: original toy. Shell 4.</li>
+</ul>
+<figure><img alt="u04_c10_flash.png" src="../../assets/u04/u04_c10_flash.png"><figcaption>outer K/V loop, inner Q loop, on-chip score block, running notebook</figcaption></figure>
+<ul>
+<li>Audit: <code>u04c10</code> to <code>f10</code>. Before: score matrix.
+  After: notebook only. One rule: tile + online.</li>
+</ul>
+<hr />
+<h2 id="c11-backward-recomputation">C11: backward recomputation</h2>
+<h3 id="source-scope-objectives-dependencies_10">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 3, Oct 07, &ldquo;Caching vs. Recompute&rdquo;.
+Scope: recompute in the FlashAttention backward pass.
+Objective: explain why backward does not store the
+score matrix. Depends on C10, U01 C04.</p>
+<h3 id="motivating-question-and-tiny-toy_10">Motivating question and tiny toy</h3>
+<p>Question: backward needs the attention scores, but we
+never stored them. Where do they come from? Toy: T =
+4, one head.</p>
+<h3 id="mental-model_10">Mental model</h3>
+<p>A chef who throws away the prep bowls and re-chops.
+Storing all scores costs O(T^2) memory. Recomputing
+each score tile in the backward pass costs extra
+FLOPs but keeps memory O(T). Memory is the scarce
+resource, FLOPs are cheap.</p>
+<h3 id="objects-shapes-assumptions_10">Objects, shapes, assumptions</h3>
+<ul>
+<li>Forward stores: m, l (O(T)), not scores.</li>
+<li>Backward: recompute S tiles from Q, K blocks, then
+  dQ, dK, dV updates with the online statistics.</li>
+<li>Assumption: recompute is bitwise-consistent enough
+  (floating-point reassociation differences are
+  tolerated).</li>
+</ul>
+<h3 id="derivation_10">Derivation</h3>
+<p>dO given. For each tile: recompute P = softmax
+block from stored (m, l), dV += P^T dO_block, dP =
+dO V^T, dS = dP * P - rowsum(dP*P) * P (softmax
+Jacobian), dQ += dS K_block, dK += dS^T Q_block.
+Memory: O(Td). Extra FLOPs: one more forward-like
+pass.</p>
+<h3 id="computed-example_10">Computed example</h3>
+<p>Toy T = 4: forward stores m (4,), l (4,): 8 numbers,
+not 16 scores. Backward recomputes 4 block pairs.
+Lab-04 checks a manual dV against finite
+differences.</p>
+<h3 id="implementation-and-checks_10">Implementation and checks</h3>
+<pre><code class="language-python">import numpy as np
+rng = np.random.default_rng(4)
+T, d = 4, 2
+Q, K, V = (rng.standard_normal((T, d)) for _ in range(3))
+S = Q @ K.T / np.sqrt(d)
+P = np.exp(S - S.max(1, keepdims=True))
+P /= P.sum(1, keepdims=True)
+O = P @ V
+dO = rng.standard_normal((T, d))
+# recompute-free reference dV:
+dV = P.T @ dO
+# recompute path: rebuild P from blocks (here one block = exact)
+S2 = Q @ K.T / np.sqrt(d)
+P2 = np.exp(S2 - S2.max(1, keepdims=True))
+P2 /= P2.sum(1, keepdims=True)
+assert np.allclose(P2.T @ dO, dV)
+</code></pre>
+<p>Check: recomputed P matches stored P. Lab-04 finite-
+differences dV.</p>
+<h3 id="complexity-and-costs_10">Complexity and costs</h3>
+<p>Backward FLOPs ~2.5x the forward attention FLOPs
+(recompute + grads). Memory stays O(Td). The trade
+is explicit: FLOPs for memory.</p>
+<h3 id="nearest-alternative-and-selection-boundary_10">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: store the scores (standard
+attention backward). Selection boundary: recompute
+when T^2 storage exceeds memory, store when T is
+small and FLOPs are precious.</p>
+<h3 id="failure-case-and-counterexample_10">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;recompute is free.&rdquo; It adds a
+full extra pass. Counterexample: at small T where
+scores fit easily, recompute wastes FLOPs for no
+memory gain. Gate it on T.</p>
+<h3 id="research-reading-and-falsifiable-extension_10">Research reading and falsifiable extension</h3>
+<p>Reading: the FlashAttention backward section.
+Falsifiable extension: measure backward time vs T
+for both. Hypothesis: recompute wins past the memory
+wall, loses below it. Report the crossover.</p>
+<h3 id="exercises_10">Exercises</h3>
+<ul>
+<li>E51 (recall): what does the forward store, and
+  what does the backward recompute?</li>
+<li>E52 (numerical): T = 4096. Stored numbers:
+  scores vs (m, l).</li>
+<li>E53 (failure diagnosis): backward OOMs but
+  forward fits. Name the cause.</li>
+<li>E54 (counterfactual): memory were infinite. Best
+  backward?</li>
+<li>E55 (research): state the backward-crossover
+  hypothesis.</li>
+</ul>
+<h3 id="visual-units_10">Visual units</h3>
+<ul>
+<li>Figure <code>u04_c11_recomp.png</code>: forward (notebook
+  only) then backward (tiles rebuilt). Source:
+  original toy. Shell 7 (break the memory limit).</li>
+</ul>
+<figure><img alt="u04_c11_recomp.png" src="../../assets/u04/u04_c11_recomp.png"><figcaption>forward (notebook only) then backward (tiles rebuilt). (break the memory limit)</figcaption></figure>
+<ul>
+<li>Audit: <code>u04c11</code> to <code>f11</code>. Before: stored scores.
+  After: recomputed tiles. One rule: trade FLOPs for
+  memory.</li>
+</ul>
+<hr />
+<h2 id="c12-benchmark-validity">C12: benchmark validity</h2>
+<h3 id="source-scope-objectives-dependencies_11">Source, scope, objectives, dependencies</h3>
+<p>Calendar anchor: Week 3, Oct 07, &ldquo;Profiling Standard
+Attention and Computing Arithmetic Intensity&rdquo;. Scope:
+honest benchmarking. Objective: list the validity
+rules. Depends on U01 C12.</p>
+<h3 id="motivating-question-and-tiny-toy_11">Motivating question and tiny toy</h3>
+<p>Question: the new kernel is &ldquo;2x faster.&rdquo; What was the
+old kernel doing wrong? Toy: attention at T = 1024.</p>
+<h3 id="mental-model_11">Mental model</h3>
+<p>A race with rules. Both runners get the same track
+(shapes, dtype), the same shoes (hardware), a warm-up
+(warmup runs), and a photo finish (synchronized
+timing). A win against a walking opponent is not a
+record.</p>
+<h3 id="objects-shapes-assumptions_11">Objects, shapes, assumptions</h3>
+<ul>
+<li>Rules: same shapes/dtype/hardware, warmup,
+  device synchronize before/after, report
+  median-of-N, include the baseline&rsquo;s best config.</li>
+<li>Assumption: steady clocks (no thermal throttle
+  mid-run).</li>
+</ul>
+<h3 id="derivation_11">Derivation</h3>
+<p>Time without sync measures launch, not work. Median
+of 100 beats mean of 3 (outliers). The baseline must
+be the strongest known (C08 lesson: naive vs
+FlashAttention as baseline flips verdicts).</p>
+<h3 id="computed-example_11">Computed example</h3>
+<p>Toy: kernel A 50 us median-of-100 synced. Kernel B
+45 us. Claim: 1.11x. Without sync: A measures 5 us
+(launch only): fake 9x. Lab-04 demonstrates the sync
+effect on CPU timing analogies (noted as analogy).</p>
+<h3 id="implementation-and-checks_11">Implementation and checks</h3>
+<pre><code class="language-python">import time, numpy as np
+def bench(fn, warmup=10, iters=100):
+    for _ in range(warmup):
+        fn()
+    ts = []
+    for _ in range(iters):
+        t0 = time.perf_counter()
+fn()
+        ts.append(time.perf_counter() - t0)
+    return float(np.median(ts))
+
+t = bench(lambda: np.sum(np.arange(1000)))
+assert t &gt; 0
+</code></pre>
+<p>Check: warmup before timing, median, not mean. GPU
+needs explicit sync (noted, not run here).</p>
+<h3 id="complexity-and-costs_11">Complexity and costs</h3>
+<p>Benchmarking costs minutes. False wins cost weeks.
+Spend the minutes.</p>
+<h3 id="nearest-alternative-and-selection-boundary_11">Nearest alternative and selection boundary</h3>
+<p>Nearest alternative: roofline estimate (no run).
+Selection boundary: estimate for direction,
+benchmark for the claim.</p>
+<h3 id="failure-case-and-counterexample_11">Failure case and counterexample</h3>
+<p>Broken assumption: &ldquo;one run is enough.&rdquo; Clocks vary,
+throttling bites, first runs include compile.
+Counterexample: the no-sync fake 9x above. Follow
+the checklist.</p>
+<h3 id="research-reading-and-falsifiable-extension_11">Research reading and falsifiable extension</h3>
+<p>Reading: the Oct 07 profiling session. Falsifiable
+extension: benchmark the same kernel with and without
+each rule. Hypothesis: each broken rule inflates the
+claim, no-sync inflates most. Report the inflation
+per rule.</p>
+<h3 id="exercises_11">Exercises</h3>
+<ul>
+<li>E56 (recall): name the five rules.</li>
+<li>E57 (numerical): times [5, 50, 51, 49, 200] us.
+  Mean vs median. Which do you report?</li>
+<li>E58 (failure diagnosis): 9x claim, no sync in the
+  script. What happened?</li>
+<li>E59 (counterfactual): clocks throttle mid-run.
+  How do you detect it?</li>
+<li>E60 (research): state the inflation hypothesis.</li>
+</ul>
+<h3 id="visual-units_11">Visual units</h3>
+<ul>
+<li>Figure <code>u04_c12_bench.png</code>: checklist card with
+  the five rules and the fake-9x crossed out.
+  Source: original toy. Shell 5 (checklist).</li>
+</ul>
+<figure><img alt="u04_c12_bench.png" src="../../assets/u04/u04_c12_bench.png"><figcaption>checklist card with the five rules and the fake-9x crossed out. (checklist)</figcaption></figure>
+<ul>
+<li>Audit: <code>u04c12</code> to <code>f12</code>. Before: one timing.
+  After: valid claim. One rule: control the race.</li>
+</ul>
+<hr />
+<h2 id="unit-chapter-plate">Unit chapter plate</h2>
+<p>Figure <code>u04_chapter.png</code>: left shows naive attention
+(three kernels, T^2 HBM trips), center shows the
+machine (warps, SRAM, tensor cores), right shows the
+IO-aware algorithm (tiled, online softmax, exact),
+bottom line: &ldquo;Never materialize the T x T matrix.&rdquo;
+Numbers from the lesson toys.</p>
+<figure><img alt="u04_chapter.png" src="../../assets/u04/u04_chapter.png"><figcaption>left shows naive attention (three kernels, T^2 HBM trips), center shows the machine (warps, SRAM, tensor cores), right shows the IO-aware algorithm (tiled, online softmax, exact), bottom line: 'Never materialize the T x T matrix.' Numbers from the lesson toys</figcaption></figure>
+<h2 id="russian-doll-ladder-flashattention-major-mechanism">Russian-doll ladder: FlashAttention (major mechanism)</h2>
+<ul>
+<li>Shell 0: question: can attention be exact with O(T)
+  HBM traffic? Observable: bytes moved per layer.</li>
+<li>Shell 1: toy: T = 4, Br = Bc = 2, d = 2 (C10).</li>
+<li>Shell 2: objects: Q/K/V blocks, (m, l, o)
+  notebook, SRAM budget.</li>
+<li>Shell 3: rule: online softmax rescale (C09).</li>
+<li>Shell 4: algorithm: <code>flash_toy</code> in C10.</li>
+<li>Shell 5: invariant: matches naive attention to
+  1e-6, (m, l) update associative.</li>
+<li>Shell 6: change Br only, predict traffic changes
+  as T/Br, confirm in lab-04.</li>
+<li>Shell 7: break the SRAM fit: blocks too big, the
+  kernel cannot launch.</li>
+<li>Shell 8: compare FlashAttention vs sparse vs
+  low-rank under equal quality bar.</li>
+<li>Shell 9: falsifiable extension in C10 (crossover
+  T*).</li>
+<li>Shell 10: production: the T* crossover gates the
+  serving kernel choice, the backward recompute
+  trades FLOPs for memory at long T.</li>
+</ul>
+<h2 id="role-bridge">Role bridge</h2>
+<ul>
+<li>Research engineer: the online softmax derivation
+  (C09) and the tile trace (C10) are the debugging
+  tools for any attention kernel.</li>
+<li>LLM engineer: the T* crossover decides the serving
+  kernel per context length.</li>
+<li>Research scientist: the approximation-vs-exact
+  table (C08) frames the error-budget decision.</li>
+</ul>
+      
+      <nav class="pager"><a href="../../lessons/u03/keys.html"><span class="lbl">← Previous</span>Unit 03 · Keys</a><a href="../../lessons/u04/keys.html"><span class="lbl">Next →</span>Unit 04 · Keys</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../../assets/vendor/katex.min.js"></script>
+<script src="../../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../../";</script>
+<script src="../../assets/app.js"></script>
+</body>
+</html>
