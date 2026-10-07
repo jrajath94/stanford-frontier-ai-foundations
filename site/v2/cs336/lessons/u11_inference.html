@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U11 · Inference algorithms and serving — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Inference algorithms and serving.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-u11" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../course_map.html" data-page="cs336-course-map">Course map</a></li>
+<li><a href="../prerequisites.html" data-page="cs336-prereqs">Prerequisites</a></li>
+<li><a href="../notation_and_shapes.html" data-page="cs336-notation">Notation</a></li>
+<li><a href="../glossary.html" data-page="cs336-glossary">Glossary</a></li>
+<li><a href="../cheatsheet.html" data-page="cs336-cheatsheet">Cheatsheet</a></li>
+<li><a href="../crash-course.html" data-page="cs336-crash">Crash course</a></li>
+<li><a href="../lessons/u01_tokenization.html" data-page="cs336-u01">U01 · Text representation and tokeni</a></li>
+<li><a href="../keys/u01_answers.html" data-page="cs336-u01-answers">U01 · Answers</a></li>
+<li><a href="../lessons/u02_tensor_programming.html" data-page="cs336-u02">U02 · Executable tensor programming </a></li>
+<li><a href="../keys/u02_answers.html" data-page="cs336-u02-answers">U02 · Answers</a></li>
+<li><a href="../lessons/u03_transformer_block.html" data-page="cs336-u03">U03 · Transformer block mechanics</a></li>
+<li><a href="../keys/u03_answers.html" data-page="cs336-u03-answers">U03 · Answers</a></li>
+<li><a href="../lessons/u04_attention_moe.html" data-page="cs336-u04">U04 · Attention alternatives and exp</a></li>
+<li><a href="../keys/u04_answers.html" data-page="cs336-u04-answers">U04 · Answers</a></li>
+<li><a href="../lessons/u05_optimization.html" data-page="cs336-u05">U05 · Optimization and training corr</a></li>
+<li><a href="../keys/u05_answers.html" data-page="cs336-u05-answers">U05 · Answers</a></li>
+<li><a href="../lessons/u06_gpu_tpu.html" data-page="cs336-u06">U06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../keys/u06_answers.html" data-page="cs336-u06-answers">U06 · Answers</a></li>
+<li><a href="../lessons/u07_kernels.html" data-page="cs336-u07">U07 · Kernels and IO-aware attention</a></li>
+<li><a href="../keys/u07_answers.html" data-page="cs336-u07-answers">U07 · Answers</a></li>
+<li><a href="../lessons/u08_data_sharding.html" data-page="cs336-u08">U08 · Data and optimizer sharding</a></li>
+<li><a href="../keys/u08_answers.html" data-page="cs336-u08-answers">U08 · Answers</a></li>
+<li><a href="../lessons/u09_model_parallel.html" data-page="cs336-u09">U09 · Model and hybrid parallelism</a></li>
+<li><a href="../keys/u09_answers.html" data-page="cs336-u09-answers">U09 · Answers</a></li>
+<li><a href="../lessons/u10_scaling_laws.html" data-page="cs336-u10">U10 · Scaling laws and extrapolation</a></li>
+<li><a href="../keys/u10_answers.html" data-page="cs336-u10-answers">U10 · Answers</a></li>
+<li><a href="../labs/u01_lab.html" data-page="cs336-lab-u01">Lab 01 · Text representation and tokeni</a></li>
+<li><a href="../lessons/u11_inference.html" data-page="cs336-u11" class="active">U11 · Inference algorithms and servi</a></li>
+<li><a href="../labs/u01_lab_key.html" data-page="cs336-lab-u01-keys">Lab 01 · Keys</a></li>
+<li><a href="../keys/u11_answers.html" data-page="cs336-u11-answers">U11 · Answers</a></li>
+<li><a href="../labs/u02_lab.html" data-page="cs336-lab-u02">Lab 02 · Executable tensor programming </a></li>
+<li><a href="../lessons/u12_evaluation.html" data-page="cs336-u12">U12 · Evaluation and measurement val</a></li>
+<li><a href="../labs/u02_lab_key.html" data-page="cs336-lab-u02-keys">Lab 02 · Keys</a></li>
+<li><a href="../keys/u12_answers.html" data-page="cs336-u12-answers">U12 · Answers</a></li>
+<li><a href="../labs/u03_lab.html" data-page="cs336-lab-u03">Lab 03 · Transformer block mechanics</a></li>
+<li><a href="../lessons/u13_data_sourcing.html" data-page="cs336-u13">U13 · Data sourcing and transformati</a></li>
+<li><a href="../labs/u03_lab_key.html" data-page="cs336-lab-u03-keys">Lab 03 · Keys</a></li>
+<li><a href="../keys/u13_answers.html" data-page="cs336-u13-answers">U13 · Answers</a></li>
+<li><a href="../labs/u04_lab.html" data-page="cs336-lab-u04">Lab 04 · Attention alternatives and exp</a></li>
+<li><a href="../lessons/u14_data_mixing.html" data-page="cs336-u14">U14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../labs/u04_lab_key.html" data-page="cs336-lab-u04-keys">Lab 04 · Keys</a></li>
+<li><a href="../keys/u14_answers.html" data-page="cs336-u14-answers">U14 · Answers</a></li>
+<li><a href="../labs/u05_lab.html" data-page="cs336-lab-u05">Lab 05 · Optimization and training corr</a></li>
+<li><a href="../lessons/u15_midtraining.html" data-page="cs336-u15">U15 · Midtraining and supervised ada</a></li>
+<li><a href="../labs/u05_lab_key.html" data-page="cs336-lab-u05-keys">Lab 05 · Keys</a></li>
+<li><a href="../keys/u15_answers.html" data-page="cs336-u15-answers">U15 · Answers</a></li>
+<li><a href="../labs/u06_lab.html" data-page="cs336-lab-u06">Lab 06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../lessons/u16_alignment_rl.html" data-page="cs336-u16">U16 · Preference alignment and reaso</a></li>
+<li><a href="../labs/u06_lab_key.html" data-page="cs336-lab-u06-keys">Lab 06 · Keys</a></li>
+<li><a href="../keys/u16_answers.html" data-page="cs336-u16-answers">U16 · Answers</a></li>
+<li><a href="../labs/u07_lab.html" data-page="cs336-lab-u07">Lab 07 · Kernels and IO-aware attention</a></li>
+<li><a href="../lessons/u17_multimodal_systems.html" data-page="cs336-u17">U17 · Multimodality and training-sys</a></li>
+<li><a href="../labs/u07_lab_key.html" data-page="cs336-lab-u07-keys">Lab 07 · Keys</a></li>
+<li><a href="../keys/u17_answers.html" data-page="cs336-u17-answers">U17 · Answers</a></li>
+<li><a href="../labs/u08_lab.html" data-page="cs336-lab-u08">Lab 08 · Data and optimizer sharding</a></li>
+<li><a href="../lessons/u18_guests_defense.html" data-page="cs336-u18">U18 · Guest material and final resea</a></li>
+<li><a href="../labs/u08_lab_key.html" data-page="cs336-lab-u08-keys">Lab 08 · Keys</a></li>
+<li><a href="../keys/u18_answers.html" data-page="cs336-u18-answers">U18 · Answers</a></li>
+<li><a href="../labs/u09_lab.html" data-page="cs336-lab-u09">Lab 09 · Model and hybrid parallelism</a></li>
+<li><a href="../labs/u09_lab_key.html" data-page="cs336-lab-u09-keys">Lab 09 · Keys</a></li>
+<li><a href="../labs/u10_lab.html" data-page="cs336-lab-u10">Lab 10 · Scaling laws and extrapolation</a></li>
+<li><a href="../labs/u10_lab_key.html" data-page="cs336-lab-u10-keys">Lab 10 · Keys</a></li>
+<li><a href="../interview/u01_questions.html" data-page="cs336-int-u01">Interview · U01</a></li>
+<li><a href="../labs/u11_lab.html" data-page="cs336-lab-u11">Lab 11 · Inference algorithms and servi</a></li>
+<li><a href="../interview/u01_key.html" data-page="cs336-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../labs/u11_lab_key.html" data-page="cs336-lab-u11-keys">Lab 11 · Keys</a></li>
+<li><a href="../interview/u02_questions.html" data-page="cs336-int-u02">Interview · U02</a></li>
+<li><a href="../labs/u12_lab.html" data-page="cs336-lab-u12">Lab 12 · Evaluation and measurement val</a></li>
+<li><a href="../interview/u02_key.html" data-page="cs336-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../labs/u12_lab_key.html" data-page="cs336-lab-u12-keys">Lab 12 · Keys</a></li>
+<li><a href="../interview/u03_questions.html" data-page="cs336-int-u03">Interview · U03</a></li>
+<li><a href="../labs/u13_lab.html" data-page="cs336-lab-u13">Lab 13 · Data sourcing and transformati</a></li>
+<li><a href="../interview/u03_key.html" data-page="cs336-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../labs/u13_lab_key.html" data-page="cs336-lab-u13-keys">Lab 13 · Keys</a></li>
+<li><a href="../interview/u04_questions.html" data-page="cs336-int-u04">Interview · U04</a></li>
+<li><a href="../labs/u14_lab.html" data-page="cs336-lab-u14">Lab 14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../interview/u04_key.html" data-page="cs336-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../labs/u14_lab_key.html" data-page="cs336-lab-u14-keys">Lab 14 · Keys</a></li>
+<li><a href="../interview/u05_questions.html" data-page="cs336-int-u05">Interview · U05</a></li>
+<li><a href="../labs/u15_lab.html" data-page="cs336-lab-u15">Lab 15 · Midtraining and supervised ada</a></li>
+<li><a href="../interview/u05_key.html" data-page="cs336-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../labs/u15_lab_key.html" data-page="cs336-lab-u15-keys">Lab 15 · Keys</a></li>
+<li><a href="../interview/u06_questions.html" data-page="cs336-int-u06">Interview · U06</a></li>
+<li><a href="../labs/u16_lab.html" data-page="cs336-lab-u16">Lab 16 · Preference alignment and reaso</a></li>
+<li><a href="../interview/u06_key.html" data-page="cs336-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../labs/u16_lab_key.html" data-page="cs336-lab-u16-keys">Lab 16 · Keys</a></li>
+<li><a href="../interview/u07_questions.html" data-page="cs336-int-u07">Interview · U07</a></li>
+<li><a href="../labs/u17_lab.html" data-page="cs336-lab-u17">Lab 17 · Multimodality and training-sys</a></li>
+<li><a href="../interview/u07_key.html" data-page="cs336-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../labs/u17_lab_key.html" data-page="cs336-lab-u17-keys">Lab 17 · Keys</a></li>
+<li><a href="../interview/u08_questions.html" data-page="cs336-int-u08">Interview · U08</a></li>
+<li><a href="../labs/u18_lab.html" data-page="cs336-lab-u18">Lab 18 · Guest material and final resea</a></li>
+<li><a href="../interview/u08_key.html" data-page="cs336-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../labs/u18_lab_key.html" data-page="cs336-lab-u18-keys">Lab 18 · Keys</a></li>
+<li><a href="../interview/u09_questions.html" data-page="cs336-int-u09">Interview · U09</a></li>
+<li><a href="../interview/u09_key.html" data-page="cs336-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../interview/u10_questions.html" data-page="cs336-int-u10">Interview · U10</a></li>
+<li><a href="../interview/u10_key.html" data-page="cs336-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../interview/u11_questions.html" data-page="cs336-int-u11">Interview · U11</a></li>
+<li><a href="../interview/u11_key.html" data-page="cs336-int-u11-keys">Interview · U11 keys</a></li>
+<li><a href="../interview/u12_questions.html" data-page="cs336-int-u12">Interview · U12</a></li>
+<li><a href="../interview/u12_key.html" data-page="cs336-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../interview/u13_questions.html" data-page="cs336-int-u13">Interview · U13</a></li>
+<li><a href="../interview/u13_key.html" data-page="cs336-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../interview/u14_questions.html" data-page="cs336-int-u14">Interview · U14</a></li>
+<li><a href="../interview/u14_key.html" data-page="cs336-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../interview/u15_questions.html" data-page="cs336-int-u15">Interview · U15</a></li>
+<li><a href="../interview/u15_key.html" data-page="cs336-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../interview/u16_questions.html" data-page="cs336-int-u16">Interview · U16</a></li>
+<li><a href="../interview/u16_key.html" data-page="cs336-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../interview/u17_questions.html" data-page="cs336-int-u17">Interview · U17</a></li>
+<li><a href="../interview/u17_key.html" data-page="cs336-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../interview/u18_questions.html" data-page="cs336-int-u18">Interview · U18</a></li>
+<li><a href="../interview/u18_key.html" data-page="cs336-int-u18-keys">Interview · U18 keys</a></li>
+<li><a href="../interview/oral-defenses.html" data-page="cs336-int-oral">Interview · Oral</a></li>
+<li><a href="../interview/keys-oral.html" data-page="cs336-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../interview/transfer-sets.html" data-page="cs336-int-transfer">Interview · Transfer</a></li>
+<li><a href="../interview/keys-transfer.html" data-page="cs336-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../capstones/capstone_applied.html" data-page="cs336-cap-applied">Capstone · Applied</a></li>
+<li><a href="../capstones/capstone_research.html" data-page="cs336-cap-research">Capstone · Research</a></li>
+<li><a href="../keys/diagnostic_key.html" data-page="cs336-diagnostic-keys">Diagnostic · Keys</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U11 · Inference algorithms and serving</nav>
+      <h1>U11 · Inference algorithms and serving</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u11-inference-algorithms-and-serving">U11 , Inference algorithms and serving</h1>
+<p>Prerequisites: P12, P14, P15, P16. Bridge links in <code>../prerequisites.md</code>.
+Session: S10 (reported Apr 29, Inference). Full session map in
+<code>../course_map.md</code>.
+Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
+PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
+<h2 id="standing-note">Standing note</h2>
+<p>No GPU on this box. Serving claims are time models and numpy
+simulations, stated as such. Reference inference model: L=32,
+d=4096, GQA with 8 KV heads, head dim 128, bf16. All numbers come
+from <code>assets/compute_u11.py</code> (executed 2026-10-06) or are labeled
+toy inputs.</p>
+<h2 id="russian-doll-map">Russian-doll map</h2>
+<p>Shells 0-1 in items 1-2, shells 2-3 in items 3-6, shell 4 in item 7,
+shell 5 in item 8, shell 6 in item 9, shell 7 in item 11, shell 8 in
+item 10, shell 9 in item 12, shell 10 in item 13(c). The depth gate
+is checked by item 13.</p>
+<h2 id="local-remediation-the-two-phases">Local remediation , the two phases</h2>
+<p>Read this if diagnostic items on arithmetic intensity were not full
+marks. Inference has two phases. Prefill processes the whole prompt
+at once: compute-bound, like training. Decode generates one token at
+a time: memory-bound, because each step re-reads all the weights.
+Toy from <code>compute_u11.py</code>: decode intensity 1.0 FLOP/byte, prefill
+at T=2048 about 2048 FLOP/byte. Every serving decision below flows
+from this split. Assessment: a 7B bf16 model is 14.0 GB of weights.
+how many bytes does one decode token read? Key:
+<code>../keys/u11_answers.md</code> R1.</p>
+<hr />
+<h3 id="c01-prefilldecode">C01: Prefill/decode</h3>
+<p>Leaf id <code>cs336-U11-C01</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the two-phase structure of generation. Objectives: name
+   the phases, state which bounds each. Depends on P12, P15.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why is the first
+   token slow and the rest fast-ish but expensive? Toy from
+   <code>compute_u11.py</code>: prefill at T=2048 has intensity ~2048
+   FLOP/byte (compute-bound), decode sits at 1.0 FLOP/byte
+   (memory-bound), one decode token reads 14.0 GB of weights.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Prefill is a wide matmul: the weights are
+   read once and reused across T tokens. Decode is a skinny
+   matvec: the weights are read once per token. Same weights,
+   opposite bottlenecks.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> TTFT: time
+   to first token. TPOT: time per output token. Assumption: batch
+   1, the reference model, bf16.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Decode FLOPs per token ~ 2N,
+   bytes read ~ 2N: intensity ~1 FLOP/byte. Prefill reuses each
+   weight read across T positions: intensity ~T. The roofline
+   knee decides which side each phase lands on.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u11.py</code> (executed
+   2026-10-06): 1.0 vs ~2048 FLOP/byte, 14.0 GB per decode token.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>phase_ai(T)</code>:
+   return max(1.0, float(T)). Three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> T=1 gives 1.0
+   (decode). T=2048 gives 2048. Monotone in T.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The toy ignores attention FLOPs in prefill (O(T^2))
+   and the KV write cost. At long T, prefill attention dominates.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Chunked
+    prefill (split long prompts into pieces) when prefill latency
+    spikes. Plain prefill otherwise.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Batch 64 at T=8192: the
+    KV cache alone is 68.7 GB and decode stops being a pure
+    weight-read story. The assumption &ldquo;decode reads only weights&rdquo;
+    breaks, cache traffic joins the bottleneck.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    Orca paper on continuous batching (Yu et al., 2022, primary).
+    Extension: sweep T in the toy from 1 to 8192, hypothesis: the
+    knee crossing predicts the latency regime change.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the two phases and their bounds.
+    (b) Oral ladder: define the phases, compute the toy, justify
+    the 1.0, implement <code>phase_ai</code>, compare with chunked prefill,
+    debug the batch-64 case, critique the T-only model, design the
+    T sweep. (c) Transfer: T=128k prompt. Which phase dominates
+    total latency and why? Answers: <code>../keys/u11_answers.md</code> A1.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U11 task 1 models the phases.
+    See <code>../labs/u11_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u11_fig02: intensity against T with the
+    knee. Source: original. Render: <code>assets/render_u11.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u11_fig02" src="../assets/u11_fig02.png"><figcaption>intensity against T with the knee. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c02-kv-append-and-memory">C02: KV append and memory</h3>
+<p>Leaf id <code>cs336-U11-C02</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the KV cache, its growth, its bytes. Objectives: compute
+   per-token and per-batch cache bytes. Depends on C01, P14.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: where does the
+   memory go during a long generation? Toy from <code>compute_u11.py</code>:
+   128.0 KB per token, batch 1 at T=2048 needs 0.27 GB, batch 16
+   at T=4096 needs 8.59 GB, batch 64 at T=8192 needs 68.72 GB.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Each decode step appends one K and one V
+   vector per layer per head. The cache grows linearly in tokens.
+   It is the price of never recomputing attention over the past.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Per-token
+   bytes = 2 * L * h_kv * d_h * bytes_per. Assumption: GQA with 8
+   KV heads, bf16, no sharing.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> 2 (K and V) x 32 layers x 8 heads x
+   128 dims x 2 bytes = 131,072 bytes per token. Multiply by batch
+   and sequence length.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u11.py</code> (executed
+   2026-10-06): 128.0 KB/token. 0.27, 8.59, 68.72 GB for the three
+   (batch, T) pairs.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>kv_bytes(b, T)</code>:
+   return 2<em>L</em>h_kv<em>dh</em>2<em>b</em>T. Three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> b=1, T=1 gives
+   131,072. Doubling b or T doubles the result.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The cache competes with weights and activations for
+   HBM. At 68.7 GB it exceeds the 14 GB weights by 5x.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Recompute K/V
+    from scratch each step (no cache, quadratic cost). Cache
+    always wins past a few dozen tokens.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> GQA assumed: with full
+    MHA (32 KV heads) the per-token cost is 512 KB, 4x more, and
+    the batch-16 case jumps to 34 GB. The assumption &ldquo;8 KV heads&rdquo;
+    breaks per architecture, recompute per model.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    GQA paper (Ainslie et al., 2023, primary). Extension: sweep
+    h_kv in the toy, hypothesis: cache bytes scale linearly in
+    h_kv with slope 16 KB per head per token.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the per-token formula.
+    (b) Oral ladder: define the cache, compute the three toys,
+    justify the factor 2, implement <code>kv_bytes</code>, compare with
+    recompute, debug the MHA case, critique the no-sharing
+    assumption, design the h_kv sweep. (c) Transfer: a 70B model
+    with L=80, h_kv=8, d=8192 (dh=128), batch 8, T=4096. Compute
+    the cache. Answers: <code>../keys/u11_answers.md</code> A2.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U11 task 2 computes cache sizes.
+    See <code>../labs/u11_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u11_fig01: cache bytes across the three
+    cases. Source: original. Render: <code>assets/render_u11.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u11_fig01" src="../assets/u11_fig01.png"><figcaption>cache bytes across the three cases. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c03-cache-sharing">C03: Cache sharing</h3>
+<p>Leaf id <code>cs336-U11-C03</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: sharing KV blocks across requests with common prefixes.
+   Objectives: compute the memory saved by sharing, state when it
+   applies. Depends on C02.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: ten requests share
+   a 2000-token system prompt. Do you store it ten times? Toy: 10
+   x 2000 x 128 KB = 2.62 GB unshared, shared once = 0.26 GB.
+   Saving: 2.36 GB.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The prefix K/V depends only on the prefix
+   tokens, not on who asked. Store it once, point every request
+   at it. Sharing is a memory optimization with zero quality
+   change.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Shared
+   bytes = prefix_tokens x per_token. Assumption: identical
+   prefix token sequences, same model.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> K/V are deterministic functions
+   of the input tokens (no sampling inside). Identical inputs
+   give identical cache blocks, so one copy serves all readers.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From the formula with the C02 per-token
+   value (128 KB): unshared 2.62 GB, shared 0.26 GB, saving 2.36
+   GB.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> Hash the prefix
+   token sequence, look up the block, attach on hit. About 10
+   lines of pseudocode.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Outputs identical
+   to unshared generation token-for-token. A hash miss falls back
+   to compute the prefix.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Reference counting and eviction: a shared block
+   cannot be freed while any request reads it. The bookkeeping is
+   small, the bug surface is real.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Prompt
+    caching at the API layer (coarser, survives across
+    connections). In-engine sharing for live requests.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Prefixes that differ by
+    one token share nothing: the hash is all-or-nothing. The
+    assumption &ldquo;prefixes match&rdquo; breaks with per-user system
+    prompts, and sharing saves zero.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    vLLM paper on paged attention (Kwon et al., 2023, primary).
+    Extension: measure hit rate against prefix-length
+    distribution on a synthetic workload, hypothesis: hit rate
+    rises steeply past 512 shared tokens.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: why sharing is exact.
+    (b) Oral ladder: define sharing, compute the toy, justify
+    determinism, sketch the lookup, compare with API caching,
+    debug the one-token-difference case, critique the hash
+    granularity, design the hit-rate test. (c) Transfer: 100
+    requests, prefixes of length 100, 500, 2000 in thirds. Compute
+    the saving. Answers: <code>../keys/u11_answers.md</code> A3.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U11 task 3 computes sharing
+    savings. See <code>../labs/u11_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure, the saving is one
+    subtraction. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c04-continuous-batching">C04: Continuous batching</h3>
+<p>Leaf id <code>cs336-U11-C04</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: replacing static batches with iteration-level
+   scheduling. Objectives: explain the idle-time saving, compute
+   it on a toy. Depends on C01.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: four requests take
+   100, 400, 250, 800 steps. Static batching waits 800 steps for
+   all. Toy from <code>compute_u11.py</code>: continuous batching with 2
+   slots finishes the same token count in 775 steps of slot-time
+   against 800 steps of wall time for the static batch, and new
+   requests start immediately instead of waiting for the batch.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Static batching is a bus that waits for every
+   passenger. Continuous batching is a taxi rank: a finished
+   request leaves, a new one takes its slot at the next iteration.
+   No slot idles while work waits.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Slots: max
+   concurrent requests. Assumption: 2 slots, the four toy lengths,
+   prefill cost ignored.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> At each decode iteration, evict
+   finished sequences and insert waiting ones (after their
+   prefill). Slot utilization stays near 100 percent whenever the
+   queue is nonempty.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u11.py</code> (executed
+   2026-10-06): static 800 steps wall, continuous 775 slot-steps
+   over 2 slots.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The scheduler
+   loop: run one iteration, evict finished, prefill and insert
+   from the queue while slots and memory allow. About 15 lines of
+   pseudocode.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Total tokens
+   generated equal the static run. No request starts before its
+   prefill completes.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Prefill of an inserted request stalls the decode
+   batch for one iteration (the prefill/decode interference).
+   Chunked prefill (C01) bounds the stall.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Static
+    batching (simple, wastes the tail). Continuous batching wins
+    whenever request lengths vary, which is always.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> All requests arrive at
+    once with identical length: continuous batching gains nothing
+    over static. The assumption &ldquo;lengths vary&rdquo; breaks, and the
+    extra scheduler complexity buys zero.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    Orca paper (Yu et al., 2022, primary). Extension: sweep the
+    length variance on a synthetic workload, hypothesis: gain
+    grows with the coefficient of variation.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the slot mechanism.
+    (b) Oral ladder: define continuous batching, compute the toy,
+    justify the eviction rule, sketch the loop, compare with
+    static, debug the equal-length case, critique the ignored
+    prefill, design the variance sweep. (c) Transfer: 8 slots,
+    Poisson arrivals, mean length 300. Name the metric that
+    decides if batching helps. Answers: <code>../keys/u11_answers.md</code>
+    A4.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U11 task 4 simulates the
+    scheduler. See <code>../labs/u11_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure, the schedule is a lab
+    simulation. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c05-paged-cache-as-bridge">C05: Paged cache as bridge</h3>
+<p>Leaf id <code>cs336-U11-C05</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: block-paged KV storage. Objectives: compute the
+   fragmentation waste with and without paging. Depends on C02,
+   P15.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: requests have
+   different lengths, contiguous allocation wastes the gaps. Toy
+   from <code>compute_u11.py</code> on lengths [512, 2048, 4096, 1024, 3072,
+   1536]: contiguous waste 50.0 percent, paged waste with block
+   16 is 0.0 percent (all lengths are multiples of 16 here).</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Operating-system paging for the KV cache:
+   split each sequence into fixed blocks, allocate blocks on
+   demand, translate logical position to physical block. Waste
+   drops to less than one block per sequence.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Block size:
+   16 tokens. Assumption: the toy length set, block table
+   overhead ignored.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Contiguous reserves max length
+   per slot: waste = (maxT<em>n - sum)/ (maxT</em>n). Paged reserves
+   ceil(len/16) blocks: waste &lt; 16 tokens per sequence.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u11.py</code> (executed
+   2026-10-06): 50.0 percent vs 0.0 percent on the toy.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> Block table per
+   sequence, allocator with a free list, attention kernel reads
+   through the table. About 20 lines of pseudocode.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Attention output
+   identical to contiguous layout. No block leaks after eviction.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The attention kernel must gather through the block
+   table: extra indirection per memory access. Block size trades
+   waste against table size.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Contiguous
+    cache (simple, wastes half the memory on varied lengths).
+    Paging wins whenever lengths vary.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Block size 4096 with
+    100-token requests: internal fragmentation returns and paging
+    saves nothing. The assumption &ldquo;block &lt;&lt; length&rdquo; breaks, size
+    blocks to the workload.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    vLLM paper (Kwon et al., 2023, primary). Extension: sweep
+    block size on the toy lengths, hypothesis: waste rises in
+    steps at multiples of the gcd of the lengths.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the block-table mechanism.
+    (b) Oral ladder: define paging, compute the toy, justify the
+    waste bound, sketch the allocator, compare with contiguous,
+    debug the giant-block case, critique the ignored overhead,
+    design the block sweep. (c) Transfer: lengths uniform at
+    2048, block 16. Compute both wastes. Answers:
+    <code>../keys/u11_answers.md</code> A5.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U11 task 5 computes waste.
+    See <code>../labs/u11_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure, the waste comparison is a
+    two-bar table in the lab key. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c06-speculative-draftverify">C06: Speculative draft/verify</h3>
+<p>Leaf id <code>cs336-U11-C06</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: draft-model speculation with target verification.
+   Objectives: compute expected tokens per step and the speedup
+   from the acceptance rate. Depends on C01.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: a small model
+   guesses 3 tokens, the big model checks them in one pass. When
+   does this win? Toy from <code>compute_u11.py</code>: alpha = 0.7, k = 3
+   gives E = 2.53 tokens per verify step, with draft cost 0.1 the
+   speedup is 1.95x.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The draft model proposes, the target model
+   disposes in a single parallel verify. Accepted tokens are
+   free, a rejection costs the draft work but still yields the
+   corrected token. Throughput follows the acceptance rate.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> alpha:
+   per-token acceptance probability. k: draft length. Assumption:
+   independent acceptances, draft cost 0.1 of target.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Expected accepted run length for
+   k drafts: E = (1 - alpha^{k+1})/(1 - alpha). Cost per step =
+   k*c_draft + 1. Speedup = E / cost.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u11.py</code> (executed
+   2026-10-06): alpha 0.7 -&gt; 1.95x. 0.3 -&gt; 1.09x. 0.5 -&gt; 1.44x.
+   0.9 -&gt; 2.65x.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> Draft k tokens,
+   one target forward on the k+1 prefixes, accept the longest
+   matching prefix, sample one more. About 15 lines of
+   pseudocode.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> With the exact
+   acceptance rule the output distribution matches the target
+   alone (C07). E is monotone in alpha.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Draft forwards cost memory bandwidth too. k too
+   large wastes draft work on likely rejections.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Medusa-style
+    multi-head drafts (no separate model, needs training).
+    Draft/verify when a small aligned model exists.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Draft and target
+    disagree on style (different fine-tunes): alpha collapses to
+    0.2 and the speedup falls below 1. The assumption &ldquo;draft
+    approximates target&rdquo; breaks, align the draft or drop the
+    scheme.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    speculative decoding papers (Leviathan et al., 2023. Chen et
+    al., 2023, primary). Extension: sweep k at fixed alpha on the
+    toy, hypothesis: optimal k grows with alpha.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the E formula.
+    (b) Oral ladder: define the scheme, compute the toy, derive
+    E, sketch the loop, compare with Medusa, debug the style-
+    mismatch case, critique the independence assumption, design
+    the k sweep. (c) Transfer: alpha = 0.85, k = 5, draft cost
+    0.2. Compute the speedup and judge. Answers:
+    <code>../keys/u11_answers.md</code> A6.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U11 task 6 computes speedups.
+    See <code>../labs/u11_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u11_fig03: speedup against alpha.
+    Source: original. Render: <code>assets/render_u11.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u11_fig03" src="../assets/u11_fig03.png"><figcaption>speedup against alpha. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c07-exact-distribution-conditions">C07: Exact-distribution conditions</h3>
+<p>Leaf id <code>cs336-U11-C07</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: when speculation preserves the target distribution.
+   Objectives: state the acceptance rule that keeps sampling
+   exact. Depends on C06, P06.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: if the draft is
+   wrong half the time, does the output still match the big
+   model? Yes, with the right acceptance rule: accept token x
+   with probability min(1, p_target(x)/p_draft(x)), else resample
+   from the adjusted distribution.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Rejection sampling: the draft proposes, the
+   target corrects. The acceptance probability exactly compensates
+   the proposal bias. The output law equals the target law,
+   token by token.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> p, q: target
+   and draft distributions over the vocabulary. Assumption: both
+   assign nonzero mass where the other does (support overlap).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Standard rejection sampling: the
+   accepted-plus-resampled mixture equals p. On rejection, sample
+   from norm(max(0, p - q)). The chain produces p exactly.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: p = [0.7, 0.3], q = [0.5, 0.5].
+   Token 1 accepted with min(1, 1.4) = 1.0, token 2 with min(1,
+   0.6) = 0.6. The mixture recovers p.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The accept/resample
+   step on two toy distributions. About 10 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Empirical token
+   frequencies from the sampler match p within sampling noise.
+   Acceptance rate equals the expected value.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Exactness costs the resampling branch and the extra
+   distribution arithmetic. Approximate acceptance (always take
+   the draft) is cheaper and wrong.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Greedy
+    acceptance (fast, changes the distribution). Exact rule when
+    the evaluation scores the target&rsquo;s distribution.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Draft with zero mass on
+    a token the target can emit: the support assumption breaks
+    and exactness fails. The fix is a draft with full support
+    (temperature &gt; 0).</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    speculative sampling paper (Leviathan et al., 2023, primary).
+    Extension: simulate the sampler on the toy p/q for 100k
+    draws, hypothesis: chi-square against p passes.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the acceptance rule.
+    (b) Oral ladder: define exactness, compute the toy, derive
+    the rule, implement the sampler, compare with greedy,
+    debug the zero-support case, critique the independence
+    assumption, design the chi-square test. (c) Transfer: draft
+    temperature 0 (greedy). Can the scheme stay exact?
+    Answers: <code>../keys/u11_answers.md</code> A7.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U11 task 7 simulates acceptance.
+    See <code>../labs/u11_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure, the rule is one formula.
+    No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c08-sampling-controls">C08: Sampling controls</h3>
+<p>Leaf id <code>cs336-U11-C08</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: temperature, top-p, top-k. Objectives: compute how each
+   reshapes a toy distribution. Depends on P06.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: logits [3, 2, 1,
+   0]: what does temperature do? Toy from <code>compute_u11.py</code>:
+   temp 0.5 -&gt; top-1 prob 0.865, entropy 0.66 bits, temp 1.0 -&gt;
+   0.644, 1.37 bits, temp 2.0 -&gt; 0.455, 1.80 bits. Top-p 0.9
+   keeps 3 of 4 tokens.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Temperature divides the logits: low temp
+   sharpens, high temp flattens. Top-p keeps the smallest set
+   with cumulative mass p. Top-k keeps k tokens. All three trade
+   diversity against focus.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Entropy in
+   bits. Assumption: the 4-token toy, sorted logits.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> p_i = softmax(z_i / T). As T -&gt; 0,
+   p concentrates on the argmax, as T -&gt; infinity, p flattens to
+   uniform. Top-p truncates and renormalizes.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u11.py</code> (executed
+   2026-10-06): the three temperature rows and the top-p count.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>sample_params</code>:
+   apply temperature, sort, truncate by top-p or top-k,
+   renormalize. About 12 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> T=1, p=1.0, k=inf
+   reproduces the plain softmax. Probabilities sum to 1 after
+   truncation.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Truncation discards tail mass that sometimes holds
+   the right answer. Temperature 0 kills diversity and
+   exploration.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Beam search
+    (deterministic, expensive) for exact-ish decoding. Sampling
+    for diversity and for pass@k metrics.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Top-p 0.9 on a flat
+    distribution keeps nearly everything: the control does
+    nothing. The assumption &ldquo;the head holds the mass&rdquo; breaks on
+    high-entropy steps.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    nucleus sampling paper (Holtzman et al., 2020, primary).
+    Extension: sweep T on the toy and plot entropy, hypothesis:
+    entropy is monotone in T.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the three controls and their
+    effects. (b) Oral ladder: define each, compute the toy,
+    justify the T limits, implement <code>sample_params</code>, compare with
+    beam search, debug the flat-distribution case, critique the
+    fixed-p choice, design the entropy sweep. (c) Transfer:
+    eval uses pass@100. Choose the sampling settings and defend.
+    Answers: <code>../keys/u11_answers.md</code> A8.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U11 task 8 applies the controls.
+    See <code>../labs/u11_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure, the table is in the lab
+    key. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c09-prefix-reuse">C09: Prefix reuse</h3>
+<p>Leaf id <code>cs336-U11-C09</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: reusing computed prefixes across requests and turns.
+   Objectives: compute the prefill work saved, state the invalidation
+   rules. Depends on C03.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: a chat session sends
+   the full history every turn. Must the prefill redo it all? No:
+   with the prefix cache, turn n reuses turns 1..n-1 and prefills
+   only the new tokens. Toy: history 1500 tokens, new turn 100:
+   prefill work falls from 1600 to 100 token-equivalents.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The KV cache is a function of the token
+   sequence. Extend the sequence, extend the cache. Identical
+   prefixes share cache blocks (C03), growing prefixes append to
+   them.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Saved work
+   in token-equivalents. Assumption: the conversation template is
+   fixed, so token sequences match exactly.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Prefill cost is roughly quadratic
+   in the new tokens only when the prefix cache hits. Without the
+   cache, each turn repays the full history.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From the C03 per-token value: 1500
+   cached tokens save 1500 x 128 KB = 192 MB of recompute traffic
+   per turn, plus the attention FLOPs.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> Session store maps
+   session id to its cache blocks, on a new turn, verify the
+   prefix hash, append. About 10 lines of pseudocode.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Turn outputs match
+   the no-cache run. A template change invalidates the cache.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Storing per-session caches costs memory between
+   turns. Eviction policy decides the hit rate.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Stateless
+    resend (simple, pays prefill every turn). Session cache when
+    turns are frequent.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The template version
+    changes mid-session: token sequences shift and the cache is
+    silently wrong if the hash ignores the template. The
+    assumption &ldquo;template fixed&rdquo; breaks, version the cache key.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    vLLM prefix-caching work (primary). Extension: simulate
+    session arrivals with a synthetic length model, hypothesis:
+    hit rate saturates with cache size.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the append rule.
+    (b) Oral ladder: define reuse, compute the toy, justify the
+    hash check, sketch the session store, compare with stateless,
+    debug the template-change case, critique the memory cost,
+    design the arrival simulation. (c) Transfer: 10k concurrent
+    sessions, average history 800 tokens. Size the cache.
+    Answers: <code>../keys/u11_answers.md</code> A9.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U11 task 9 computes reuse.
+    See <code>../labs/u11_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c10-quantizationdistillation">C10: Quantization/distillation</h3>
+<p>Leaf id <code>cs336-U11-C10</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: shrinking the serving artifact. Objectives: compute the
+   memory saved by quantization, state the quality-evaluation
+   duty. Depends on C01, P12.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the 7B model needs
+   14.0 GB in fp16. What do int8 and int4 buy? Toy from
+   <code>compute_u11.py</code>: int8 7.0 GB, int4 3.50 GB. The quality delta
+   is not computed here: it must be measured on evals (U12), never
+   assumed.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Quantization stores weights in fewer bits.
+   the matmul may dequantize on the fly or compute in low
+   precision. Distillation trains a small student on a big
+   teacher&rsquo;s outputs: a different, smaller model, not a
+   compressed one.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Bytes per
+   param: 2, 1, 0.5. Assumption: uniform quantization, no
+   quality claim.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Memory = N x bytes-per-param.
+   Halving the bits halves the weight traffic per decode token,
+   which is the decode bottleneck (C01).</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u11.py</code> (executed
+   2026-10-06): 14.0, 7.0, 3.50 GB.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>quant_mem(N,
+   bits)</code>: return N * bits / 8. Two lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> bits=16 returns
+   14.0 GB for 7B. The ratio int8/fp16 is exactly 0.5.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Quality risk concentrates in outliers and at small
+   scales. Calibration data and evals (U12) are the real cost.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Distillation
+    (new small model, needs teacher outputs and training).
+    Quantization (same model, needs evals) for fast wins.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Per-tensor int4 on a
+    model with large activation outliers: quality collapses on
+    math tasks while prose looks fine. The assumption &ldquo;quality
+    holds&rdquo; breaks, evaluate per capability slice (U12-C10).</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    GPTQ paper (Frantar et al., 2023, primary). Extension:
+    register a quality band before quantizing the toy (C10 of
+    U10), hypothesis: the measured delta lands inside.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the memory numbers and the eval
+    duty. (b) Oral ladder: define both techniques, compute the
+    toy, justify the decode win, implement <code>quant_mem</code>, compare
+    with distillation, debug the outlier case, critique the
+    uniform assumption, design the preregistered eval.
+    (c) Transfer: 70B must fit one 80 GB card. Choose bits and
+    name the evals. Answers: <code>../keys/u11_answers.md</code> A10.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U11 task 10 computes the
+    footprints. See <code>../labs/u11_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c11-ttfttpottail-latency">C11: TTFT/TPOT/tail latency</h3>
+<p>Leaf id <code>cs336-U11-C11</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: latency metrics and tails. Objectives: define TTFT,
+   TPOT, and p99, compute them on a toy service model. Depends on
+   C01, P07.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: mean latency looks
+   fine, but users complain. What is the tail? Toy from
+   <code>compute_u11.py</code> with exponential service times: TTFT mean
+   120 ms, p99 533 ms. TPOT mean 8.0 ms, p99 38.1 ms. The p99 is
+   4-5x the mean.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> TTFT measures prefill plus queueing. TPOT
+   measures decode pacing. Means hide the tail, the p99 decides
+   the user experience. Exponential service is the toy that shows
+   how wide tails get.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> ms. p99:
+   the 99th percentile. Assumption: iid exponential service,
+   10k samples, seed 2.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> For an exponential with mean m,
+   p99 = m * ln(100) = 4.6m. The toy shows 533/120 = 4.4 and
+   38.1/8 = 4.8, matching the theory within sampling noise.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u11.py</code> (executed
+   2026-10-06): TTFT 120/533 ms, TPOT 8.0/38.1 ms.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> Sample service
+   times, take mean and percentile. About 6 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> p99/mean near 4.6
+   for the exponential toy. p50 near 0.69m.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Real tails come from queueing, prefill
+   interference, and retries, not just service variance. The toy
+   understates the real p99.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> SLOs on p50
+    (cheap to meet, users still suffer). SLOs on p99 (the honest
+    contract) for user-facing serving.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A traffic spike makes
+    queueing dominate: p99 explodes while the service-time toy
+    stays calm. The assumption &ldquo;no queueing&rdquo; breaks, model the
+    queue (C12).</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    serving-system SLO literature (secondary). Extension: add an
+    M/D/1 queue to the toy, hypothesis: p99 grows faster than
+    linearly in utilization past 0.8.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the three metrics.
+    (b) Oral ladder: define each, compute the toy, justify the
+    4.6x, implement the sampler, compare p50 with p99 SLOs, debug
+    the spike case, critique the no-queue assumption, design the
+    queue test. (c) Transfer: SLO demands p99 TTFT under 500 ms.
+    The toy says 533. Name two fixes. Answers:
+    <code>../keys/u11_answers.md</code> A11.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U11 task 11 computes tails.
+    See <code>../labs/u11_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure, the tail table is in the
+    lab key. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c12-loadqualitycost-tradeoff">C12: Load/quality/cost tradeoff</h3>
+<p>Leaf id <code>cs336-U11-C12</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the serving triangle. Objectives: state the three-way
+   tradeoff, pick a point for a given SLO. Depends on C10, C11.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: load doubles. What
+   gives: quality, cost, or latency? Something must: serve a
+   smaller/quantized model (quality), add GPUs (cost), or let the
+   queue grow (latency). The toy numbers behind each lever are
+   C02 (memory), C10 (footprint), C11 (tails).</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> A triangle with load, quality, and cost at
+   the corners, latency is the slack variable. Every serving
+   decision moves along an edge. Name the edge before deciding.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Requests per
+   second, dollars per hour, quality bar. Assumption: the
+   reference model and the toy latencies.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Capacity per GPU = 1 / (mean
+   service time). GPUs needed = peak RPS / capacity, rounded up
+   with headroom. Quality enters through the model choice, cost
+   through the GPU count.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: TPOT 8 ms/token, 100 output
+   tokens: 0.8 s decode per request per GPU slot. At 10 RPS with
+   2 slots per GPU, 5 GPUs serve the mean load, the p99 needs
+   headroom on top.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>gpus_needed(rps,
+   tpot, out_tok, slots, headroom)</code>: capacity math. About 8
+   lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Doubling RPS
+   doubles GPUs. Headroom 1.3 multiplies by 1.3.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The toy ignores prefill, batching efficiency, and
+   traffic shape. Real sizing needs the measured distributions.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Overprovision
+    (simple, expensive). Autoscale (complex, lags spikes). Fixed
+    pool with queue SLOs (middle path).</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Provisioned for the mean
+    RPS: the p99 traffic hour queues and the SLO burns. The
+    assumption &ldquo;mean load&rdquo; breaks, provision for a high quantile
+    of demand.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    inference-serving cost literature (secondary). Extension:
+    replay a synthetic diurnal trace through the toy, hypothesis:
+    the cheapest feasible plan uses 2x mean capacity, not 1x.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the triangle and the slack.
+    (b) Oral ladder: define the tradeoff, compute the toy,
+    justify the headroom, implement <code>gpus_needed</code>, compare the
+    three provisioning styles, debug the mean-provisioning case,
+    critique the toy service model, design the trace replay.
+    (c) Transfer: the SLO is p99 latency, the budget is fixed,
+    load doubles. Choose the edge and defend. Answers:
+    <code>../keys/u11_answers.md</code> A12.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U11 task 12 sizes a pool.
+    See <code>../labs/u11_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure, the sizing table is in the
+    lab key. No unresolved conflict.</p>
+</li>
+</ol>
+      
+      <nav class="pager"><a href="../labs/u01_lab.html"><span class="lbl">← Previous</span>Lab 01 · Text representation and tokenization</a><a href="../labs/u01_lab_key.html"><span class="lbl">Next →</span>Lab 01 · Keys</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
