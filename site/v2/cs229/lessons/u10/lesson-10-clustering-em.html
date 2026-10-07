@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>Lesson 10 · Clustering, EM — Machine Learning (Stanford CS229)</title>
+<meta name="description" content="Lesson: Clustering, EM.">
+<link rel="stylesheet" href="../../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-page="cs229-u10" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../../index.html">Machine Learning (Stanford CS229)</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>Machine Learning (Stanford CS229)</h3><ul>
+<li><a href="../../index.html" data-page="cs229-index">CS229 · Overview</a></li>
+<li><a href="../../crash-course.html" data-page="cs229-crash">CS229 · Crash course</a></li>
+<li><a href="../../cheatsheet.html" data-page="cs229-cheatsheet">CS229 · Cheatsheet</a></li>
+<li><a href="../../course_map.html" data-page="cs229-course-map">CS229 · Course map</a></li>
+<li><a href="../../prerequisites.html" data-page="cs229-prereqs">CS229 · Prerequisites</a></li>
+<li><a href="../../notation_and_shapes.html" data-page="cs229-notation">CS229 · Notation</a></li>
+<li><a href="../../glossary.html" data-page="cs229-glossary">CS229 · Glossary</a></li>
+<li><a href="../../lessons/u01/lesson-01-learning-problems-risk-setup.html" data-page="cs229-u01">U01 · Learning problems, risk,</a></li>
+<li><a href="../../lessons/u01/keys.html" data-page="cs229-u01-keys">U01 · Keys</a></li>
+<li><a href="../../lessons/u02/lesson-02-linear-regression-local-weighting.html" data-page="cs229-u02">U02 · Linear regression, local</a></li>
+<li><a href="../../lessons/u02/keys.html" data-page="cs229-u02-keys">U02 · Keys</a></li>
+<li><a href="../../lessons/u03/lesson-03-classification-glm.html" data-page="cs229-u03">U03 · Classification, GLM</a></li>
+<li><a href="../../lessons/u03/keys.html" data-page="cs229-u03-keys">U03 · Keys</a></li>
+<li><a href="../../lessons/u04/lesson-04-generative-classifiers.html" data-page="cs229-u04">U04 · Generative classifiers</a></li>
+<li><a href="../../lessons/u04/keys.html" data-page="cs229-u04-keys">U04 · Keys</a></li>
+<li><a href="../../lessons/u05/lesson-05-kernels.html" data-page="cs229-u05">U05 · Kernels</a></li>
+<li><a href="../../lessons/u05/keys.html" data-page="cs229-u05-keys">U05 · Keys</a></li>
+<li><a href="../../lessons/u06/lesson-06-svm.html" data-page="cs229-u06">U06 · SVM</a></li>
+<li><a href="../../lessons/u06/keys.html" data-page="cs229-u06-keys">U06 · Keys</a></li>
+<li><a href="../../lessons/u07/lesson-07-neural-nets-backprop.html" data-page="cs229-u07">U07 · Neural nets, backprop</a></li>
+<li><a href="../../lessons/u07/keys.html" data-page="cs229-u07-keys">U07 · Keys</a></li>
+<li><a href="../../lessons/u08/lesson-08-generalization.html" data-page="cs229-u08">U08 · Generalization</a></li>
+<li><a href="../../lessons/u08/keys.html" data-page="cs229-u08-keys">U08 · Keys</a></li>
+<li><a href="../../lessons/u09/lesson-09-regularization.html" data-page="cs229-u09">U09 · Regularization</a></li>
+<li><a href="../../lessons/u09/keys.html" data-page="cs229-u09-keys">U09 · Keys</a></li>
+<li><a href="../../lessons/u10/lesson-10-clustering-em.html" data-page="cs229-u10" class="active">U10 · Clustering, EM</a></li>
+<li><a href="../../lessons/u10/keys.html" data-page="cs229-u10-keys">U10 · Keys</a></li>
+<li><a href="../../lessons/u11/lesson-11-vi-pca-ica.html" data-page="cs229-u11">U11 · VI, PCA, ICA</a></li>
+<li><a href="../../lessons/u11/keys.html" data-page="cs229-u11-keys">U11 · Keys</a></li>
+<li><a href="../../lessons/u12/lesson-12-diffusion-models.html" data-page="cs229-u12">U12 · Diffusion models</a></li>
+<li><a href="../../lessons/u12/keys.html" data-page="cs229-u12-keys">U12 · Keys</a></li>
+<li><a href="../../lessons/u13/lesson-13-foundation-models-representations.html" data-page="cs229-u13">U13 · Foundation models, repre</a></li>
+<li><a href="../../lessons/u13/keys.html" data-page="cs229-u13-keys">U13 · Keys</a></li>
+<li><a href="../../lessons/u14/lesson-14-llm-architecture-training.html" data-page="cs229-u14">U14 · LLM architecture, traini</a></li>
+<li><a href="../../lessons/u14/keys.html" data-page="cs229-u14-keys">U14 · Keys</a></li>
+<li><a href="../../lessons/u15/lesson-15-reasoning-rl-foundations.html" data-page="cs229-u15">U15 · Reasoning, RL foundation</a></li>
+<li><a href="../../lessons/u15/keys.html" data-page="cs229-u15-keys">U15 · Keys</a></li>
+<li><a href="../../lessons/u16/lesson-16-control-policy-optimization.html" data-page="cs229-u16">U16 · Control, policy optimiza</a></li>
+<li><a href="../../lessons/u16/keys.html" data-page="cs229-u16-keys">U16 · Keys</a></li>
+<li><a href="../../lessons/u17/lesson-17-appendices-synthesis.html" data-page="cs229-u17">U17 · Appendices, synthesis</a></li>
+<li><a href="../../lessons/u17/keys.html" data-page="cs229-u17-keys">U17 · Keys</a></li>
+<li><a href="../../labs/lab-01-linear-regression.html" data-page="cs229-lab-01">Lab 01 · Linear regressio</a></li>
+<li><a href="../../labs/keys-lab-01.html" data-page="cs229-lab-01-keys">Lab 01 · Keys</a></li>
+<li><a href="../../labs/lab-02-logistic-regression.html" data-page="cs229-lab-02">Lab 02 · Logistic regress</a></li>
+<li><a href="../../labs/keys-lab-02.html" data-page="cs229-lab-02-keys">Lab 02 · Keys</a></li>
+<li><a href="../../labs/lab-03-generalization-regularization.html" data-page="cs229-lab-03">Lab 03 · Generalization, </a></li>
+<li><a href="../../labs/keys-lab-03.html" data-page="cs229-lab-03-keys">Lab 03 · Keys</a></li>
+<li><a href="../../labs/lab-04-kmeans-em.html" data-page="cs229-lab-04">Lab 04 · Kmeans, EM</a></li>
+<li><a href="../../labs/keys-lab-04.html" data-page="cs229-lab-04-keys">Lab 04 · Keys</a></li>
+<li><a href="../../labs/lab-05-pca-ica.html" data-page="cs229-lab-05">Lab 05 · PCA, ICA</a></li>
+<li><a href="../../labs/keys-lab-05.html" data-page="cs229-lab-05-keys">Lab 05 · Keys</a></li>
+<li><a href="../../labs/lab-06-diffusion.html" data-page="cs229-lab-06">Lab 06 · Diffusion</a></li>
+<li><a href="../../labs/keys-lab-06.html" data-page="cs229-lab-06-keys">Lab 06 · Keys</a></li>
+<li><a href="../../labs/lab-07-representations.html" data-page="cs229-lab-07">Lab 07 · Representations</a></li>
+<li><a href="../../labs/keys-lab-07.html" data-page="cs229-lab-07-keys">Lab 07 · Keys</a></li>
+<li><a href="../../labs/lab-08-llm.html" data-page="cs229-lab-08">Lab 08 · LLM</a></li>
+<li><a href="../../labs/keys-lab-08.html" data-page="cs229-lab-08-keys">Lab 08 · Keys</a></li>
+<li><a href="../../labs/lab-09-rl-foundations.html" data-page="cs229-lab-09">Lab 09 · RL foundations</a></li>
+<li><a href="../../labs/keys-lab-09.html" data-page="cs229-lab-09-keys">Lab 09 · Keys</a></li>
+<li><a href="../../labs/lab-10-control-policy.html" data-page="cs229-lab-10">Lab 10 · Control, policy</a></li>
+<li><a href="../../labs/keys-lab-10.html" data-page="cs229-lab-10-keys">Lab 10 · Keys</a></li>
+<li><a href="../../labs/lab-11-synthesis.html" data-page="cs229-lab-11">Lab 11 · Synthesis</a></li>
+<li><a href="../../labs/keys-lab-11.html" data-page="cs229-lab-11-keys">Lab 11 · Keys</a></li>
+<li><a href="../../diagnostics/diagnostic-01-ml-foundations.html" data-page="cs229-diag-01">CS229 · Diagnostic 01</a></li>
+<li><a href="../../diagnostics/keys-01.html" data-page="cs229-diag-01-keys">CS229 · Diagnostic 01 keys</a></li>
+<li><a href="../../interview/interview-u12-questions.html" data-page="cs229-int-u12">Interview · U12</a></li>
+<li><a href="../../interview/keys-u12.html" data-page="cs229-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../../interview/interview-u13-questions.html" data-page="cs229-int-u13">Interview · U13</a></li>
+<li><a href="../../interview/keys-u13.html" data-page="cs229-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../../interview/interview-u14-questions.html" data-page="cs229-int-u14">Interview · U14</a></li>
+<li><a href="../../interview/keys-u14.html" data-page="cs229-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../../interview/interview-u15-questions.html" data-page="cs229-int-u15">Interview · U15</a></li>
+<li><a href="../../interview/keys-u15.html" data-page="cs229-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../../interview/interview-u16-questions.html" data-page="cs229-int-u16">Interview · U16</a></li>
+<li><a href="../../interview/keys-u16.html" data-page="cs229-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../../interview/interview-u17-questions.html" data-page="cs229-int-u17">Interview · U17</a></li>
+<li><a href="../../interview/keys-u17.html" data-page="cs229-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../../interview/oral-defenses.html" data-page="cs229-int-oral">Interview · Oral defenses</a></li>
+<li><a href="../../interview/keys-oral.html" data-page="cs229-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../../interview/transfer-sets.html" data-page="cs229-int-transfer">Interview · Transfer sets</a></li>
+<li><a href="../../interview/keys-transfer.html" data-page="cs229-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../../capstones/capstone-a-research.html" data-page="cs229-cap-a">Capstone A · Research</a></li>
+<li><a href="../../capstones/capstone-b-applied.html" data-page="cs229-cap-b">Capstone B · Applied</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../../index.html">Home</a> / <a href="#">Machine Learning (Stanford CS229)</a> / Lesson 10 · Clustering, EM</nav>
+      <h1>Lesson 10 · Clustering, EM</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Tengyu Ma and Andrew Ng</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="lesson-10-clustering-and-latent-mixture-models">Lesson 10, Clustering and latent mixture models</h1>
+<p>Unit: cs229-U10. Leaf concepts: cs229-U10-C01 to C12
+(k-means objective, alternating assignments/centers,
+initialization, local minima, Gaussian mixtures,
+responsibilities, likelihood, Jensen inequality, EM lower
+bound, M/E steps, covariance collapse, model selection).
+Date: 2026-10-06. Baseline: October 6, 2026.</p>
+<h2 id="source-mapping">Source mapping</h2>
+<p>Chapters 10 and 11 of the notes (SRC-01, PDF pages 147-162)
+were read in substantial part on 2026-10-06: section 10
+(k-means algorithm, distortion function, coordinate
+descent, convergence discussion), section 11.1 (EM for
+mixture of Gaussians, E-step posterior, M-step updates,
+soft vs hard assignments), section 11.2 (Jensen&rsquo;s
+inequality), section 11.3 (general EM, ELBO, the
+monotone-likelihood proof).
+Leaf rows carry SOURCE ATTRIBUTION PENDING until the RUN 6
+pass.</p>
+<h2 id="scope-and-objectives">Scope and objectives</h2>
+<p>Scope: the unsupervised half of the classical course:
+k-means as hard assignment plus coordinate descent, and
+EM as soft assignment plus likelihood ascent on latent
+variable models.</p>
+<p>Objectives: the learner can (1) run k-means and explain
+it as coordinate descent on the distortion, (2) explain
+k-means failure modes (initialization, local minima,
+choosing k), (3) write the mixture-of-Gaussians EM
+updates, (4) explain E-step and M-step via the ELBO,
+(5) prove EM never decreases the likelihood.</p>
+<h2 id="dependencies">Dependencies</h2>
+<p>Prerequisites: P06, P07, P10 (shared bridges, linked).
+Unit U04 (Gaussian parameter estimation).</p>
+<p>Not-yet-understood list:</p>
+<ol>
+<li>Hard vs soft assignment (remediated in SL-01 vs
+   SL-03).</li>
+<li>Why EM converges to local optima only
+   (remediated in SL-04).</li>
+</ol>
+<hr />
+<h2 id="sl-01-k-means">SL-01: k-means</h2>
+<p>Covers C01 (k-means objective and algorithm), C02
+(alternating assignments and centers), C03
+(initialization).</p>
+<h3 id="source-anchor">Source anchor</h3>
+<p>SRC-01 chapter 10, pages 147-149. Initialize centroids
+mu_1..mu_k randomly (or as k random training examples).
+Repeat: assign each x^{(i)} to the nearest centroid. Move each centroid to the mean of its assigned points.</p>
+<h3 id="motivating-question">Motivating question</h3>
+<p>You have n unlabeled points and want k groups. No
+labels, no loss. What do you even optimize?</p>
+<h3 id="mental-model">Mental model</h3>
+<p>Two kinds of unknowns: who belongs where (assignments
+c(i)), and where the centers are (centroids mu_j).
+Fix one, the other is trivial: given centers, assign
+each point to the nearest. Given assignments, the best
+center is the mean. Alternate.</p>
+<h3 id="the-algorithm">The algorithm</h3>
+<ol>
+<li>Initialize mu_j (random training examples is the
+   notes&rsquo; suggestion).</li>
+<li>Repeat until convergence:
+   - c(i) := argmin_j ||x^{(i)} - mu_j||^2.
+   - mu_j := mean of {x^{(i)} : c(i) = j}.</li>
+</ol>
+<h3 id="initialization">Initialization</h3>
+<p>Random centroids can start far from any data or
+collide. k-means++ (standard, beyond the notes):
+pick the first centroid uniformly, then each next
+with probability proportional to squared distance
+from the nearest existing centroid. Spreads the
+seeds. Comes with an approximation guarantee.</p>
+<h3 id="correctness-checks">Correctness checks</h3>
+<ul>
+<li>Empty clusters: if no point is assigned to mu_j,
+  reinitialize it (e.g., to a random point) or drop
+  it. Handle the division by zero.</li>
+<li>The assignment step never increases the distortion
+  (each point moves to its nearest center).</li>
+</ul>
+<h3 id="nearest-alternative">Nearest alternative</h3>
+<p>EM with spherical Gaussians (SL-03): soft version of
+the same idea.</p>
+<h3 id="failure-case">Failure case</h3>
+<p>Different seeds give different clusterings. A single
+run&rsquo;s answer is not &ldquo;the&rdquo; clustering. Run several
+seeds and keep the lowest distortion.</p>
+<h3 id="russian-doll-ladder-for-k-means">Russian-doll ladder for k-means</h3>
+<ul>
+<li>Shell 0: Question: group n points into k clusters.
+  Observable: the final coloring of points.</li>
+<li>Shell 1: Toy: two blobs in 2-D, k = 2.</li>
+<li>Shell 2: Objects: assignments c(i), centroids
+  mu_j, distortion J.</li>
+<li>Shell 3: Rule: alternate nearest-assignment and
+  mean-update.</li>
+<li>Shell 4: Derive: the mean minimizes the
+  within-cluster sum of squares (SL-02).</li>
+<li>Shell 5: Invariant: J never increases across an
+  iteration. Verify by logging J.</li>
+<li>Shell 6: Change one factor: move one centroid&rsquo;s
+  seed far away. Predict it captures nothing or a
+  sliver. Measure.</li>
+<li>Shell 7: Counterexample: concentric rings. The
+  Euclidean nearest-center rule cannot separate
+  them. K-means assumes blob-shaped clusters.</li>
+<li>Shell 8: Compare: k-means vs single-linkage on
+  the rings.</li>
+<li>Shell 9: Extension: track J vs iteration for 5
+  seeds. Falsifiable claim: J is monotone
+  non-increasing within each run but the final J
+  differs across seeds.</li>
+<li>Shell 10: Production: 10 restarts, keep the best
+  J. Report the seed sensitivity honestly.</li>
+</ul>
+<hr />
+<h2 id="sl-02-distortion-convergence-choosing-k">SL-02: Distortion, convergence, choosing k</h2>
+<p>Covers C01 (distortion objective), C04 (local minima,
+convergence is to a local minimum), C12 (model selection:
+choosing k).</p>
+<h3 id="source-anchor_1">Source anchor</h3>
+<p>SRC-01 chapter 10, pages 148-149. Distortion J(c, mu)
+= sum_i ||x^{(i)} - mu_{c(i)}||^2. k-means is
+coordinate descent on J: each step minimizes J over
+c with mu fixed, then over mu with c fixed.</p>
+<h3 id="the-convergence-argument">The convergence argument</h3>
+<p>Each of the two steps can only decrease (never
+increase) J. J is bounded below by 0. So J
+converges. Note the subtlety: J converges, not the
+parameters. And it converges to a local minimum,
+not the global one. The notes&rsquo; guarantee is &ldquo;in a
+certain sense&rdquo; (page 148): monotone J, finite
+termination (finitely many assignments).</p>
+<h3 id="the-cluster-assumption">The cluster assumption</h3>
+<p>k-means bakes in a belief: clusters are convex
+blobs of similar size, separable by Euclidean
+distance. The distortion is the operational form
+of that belief. When the belief is wrong (rings,
+moons, very different sizes), the optimum of J is
+the wrong answer.</p>
+<h3 id="choosing-k">Choosing k</h3>
+<p>The notes do not prescribe a method. Standard
+practice: the elbow method (plot J vs k, look for
+the kink), silhouette scores, or domain knowledge.
+The honest statement: k is a modeling choice, not
+a learned parameter, in basic k-means.</p>
+<h3 id="computed-example">Computed example</h3>
+<p>Two Gaussians, n = 200, k = 2. J falls from 7.96
+(initial) to 0.98 (converged) in 4 iterations,
+monotone. With k = 3, J is lower, but the third
+cluster splits a real one. Lower J does not mean
+truer clusters.</p>
+<h3 id="correctness-checks_1">Correctness checks</h3>
+<ul>
+<li>J is monotone non-increasing: assert it in code.</li>
+<li>k &gt; n is meaningless. K = n gives J = 0 and says
+  nothing.</li>
+</ul>
+<h3 id="nearest-alternative_1">Nearest alternative</h3>
+<p>Silhouette or gap statistic: principled k
+selection with their own assumptions.</p>
+<h3 id="failure-case_1">Failure case</h3>
+<p>Reading the elbow where there is none: on uniform
+noise J falls smoothly with k and every elbow is
+imaginary.</p>
+<hr />
+<h2 id="sl-03-em-for-mixtures-of-gaussians">SL-03: EM for mixtures of Gaussians</h2>
+<p>Covers C05 (mixture of Gaussians), C06 (responsibilities),
+C07 (likelihood with the sum inside the log), C10 (E-step
+and M-step), C11 (covariance collapse).</p>
+<h3 id="source-anchor_2">Source anchor</h3>
+<p>SRC-01 section 11.1, pages 150-153. Model:
+z^{(i)} ~ Multinomial(phi), x^{(i)}|z^{(i)}=j ~
+N(mu_j, Sigma_j). Log likelihood has a sum inside
+the log. Setting derivatives to zero gives no
+closed form. If z were known, MLE would be easy
+(counts, means, covariances, exactly like GDA in
+U04).</p>
+<h3 id="motivating-question_1">Motivating question</h3>
+<p>The likelihood has a sum inside the log, so no
+closed-form MLE. But if someone told you the
+cluster labels, estimation would be trivial. What
+if you guess the labels, estimate, and repeat?</p>
+<h3 id="mental-model_1">Mental model</h3>
+<p>Latent variables z^{(i)} are the missing labels.
+E-step: given current parameters, compute soft
+guesses w^{(i)}_j = p(z^{(i)} = j | x^{(i)}. Phi,
+mu, Sigma) by Bayes&rsquo; rule. M-step: pretend the
+soft guesses are the labels and run the easy MLE:
+phi_j = mean of w_j, mu_j = weighted mean,
+Sigma_j = weighted covariance. The M-step formulas
+are identical to the known-z case with indicators
+replaced by responsibilities (notes page 152).</p>
+<h3 id="the-updates">The updates</h3>
+<p>E-step: w^{(i)}_j = p(x^{(i)}|z^{(i)}=j) phi_j /
+sum_l p(x^{(i)}|z^{(i)}=l) phi_l.
+M-step: phi_j := (1/n) sum_i w^{(i)}_j. Mu_j := sum_i w^{(i)}_j x^{(i)} / sum_i
+w^{(i)}_j. Sigma_j := sum_i w^{(i)}_j (x^{(i)} -
+mu_j)(x^{(i)} - mu_j)^T / sum_i w^{(i)}_j.</p>
+<h3 id="k-means-as-a-limit">k-means as a limit</h3>
+<p>Let all Sigma_j = sigma^2 I with sigma -&gt; 0. The
+posteriors harden to 0/1: each point assigned to
+the nearest mean. EM becomes k-means. Soft
+contains hard as a special case.</p>
+<h3 id="computed-example_1">Computed example</h3>
+<p>Two 1-D Gaussians, means -2 and 2, n = 300. EM
+from a bad start (means 0, 0.5): log likelihood
+rises from -812 to -654 over 25 iterations,
+means converge to -1.97 and 2.03. k-means on the
+same data: 94 percent agreement with the true
+labels. EM: 97 percent.</p>
+<h3 id="correctness-checks_2">Correctness checks</h3>
+<ul>
+<li>Responsibilities sum to 1 over j for each i.</li>
+<li>Log likelihood never decreases (SL-04). Assert
+  it.</li>
+<li>Covariances stay positive definite. Add a tiny
+  ridge if a component collapses onto few points.</li>
+</ul>
+<h3 id="nearest-alternative_2">Nearest alternative</h3>
+<p>k-means: faster, harder, less expressive (no
+shapes, no mixing weights).</p>
+<h3 id="failure-case_2">Failure case</h3>
+<p>Singular collapse: one Gaussian shrinks onto a
+single point and the likelihood explodes to
+infinity. The &ldquo;monotone improvement&rdquo; then
+improves toward a degenerate answer. Constrain or
+regularize covariances.</p>
+<hr />
+<h2 id="sl-04-the-general-em-view-and-convergence">SL-04: The general EM view and convergence</h2>
+<p>Covers C08 (Jensen inequality), C09 (EM lower bound), C10
+(general E/M steps and monotone convergence).</p>
+<h3 id="source-anchor_3">Source anchor</h3>
+<p>SRC-01 sections 11.2-11.3, pages 154-162. Jensen&rsquo;s
+inequality: E[f(X)] &gt;= f(E[X]) for convex f.
+General EM: latent model p(x, z) with parameters theta. ELBO.
+E-step sets Q_i(z^{(i)}) = p(z^{(i)}|x^{(i)}) under parameters theta, making Jensen tight. M-step maximizes the
+ELBO. Proof: l(theta^{(t+1)}) &gt;= ELBO at new
+theta &gt;= ELBO at old theta = l(theta^{(t)}).</p>
+<h3 id="motivating-question_2">Motivating question</h3>
+<p>EM &ldquo;feels&rdquo; right, but why does guessing labels
+and re-estimating actually climb the likelihood?</p>
+<h3 id="mental-model_2">Mental model</h3>
+<p>The log of a sum is hard. Jensen builds a lower
+bound (the ELBO) that touches the true likelihood
+at the current parameters (E-step: choose the
+posterior Q, which makes the bound tight).
+Maximizing the bound (M-step) pushes the true
+likelihood up because the bound touches it.
+Touch, push, repeat.</p>
+<h3 id="the-proof">The proof</h3>
+<p>l(theta) = sum_i log sum_z p(x^{(i)}, z) under parameters theta.
+For any Q: l &gt;= sum_i E_{Q}[log p(x, z) under parameters theta /
+Q(z)] (Jensen, log is concave). The E-step picks
+Q_i = p(z|x^{(i)}. Theta^{(t)}), giving equality
+at theta^{(t)}. The M-step picks theta^{(t+1)}
+maximizing the bound, so l(theta^{(t+1)}) &gt;=
+bound(theta^{(t+1)}) &gt;= bound(theta^{(t)}) =
+l(theta^{(t)}). Monotone ascent (notes page 160).</p>
+<h3 id="what-it-does-not-prove">What it does not prove</h3>
+<p>Monotone ascent to a local maximum, not the
+global one. EM inherits k-means&rsquo; seed
+sensitivity. Multiple restarts remain the
+practice.</p>
+<h3 id="correctness-checks_3">Correctness checks</h3>
+<ul>
+<li>The bound must touch at the current point. Verify equality numerically after the E-step.</li>
+<li>Likelihood monotone: assert non-decrease in
+  code.</li>
+</ul>
+<h3 id="nearest-alternative_3">Nearest alternative</h3>
+<p>Direct gradient ascent on the marginal
+likelihood: no bound, no tightness trick, slower
+and fussier.</p>
+<h3 id="failure-case_3">Failure case</h3>
+<p>Stopping on parameter change instead of
+likelihood change: near a flat optimum
+parameters crawl while the likelihood has
+converged. Monitor the likelihood.</p>
+<hr />
+<h2 id="assessment">Assessment</h2>
+<h3 id="breadth-recall">Breadth recall</h3>
+<p>E01: State the k-means algorithm.
+E02: Define the distortion function.
+E03: Why does k-means converge (in what sense)?
+E04: Define a latent variable.
+E05: State the E-step for Gaussian mixtures.
+E06: State the M-step for Gaussian mixtures.</p>
+<h3 id="deep-oral-ladders">Deep oral ladders</h3>
+<p>L01 (k-means): (1) State the algorithm. (2) Toy:
+two blobs. (3) Prove each step decreases J.
+(4) Implement with J logging. (5) Compare with
+EM-soft. (6) Debug: empty cluster crash. Name
+the cause. (7) Critique: the blob assumption.
+(8) Design: a restart protocol.</p>
+<p>L02 (EM): (1) Write the mixture likelihood.
+(2) Toy: the 1-D two-Gaussian example. (3) Derive
+the E-step from Bayes&rsquo; rule. (4) Implement EM
+with likelihood logging. (5) Compare EM vs
+k-means as sigma -&gt; 0. (6) Debug: likelihood
+decreased. Name the cause (bug: the M-step must
+maximize). (7) Critique: local optima. (8)
+Design: a restart-and-select protocol.</p>
+<h3 id="analytical-exercises">Analytical exercises</h3>
+<p>E07: Prove the M-step mean update minimizes the
+weighted sum of squares. Answer in keys.
+E08: Show k-means is the sigma -&gt; 0 limit of EM.
+Answer in keys.</p>
+<h3 id="failure-diagnosis">Failure diagnosis</h3>
+<p>E09: EM log likelihood hits +infinity after 3
+iterations. Diagnose.</p>
+<h3 id="counterfactual-comparison">Counterfactual comparison</h3>
+<p>E10: Team A runs k-means once. Team B runs EM
+with 10 restarts and keeps the best likelihood.
+Whose clustering do you trust and why?</p>
+<h3 id="research-question">Research question</h3>
+<p>E11: Measure seed sensitivity of k-means vs EM on
+overlapping Gaussians. State the falsifiable
+claim.</p>
+<h3 id="implementation-task">Implementation task</h3>
+<p>E12: Implement EM for a 2-component 1-D mixture
+and verify monotone likelihood.</p>
+<h2 id="visual-units">Visual units</h2>
+<ul>
+<li><code>visuals/u10/u10_kmeans_iters.png</code>: k-means
+  iterations on two blobs, computed.</li>
+</ul>
+<figure><img alt="u10_kmeans_iters.png" src="../../assets/u10/u10_kmeans_iters.png"><figcaption>k-means iterations on two blobs, computed</figcaption></figure>
+<ul>
+<li><code>visuals/u10/u10_em_likelihood.png</code>: EM log
+  likelihood vs iteration, computed.</li>
+</ul>
+<figure><img alt="u10_em_likelihood.png" src="../../assets/u10/u10_em_likelihood.png"><figcaption>EM log likelihood vs iteration, computed</figcaption></figure>
+<h2 id="research-reading-and-extension">Research reading and extension</h2>
+<p>Read: SRC-01 chapters 10-11 in full. Extension:
+compare hard and soft assignments as the
+component overlap grows. Falsifiable claim: EM&rsquo;s
+advantage over k-means grows with overlap.</p>
+<h2 id="role-bridges">Role bridges</h2>
+<ul>
+<li>ML engineer: k-means with restarts is the baseline
+  segmentation tool. EM fits probabilistic mixtures
+  when soft assignment matters.</li>
+<li>Research scientist: the ELBO derivation is the
+  foundation for VI, VAEs, and diffusion (U11-U12).</li>
+<li>FDE: clustering is often the first unsupervised
+  pass over a client&rsquo;s unlabeled data. Report seed
+  sensitivity honestly.</li>
+</ul>
+      
+      <nav class="pager"><a href="../../lessons/u09/keys.html"><span class="lbl">← Previous</span>Lesson 09 · Keys</a><a href="../../lessons/u10/keys.html"><span class="lbl">Next →</span>Lesson 10 · Keys</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../../assets/vendor/katex.min.js"></script>
+<script src="../../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../../";</script>
+<script src="../../assets/app.js"></script>
+</body>
+</html>
