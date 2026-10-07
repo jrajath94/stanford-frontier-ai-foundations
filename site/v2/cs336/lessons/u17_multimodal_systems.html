@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U17 · Multimodality and training-system integration — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Multimodality and training-system integration.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-u17" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../course_map.html" data-page="cs336-course-map">Course map</a></li>
+<li><a href="../prerequisites.html" data-page="cs336-prereqs">Prerequisites</a></li>
+<li><a href="../notation_and_shapes.html" data-page="cs336-notation">Notation</a></li>
+<li><a href="../glossary.html" data-page="cs336-glossary">Glossary</a></li>
+<li><a href="../cheatsheet.html" data-page="cs336-cheatsheet">Cheatsheet</a></li>
+<li><a href="../crash-course.html" data-page="cs336-crash">Crash course</a></li>
+<li><a href="../lessons/u01_tokenization.html" data-page="cs336-u01">U01 · Text representation and tokeni</a></li>
+<li><a href="../keys/u01_answers.html" data-page="cs336-u01-answers">U01 · Answers</a></li>
+<li><a href="../lessons/u02_tensor_programming.html" data-page="cs336-u02">U02 · Executable tensor programming </a></li>
+<li><a href="../keys/u02_answers.html" data-page="cs336-u02-answers">U02 · Answers</a></li>
+<li><a href="../lessons/u03_transformer_block.html" data-page="cs336-u03">U03 · Transformer block mechanics</a></li>
+<li><a href="../keys/u03_answers.html" data-page="cs336-u03-answers">U03 · Answers</a></li>
+<li><a href="../lessons/u04_attention_moe.html" data-page="cs336-u04">U04 · Attention alternatives and exp</a></li>
+<li><a href="../keys/u04_answers.html" data-page="cs336-u04-answers">U04 · Answers</a></li>
+<li><a href="../lessons/u05_optimization.html" data-page="cs336-u05">U05 · Optimization and training corr</a></li>
+<li><a href="../keys/u05_answers.html" data-page="cs336-u05-answers">U05 · Answers</a></li>
+<li><a href="../lessons/u06_gpu_tpu.html" data-page="cs336-u06">U06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../keys/u06_answers.html" data-page="cs336-u06-answers">U06 · Answers</a></li>
+<li><a href="../lessons/u07_kernels.html" data-page="cs336-u07">U07 · Kernels and IO-aware attention</a></li>
+<li><a href="../keys/u07_answers.html" data-page="cs336-u07-answers">U07 · Answers</a></li>
+<li><a href="../lessons/u08_data_sharding.html" data-page="cs336-u08">U08 · Data and optimizer sharding</a></li>
+<li><a href="../keys/u08_answers.html" data-page="cs336-u08-answers">U08 · Answers</a></li>
+<li><a href="../lessons/u09_model_parallel.html" data-page="cs336-u09">U09 · Model and hybrid parallelism</a></li>
+<li><a href="../keys/u09_answers.html" data-page="cs336-u09-answers">U09 · Answers</a></li>
+<li><a href="../lessons/u10_scaling_laws.html" data-page="cs336-u10">U10 · Scaling laws and extrapolation</a></li>
+<li><a href="../keys/u10_answers.html" data-page="cs336-u10-answers">U10 · Answers</a></li>
+<li><a href="../labs/u01_lab.html" data-page="cs336-lab-u01">Lab 01 · Text representation and tokeni</a></li>
+<li><a href="../lessons/u11_inference.html" data-page="cs336-u11">U11 · Inference algorithms and servi</a></li>
+<li><a href="../labs/u01_lab_key.html" data-page="cs336-lab-u01-keys">Lab 01 · Keys</a></li>
+<li><a href="../keys/u11_answers.html" data-page="cs336-u11-answers">U11 · Answers</a></li>
+<li><a href="../labs/u02_lab.html" data-page="cs336-lab-u02">Lab 02 · Executable tensor programming </a></li>
+<li><a href="../lessons/u12_evaluation.html" data-page="cs336-u12">U12 · Evaluation and measurement val</a></li>
+<li><a href="../labs/u02_lab_key.html" data-page="cs336-lab-u02-keys">Lab 02 · Keys</a></li>
+<li><a href="../keys/u12_answers.html" data-page="cs336-u12-answers">U12 · Answers</a></li>
+<li><a href="../labs/u03_lab.html" data-page="cs336-lab-u03">Lab 03 · Transformer block mechanics</a></li>
+<li><a href="../lessons/u13_data_sourcing.html" data-page="cs336-u13">U13 · Data sourcing and transformati</a></li>
+<li><a href="../labs/u03_lab_key.html" data-page="cs336-lab-u03-keys">Lab 03 · Keys</a></li>
+<li><a href="../keys/u13_answers.html" data-page="cs336-u13-answers">U13 · Answers</a></li>
+<li><a href="../labs/u04_lab.html" data-page="cs336-lab-u04">Lab 04 · Attention alternatives and exp</a></li>
+<li><a href="../lessons/u14_data_mixing.html" data-page="cs336-u14">U14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../labs/u04_lab_key.html" data-page="cs336-lab-u04-keys">Lab 04 · Keys</a></li>
+<li><a href="../keys/u14_answers.html" data-page="cs336-u14-answers">U14 · Answers</a></li>
+<li><a href="../labs/u05_lab.html" data-page="cs336-lab-u05">Lab 05 · Optimization and training corr</a></li>
+<li><a href="../lessons/u15_midtraining.html" data-page="cs336-u15">U15 · Midtraining and supervised ada</a></li>
+<li><a href="../labs/u05_lab_key.html" data-page="cs336-lab-u05-keys">Lab 05 · Keys</a></li>
+<li><a href="../keys/u15_answers.html" data-page="cs336-u15-answers">U15 · Answers</a></li>
+<li><a href="../labs/u06_lab.html" data-page="cs336-lab-u06">Lab 06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../lessons/u16_alignment_rl.html" data-page="cs336-u16">U16 · Preference alignment and reaso</a></li>
+<li><a href="../labs/u06_lab_key.html" data-page="cs336-lab-u06-keys">Lab 06 · Keys</a></li>
+<li><a href="../keys/u16_answers.html" data-page="cs336-u16-answers">U16 · Answers</a></li>
+<li><a href="../labs/u07_lab.html" data-page="cs336-lab-u07">Lab 07 · Kernels and IO-aware attention</a></li>
+<li><a href="../lessons/u17_multimodal_systems.html" data-page="cs336-u17" class="active">U17 · Multimodality and training-sys</a></li>
+<li><a href="../labs/u07_lab_key.html" data-page="cs336-lab-u07-keys">Lab 07 · Keys</a></li>
+<li><a href="../keys/u17_answers.html" data-page="cs336-u17-answers">U17 · Answers</a></li>
+<li><a href="../labs/u08_lab.html" data-page="cs336-lab-u08">Lab 08 · Data and optimizer sharding</a></li>
+<li><a href="../lessons/u18_guests_defense.html" data-page="cs336-u18">U18 · Guest material and final resea</a></li>
+<li><a href="../labs/u08_lab_key.html" data-page="cs336-lab-u08-keys">Lab 08 · Keys</a></li>
+<li><a href="../keys/u18_answers.html" data-page="cs336-u18-answers">U18 · Answers</a></li>
+<li><a href="../labs/u09_lab.html" data-page="cs336-lab-u09">Lab 09 · Model and hybrid parallelism</a></li>
+<li><a href="../labs/u09_lab_key.html" data-page="cs336-lab-u09-keys">Lab 09 · Keys</a></li>
+<li><a href="../labs/u10_lab.html" data-page="cs336-lab-u10">Lab 10 · Scaling laws and extrapolation</a></li>
+<li><a href="../labs/u10_lab_key.html" data-page="cs336-lab-u10-keys">Lab 10 · Keys</a></li>
+<li><a href="../interview/u01_questions.html" data-page="cs336-int-u01">Interview · U01</a></li>
+<li><a href="../labs/u11_lab.html" data-page="cs336-lab-u11">Lab 11 · Inference algorithms and servi</a></li>
+<li><a href="../interview/u01_key.html" data-page="cs336-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../labs/u11_lab_key.html" data-page="cs336-lab-u11-keys">Lab 11 · Keys</a></li>
+<li><a href="../interview/u02_questions.html" data-page="cs336-int-u02">Interview · U02</a></li>
+<li><a href="../labs/u12_lab.html" data-page="cs336-lab-u12">Lab 12 · Evaluation and measurement val</a></li>
+<li><a href="../interview/u02_key.html" data-page="cs336-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../labs/u12_lab_key.html" data-page="cs336-lab-u12-keys">Lab 12 · Keys</a></li>
+<li><a href="../interview/u03_questions.html" data-page="cs336-int-u03">Interview · U03</a></li>
+<li><a href="../labs/u13_lab.html" data-page="cs336-lab-u13">Lab 13 · Data sourcing and transformati</a></li>
+<li><a href="../interview/u03_key.html" data-page="cs336-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../labs/u13_lab_key.html" data-page="cs336-lab-u13-keys">Lab 13 · Keys</a></li>
+<li><a href="../interview/u04_questions.html" data-page="cs336-int-u04">Interview · U04</a></li>
+<li><a href="../labs/u14_lab.html" data-page="cs336-lab-u14">Lab 14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../interview/u04_key.html" data-page="cs336-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../labs/u14_lab_key.html" data-page="cs336-lab-u14-keys">Lab 14 · Keys</a></li>
+<li><a href="../interview/u05_questions.html" data-page="cs336-int-u05">Interview · U05</a></li>
+<li><a href="../labs/u15_lab.html" data-page="cs336-lab-u15">Lab 15 · Midtraining and supervised ada</a></li>
+<li><a href="../interview/u05_key.html" data-page="cs336-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../labs/u15_lab_key.html" data-page="cs336-lab-u15-keys">Lab 15 · Keys</a></li>
+<li><a href="../interview/u06_questions.html" data-page="cs336-int-u06">Interview · U06</a></li>
+<li><a href="../labs/u16_lab.html" data-page="cs336-lab-u16">Lab 16 · Preference alignment and reaso</a></li>
+<li><a href="../interview/u06_key.html" data-page="cs336-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../labs/u16_lab_key.html" data-page="cs336-lab-u16-keys">Lab 16 · Keys</a></li>
+<li><a href="../interview/u07_questions.html" data-page="cs336-int-u07">Interview · U07</a></li>
+<li><a href="../labs/u17_lab.html" data-page="cs336-lab-u17">Lab 17 · Multimodality and training-sys</a></li>
+<li><a href="../interview/u07_key.html" data-page="cs336-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../labs/u17_lab_key.html" data-page="cs336-lab-u17-keys">Lab 17 · Keys</a></li>
+<li><a href="../interview/u08_questions.html" data-page="cs336-int-u08">Interview · U08</a></li>
+<li><a href="../labs/u18_lab.html" data-page="cs336-lab-u18">Lab 18 · Guest material and final resea</a></li>
+<li><a href="../interview/u08_key.html" data-page="cs336-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../labs/u18_lab_key.html" data-page="cs336-lab-u18-keys">Lab 18 · Keys</a></li>
+<li><a href="../interview/u09_questions.html" data-page="cs336-int-u09">Interview · U09</a></li>
+<li><a href="../interview/u09_key.html" data-page="cs336-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../interview/u10_questions.html" data-page="cs336-int-u10">Interview · U10</a></li>
+<li><a href="../interview/u10_key.html" data-page="cs336-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../interview/u11_questions.html" data-page="cs336-int-u11">Interview · U11</a></li>
+<li><a href="../interview/u11_key.html" data-page="cs336-int-u11-keys">Interview · U11 keys</a></li>
+<li><a href="../interview/u12_questions.html" data-page="cs336-int-u12">Interview · U12</a></li>
+<li><a href="../interview/u12_key.html" data-page="cs336-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../interview/u13_questions.html" data-page="cs336-int-u13">Interview · U13</a></li>
+<li><a href="../interview/u13_key.html" data-page="cs336-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../interview/u14_questions.html" data-page="cs336-int-u14">Interview · U14</a></li>
+<li><a href="../interview/u14_key.html" data-page="cs336-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../interview/u15_questions.html" data-page="cs336-int-u15">Interview · U15</a></li>
+<li><a href="../interview/u15_key.html" data-page="cs336-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../interview/u16_questions.html" data-page="cs336-int-u16">Interview · U16</a></li>
+<li><a href="../interview/u16_key.html" data-page="cs336-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../interview/u17_questions.html" data-page="cs336-int-u17">Interview · U17</a></li>
+<li><a href="../interview/u17_key.html" data-page="cs336-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../interview/u18_questions.html" data-page="cs336-int-u18">Interview · U18</a></li>
+<li><a href="../interview/u18_key.html" data-page="cs336-int-u18-keys">Interview · U18 keys</a></li>
+<li><a href="../interview/oral-defenses.html" data-page="cs336-int-oral">Interview · Oral</a></li>
+<li><a href="../interview/keys-oral.html" data-page="cs336-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../interview/transfer-sets.html" data-page="cs336-int-transfer">Interview · Transfer</a></li>
+<li><a href="../interview/keys-transfer.html" data-page="cs336-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../capstones/capstone_applied.html" data-page="cs336-cap-applied">Capstone · Applied</a></li>
+<li><a href="../capstones/capstone_research.html" data-page="cs336-cap-research">Capstone · Research</a></li>
+<li><a href="../keys/diagnostic_key.html" data-page="cs336-diagnostic-keys">Diagnostic · Keys</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U17 · Multimodality and training-system integration</nav>
+      <h1>U17 · Multimodality and training-system integration</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u17-multimodality-and-training-system-integration">U17 , Multimodality and training-system integration</h1>
+<p>Prerequisites: P14, P16, P17, P21. Bridge links in <code>../prerequisites.md</code>.
+Session: S17 (reported May 27, Alignment: RL Systems). The unit also
+carries the requested multimodality branch, the two are taught as one
+systems unit, stated here. Full map in <code>../course_map.md</code>.
+Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
+PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
+<h2 id="standing-note">Standing note</h2>
+<p>No cluster, no rollout fleet on this box. System claims are time
+models and numpy simulations from <code>assets/compute_u17.py</code> (executed
+2026-10-06), stated as such. Multimodal numbers are token-budget
+arithmetic on toy inputs.</p>
+<h2 id="russian-doll-map">Russian-doll map</h2>
+<p>Shells 0-1 in items 1-2, shells 2-3 in items 3-6, shell 4 in item 7,
+shell 5 in item 8, shell 6 in item 9, shell 7 in item 11, shell 8 in
+item 10, shell 9 in item 12, shell 10 in item 13(c). The depth gate
+is checked by item 13.</p>
+<h2 id="local-remediation-the-interface-view">Local remediation , the interface view</h2>
+<p>Read this if diagnostic items on system bottlenecks were not full
+marks. A training system is three interfaces: the model (compute),
+the data (bytes), the rollout fleet (sequences). The slowest
+interface sets the pace. Toy from <code>compute_u17.py</code>: stage times
+sum to 143 ms with backward at 38.5%, doubling backward speed cuts
+the step to 116 ms, 19.2% faster. Amdahl&rsquo;s law, not magic.
+Assessment: which stage do you optimize first, and what is the max
+possible step saving? Key: <code>../keys/u17_answers.md</code> R1.</p>
+<hr />
+<h3 id="c01-modality-representations">C01: Modality representations</h3>
+<p>Leaf id <code>cs336-U17-C01</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: turning non-text inputs into tokens. Objectives: state
+   the image-to-token recipe, compute the token cost. Depends on
+   P14.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how does an image
+   enter a language model? As tokens: split into 16x16 patches,
+   embed each patch, lay the 256 tokens before the text. Toy
+   from <code>compute_u17.py</code>: 256 image tokens + 512 text = 768.
+   the image takes 33.3% of the context.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Every modality becomes a token stream.
+   The transformer never sees pixels, only embeddings in
+   sequence. The modality&rsquo;s cost is its token count.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Patches:
+   16x16. Assumption: fixed patch size, one embedding per
+   patch.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Image 224x224 / 16 = 14x14 =
+   196 patches (the toy uses 16x16 patches for round numbers:
+   256). Each patch is linearly projected to d_model.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u17.py</code> (executed
+   2026-10-06): 768 tokens, 33.3% image.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>patchify(img)</code>:
+   reshape to patches, project. About 8 lines of pseudocode.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Patch count =
+   (H/16)*(W/16). Order is row-major.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Images are token-hungry: 8 images take 80.0% of
+   the toy context, leaving little for text.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Learned
+    perceiver-style compressors (fewer tokens, more machinery).
+    Raw patches for the baseline.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Tiny text in the image:
+    16x16 patches blur it beyond reading. The assumption &ldquo;patches
+    suffice&rdquo; breaks, raise resolution or patch finer.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    vision-transformer papers (Dosovitskiy et al., 2021,
+    primary). Extension: sweep patch size on the toy, hypothesis:
+    token count falls quadratically.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the patch recipe.
+    (b) Oral ladder: define the representation, compute the toy,
+    justify the projection, sketch <code>patchify</code>, compare with
+    perceiver, debug the tiny-text case, critique the toy,
+    design the sweep. (c) Transfer: video at 30 fps, 10 s.
+    Token budget? Answers: <code>../keys/u17_answers.md</code> A1.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U17 task 1 budgets tokens.
+    See <code>../labs/u17_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u17_fig01: context share by image count.
+    Source: original. Render: <code>assets/render_u17.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u17_fig01" src="../assets/u17_fig01.png"><figcaption>context share by image count. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c02-jointinterleaved-streams">C02: Joint/interleaved streams</h3>
+<p>Leaf id <code>cs336-U17-C02</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: mixing modalities in one sequence. Objectives: lay out
+   an interleaved stream, state the attention rule. Depends on
+   C01.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: a document has
+   text, two images, more text. What is the token order? The
+   interleaved stream: text tokens, image-1 patches, text,
+   image-2 patches, text. Position ids run across the whole
+   stream, attention is causal over all of it.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> One sequence, many modalities. The model
+   learns cross-modal links the same way it learns long-range
+   text links: through attention over positions.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Stream
+   order, modality tags. Assumption: causal attention over the
+   joint stream.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is a layout.
+   Special tokens mark modality boundaries, the loss mask
+   (U15-C04) can target text only.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: 200 text + 256 image + 300 text =
+   756 tokens, one stream.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>interleave
+   (parts)</code>: concatenate with boundary tokens. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Boundary tokens
+   parse back to the part list. Masks align.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Long multimodal streams hit the context limit
+   fast (C01: 8 images = 80%).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Separate
+    encoders with late fusion (modular, weaker cross-modal
+    reasoning). Joint streams for deep fusion.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Modalities need
+    different position handling (2D for images): flat positions
+    confuse spatial relations. The assumption &ldquo;1D positions
+    suffice&rdquo; breaks, add 2D-aware encodings.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    multimodal-LM reports (secondary). Extension: shuffle the
+    toy stream order, hypothesis: cross-modal loss rises.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the layout rule.
+    (b) Oral ladder: define interleaving, work the toy, justify
+    causal attention, implement <code>interleave</code>, compare with late
+    fusion, debug the 2D case, critique the toy, design the
+    shuffle test. (c) Transfer: audio + text + image in one
+    stream. Lay it out. Answers: <code>../keys/u17_answers.md</code> A2.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U17 task 2 interleaves streams.
+    See <code>../labs/u17_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c03-modeldatacompute-interfaces">C03: Model/data/compute interfaces</h3>
+<p>Leaf id <code>cs336-U17-C03</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: the three contracts of a training system. Objectives:
+   state each interface&rsquo;s units and the balance condition.
+   Depends on P16.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the GPUs idle
+   while data loads. Whose bug? The interface contract: the data
+   loader owes tokens/sec, the model owes tokens/sec/GPU, the
+   cluster owes the interconnect. Toy from <code>compute_u17.py</code>:
+   2.5 Mtok/s needs 0.010 GB/s at 4.2 bytes/token: the data
+   interface is rarely the bottleneck at this rate.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Three pipes in series: storage -&gt; loader -&gt;
+   GPUs -&gt; interconnect. Throughput is the minimum. Size each
+   pipe to the target, then verify.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Tokens/sec,
+   GB/sec. Assumption: 4.2 bytes/token, the toy rate.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Required bandwidth = token rate
+   x bytes/token. Required interconnect = the collective volume
+   per step (U08/U09) divided by the step time.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u17.py</code> (executed
+   2026-10-06): 0.010 GB/s for the toy.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>pipe_check</code>:
+   compute each pipe&rsquo;s capacity, take the min. About 8 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> The min matches
+   the observed bottleneck in the toy stage table.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Overprovisioning one pipe wastes money, the
+   minimum decides.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Profile then
+    fix (reactive). Interface contracts first (proactive) for
+    new clusters.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The loader hits a slow
+    storage tier at 3am: the contract held on average, not at
+    p99. The assumption &ldquo;average rates suffice&rdquo; breaks, contract
+    the tail too.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    training-system reports (secondary). Extension: throttle
+    each toy pipe in turn, hypothesis: step time follows the
+    min.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the three contracts.
+    (b) Oral ladder: define each, compute the toy, justify the
+    min, implement <code>pipe_check</code>, compare the two strategies,
+    debug the tail case, critique the toy, design the throttle
+    test. (c) Transfer: token rate must triple. Which pipe do
+    you check first? Answers: <code>../keys/u17_answers.md</code> A3.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U17 task 3 checks pipes.
+    See <code>../labs/u17_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c04-rollouttraining-separation">C04: Rollout/training separation</h3>
+<p>Leaf id <code>cs336-U17-C04</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: splitting generation from optimization. Objectives:
+   state why they separate, name the sync points. Depends on
+   U16-C09, P16.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why not generate
+   and train on the same GPUs? Because the two workloads want
+   different things: generation wants low-latency inference
+   (U11), training wants throughput. Separation lets each use
+   its best setup, the sync point is the weight broadcast.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Two fleets, one contract: rollout workers
+   generate with weight version v, trainers optimize to v+1,
+   then broadcast. The version tag (U16-C10) keeps the staleness
+   honest.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Weight
+   version, broadcast period. Assumption: the U16 staleness
+   budget.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is an
+   architecture. The tradeoff: frequent broadcasts cost
+   bandwidth, rare ones cost staleness.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: broadcast every 10 updates.
+   staleness KL stays under 0.01 nats on the U16-C10 toy path.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The separated
+   loop: generate(v), train to v+1, broadcast. About 10 lines
+   of pseudocode.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Rollout versions
+   match the trainer&rsquo;s expectation. No update trains on
+   untagged data.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The broadcast moves the full weights across the
+   cluster. Idle time appears when the fleets desync (C05).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Colocated
+    (simple, both workloads compromise). Separated for
+    large-scale RL.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The broadcast fails
+    silently and workers generate on stale weights: the KL
+    budget blows past with no alarm. The assumption &ldquo;broadcasts
+    succeed&rdquo; breaks, checksum the weights.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    RL-system reports (secondary). Extension: simulate missed
+    broadcasts on the toy, hypothesis: drift exceeds budget
+    within 3 misses.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the separation reason.
+    (b) Oral ladder: define it, work the toy, justify the
+    version tag, sketch the loop, compare with colocated, debug
+    the silent-failure case, critique the toy, design the miss
+    test. (c) Transfer: 10:1 rollout-to-trainer GPU ratio.
+    Size the broadcast. Answers: <code>../keys/u17_answers.md</code> A4.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U17 task 4 designs the split.
+    See <code>../labs/u17_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c05-asynchronous-pipelines">C05: Asynchronous pipelines</h3>
+<p>Leaf id <code>cs336-U17-C05</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: decoupled rollout and training rates. Objectives:
+   compute utilization and backlog from the two rates. Depends
+   on C04.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: rollouts produce
+   120 seq/min, the trainer consumes 100. What happens? Toy
+   from <code>compute_u17.py</code>: utilization 83.3%, backlog grows 1200
+   sequences/hour. The queue absorbs the mismatch until it does
+   not.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Two rates, one queue. Utilization =
+   min(r,c)/max(r,c). Backlog = (r-c) x time. Size the queue or
+   balance the rates, the math gives no third option.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Rates per
+   minute. Assumption: constant toy rates, infinite queue.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The queue grows linearly in the
+   rate difference. Steady state needs r &lt;= c or a drain
+   policy.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u17.py</code> (executed
+   2026-10-06): 83.3%, 1200/hour, balanced at 100/100.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>backlog(r, c,
+   t)</code>: (r-c)*t. Two lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> r=c gives 0.
+   r&lt;c drains the queue.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The queue holds sequences that age: staleness
+   (U16-C10) grows with queue time.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Synchronous
+    lockstep (no queue, both fleets idle in turn). Async with a
+    bounded queue for throughput.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The trainer stalls for
+    an hour: the queue overflows and fresh rollouts are dropped.
+    The assumption &ldquo;the trainer never stalls&rdquo; breaks, bound the
+    queue and shed load oldest-first.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    async-RL reports (secondary). Extension: simulate the toy
+    with a 1-hour trainer stall, hypothesis: the backlog hits
+    the bound and drops begin.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the two formulas.
+    (b) Oral ladder: define async, compute the toy, justify the
+    min/max, implement <code>backlog</code>, compare with lockstep, debug
+    the stall case, critique the constant rates, design the
+    stall test. (c) Transfer: staleness budget 0.01 nats, queue
+    time 30 min. Feasible? Answers: <code>../keys/u17_answers.md</code>
+    A5.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U17 task 5 balances rates.
+    See <code>../labs/u17_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u17_fig02: the rate bars. Source:
+    original. Render: <code>assets/render_u17.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u17_fig02" src="../assets/u17_fig02.png"><figcaption>the rate bars. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c06-normalizationtemplate-consistency">C06: Normalization/template consistency</h3>
+<p>Leaf id <code>cs336-U17-C06</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: keeping data formatting identical across stages.
+   Objectives: state the consistency contract, name the checks.
+   Depends on U15-C03.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: SFT used template
+   v2, RL rollouts use v3. What breaks? The policy sees a new
+   format: KL spikes, rewards wobble, and nobody knows if the
+   model or the template changed.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> One template version per training stage,
+   pinned in the manifest (U13-C12). Normalization (whitespace,
+   unicode) is part of the template. Change it deliberately or
+   not at all.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Template
+   version id. Assumption: the U13 versioning machinery.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is a contract.
+   The rollout config hashes the template, the trainer verifies
+   the hash before each run.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: template v2 hash ab12, v3 hash
+   cd34. The mismatch check fires before any GPU burns.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>check_template
+   (config)</code>: compare hashes. Three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Matching hashes
+   pass. A silent template edit changes the hash and fails.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Pinning slows iteration: every template tweak is
+   a versioned change.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Free-
+    floating templates (fast, mysterious regressions). Pinned
+    for any staged pipeline.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Normalization differs
+    between the data pipeline and the serving stack: training
+    sees clean text, users send raw text. The assumption &ldquo;one
+    normalization&rdquo; breaks, test with raw inputs.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    training/serving skew notes (secondary). Extension: perturb
+    the toy template and measure a proxy KL, hypothesis: even
+    small changes register.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the contract.
+    (b) Oral ladder: define consistency, work the toy, justify
+    the hash, implement the check, compare the two disciplines,
+    debug the serving-skew case, critique the iteration cost,
+    design the perturbation test. (c) Transfer: three stages,
+    two template versions. Audit. Answers:
+    <code>../keys/u17_answers.md</code> A6.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U17 task 6 pins templates.
+    See <code>../labs/u17_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c07-safety-controls">C07: Safety controls</h3>
+<p>Leaf id <code>cs336-U17-C07</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: system-level safety for RL pipelines. Objectives: name
+   the controls, place them in the loop. Depends on P21,
+   U16-C12.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the rollout fleet
+   generates a million responses a day. Who watches? Controls:
+   rollout filters (block bad generations from training),
+   reward-model monitoring (catch drift), human review sampling,
+   and the kill switch.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Defense in depth: no single control is
+   trusted. The filter catches the known-bad, sampling catches
+   the unknown, the kill switch bounds the blast radius.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Review
+   sample rate, kill criteria. Assumption: the U16 safety
+   slices.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is an
+   operations design. Each control has an owner, a threshold,
+   and a runbook.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: 1% human review of 1M rollouts =
+   10k reviews/day. The kill criterion: safety slice drops 2
+   points.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> The control
+   table: control, threshold, owner, action. Text.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Every incident
+   maps to a control that should have caught it (postmortem).</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Review labor and slower iteration. The alternative
+   is unmonitored optimization (U16-C11).</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Train then
+    filter (post-hoc). In-loop controls for online RL.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The filter and the
+    policy co-adapt: the policy learns the filter&rsquo;s blind
+    spots. The assumption &ldquo;controls are fixed&rdquo; breaks, refresh
+    them adversarially.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    AI-safety operations literature (secondary). Extension:
+    red-team the toy filter, hypothesis: it falls to paraphrase.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the four controls.
+    (b) Oral ladder: define each, work the toy, justify depth,
+    write the table, compare the two postures, debug the
+    co-adaptation case, critique the labor cost, design the
+    red-team test. (c) Transfer: the kill switch fired twice
+    this month. Respond. Answers: <code>../keys/u17_answers.md</code> A7.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U17 task 7 places controls.
+    See <code>../labs/u17_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c08-artifact-lineage">C08: Artifact lineage</h3>
+<p>Leaf id <code>cs336-U17-C08</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: tracking every artifact&rsquo;s parents. Objectives: build
+   the hash chain, verify it. Depends on U13-C12.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: this checkpoint
+   misbehaves. Which data made it? Toy from <code>compute_u17.py</code>:
+   the chain raw-v3 -&gt; dedup-v3 -&gt; mix-v7 -&gt; train-run-12 -&gt;
+   sft-run-4 -&gt; rl-run-2 ends at artifact id ea98188a5dad105d.
+   Walk the chain backward to the data.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Every artifact records its parents&rsquo;
+   hashes. The chain is a Merkle-like trail from raw data to
+   final weights. Debugging starts at the end and walks back.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Artifact
+   id: chained sha256. Assumption: each stage records its
+   inputs.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> id_n = sha256(id_{n-1} +
+   stage_n). Tampering anywhere changes every later id.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u17.py</code> (executed
+   2026-10-06): the six-stage chain, final ea98188a5dad105d.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>chain(stages)</code>:
+   fold the hashes. About 6 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Recomputing the
+   chain reproduces the final id. A changed stage breaks it.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The bookkeeping is small, the discipline (every
+   stage records) is the hard part.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Filenames
+    and memory (fragile). Hash chains for anything auditable.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A stage ran twice with
+    different configs but one id: the chain lies. The assumption
+    &ldquo;one id per run&rdquo; breaks, make ids content-addressed.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    ML-lineage tools (secondary). Extension: tamper with a toy
+    stage, hypothesis: the final id changes.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the chain rule.
+    (b) Oral ladder: define lineage, read the toy, justify the
+    chaining, implement <code>chain</code>, compare with filenames, debug
+    the double-run case, critique the bookkeeping, design the
+    tamper test. (c) Transfer: the chain breaks at mix-v7.
+    Diagnose. Answers: <code>../keys/u17_answers.md</code> A8.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U17 task 8 chains artifacts.
+    See <code>../labs/u17_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c09-resumability">C09: Resumability</h3>
+<p>Leaf id <code>cs336-U17-C09</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: surviving failures mid-run. Objectives: state the
+   resume contract, compute the checkpoint cost. Depends on
+   U08-C11, U15-C12.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the cluster dies
+   at 80% of training. How much is lost? The checkpoint
+   interval decides: at most one interval&rsquo;s work. The full
+   state (U15-C12) makes the resume exact.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Checkpoints are save points. The interval
+   trades write cost against redo cost. The resume replays from
+   the last save point with identical RNG and data position.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong>
+   Checkpoint interval in steps. Assumption: the U15 state
+   contents.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Expected waste = interval/2
+   steps on random failure. Write cost = state bytes /
+   bandwidth per checkpoint.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: interval 1000 steps, state 84 GB
+   (U15-C12), write bandwidth 10 GB/s: 8.4 s per checkpoint,
+   expected waste 500 steps.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>expected_waste
+   (interval)</code>: interval/2. One line.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Resumed loss
+   matches the uninterrupted curve within noise.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Frequent checkpoints cost write time and storage.
+   Rare ones cost redo time.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> No
+    checkpoints (unacceptable past toy scale). Interval tuned
+    to the failure rate.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The checkpoint itself
+    is corrupt: the resume loads garbage. The assumption
+    &ldquo;checkpoints are valid&rdquo; breaks, verify on write (read-back
+    hash).</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    large-run reliability reports (secondary). Extension:
+    corrupt a toy checkpoint, hypothesis: the read-back check
+    catches it.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the interval tradeoff.
+    (b) Oral ladder: define resumability, compute the toy,
+    justify the interval/2, implement the waste formula, compare
+    the frequencies, debug the corrupt-checkpoint case, critique
+    the toy, design the corruption test. (c) Transfer: failures
+    every 6 hours, step time 2 s. Set the interval. Answers:
+    <code>../keys/u17_answers.md</code> A9.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U17 task 9 sets intervals.
+    See <code>../labs/u17_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c10-end-to-end-correctness">C10: End-to-end correctness</h3>
+<p>Leaf id <code>cs336-U17-C10</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: proving the whole pipeline is right. Objectives: name
+   the end-to-end invariants, state the test for each. Depends on
+   P22.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: every stage
+   passed its unit tests, but the final model is wrong. What
+   test catches system bugs? End-to-end invariants: data
+   lineage intact (C08), template hashes match (C06), loss
+   reproducible from the manifest (U13-C12), evals move in the
+   right direction.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Unit tests check parts, invariants check
+   the composition. The pipeline is correct when the invariants
+   hold from raw data to final eval.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Invariant
+   list with tests. Assumption: the C06/C08/C11 machinery.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is a test
+   suite. Each invariant is a boolean over the run&rsquo;s artifacts.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: 6 invariants, 5 pass, template
+   hash fails: the run is rejected before eval.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>e2e_check(run)</code>:
+   evaluate each invariant. About 12 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> A known-good toy
+   run passes all. Each injected fault fails exactly its
+   invariant.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The suite runs per stage transition. Skipping it
+   moves debugging to production.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Manual
+    inspection (slow, misses things). Automated invariants for
+    every run.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The invariants are
+    stale: they check last quarter&rsquo;s pipeline. The assumption
+    &ldquo;invariants are current&rdquo; breaks, version them with the
+    pipeline.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    ML-testing literature (secondary). Extension: inject 6 toy
+    faults, hypothesis: each trips its invariant.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the invariant list.
+    (b) Oral ladder: define e2e correctness, work the toy,
+    justify the composition view, implement <code>e2e_check</code>, compare
+    with unit tests, debug the stale-invariant case, critique
+    the toy, design the fault-injection test. (c) Transfer: a
+    new stage is added. Update the suite. Answers:
+    <code>../keys/u17_answers.md</code> A10.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U17 task 10 checks invariants.
+    See <code>../labs/u17_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c11-performance-bottlenecks">C11: Performance bottlenecks</h3>
+<p>Leaf id <code>cs336-U17-C11</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: finding and attacking the bottleneck. Objectives: read
+   the stage table, compute the Amdahl-limited gain. Depends on
+   C03.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: where does
+   optimization pay? Toy from <code>compute_u17.py</code>: 143 ms step,
+   backward 55 ms (38.5%). Doubling backward speed saves 27.5
+   ms: 19.2% off the step. Nothing else comes close.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Profile first, optimize second. Amdahl&rsquo;s
+   law: the gain is bounded by the stage&rsquo;s share. Optimizing a
+   3% stage is theater.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Stage
+   times in ms. Assumption: the toy stage table.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> New total = total - share +
+   share/speedup. Max gain = the share itself.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u17.py</code> (executed
+   2026-10-06): 143 ms, backward 38.5%, 2x -&gt; 116 ms, 19.2%.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>amdalh(stages,
+   target, speedup)</code>: the formula. Four lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Speedup 1 gives
+   0% gain. Infinite speedup gives the share.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Profiling costs engineering time. Optimizing the
+   wrong stage costs more.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Gut-feel
+    optimization (fast, usually wrong). Profile-driven for real
+    gains.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The bottleneck moves:
+    after fixing backward, all-reduce becomes the limit. The
+    assumption &ldquo;one bottleneck&rdquo; breaks, re-profile after each
+    fix.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    profiling guides (secondary). Extension: apply two toy
+    speedups in sequence, hypothesis: the second gain is
+    smaller than its standalone share.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: Amdahl&rsquo;s bound.
+    (b) Oral ladder: define the bottleneck, read the toy, justify
+    the bound, implement <code>amdahl</code>, compare the strategies, debug
+    the moving-bottleneck case, critique the toy, design the
+    sequence test. (c) Transfer: all-reduce is 40% of the step.
+    Two options: 2x links or overlap. Decide. Answers:
+    <code>../keys/u17_answers.md</code> A11.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U17 task 11 profiles the toy.
+    See <code>../labs/u17_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u17_fig03: stage time bars. Source:
+    original. Render: <code>assets/render_u17.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u17_fig03" src="../assets/u17_fig03.png"><figcaption>stage time bars. Source: original.</figcaption></figure>
+<hr />
+<h3 id="c12-scope-of-small-scale-conclusions">C12: Scope of small-scale conclusions</h3>
+<p>Leaf id <code>cs336-U17-C12</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+   Scope: what toy results do and do not prove. Objectives: read
+   the scale-effect toy, state the transfer rule. Depends on
+   U10-C12, P22.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the effect is
+   +0.10 at 1x. Does it hold at 64x? Toy from <code>compute_u17.py</code>
+   (synthetic): effects +0.10, +0.06, +0.02, -0.03 at 1x, 4x,
+   16x, 64x. The sign flips: the small-scale conclusion does not
+   transfer.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Scale changes the regime: different
+   bottlenecks, different noise, different optima. A toy result
+   is a hypothesis about large scale, never a conclusion.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Effect vs
+   scale. Assumption: the synthetic effect series.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> No derivation, it is a caution
+   with a procedure: test at 2-3 scales, watch the trend, never
+   extrapolate the sign.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u17.py</code> (executed
+   2026-10-06): the four effects, sign flip at 64x.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>trend(effects)</code>:
+   report sign changes. Three lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> The toy flags the
+   flip.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Multi-scale tests cost runs. Single-scale claims
+   cost credibility.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Toy-only
+    claims (cheap, weak). Staged validation (U10-C12) for real
+    bets.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> The trend looks stable
+    across 1x-16x then flips at 64x: the tested range was too
+    narrow. The assumption &ldquo;the trend continues&rdquo; breaks, test
+    the widest affordable range.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+    scaling-transfer debates (secondary). Extension: add noise
+    to the toy effects, hypothesis: the flip survives.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: the transfer rule.
+    (b) Oral ladder: define the scope limit, read the toy,
+    justify multi-scale testing, implement <code>trend</code>, compare the
+    postures, debug the narrow-range case, critique the toy,
+    design the noise test. (c) Transfer: all your evidence is
+    from this course&rsquo;s toys. What can you claim about a real
+    70B run? Answers: <code>../keys/u17_answers.md</code> A12.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U17 task 12 scopes conclusions.
+    See <code>../labs/u17_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> No dedicated figure. No unresolved conflict.</p>
+</li>
+</ol>
+      
+      <nav class="pager"><a href="../labs/u07_lab.html"><span class="lbl">← Previous</span>Lab 07 · Kernels and IO-aware attention</a><a href="../labs/u07_lab_key.html"><span class="lbl">Next →</span>Lab 07 · Keys</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
