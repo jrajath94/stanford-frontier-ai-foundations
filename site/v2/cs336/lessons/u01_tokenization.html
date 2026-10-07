@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.remove('no-js');</script>
+<title>U01 · Text representation and tokenization — Stanford Frontier AI</title>
+<meta name="description" content="Lesson: Text representation and tokenization.">
+<link rel="stylesheet" href="../assets/vendor/katex.min.css">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-page="cs336-u01" class="page-lesson">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+  <a class="brand" href="../index.html">Stanford Frontier AI</a>
+  <div class="topbar-search">
+    <input id="searchBox" type="search" placeholder="Search lessons, concepts, papers…" autocomplete="off" aria-label="Search">
+    <div id="searchResults" class="search-results" hidden></div>
+  </div>
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">◐</button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Course navigation">
+    <h3>CS336: Language Modeling from Scratch</h3><ul>
+<li><a href="../index.html" data-page="cs336-index">CS336 · Overview</a></li>
+<li><a href="../course_map.html" data-page="cs336-course-map">Course map</a></li>
+<li><a href="../prerequisites.html" data-page="cs336-prereqs">Prerequisites</a></li>
+<li><a href="../notation_and_shapes.html" data-page="cs336-notation">Notation</a></li>
+<li><a href="../glossary.html" data-page="cs336-glossary">Glossary</a></li>
+<li><a href="../cheatsheet.html" data-page="cs336-cheatsheet">Cheatsheet</a></li>
+<li><a href="../crash-course.html" data-page="cs336-crash">Crash course</a></li>
+<li><a href="../lessons/u01_tokenization.html" data-page="cs336-u01" class="active">U01 · Text representation and tokeni</a></li>
+<li><a href="../keys/u01_answers.html" data-page="cs336-u01-answers">U01 · Answers</a></li>
+<li><a href="../lessons/u02_tensor_programming.html" data-page="cs336-u02">U02 · Executable tensor programming </a></li>
+<li><a href="../keys/u02_answers.html" data-page="cs336-u02-answers">U02 · Answers</a></li>
+<li><a href="../lessons/u03_transformer_block.html" data-page="cs336-u03">U03 · Transformer block mechanics</a></li>
+<li><a href="../keys/u03_answers.html" data-page="cs336-u03-answers">U03 · Answers</a></li>
+<li><a href="../lessons/u04_attention_moe.html" data-page="cs336-u04">U04 · Attention alternatives and exp</a></li>
+<li><a href="../keys/u04_answers.html" data-page="cs336-u04-answers">U04 · Answers</a></li>
+<li><a href="../lessons/u05_optimization.html" data-page="cs336-u05">U05 · Optimization and training corr</a></li>
+<li><a href="../keys/u05_answers.html" data-page="cs336-u05-answers">U05 · Answers</a></li>
+<li><a href="../lessons/u06_gpu_tpu.html" data-page="cs336-u06">U06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../keys/u06_answers.html" data-page="cs336-u06-answers">U06 · Answers</a></li>
+<li><a href="../lessons/u07_kernels.html" data-page="cs336-u07">U07 · Kernels and IO-aware attention</a></li>
+<li><a href="../keys/u07_answers.html" data-page="cs336-u07-answers">U07 · Answers</a></li>
+<li><a href="../lessons/u08_data_sharding.html" data-page="cs336-u08">U08 · Data and optimizer sharding</a></li>
+<li><a href="../keys/u08_answers.html" data-page="cs336-u08-answers">U08 · Answers</a></li>
+<li><a href="../lessons/u09_model_parallel.html" data-page="cs336-u09">U09 · Model and hybrid parallelism</a></li>
+<li><a href="../keys/u09_answers.html" data-page="cs336-u09-answers">U09 · Answers</a></li>
+<li><a href="../lessons/u10_scaling_laws.html" data-page="cs336-u10">U10 · Scaling laws and extrapolation</a></li>
+<li><a href="../keys/u10_answers.html" data-page="cs336-u10-answers">U10 · Answers</a></li>
+<li><a href="../labs/u01_lab.html" data-page="cs336-lab-u01">Lab 01 · Text representation and tokeni</a></li>
+<li><a href="../lessons/u11_inference.html" data-page="cs336-u11">U11 · Inference algorithms and servi</a></li>
+<li><a href="../labs/u01_lab_key.html" data-page="cs336-lab-u01-keys">Lab 01 · Keys</a></li>
+<li><a href="../keys/u11_answers.html" data-page="cs336-u11-answers">U11 · Answers</a></li>
+<li><a href="../labs/u02_lab.html" data-page="cs336-lab-u02">Lab 02 · Executable tensor programming </a></li>
+<li><a href="../lessons/u12_evaluation.html" data-page="cs336-u12">U12 · Evaluation and measurement val</a></li>
+<li><a href="../labs/u02_lab_key.html" data-page="cs336-lab-u02-keys">Lab 02 · Keys</a></li>
+<li><a href="../keys/u12_answers.html" data-page="cs336-u12-answers">U12 · Answers</a></li>
+<li><a href="../labs/u03_lab.html" data-page="cs336-lab-u03">Lab 03 · Transformer block mechanics</a></li>
+<li><a href="../lessons/u13_data_sourcing.html" data-page="cs336-u13">U13 · Data sourcing and transformati</a></li>
+<li><a href="../labs/u03_lab_key.html" data-page="cs336-lab-u03-keys">Lab 03 · Keys</a></li>
+<li><a href="../keys/u13_answers.html" data-page="cs336-u13-answers">U13 · Answers</a></li>
+<li><a href="../labs/u04_lab.html" data-page="cs336-lab-u04">Lab 04 · Attention alternatives and exp</a></li>
+<li><a href="../lessons/u14_data_mixing.html" data-page="cs336-u14">U14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../labs/u04_lab_key.html" data-page="cs336-lab-u04-keys">Lab 04 · Keys</a></li>
+<li><a href="../keys/u14_answers.html" data-page="cs336-u14-answers">U14 · Answers</a></li>
+<li><a href="../labs/u05_lab.html" data-page="cs336-lab-u05">Lab 05 · Optimization and training corr</a></li>
+<li><a href="../lessons/u15_midtraining.html" data-page="cs336-u15">U15 · Midtraining and supervised ada</a></li>
+<li><a href="../labs/u05_lab_key.html" data-page="cs336-lab-u05-keys">Lab 05 · Keys</a></li>
+<li><a href="../keys/u15_answers.html" data-page="cs336-u15-answers">U15 · Answers</a></li>
+<li><a href="../labs/u06_lab.html" data-page="cs336-lab-u06">Lab 06 · GPU/TPU architecture and profi</a></li>
+<li><a href="../lessons/u16_alignment_rl.html" data-page="cs336-u16">U16 · Preference alignment and reaso</a></li>
+<li><a href="../labs/u06_lab_key.html" data-page="cs336-lab-u06-keys">Lab 06 · Keys</a></li>
+<li><a href="../keys/u16_answers.html" data-page="cs336-u16-answers">U16 · Answers</a></li>
+<li><a href="../labs/u07_lab.html" data-page="cs336-lab-u07">Lab 07 · Kernels and IO-aware attention</a></li>
+<li><a href="../lessons/u17_multimodal_systems.html" data-page="cs336-u17">U17 · Multimodality and training-sys</a></li>
+<li><a href="../labs/u07_lab_key.html" data-page="cs336-lab-u07-keys">Lab 07 · Keys</a></li>
+<li><a href="../keys/u17_answers.html" data-page="cs336-u17-answers">U17 · Answers</a></li>
+<li><a href="../labs/u08_lab.html" data-page="cs336-lab-u08">Lab 08 · Data and optimizer sharding</a></li>
+<li><a href="../lessons/u18_guests_defense.html" data-page="cs336-u18">U18 · Guest material and final resea</a></li>
+<li><a href="../labs/u08_lab_key.html" data-page="cs336-lab-u08-keys">Lab 08 · Keys</a></li>
+<li><a href="../keys/u18_answers.html" data-page="cs336-u18-answers">U18 · Answers</a></li>
+<li><a href="../labs/u09_lab.html" data-page="cs336-lab-u09">Lab 09 · Model and hybrid parallelism</a></li>
+<li><a href="../labs/u09_lab_key.html" data-page="cs336-lab-u09-keys">Lab 09 · Keys</a></li>
+<li><a href="../labs/u10_lab.html" data-page="cs336-lab-u10">Lab 10 · Scaling laws and extrapolation</a></li>
+<li><a href="../labs/u10_lab_key.html" data-page="cs336-lab-u10-keys">Lab 10 · Keys</a></li>
+<li><a href="../interview/u01_questions.html" data-page="cs336-int-u01">Interview · U01</a></li>
+<li><a href="../labs/u11_lab.html" data-page="cs336-lab-u11">Lab 11 · Inference algorithms and servi</a></li>
+<li><a href="../interview/u01_key.html" data-page="cs336-int-u01-keys">Interview · U01 keys</a></li>
+<li><a href="../labs/u11_lab_key.html" data-page="cs336-lab-u11-keys">Lab 11 · Keys</a></li>
+<li><a href="../interview/u02_questions.html" data-page="cs336-int-u02">Interview · U02</a></li>
+<li><a href="../labs/u12_lab.html" data-page="cs336-lab-u12">Lab 12 · Evaluation and measurement val</a></li>
+<li><a href="../interview/u02_key.html" data-page="cs336-int-u02-keys">Interview · U02 keys</a></li>
+<li><a href="../labs/u12_lab_key.html" data-page="cs336-lab-u12-keys">Lab 12 · Keys</a></li>
+<li><a href="../interview/u03_questions.html" data-page="cs336-int-u03">Interview · U03</a></li>
+<li><a href="../labs/u13_lab.html" data-page="cs336-lab-u13">Lab 13 · Data sourcing and transformati</a></li>
+<li><a href="../interview/u03_key.html" data-page="cs336-int-u03-keys">Interview · U03 keys</a></li>
+<li><a href="../labs/u13_lab_key.html" data-page="cs336-lab-u13-keys">Lab 13 · Keys</a></li>
+<li><a href="../interview/u04_questions.html" data-page="cs336-int-u04">Interview · U04</a></li>
+<li><a href="../labs/u14_lab.html" data-page="cs336-lab-u14">Lab 14 · Filtering, deduplication, mixi</a></li>
+<li><a href="../interview/u04_key.html" data-page="cs336-int-u04-keys">Interview · U04 keys</a></li>
+<li><a href="../labs/u14_lab_key.html" data-page="cs336-lab-u14-keys">Lab 14 · Keys</a></li>
+<li><a href="../interview/u05_questions.html" data-page="cs336-int-u05">Interview · U05</a></li>
+<li><a href="../labs/u15_lab.html" data-page="cs336-lab-u15">Lab 15 · Midtraining and supervised ada</a></li>
+<li><a href="../interview/u05_key.html" data-page="cs336-int-u05-keys">Interview · U05 keys</a></li>
+<li><a href="../labs/u15_lab_key.html" data-page="cs336-lab-u15-keys">Lab 15 · Keys</a></li>
+<li><a href="../interview/u06_questions.html" data-page="cs336-int-u06">Interview · U06</a></li>
+<li><a href="../labs/u16_lab.html" data-page="cs336-lab-u16">Lab 16 · Preference alignment and reaso</a></li>
+<li><a href="../interview/u06_key.html" data-page="cs336-int-u06-keys">Interview · U06 keys</a></li>
+<li><a href="../labs/u16_lab_key.html" data-page="cs336-lab-u16-keys">Lab 16 · Keys</a></li>
+<li><a href="../interview/u07_questions.html" data-page="cs336-int-u07">Interview · U07</a></li>
+<li><a href="../labs/u17_lab.html" data-page="cs336-lab-u17">Lab 17 · Multimodality and training-sys</a></li>
+<li><a href="../interview/u07_key.html" data-page="cs336-int-u07-keys">Interview · U07 keys</a></li>
+<li><a href="../labs/u17_lab_key.html" data-page="cs336-lab-u17-keys">Lab 17 · Keys</a></li>
+<li><a href="../interview/u08_questions.html" data-page="cs336-int-u08">Interview · U08</a></li>
+<li><a href="../labs/u18_lab.html" data-page="cs336-lab-u18">Lab 18 · Guest material and final resea</a></li>
+<li><a href="../interview/u08_key.html" data-page="cs336-int-u08-keys">Interview · U08 keys</a></li>
+<li><a href="../labs/u18_lab_key.html" data-page="cs336-lab-u18-keys">Lab 18 · Keys</a></li>
+<li><a href="../interview/u09_questions.html" data-page="cs336-int-u09">Interview · U09</a></li>
+<li><a href="../interview/u09_key.html" data-page="cs336-int-u09-keys">Interview · U09 keys</a></li>
+<li><a href="../interview/u10_questions.html" data-page="cs336-int-u10">Interview · U10</a></li>
+<li><a href="../interview/u10_key.html" data-page="cs336-int-u10-keys">Interview · U10 keys</a></li>
+<li><a href="../interview/u11_questions.html" data-page="cs336-int-u11">Interview · U11</a></li>
+<li><a href="../interview/u11_key.html" data-page="cs336-int-u11-keys">Interview · U11 keys</a></li>
+<li><a href="../interview/u12_questions.html" data-page="cs336-int-u12">Interview · U12</a></li>
+<li><a href="../interview/u12_key.html" data-page="cs336-int-u12-keys">Interview · U12 keys</a></li>
+<li><a href="../interview/u13_questions.html" data-page="cs336-int-u13">Interview · U13</a></li>
+<li><a href="../interview/u13_key.html" data-page="cs336-int-u13-keys">Interview · U13 keys</a></li>
+<li><a href="../interview/u14_questions.html" data-page="cs336-int-u14">Interview · U14</a></li>
+<li><a href="../interview/u14_key.html" data-page="cs336-int-u14-keys">Interview · U14 keys</a></li>
+<li><a href="../interview/u15_questions.html" data-page="cs336-int-u15">Interview · U15</a></li>
+<li><a href="../interview/u15_key.html" data-page="cs336-int-u15-keys">Interview · U15 keys</a></li>
+<li><a href="../interview/u16_questions.html" data-page="cs336-int-u16">Interview · U16</a></li>
+<li><a href="../interview/u16_key.html" data-page="cs336-int-u16-keys">Interview · U16 keys</a></li>
+<li><a href="../interview/u17_questions.html" data-page="cs336-int-u17">Interview · U17</a></li>
+<li><a href="../interview/u17_key.html" data-page="cs336-int-u17-keys">Interview · U17 keys</a></li>
+<li><a href="../interview/u18_questions.html" data-page="cs336-int-u18">Interview · U18</a></li>
+<li><a href="../interview/u18_key.html" data-page="cs336-int-u18-keys">Interview · U18 keys</a></li>
+<li><a href="../interview/oral-defenses.html" data-page="cs336-int-oral">Interview · Oral</a></li>
+<li><a href="../interview/keys-oral.html" data-page="cs336-int-oral-keys">Interview · Oral keys</a></li>
+<li><a href="../interview/transfer-sets.html" data-page="cs336-int-transfer">Interview · Transfer</a></li>
+<li><a href="../interview/keys-transfer.html" data-page="cs336-int-transfer-keys">Interview · Transfer keys</a></li>
+<li><a href="../capstones/capstone_applied.html" data-page="cs336-cap-applied">Capstone · Applied</a></li>
+<li><a href="../capstones/capstone_research.html" data-page="cs336-cap-research">Capstone · Research</a></li>
+<li><a href="../keys/diagnostic_key.html" data-page="cs336-diagnostic-keys">Diagnostic · Keys</a></li>
+</ul>
+  </nav>
+  <main class="content" id="main">
+    <article>
+      <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U01 · Text representation and tokenization</nav>
+      <h1>U01 · Text representation and tokenization</h1>
+      <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
+      <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u01-text-representation-and-tokenization">U01 , Text representation and tokenization</h1>
+<p>Prerequisites: P01, P02, P06, P13. Bridge links in <code>../prerequisites.md</code>.
+Session: S01 (reported: Mar 30, Overview, Tokenization).
+Claim class: REQUESTED-BRANCH. C03/C04 partial OFFICIAL-SOURCE via SRC-03.
+All leaves: PLANNED / SOURCE ATTRIBUTION PENDING unless noted.
+Notation: see <code>../notation_and_shapes.md</code>. Glossary: <code>../glossary.md</code>.</p>
+<h2 id="local-remediation-code-points-and-utf-8">Local remediation , code points and UTF-8</h2>
+<p>Read this block first if the diagnostic items D1 or D8 were not full marks.</p>
+<p>A character is an abstract unit of text (&ldquo;A&rdquo;, &ldquo;é&rdquo;, &ldquo;中&rdquo;). A code point is
+the number Unicode assigns to a character, written U+0041 for &ldquo;A&rdquo;. UTF-8 is
+a rule that turns code points into bytes: code points below U+0080 become
+one byte, and larger code points become two, three, or four bytes. The
+first byte of a multi-byte sequence states the total length, so a decoder
+can walk bytes left to right without ambiguity.</p>
+<p>Worked check: &ldquo;é&rdquo; is U+00E9. Its UTF-8 form is the two bytes [195, 169].
+Decode reverses the rule and returns U+00E9. Any byte sequence that breaks
+the rule is invalid UTF-8, a strict decoder raises an error instead of
+guessing. Assessment: encode &ldquo;€&rdquo; (U+20AC) by hand from the rule, then
+verify with Python. Key: <code>../keys/u01_answers.md</code> R1.</p>
+<hr />
+<h3 id="c01-unicode-code-points-utf-8">C01: Unicode, code points, UTF-8</h3>
+<p>Leaf id <code>cs336-U01-C01</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> Maps to S01
+   tokenization foundations. Scope: from abstract character to byte
+   sequence. Objectives: state the code point of any ASCII character,
+   encode and decode UTF-8 by hand for 1-byte and 2-byte cases, detect
+   invalid sequences. Depends on P01 (hex and binary) and the remediation
+   block above.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how does the model see text
+   at all? Toy: the string &ldquo;Aé&rdquo; is two characters, code points U+0041 and
+   U+00E9, and three UTF-8 bytes [65, 195, 169]. The model never sees
+   characters, it sees integers derived from bytes.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Think of three layers: characters (what humans read),
+   code points (numbers for characters), bytes (what storage holds).
+   UTF-8 is the fixed bridge between code points and bytes. Tokenizers
+   build on bytes, not on characters.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Code point: integer in
+   [0, 0x10FFFF]. Byte: integer in [0, 255]. A UTF-8 sequence has length 1
+   to 4. Assumption: input text is valid Unicode, invalid byte sequences
+   are rejected, not repaired silently.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> UTF-8 encoding rule: for U+0000-U+007F, one
+   byte <code>0xxxxxxx</code>. For U+0080-U+07FF, two bytes <code>110xxxxx 10xxxxxx</code>. For
+   U+0800-U+FFFF, three bytes <code>1110xxxx 10xxxxxx 10xxxxxx</code>. For
+   U+10000-U+10FFFF, four bytes <code>11110xxx 10xxxxxx 10xxxxxx 10xxxxxx</code>.
+   The x bits are the code point bits, big end first. Decoding reads the
+   lead byte, learns the length, then collects the continuation bytes.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u01.py</code> (executed
+   2026-10-06, CPython): &ldquo;A&rdquo; -&gt; [65], &ldquo;é&rdquo; -&gt; [195, 169], &ldquo;€&rdquo; -&gt; [226, 130,
+   172], U+1F600 -&gt; [240, 159, 152, 128], &ldquo;中&rdquo; -&gt; [228, 184, 173].</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong>
+   <code>encode_utf8(code_point)</code>:
+   - If cp &lt; 0x80: return [cp].
+   - If cp &lt; 0x800: return [0xC0 | (cp &gt;&gt; 6), 0x80 | (cp &amp; 0x3F)].
+   - If cp &lt; 0x10000: return [0xE0 | (cp &gt;&gt; 12), 0x80 | ((cp &gt;&gt; 6) &amp; 0x3F),
+     0x80 | (cp &amp; 0x3F)].
+   - Else: return [0xF0 | (cp &gt;&gt; 18), 0x80 | ((cp &gt;&gt; 12) &amp; 0x3F),
+     0x80 | ((cp &gt;&gt; 6) &amp; 0x3F), 0x80 | (cp &amp; 0x3F)].
+   Check against <code>bytes(ch, "utf-8")</code> for the five sample characters.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Roundtrip: decode(encode(cp))
+   == cp for 20 sampled code points across all four lengths. Invalid input:
+   the byte [0x80] alone raises, the overlong form of &ldquo;A&rdquo; ([0xC1, 0x81])
+   raises. Expected: all roundtrips pass, both invalid cases raise.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Encoding is O(n) in code points with tiny constants. Memory
+   is the byte array itself. No stability risk: the map is exact integer
+   arithmetic.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> UTF-16 uses 2 or 4
+    bytes per code point and is the in-memory form of some platforms.
+    UTF-8 wins for storage and wire transfer of mostly-ASCII text and is
+    the tokenizer standard. Choose UTF-16 only when the platform API
+    demands it.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A lone continuation byte [0xA9]
+    has no lead byte. A strict decoder must raise. Silent repair (replace
+    with U+FFFD) breaks the roundtrip invariant of C06, the failure is
+    invisible until a hash or id comparison mismatches.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the Unicode
+    Standard, chapter on UTF-8 (primary specification). Extension:
+    measure the byte-length distribution of code points in a 1 MB sample
+    of web text, hypothesis: over 90 percent of code points encode in 1
+    byte. Falsifiable by direct count.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: state the four UTF-8 lead-byte patterns.
+    (b) Oral ladder: define a code point, give the bytes of &ldquo;ñ&rdquo; (U+00F1)
+    by hand, justify why the lead byte encodes the length, implement
+    decode for the 2-byte case, compare UTF-8 with fixed-width UTF-32,
+    debug a decoder that accepts overlong forms, critique the assumption
+    of valid input, design the extension experiment above.
+    (c) Transfer: a protocol sends UTF-8 over a channel that drops
+    continuation bytes. What breaks first, and what check detects it?
+    Answers: <code>../keys/u01_answers.md</code> A1.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U01 task 1 builds the encoder/decoder and
+    runs the invalid-input checks. See <code>../labs/u01_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Unit u01_fig01 context: none needed for this pure-fact
+    unit, the computed table in item 6 serves as the audit row. No
+    decorative figure drawn (visual system: no state change to show).</p>
+</li>
+</ol>
+<hr />
+<h3 id="c02-character-byte-and-word-tokenizers">C02: Character, byte, and word tokenizers</h3>
+<p>Leaf id <code>cs336-U01-C02</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S01 foundations.
+   Scope: the three baseline tokenizers that BPE generalizes. Objectives:
+   implement each on a toy corpus, state vocabulary size and sequence
+   length effects. Depends on C01 and P02.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why not feed characters or
+   words directly? Toy corpus: &ldquo;low lower&rdquo;. Character tokens: l,o,w,space,
+   l,o,w,e,r (9 tokens). Word tokens: &ldquo;low&rdquo;, &ldquo;lower&rdquo; (2 tokens, but an
+   unseen word like &ldquo;lowest&rdquo; has no id). Byte tokens: each UTF-8 byte is an
+   id (256 ids cover everything, but sequences get long).</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> A tokenizer trades vocabulary size against sequence
+   length. Characters: tiny vocab, long sequences. Words: short sequences,
+   huge vocab with an unknown-word hole. Bytes: fixed tiny vocab, no hole,
+   longest sequences. BPE (C03) sits between bytes and words.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Vocabulary V: the id
+   set, size |V|. Token id: integer in [0, |V|). Sequence length T grows
+   as granularity gets finer. Assumption: the same tokenizer encodes
+   training and inference text (C09 breaks this on purpose later).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Character tokenizer: vocab = observed
+   characters, encode maps each character to its index. Byte tokenizer:
+   vocab = 256 byte values, encode maps UTF-8 bytes. Word tokenizer:
+   vocab = observed words plus an UNK id, encode splits on whitespace and
+   looks up each word, emitting UNK when absent.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy corpus &ldquo;low lower newest&rdquo;: character vocab
+   size 9 {l,o,w,space,e,r,n,s,t}, &ldquo;low&rdquo; encodes to 3 ids, word vocab
+   size 4 including UNK, &ldquo;lowest&rdquo; encodes to [UNK]. (Hand-computed toy,
+   verified by the lab script.)</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>build_vocab(texts, level)</code>:
+   collect the unit set for level in {&ldquo;char&rdquo;, &ldquo;byte&rdquo;, &ldquo;word&rdquo;}, assign ids
+   in sorted order, return (encode, decode) closures. <code>encode</code> maps each
+   unit, using UNK only at word level. under 30 lines in the lab.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Roundtrip on the toy corpus
+   for char and byte levels: exact match. Word level: &ldquo;lowest&rdquo; decodes to
+   the UNK surface form, not to &ldquo;lowest&rdquo;, the test asserts this loss is
+   detected and reported.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Char/byte: O(n) time, O(1) vocab memory. Word: vocab memory
+   grows with distinct words (unbounded on web text). Sequence length
+   multiplies attention cost quadratically later (U03), so the tokenizer
+   choice sets the compute bill.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Subword methods (C03)
+    dominate modern practice because they remove the UNK hole while
+    keeping sequences short. Use pure byte level only for tiny models or
+    when the vocabulary must stay minimal.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Word tokenizer on code: the
+    identifier <code>my_var_2</code> is unseen, so it becomes UNK and the model
+    learns nothing about its parts. The assumption &ldquo;vocabulary covers the
+    domain&rdquo; breaks on open vocabularies.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: Sennrich et
+    al., &ldquo;Neural Machine Translation of Rare Words with Subword Units&rdquo;
+    (2016), the subword motivation paper. Extension: measure UNK rate of a
+    word tokenizer versus BPE on a code sample, hypothesis: BPE UNK rate
+    is zero by construction.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: name the three baselines and their vocab
+    sizes on ASCII text. (b) Oral ladder: define each, encode &ldquo;hi!&rdquo; at all
+    three levels, derive why byte level needs no UNK, implement word
+    encode, compare sequence lengths, debug a word tokenizer that drops
+    punctuation, critique the closed-vocabulary assumption, design the
+    UNK-rate experiment. (c) Transfer: log text mixes English and emoji.
+    Which baseline degrades least, and why? Answers: <code>../keys/u01_answers.md</code> A2.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U01 task 2 implements all three and
+    measures UNK rate. See <code>../labs/u01_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: computed table in item 6. No figure, the state
+    change (granularity versus length) is tabular, and the medium ladder
+    prefers a table for value comparison.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c03-bpe-pair-counts-and-merge-order">C03: BPE pair counts and merge order</h3>
+<p>Leaf id <code>cs336-U01-C03</code>. Claim class OFFICIAL-SOURCE (partial, SRC-03:
+BPE training and encoding functions reported in lecture_01.py, tail of
+file unseen, behavior reimplemented here, not copied).
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S01 core, reported
+   Assignment 1 objective (build a BPE tokenizer). Scope: BPE training
+   (learn merges) and BPE encoding (apply merges). Objectives: compute
+   pair counts by hand, run merge steps, apply merges greedily in order.
+   Depends on C01, C02, P02.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: how do we get short
+   sequences without an UNK hole? Toy: corpus {&ldquo;low&rdquo;: 2, &ldquo;lower&rdquo;: 1,
+   &ldquo;lowest&rdquo;: 1, &ldquo;new&rdquo;: 1, &ldquo;newer&rdquo;: 1}. Most frequent adjacent pair is
+   (&ldquo;o&rdquo;, &ldquo;w&rdquo;) with count 4. Merge it to &ldquo;ow&rdquo;. Repeat.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> BPE starts from bytes (or characters) and repeatedly
+   glues the most frequent neighboring pair. The merge list is ordered,
+   encoding applies merges in that order, greedily, left to right. The
+   vocabulary is the base set plus one entry per merge.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Pair: two adjacent
+   symbols. Count: frequency weighted by word counts. Merge rank: the step
+   index, lower rank applies first. Assumption: word boundaries are marked
+   (here with </w>) so merges never cross words unless the design allows
+   it.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Training loop: (a) count all adjacent
+   pairs across the corpus weighted by word frequency, (b) pick the pair
+   with max count (ties broken by a fixed rule), (c) record the merge,
+   (d) rewrite every word replacing the pair with the joined symbol,
+   (e) repeat until the vocabulary reaches the target size. Encoding:
+   split text into words, start from base symbols, apply merges in rank
+   order wherever they match, left to right, until no merge applies.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u01.py</code> (executed
+   2026-10-06): initial counts give merge 1 (&ldquo;o&rdquo;,&rdquo;w&rdquo;) count 4, merge 2
+   (&ldquo;l&rdquo;,&rdquo;ow&rdquo;) count 4, merge 3 (&ldquo;r&rdquo;,&rdquo;</w>&ldquo;) count 2, merge 4 (&ldquo;n&rdquo;,&rdquo;e&rdquo;)
+   count 2. Final splits: &ldquo;low&rdquo; x2, &ldquo;lower&rdquo; as low+e+r</w>,
+   &ldquo;lowest&rdquo; as low+e+s+t+</w>, &ldquo;new&rdquo; as ne+w+</w>, &ldquo;newer&rdquo; as ne+w+e+r</w>.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>train_bpe(corpus_counts,
+   num_merges)</code>: as item 5, about 40 lines. <code>encode_bpe(word, merges)</code>:
+   start from tuple(word) + (&ldquo;</w>&ldquo;,), loop over merges in rank order and
+   rewrite matches, return tuple. Both in the lab.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Determinism: same corpus
+   and tie-break gives the same merge list twice. Monotonicity:
+   vocabulary size grows by exactly one per merge. Encoding check:
+   &ldquo;low&rdquo; encodes with the rank-1 and rank-2 merges applied. Expected
+   outputs recorded in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Training is O(num_merges * corpus_pairs), each step
+   rescans pairs. Encoding one word is O(len * num_merges) naive, faster
+   with caching. Memory: the merge table, small.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> WordPiece picks merges
+    by likelihood gain, not raw count, Unigram LM starts large and prunes
+    by loss. BPE wins on simplicity and speed of training. Choose
+    WordPiece/Unigram when the downstream model was built for them
+    (vocabulary compatibility matters more than the algorithm).</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Tie-breaking ignored: two runs
+    pick different pairs on ties and produce different vocabularies, so
+    token ids shift and a trained model misreads input. The assumption
+    &ldquo;merge order is canonical&rdquo; breaks without a fixed tie-break.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: Sennrich et
+    al. (2016) for the algorithm, Gage (1994) for the original
+    compression idea. Extension: train BPE on code versus prose with the
+    same budget, hypothesis: the code vocabulary contains more
+    punctuation-heavy tokens. Falsifiable by inspecting the top merges.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: state the training loop in order.
+    (b) Oral ladder: define pair count, compute the first merge of the
+    toy by hand, justify greedy application order, implement one merge
+    rewrite, compare BPE with WordPiece, debug an encoder that applies
+    merges out of order, critique the word-boundary assumption, design
+    the code-versus-prose experiment. (c) Transfer: the corpus gains a
+    new frequent word after training. What happens at encode time, and
+    what is the principled fix? Answers: <code>../keys/u01_answers.md</code> A3.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U01 task 3 trains BPE on the toy corpus and
+    checks determinism. See <code>../labs/u01_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u01_fig01: lesson plate, one BPE merge step with
+    pair counts before and after. Source: original toy. Shell 3 (apply
+    one rule). Render: <code>assets/render_u01.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u01_fig01" src="../assets/u01_fig01.png"><figcaption>lesson plate, one BPE merge step with pair counts before and after. Source: original toy. Shell 3 (apply one rule).</figcaption></figure>
+<hr />
+<h3 id="c04-pretokenization-regex">C04: Pretokenization regex</h3>
+<p>Leaf id <code>cs336-U01-C04</code>. Claim class OFFICIAL-SOURCE (partial, SRC-03:
+byte-level pretokenization reported in lecture_01.py).
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S01. Scope: the
+   split of raw text into pretokens before BPE merges run. Objectives:
+   read a standard pretokenizer regex, predict its splits, explain why
+   merges never cross pretoken boundaries. Depends on C03 and P02.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> (Note: &ldquo;don\u0027t&rdquo; writes the apostrophe as \u0027,
+   it reads as the contracted form of do not.) Question: why does &ldquo;don\u0027t&rdquo; tokenize
+   as &ldquo;don&rdquo; + &ldquo;&lsquo;t&rdquo; in many models? Toy: the GPT-2 style pattern splits
+   &ldquo;don\u0027t&rdquo; into [&ldquo;don&rdquo;, &ldquo;&lsquo;t&rdquo;] and &ldquo;Hello, world! 123&rdquo; into [&ldquo;Hello&rdquo;,
+   &ldquo;,&rdquo;, &rdquo; world&rdquo;, &ldquo;!&rdquo;, &rdquo; 123&rdquo;] (computed run below).</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Pretokenization cuts text into chunks with a regex.
+   BPE merges run inside each chunk only. The regex therefore decides
+   which merges are even possible: a merge can never join text from two
+   different pretokens.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Pretoken: a regex
+   match (a substring). The pattern used here allows optional leading
+   space, letter runs, number runs, and punctuation runs. Assumption: the
+   same regex is used at train and inference time.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> The pattern is an alternation tried left to
+   right at each position: contractions first (&ldquo;&lsquo;s&rdquo;, &ldquo;&lsquo;t&rdquo;, &hellip;), then an
+   optional space plus letters, then an optional space plus digits, then
+   punctuation runs, then whitespace runs. Because alternatives are
+   ordered, &ldquo;&lsquo;t&rdquo; matches before a bare &ldquo;t&rdquo; would.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> From <code>assets/compute_u01.py</code> (executed
+   2026-10-06): &ldquo;Hello, world! 123 Testing&hellip; don\u0027t&rdquo; splits to [&lsquo;Hello&rsquo;, &lsquo;,&rsquo;, &rsquo; world&rsquo;,
+   &lsquo;!&rsquo;, &rsquo; 123&rsquo;, &rsquo; Testing&rsquo;, &lsquo;&hellip;&rsquo;, &rsquo; don&rsquo;, &ldquo;&lsquo;t&rdquo;]. Note the leading spaces
+   stay attached to the following word piece, and punctuation forms its
+   own pretokens.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>pretokenize(text)</code>:
+   compile the pattern once, return <code>pattern.findall(text)</code>. About 5
+   lines plus the pattern constant. The lab adds a strict check that the
+   concatenation of pretokens equals the input.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Coverage: join(pretokens)
+   == text for 50 random ASCII strings. Boundary: no pretoken crosses a
+   digit/letter boundary except the leading-space rule. Expected outputs
+   in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Regex scan is O(n) with a larger constant than BPE merges,
+   on long documents it can dominate encode time. Memory is the pretoken
+   list.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> No pretokenization
+    (raw BPE on the full string) allows cross-word merges and slightly
+    better compression, but it merges across languages and scripts in
+    surprising ways. The regex wins for control and multilingual sanity.
+    Drop it only for byte-level models that want maximal sharing.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A regex that splits digits from
+    letters (&ldquo;abc123&rdquo; -&gt; &ldquo;abc&rdquo;, &ldquo;123&rdquo;) destroys numeric tokens (C10):
+    the model can never learn &ldquo;123&rdquo; as one unit. The assumption &ldquo;splits
+    are harmless&rdquo; breaks for numbers.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: the GPT-2
+    tokenizer specification (primary source for the pattern family).
+    Extension: ablate the contraction alternatives, hypothesis: removal
+    raises fertility on English dialogue text. Falsifiable by counting
+    tokens per word before and after.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: why do merges respect pretoken
+    boundaries? (b) Oral ladder: define a pretoken, split &ldquo;cannot stop&rdquo;
+    by hand, justify the alternation order, implement the coverage check,
+    compare with no-pretokenization BPE, debug a pattern that drops
+    spaces, critique the digit-splitting choice, design the ablation.
+    (c) Transfer: the input is code with long snake_case names. Which
+    pattern alternative handles them, and what merge becomes possible?
+    Answers: <code>../keys/u01_answers.md</code> A4.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U01 task 4 runs the splitter and the
+    coverage check. See <code>../labs/u01_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u01_fig02: lesson plate, the input string with cut
+    marks placed by the regex. Source: original toy. Shell 3 (apply one
+    rule). Render: <code>assets/render_u01.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u01_fig02" src="../assets/u01_fig02.png"><figcaption>lesson plate, the input string with cut marks placed by the regex. Source: original toy. Shell 3 (apply one rule).</figcaption></figure>
+<hr />
+<h3 id="c05-special-token-handling">C05: Special-token handling</h3>
+<p>Leaf id <code>cs336-U01-C05</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S01. Scope: tokens
+   with control meaning (end of text, padding, mask, chat boundaries).
+   Objectives: encode text with special tokens kept atomic, explain why
+   they bypass BPE. Depends on C03, C04.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: what stops the tokenizer
+   from splitting &ldquo;&lt;|endoftext|&gt;&rdquo; into pieces? Toy: with &ldquo;&lt;|endoftext|&gt;&rdquo;
+   registered as special, the string &ldquo;hi&lt;|endoftext|&gt;bye&rdquo; encodes to
+   [ids(&ldquo;hi&rdquo;), EOT, ids(&ldquo;bye&rdquo;)], without registration it encodes to
+   many piece ids and the control meaning is lost.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Special tokens are fenced-off substrings. The encoder
+   splits the input on them first, runs normal BPE on the gaps, and maps
+   each fenced substring to its reserved id directly. They never enter
+   pair counting or merging.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Special token: a
+   string mapped to a reserved id, usually at the end of the vocabulary.
+   Assumption: the fence strings never occur as normal text, or the
+   encoder treats every occurrence as control.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Encoding with specials: (a) split the input
+   on the set of special strings (longest match first), (b) encode each
+   plain span with the normal pipeline, (c) emit the reserved id for each
+   special span. Decoding maps reserved ids back to their strings.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy vocab: base ids 0-255, merges add 256+,
+   EOT = 50000. &ldquo;hi&lt;|endoftext|&gt;&rdquo; with the fence: [ids(&ldquo;hi&rdquo;), 50000].
+   Without the fence: the pieces of the literal string, 8+ ids, and no</p>
+</li>
+<li>
+<p>(Lab-verified on the toy encoder.)</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>encode_with_specials(text,
+   specials)</code>: build a regex alternation of escaped special strings
+   sorted by length descending, split, encode spans, map specials. About
+   15 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Atomicity: the encoded
+   output contains the reserved id exactly where the fence string stood.
+   Roundtrip: decode(encode(text)) == text including the fence strings.
+   Overlap: &ldquo;&lt;|endoftext|&gt;&rdquo; inside &ldquo;&lt;|endoftext|&gt;x&rdquo; still matches once.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> One extra regex pass over the input. Memory: the small
+   special map. The real cost of getting it wrong is semantic: a split
+   control token silently changes model behavior.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Byte-fallback models
+    (C11) can avoid some specials, but document and chat boundaries still
+    need explicit control tokens. Keep specials for any multi-turn or
+    multi-document pipeline.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> User text contains the literal
+    fence string (&ldquo;type &lt;|endoftext|&gt; to quit&rdquo; in a help page). The
+    encoder treats it as control, truncating the model&rsquo;s context at that
+    point. The assumption &ldquo;fences never appear in content&rdquo; breaks on
+    adversarial or instructional text, escaping or filtering is required.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: model
+    tokenizer configs (primary sources: tokenizer.json special-token
+    fields). Extension: measure how often a fence string occurs in a web
+    sample, hypothesis: rare but nonzero, so a filter is warranted.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: why do specials bypass BPE? (b) Oral
+    ladder: define a special token, hand-encode the toy, justify the
+    longest-match rule, implement the splitter, compare with no-special
+    encoding, debug an encoder that merges inside a fence, critique the
+    never-in-content assumption, design the frequency experiment.
+    (c) Transfer: two document batches are joined with EOT between them.
+    A bug drops the EOT. What changes in the loss (U05) and why?
+    Answers: <code>../keys/u01_answers.md</code> A5.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U01 task 5 adds specials to the toy encoder
+    and runs the atomicity checks. See <code>../labs/u01_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the fence/split/encode diagram is tabular
+    (three spans with ids). No figure, the state change is a partition,
+    shown as an annotated table in the lesson.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c06-roundtrip-invariants">C06: Roundtrip invariants</h3>
+<p>Leaf id <code>cs336-U01-C06</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S01. Scope: the
+   guarantees encode/decode must satisfy. Objectives: state the three
+   invariants, write property tests for them, locate which component
+   breaks each. Depends on C01-C05.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: when is it safe to
+   tokenize, process ids, and decode back? Toy: &ldquo;café&rdquo; encodes to ids and
+   decodes back to &ldquo;café&rdquo; byte-for-byte. A normalizer that lowercases
+   breaks the invariant: &ldquo;Café&rdquo; would not roundtrip.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Three invariants: (I1) decode(encode(s)) == s for all
+   valid strings s. (I2) encode is deterministic: same input, same ids.
+   (I3) ids decode to the byte sequence the encoder consumed (no silent
+   normalization). I1 is the headline, I2 and I3 are what make I1 hold in
+   pipelines.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> s: a valid Unicode
+   string. ids: a list of integers. Assumption: the same vocabulary,
+   regex, specials, and normalization are used on both sides.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> I1 holds when every stage is injective on
+   its domain: UTF-8 encode is injective, pretokenization partitions the
+   string (join of parts == whole), BPE encoding is a deterministic
+   rewrite, specials are fenced. Any lossy stage (lowercasing, unicode
+   normalization, dropped characters) breaks injectivity and with it I1.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab run on 200 random strings (ASCII plus
+   sampled multilingual): I1 held for all 200 with the toy encoder, after
+   enabling a lowercase normalizer, 163 of 200 failed I1. (Executed
+   2026-10-06, outputs in the lab key.)</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>check_invariants(enc, dec,
+   strings)</code>: for each s, assert dec(enc(s)) == s, assert enc(s) ==
+   enc(s), assert bytes(dec(enc(s)), &ldquo;utf-8&rdquo;) == bytes(s, &ldquo;utf-8&rdquo;).
+   Returns the failure list.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> The checker itself is
+   tested on a deliberately broken encoder (one that strips accents):
+   it must report failures. Expected: the broken encoder fails I1 on any
+   accented input.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Property tests cost one extra encode/decode pass per
+   string, run them in CI on a fixed corpus, not per request.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Weaker guarantee:
+    &ldquo;roundtrip except normalization&rdquo; is acceptable for search indexing
+    but not for code or for training data pipelines, where byte-exactness
+    matters. Choose full I1 for anything the model trains on.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A pipeline normalizes unicode
+    (NFKC) before encoding but decodes without denormalizing. &ldquo;ﬁ&rdquo; (one
+    ligature character) becomes &ldquo;fi&rdquo; (two characters). Hashes of decoded
+    text mismatch the source, deduplication (U14) then treats one
+    document as two.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: Unicode
+    normalization forms (primary specification). Extension: count I1
+    failures across a tokenizer with and without NFKC on a multilingual
+    sample, hypothesis: NFKC failures concentrate in specific scripts.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: state I1, I2, I3. (b) Oral ladder: define
+    roundtrip, test &ldquo;naïve&rdquo; by hand, justify why injectivity at each
+    stage implies I1, implement the checker, compare full versus weak
+    guarantees, debug a pipeline where decode adds a trailing space,
+    critique the same-config assumption, design the NFKC experiment.
+    (c) Transfer: two tokenizers claim the same vocabulary. What single
+    test distinguishes them? Answers: <code>../keys/u01_answers.md</code> A6.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U01 task 6 runs the invariant checker on
+    the toy encoder with and without normalization. See <code>../labs/u01_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the invariant table (stage, injectivity,
+    breaker). No figure, tabular claim per the medium ladder.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c07-streaming-encode-boundaries">C07: Streaming encode boundaries</h3>
+<p>Leaf id <code>cs336-U01-C07</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S01. Scope:
+   encoding text that arrives in chunks. Objectives: explain why naive
+   chunk encoding changes ids, implement boundary-safe streaming.
+   Depends on C03, C04.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: can we tokenize each network
+   packet as it arrives? Toy: &ldquo;unhappy&rdquo; split as &ldquo;unha&rdquo; + &ldquo;ppy&rdquo;. Encoded
+   whole, BPE may merge across the &ldquo;a|p&rdquo; boundary. Encoded per chunk, it
+   cannot. The two id sequences differ, so streaming naively changes model
+   input.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> A chunk edge can fall inside a word, where merges
+   are still undecided. Keep a carry buffer of the unemitted tail and
+   emit only complete words, no future chunk can change an emitted
+   whole word because merges never cross the word sentinel.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Chunk: one arrival
+   unit. Carry: unemitted tail text. Longest token L_max: the max token
+   length in characters. Assumption: the full vocabulary and merge order
+   are fixed during the stream.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Safe rule: hold back everything from the
+   last word boundary, encode the complete words before it. Merges never
+   cross the end-of-word sentinel, so a whole word encodes exactly as in
+   whole-string encoding and the emitted prefix is final. At stream end,
+   flush the carry. (For sentinel-free BPE the textbook refinement holds
+   back L_max - 1 characters, where L_max is the longest token, the word
+   boundary version used here is stricter and simpler.)</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab run (executed 2026-10-06): the paragraph
+   &ldquo;low lowest newer low new lower&rdquo; was cut at 100 seeded random split
+   points. The word-boundary streaming encoder reproduced whole-string
+   ids in 100 of 100 cases, naive per-chunk encoding mismatched in 100
+   of 100 cases.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>StreamingEncoder</code>:
+   <code>feed(chunk)</code> appends to the buffer, encodes buffer[:-holdback],
+   emits ids, keeps the tail, <code>flush()</code> encodes the remainder. About 25
+   lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> For 100 random splits of a
+   test string, streamed ids equal whole-string ids in all 100 cases.
+   Naive per-chunk encoding mismatches on at least one split. Expected
+   outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Latency: the holdback delays emission by a few characters.
+   Memory: the carry buffer, tiny. Correctness costs almost nothing.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Re-encode from scratch
+    on every chunk: simple and always correct, but O(n^2) on long
+    streams. Use the carry method for interactive or long-running streams,
+    use re-encode only for short, infrequent chunks.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Pretoken regex with a
+    contraction rule: &ldquo;don&rdquo; + &ldquo;&lsquo;t&rdquo; arriving in separate chunks. If the
+    carry logic only counts characters but the regex needs the apostrophe
+    to decide the split, a char-count holdback can still mis-split. The
+    assumption &ldquo;character horizon suffices&rdquo; breaks when rules look at
+    pattern context, the safe fix is to hold back to the last regex-safe
+    boundary.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: streaming
+    tokenizer designs in inference servers (primary: server docs).
+    Extension: measure id mismatch rate of naive chunking versus carry
+    buffering on dialogue text, hypothesis: naive mismatches on a nonzero
+    fraction of chunk boundaries.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: state the holdback rule. (b) Oral ladder:
+    define the boundary problem, hand-encode &ldquo;unhappy&rdquo; whole versus
+    split, justify why whole words are safe to emit, implement feed/flush, compare
+    with re-encoding, debug a carry that drops the tail, critique the
+    character-horizon assumption, design the mismatch experiment.
+    (c) Transfer: the stream is code and the regex splits on punctuation.
+    Where is the safe boundary now? Answers: <code>../keys/u01_answers.md</code> A7.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U01 task 7 implements the streaming
+    encoder and runs the 100-split test. See <code>../labs/u01_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the carry/emit timeline table. No figure, the
+    state change is a buffer partition over time, shown tabular.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c08-vocabulary-and-compression-tradeoff">C08: Vocabulary and compression tradeoff</h3>
+<p>Leaf id <code>cs336-U01-C08</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S01. Scope: how
+   vocabulary size changes sequence length and model cost. Objectives:
+   compute fertility at several vocab sizes, state the tradeoff in one
+   line. Depends on C02, C03, U02-C06 (FLOP accounting, forward link).</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why not a 1M vocabulary for
+   maximum compression? Toy: on the repeated sentence corpus in
+   <code>compute_u01.py</code>, character level gives 3.89 tokens per word, a small
+   BPE gives about 1.30. Bigger vocab compresses more, but the embedding
+   matrix and output head grow with V.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Vocabulary size buys compression (fewer tokens per
+   word) and pays in parameters (V times d embedding rows plus V times d
+   output weights) and in rare-token undertraining (tail tokens see few
+   updates).</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> V: vocabulary size.
+   Fertility: tokens per word. Embedding params: V * d. Assumption: the
+   training corpus represents the deployment mix, otherwise the
+   compression numbers do not transfer.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Doubling V roughly halves the marginal
+   fertility gain (diminishing returns: frequent words are already one
+   token). Parameter cost grows linearly in V. The output softmax costs
+   O(V * d) per position, so very large V directly taxes every training
+   step.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab run on the repeated-sentence corpus
+   (executed 2026-10-06), merge budgets 0..8, tokens per word: 4.89,
+   4.67, 4.44, 4.22, 4.11, 4.00, 3.89, 3.78, 3.67. Non-increasing, as
+   asserted. Each word carries one end-of-word token at budget 0, which
+   is why the curve starts near 5. Figure u01_fig03 plots this curve.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>fertility_curve(text,
+   merge_budgets)</code>: train BPE per budget, encode, return tokens/word.
+   About 20 lines on top of the C03 trainer.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Monotonicity: fertility
+   never rises as merges increase (each merge can only shorten or hold).
+   The test asserts non-increasing fertility across budgets.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Training-time: larger V raises the output layer cost per
+   step. Memory: V * d * bytes_per_param for embeddings plus the same
+   for the head (unless tied, U03-C11). Inference: longer sequences from
+   small V raise attention cost quadratically.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Byte-level (V = 256):
+    minimal parameters, maximal sequence length, viable only for small
+    models or special architectures. Large V (100k+): standard for
+    multilingual models where many scripts need coverage. The common
+    32k-64k band balances the two for English-centric models.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A 200k vocabulary trained on
+    English-heavy data: rare-script tokens get few updates, so their
+    embeddings stay near initialization and generation in those scripts
+    degrades. The assumption &ldquo;more vocab is free capacity&rdquo; breaks on the
+    long tail.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: vocabulary
+    size ablations in scaling papers (primary: paper tables). Extension:
+    plot fertility versus V on two domains, hypothesis: the curves cross,
+    so the best V is domain-dependent.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: state the tradeoff in one sentence.
+    (b) Oral ladder: define fertility, compute tokens/word for the toy,
+    justify diminishing returns, implement the curve, compare 32k versus
+    256k for a code model, debug a fertility script that counts the EOT
+    token, critique the corpus-representativeness assumption, design the
+    two-domain experiment. (c) Transfer: context length doubles but V
+    stays fixed. Which cost term moves, and which does not?
+    Answers: <code>../keys/u01_answers.md</code> A8.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U01 task 8 builds the fertility curve.
+    See <code>../labs/u01_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Figure u01_fig03: chapter plate, fertility versus merge
+    budget with the parameter-cost note. Source: original computed toy.
+    Render: <code>assets/render_u01.py</code>.</p>
+</li>
+</ol>
+<figure><img alt="u01_fig03" src="../assets/u01_fig03.png"><figcaption>chapter plate, fertility versus merge budget with the parameter-cost note. Source: original computed toy.</figcaption></figure>
+<hr />
+<h3 id="c09-training-and-inference-mismatch">C09: Training and inference mismatch</h3>
+<p>Leaf id <code>cs336-U01-C09</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S01. Scope: ways
+   the inference tokenizer setup can differ from training. Objectives:
+   list four mismatch classes, write a config check that catches each.
+   Depends on C01-C08.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: the model trained fine, why
+   does it babble in production? Toy: training used pretokenizer regex R1
+   and 50k merges, inference loads regex R2 and 32k merges. The same
+   string maps to different ids, so the model reads garbage.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> The tokenizer is part of the model artifact. Four
+   mismatch classes: different vocabulary or merges, different regex or
+   normalization, different special tokens, different byte-fallback or
+   error handling. Any one of them silently shifts every id.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Tokenizer config: the
+   tuple (vocab, merges, regex, specials, normalization). Assumption: the
+   artifact store versions the config with the weights.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Each class changes the string-to-id map:
+   merges change segmentation, regex changes pretokens, specials change
+   control ids, normalization changes the input before anything runs.
+   Because ids are the model&rsquo;s input alphabet, a shifted map is
+   equivalent to permuted inputs.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Toy: encode &ldquo;Testing 123&rdquo; with the C04 regex
+   versus a regex that splits digits from letters. Id sequences differ
+   in segmentation (lab run: 4 pretokens versus 5, exact ids in the lab
+   key). One changed component is enough to shift the whole sequence.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>check_tokenizer_match(cfg,
+   artifact)</code>: hash the merge list, compare regex source strings, compare
+   special maps, compare normalization flags, raise on any difference.
+   About 20 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Positive: identical configs
+   pass. Negative: each of the four mutations is caught and named.
+   Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> The check runs once at load time, negligible. The cost of
+   skipping it is silent quality loss that looks like a model problem.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Store the tokenizer
+    inside the model checkpoint directory (standard practice) versus a
+    shared registry. Registry wins when many models share one tokenizer,
+    bundled wins when tokenizers evolve per model. Either way, hash and
+    verify at load.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A chat template adds new special
+    tokens at inference but the training config lacked them. Their ids
+    collide with or shift existing ids, and the model treats role markers
+    as random words. The assumption &ldquo;specials are fixed&rdquo; breaks when
+    templates evolve.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: tokenizer
+    config specifications (primary: tokenizer.json schema). Extension:
+    measure perplexity (U05/U12) under each mismatch class on a fixed
+    model, hypothesis: merge mismatch hurts most.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: name the four mismatch classes. (b) Oral
+    ladder: define the config tuple, hand-show one mismatch, justify why
+    ids are the input alphabet, implement the checker, compare bundled
+    versus registry storage, debug a passing hash with failing behavior
+    (hint: regex flags), critique the versioned-artifact assumption,
+    design the perplexity experiment. (c) Transfer: the inference server
+    lowercases input &ldquo;for safety&rdquo;. Which class is this, and what breaks?
+    Answers: <code>../keys/u01_answers.md</code> A9.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U01 task 9 mutates each config class and
+    runs the checker. See <code>../labs/u01_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the four-class table with detection method.
+    No figure, tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c10-multilingual-and-numeric-tokenization">C10: Multilingual and numeric tokenization</h3>
+<p>Leaf id <code>cs336-U01-C10</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S01. Scope: how
+   tokenizers treat non-English scripts and numbers. Objectives: compute
+   bytes-per-token across scripts, explain digit-splitting effects.
+   Depends on C01, C04, C08.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: why does the same model
+   cost more per word in some languages? Toy from <code>compute_u01.py</code>: &ldquo;中&rdquo;
+   is 3 bytes, &ldquo;é&rdquo; is 2, &ldquo;A&rdquo; is 1. A byte-started BPE needs more merges
+   to cover a 3-byte character, so scripts with long UTF-8 forms get
+   worse compression at fixed V.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Fertility is script-dependent: scripts whose
+   characters take more bytes start further from good compression. For
+   numbers, the pretokenizer decides the damage: splitting digits apart
+   turns &ldquo;123&rdquo; into three tokens and hides place value.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Bytes per character
+   per script, tokens per number. Assumption: the training corpus weights
+   scripts the way deployment will.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> BPE merges are frequency-driven on the
+   training mix. A script rare in training gets few dedicated merges, so
+   its text stays near byte level: up to 4 tokens per character for some
+   scripts. Digit splitting (C04 alternative) forces one token per digit
+   regardless of frequency.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Byte lengths (executed 2026-10-06): ASCII 1,
+   &ldquo;é&rdquo; 2, &ldquo;€&rdquo;/&rdquo;中&rdquo; 3, emoji 4. Consequence: at byte level, &ldquo;中中&rdquo; is 6
+   tokens while &ldquo;ee&rdquo; is 2. A digit-splitting regex turns &ldquo;2026&rdquo; into 4
+   tokens, a digit-keeping regex keeps it splittable into fewer.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>script_stats(texts)</code>:
+   group characters by UTF-8 length, report counts and the implied
+   byte-level token counts. About 15 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> On a mixed sample, the
+   byte-level token count equals the UTF-8 byte count exactly. Expected
+   outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Longer sequences for some scripts mean higher attention
+   cost and higher API bills per word for those users: a fairness and
+   cost issue, not just a quality issue.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Script-balanced BPE
+    training (upsample rare scripts) or larger V for multilingual models.
+    For numbers, digit-aware pretokenization (keep digit runs together)
+    is standard in math-heavy models. Choose by the deployment mix.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A model trained with
+    digit-splitting does arithmetic: &ldquo;123+456&rdquo; becomes 9 tokens with no
+    token for &ldquo;12&rdquo; or &ldquo;23&rdquo;, and place-value patterns must be relearned
+    from scratch per position. The assumption &ldquo;digits are like letters&rdquo;
+    breaks for arithmetic.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: multilingual
+    fertility studies (primary: paper measurements). Extension: compute
+    tokens-per-word across 5 scripts at fixed V, hypothesis: the ratio
+    tracks mean UTF-8 bytes per character.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: why is fertility script-dependent?
+    (b) Oral ladder: define the byte-length effect, compute tokens for
+    &ldquo;中文&rdquo; at byte level, justify the upsampling fix, implement
+    script_stats, compare digit-split versus digit-keep, debug a
+    &ldquo;multilingual&rdquo; tokenizer trained on English-only data, critique the
+    corpus-mix assumption, design the 5-script experiment. (c) Transfer:
+    a user pastes a phone number. Which regex choice changes the token
+    count, and why does it matter for a form-filling agent?
+    Answers: <code>../keys/u01_answers.md</code> A10.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U01 task 10 runs script_stats and the
+    digit-regex comparison. See <code>../labs/u01_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: script byte-length table with implied token
+    counts. No figure, tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c11-bytes-first-alternatives">C11: Bytes-first alternatives</h3>
+<p>Leaf id <code>cs336-U01-C11</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S01. Scope:
+   tokenizers that skip BPE: pure bytes, and learned alternatives.
+   Objectives: state when bytes-first wins, name the costs honestly.
+   Depends on C02, C08.</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: what if the vocabulary were
+   just 256 bytes? Toy: &ldquo;hi&rdquo; -&gt; [104, 105]. No training, no UNK, no
+   merge table. The price: sequences 4x longer than BPE on English.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Bytes-first removes the tokenizer as a learned
+   component. The model sees raw bytes and must learn segmentation
+   itself. This shifts work from preprocessing into the network.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> V = 256 fixed.
+   Sequence length multiplier versus BPE: measured 1.30x on the toy
+   8-merge BPE, larger vocabularies raise it.
+   Assumption: the architecture can handle the longer sequences
+   (attention cost grows quadratically, see U03/U04).</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> With V = 256 there is no vocabulary to
+   learn and no language-specific bias: every script and every byte
+   sequence is representable. The model pays in sequence length, which
+   multiplies attention FLOPs by the square of the multiplier and
+   stretches the context window.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Lab run (executed 2026-10-06): the 43-byte
+   test paragraph encodes to 43 byte tokens versus 33 tokens under the
+   toy 8-merge BPE: a 1.30x length multiplier, implying an attention
+   FLOP ratio of 1.7x (the square). The toy BPE is weak, production
+   vocabularies compress further, so treat 1.30x as a lower bound on the
+   multiplier, not as a typical value.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>encode_bytes(text)</code>:
+   return list(text.encode(&ldquo;utf-8&rdquo;)). One line. Decoding is
+   <code>bytes(ids).decode("utf-8", errors="strict")</code>.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Roundtrip holds for all
+   valid strings by UTF-8 injectivity. Invalid byte sequences raise
+   under strict errors. Expected outputs in the lab key.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Attention FLOPs multiply by ~m^2 for length multiplier m.
+   Embedding parameters shrink to 256 * d. The tradeoff only works with
+   subquadratic architectures (U04) or short contexts.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> BPE stays the default
+    for standard transformers. Bytes-first fits research on
+    tokenizer-free models and heavily multilingual settings where BPE
+    bias hurts. Choose bytes when tokenizer bias is the research
+    question, not for production efficiency on vanilla transformers.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> A byte-level model with a 2k
+    context window on code: the effective context in &ldquo;BPE words&rdquo; is only
+    a few hundred, so long-range dependencies vanish. The assumption
+    &ldquo;context length is comparable across tokenizers&rdquo; breaks, compare in
+    bytes, not in tokens.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: ByT5 and
+    CANINE papers (primary: architecture papers for byte-level models).
+    Extension: measure the T^2 attention FLOP ratio of byte versus BPE
+    encodings on a fixed corpus, hypothesis: the ratio tracks the square
+    of the length multiplier.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: state the bytes-first tradeoff in one
+    line. (b) Oral ladder: define V=256 encoding, compute the toy
+    multiplier, justify the m^2 attention claim, implement encode_bytes,
+    compare with BPE on multilingual text, debug a decoder that silently
+    replaces invalid bytes, critique the architecture-can-handle-it
+    assumption, design the FLOP-ratio experiment. (c) Transfer: context
+    window is fixed at 4096 tokens. How many English words fit under
+    each scheme? Answers: <code>../keys/u01_answers.md</code> A11.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U01 task 11 compares byte and BPE lengths
+    and attention FLOP ratios. See <code>../labs/u01_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the multiplier table (scheme, length, implied
+    attention FLOPs). No figure, tabular claim.</p>
+</li>
+</ol>
+<hr />
+<h3 id="c12-performance-profiling">C12: Performance profiling</h3>
+<p>Leaf id <code>cs336-U01-C12</code>. Claim class REQUESTED-BRANCH.
+Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
+<ol>
+<li>
+<p><strong>Source mapping, scope, objectives, dependencies.</strong> S01. Scope:
+   measuring tokenizer throughput and finding the bottleneck. Objectives:
+   profile encode on a fixed workload, attribute time to regex versus
+   merges. Depends on C04, P02, U02-C08 (forward link).</p>
+</li>
+<li>
+<p><strong>Motivating question and toy.</strong> Question: tokenization is &ldquo;fast&rdquo;, so
+   why does data loading stall? Toy: scanning 60 KB of ASCII took 0.0009
+   s in <code>compute_u01.py</code> (67.5 MB/s) for a trivial loop, the regex pass
+   on real text is far slower per byte than the merge loop.</p>
+</li>
+<li>
+<p><strong>Mental model.</strong> Encode time = regex time + merge time + Python
+   overhead. On English text the regex usually dominates. On tiny strings
+   the per-call overhead dominates. Measure before optimizing.</p>
+</li>
+<li>
+<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Throughput: MB/s or
+   tokens/s. Workload: fixed text, fixed tokenizer, warmed-up process.
+   Assumption: single-threaded measurement unless stated.</p>
+</li>
+<li>
+<p><strong>Derivation / mechanism.</strong> Profiling method: (a) fix the input and
+   tokenizer, (b) warm up, (c) time N repeats with <code>time.perf_counter</code>,
+   (d) split the pipeline (regex-only versus merges-only) to attribute.
+   Report median, not mean, to resist outliers.</p>
+</li>
+<li>
+<p><strong>Computed example.</strong> Executed 2026-10-06 on this box: the trivial
+   byte scan reached 67.5 MB/s. The lab measures the toy BPE encode on
+   10k words and the regex split separately, exact numbers land in the
+   lab key because they are machine-specific.</p>
+</li>
+<li>
+<p><strong>Algorithm and reference implementation.</strong> <code>profile_encode(enc,
+   text, repeats)</code>: warmup loop, timed loop, returns median seconds and
+   MB/s. About 15 lines.</p>
+</li>
+<li>
+<p><strong>Correctness checks and expected output.</strong> Sanity: throughput is
+   positive and stable across runs within 20 percent. Attribution: the
+   parts sum to within 10 percent of the whole.</p>
+</li>
+<li>
+<p><strong>Costs.</strong> Profiling costs minutes of machine time. The risk is
+   optimizing the wrong stage, attribution prevents that.</p>
+</li>
+<li>
+<p><strong>Nearest alternative and selection boundary.</strong> Rust-backed
+    tokenizers (industry standard) beat pure Python by 10-100x. For this
+    course, Python is the teaching vehicle, for production, use a
+    compiled tokenizer. The measurement method is the same either way.</p>
+</li>
+<li>
+<p><strong>Failure case and counterexample.</strong> Profiling with a cold regex
+    cache and one short string: the first call pays compile cost and the
+    number looks 100x worse than steady state. The assumption &ldquo;one
+    measurement represents the workload&rdquo; breaks, warmup exists for this.</p>
+</li>
+<li>
+<p><strong>Research reading and falsifiable extension.</strong> Reading: tokenizer
+    benchmark reports (primary: measured numbers with stated hardware).
+    Extension: profile regex versus merges as text length grows,
+    hypothesis: regex share grows with length.</p>
+</li>
+<li>
+<p><strong>Assessment.</strong> (a) Recall: name the three time components. (b) Oral
+    ladder: define throughput, hand-estimate time for 1 MB at 50 MB/s,
+    justify median over mean, implement the profiler, compare Python
+    versus compiled tokenizers, debug a profile that includes file
+    reading, critique the single-thread assumption, design the scaling
+    experiment. (c) Transfer: data loading stalls at 8 workers. The
+    profile says regex dominates. What is the first fix to try?
+    Answers: <code>../keys/u01_answers.md</code> A12.</p>
+</li>
+<li>
+<p><strong>Lab and exercises.</strong> Lab U01 task 12 profiles the toy pipeline and
+    attributes stages. See <code>../labs/u01_lab.md</code>.</p>
+</li>
+<li>
+<p><strong>Visuals.</strong> Audit row: the attribution table (stage, share).
+    Machine-specific bars are not drawn as figures, the lesson records
+    the method and the lab records the numbers.</p>
+</li>
+</ol>
+<hr />
+<h2 id="unit-russian-doll-ladder-u01">Unit Russian-doll ladder (U01)</h2>
+<ul>
+<li>Shell 0: how does text become model input, and what changes the ids?</li>
+<li>Shell 1: &ldquo;Aé&rdquo; -&gt; [65, 195, 169], BPE toy corpus with 4 merges.</li>
+<li>Shell 2: code points, bytes, pairs, merges, pretokens, specials.</li>
+<li>Shell 3: one merge, one regex cut, one fence split.</li>
+<li>Shell 4: BPE encoder, streaming encoder, invariant checker.</li>
+<li>Shell 5: finite-difference style checks are replaced here by property
+  tests: roundtrip on random strings, determinism, monotonic fertility.</li>
+<li>Shell 6: change the regex, predict the split change, measure fertility.</li>
+<li>Shell 7: break a stage (normalization, no tie-break, dropped special)
+  and watch the invariant fail.</li>
+<li>Shell 8: BPE versus WordPiece versus bytes-first under equal corpora.</li>
+<li>Shell 9: script-balanced vocabularies, streaming-safe regex design.</li>
+<li>Shell 10: tokenizer config is a versioned model artifact, mismatch
+  silently degrades production quality.</li>
+</ul>
+      
+      <nav class="pager"><a href="../crash-course.html"><span class="lbl">← Previous</span>Crash course</a><a href="../keys/u01_answers.html"><span class="lbl">Next →</span>U01 · Answers</a></nav>
+    </article>
+    <footer class="pagefoot">
+      <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
+    </footer>
+  </main>
+</div>
+<script src="../assets/vendor/katex.min.js"></script>
+<script src="../assets/vendor/mermaid.min.js"></script>
+<script>window.SITE_ROOT = "../";</script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
