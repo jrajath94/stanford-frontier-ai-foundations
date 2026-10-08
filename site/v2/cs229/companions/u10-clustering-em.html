@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U10 Companion: Clustering and latent mixture models · CS229</title>
+<style>
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+input.range{width:100%}
+input.range{max-width:420px}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+.hist{border:1px solid var(--line)}
+.hist{border-radius:10px}
+.hist{background:#fffdf8}
+.hist{padding:6px}
+.hist{margin:16px 0}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS229 · Unit 10 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Clustering and latent mixture models</h1>
+<p class="dek">You have n unlabeled points and want k groups. No labels, no loss. What do you even optimize? This companion walks the full arc of Unit 10: k-means as hard assignment plus coordinate descent, the distortion and its local minima, EM for mixtures of Gaussians, and the ELBO proof that guessing labels climbs the likelihood.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>lesson-10-clustering-em.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no lecture transcript exists for this unit, and no lecture video is named in the lesson. The lesson's Source mapping states that SRC-01 chapters 10 and 11 (PDF pages 147 to 162) were read in substantial part on 2026-10-06. k-means++ is standard material beyond the notes and is labeled as such. Leaf rows carry SOURCE ATTRIBUTION PENDING until the RUN 6 pass.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u10-two-flocks.jpg" alt="Watercolor of scattered ink dots gathering into two clusters around two stones">
+<figcaption><span class="tag tag-toy">Illustration</span> Clustering as gathering: scattered points finding their stones. Watercolor, original to this companion.</figcaption>
+</figure>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 k-means</a>
+<a href="#s2">2 Distortion</a>
+<a href="#s3">3 EM</a>
+<a href="#s4">4 ELBO</a>
+<a href="#s5">5 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<section class="block" id="s1">
+<p class="secnum">Section 1 · SL-01 · C01, C02, C03</p>
+<h2>k-means: fix one unknown, the other is trivial</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Source anchor, §Mental model</span></p>
+<p>Two kinds of unknowns: who belongs where (assignments c(i)), and where the centers are (centroids μⱼ). Fix one, the other is trivial: given centers, assign each point to the nearest. Given assignments, the best center is the mean. Alternate. The algorithm: initialize μⱼ (random training examples is the notes' suggestion), repeat until convergence: c(i) := argminⱼ ||xⁱ − μⱼ||², then μⱼ := mean of the points assigned to it.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Initialization, §Correctness checks</span></p>
+<p>Random centroids can start far from any data or collide. k-means++ (standard, beyond the notes): pick the first centroid uniformly, then each next with probability proportional to squared distance from the nearest existing centroid. It spreads the seeds and comes with an approximation guarantee. Empty clusters: if no point is assigned to μⱼ, reinitialize it (for example to a random point) or drop it. Handle the division by zero. The assignment step never increases the distortion: each point moves to its nearest center.</p>
+</div>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> A real k-means on invented 2-D blobs. The data are made up for the toy, but the algorithm is the lesson's: alternate assignment and mean update, log J each iteration. Pick a seed and watch.</p>
+<p><button class="btn" id="kmb1">Seed 1</button> <button class="btn" id="kmb2">Seed 2</button> <button class="btn" id="kmb3">Seed 3</button></p>
+<div class="chips" id="kmout"></div>
+<svg id="kmsvg" viewBox="0 0 400 220" class="chart" role="img" aria-label="k-means toy scatter"></svg>
+<p class="small muted">The lesson's claim to check: J is monotone non-increasing within each run, but the final J can differ across seeds.</p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Failure case</span></p>
+<p>Different seeds give different clusterings. A single run's answer is not "the" clustering. Run several seeds and keep the lowest distortion.</p>
+</div>
+<div class="nugget" id="nugget-alternate">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Mental model</span></h4>
+<p class="big">Two unknowns, one rule: fix one, the other is trivial. Alternate.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A hard joint problem splits into two easy conditional ones. Alternation turns a problem with no loss into a descent on one.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When two unknowns tangle, hold one fixed and solve for the other. Repeat. Many hard problems are two easy problems taking turns.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · SL-02 · C01, C04, C12</p>
+<h2>The distortion: what converges, and to what</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Source anchor, §The convergence argument</span></p>
+<p>Distortion J(c, μ) = Σᵢ ||xⁱ − μ_{c(i)}||². k-means is coordinate descent on J: each step minimizes J over c with μ fixed, then over μ with c fixed. Each of the two steps can only decrease, never increase, J. J is bounded below by 0. So J converges. The subtlety: J converges, not the parameters. And it converges to a local minimum, not the global one. The notes' guarantee is "in a certain sense" (page 148): monotone J, finite termination, finitely many assignments.</p>
+</div>
+<table class="data">
+<tr><th>Two Gaussians, n = 200, k = 2 <span class="tag tag-toy">Illustration</span></th><th>J</th></tr>
+<tr><td>Initial</td><td class="num">7.96</td></tr>
+<tr><td>Converged, 4 iterations, monotone</td><td class="num">0.98</td></tr>
+<tr><td>k = 3 (lower J)</td><td class="num">below 0.98</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Computed example</span> Bridge content: the numbers illustrate the run. With k = 3, J is lower, but the third cluster splits a real one. Lower J does not mean truer clusters.</figcaption>
+<figure>
+<div id="chart-j"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Computed example</span> J falls from 7.96 to 0.98 in 4 iterations, monotone. The anchors are the lesson's. The smooth trend between them is drawn for illustration.</figcaption>
+</figure>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §The cluster assumption, §Choosing k</span></p>
+<p>k-means bakes in a belief: clusters are convex blobs of similar size, separable by Euclidean distance. The distortion is the operational form of that belief. When the belief is wrong (rings, moons, very different sizes), the optimum of J is the wrong answer. Choosing k: the notes do not prescribe a method. Standard practice: the elbow method (plot J vs k, look for the kink), silhouette scores, or domain knowledge. The honest statement: k is a modeling choice, not a learned parameter, in basic k-means.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Failure case, §Correctness checks</span></p>
+<p>Reading the elbow where there is none: on uniform noise J falls smoothly with k and every elbow is imaginary. k above n is meaningless. k = n gives J = 0 and says nothing.</p>
+</div>
+<div class="nugget" id="nugget-jconverges">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §The convergence argument</span></h4>
+<p class="big">J converges, not the parameters. And it converges to a local minimum, not the global one.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The guarantee is narrower than it sounds. Monotone descent on the objective does not promise the best answer, or even a stable one.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Ask of every convergence claim: what converges, and to what. The objective's convergence is not the parameters'.</dd>
+</dl>
+</div>
+<div class="nugget" id="nugget-lowerj">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Computed example</span></h4>
+<p class="big">Lower J does not mean truer clusters. With k = 3 the distortion falls and a real cluster splits.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The objective always improves with more clusters. The objective is not the truth: k is a modeling choice, and the elbow on noise is imaginary.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>A score that improves by construction cannot validate the construction. Judge the model, not the number.</dd>
+</dl>
+</div>
+</section>
+<section class="block" id="s3">
+<p class="secnum">Section 3 · SL-03 · C05, C06, C07, C10, C11</p>
+<h2>EM: soft guesses, then the easy MLE</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Source anchor, §Mental model</span></p>
+<p>Model: zⁱ ∼ Multinomial(φ), xⁱ|zⁱ=j ∼ N(μⱼ, Σⱼ). The log likelihood has a sum inside the log, so setting derivatives to zero gives no closed form. If z were known, MLE would be easy: counts, means, covariances, exactly like GDA in U04. The motivating question: the likelihood has a sum inside the log, so no closed-form MLE. But if someone told you the cluster labels, estimation would be trivial. What if you guess the labels, estimate, and repeat?</p>
+<p>Latent variables zⁱ are the missing labels. E-step: given current parameters, compute soft guesses wⁱⱼ = p(zⁱ = j | xⁱ. φ, μ, Σ) by Bayes' rule. M-step: pretend the soft guesses are the labels and run the easy MLE: φⱼ = mean of wⱼ, μⱼ = weighted mean, Σⱼ = weighted covariance. The M-step formulas are identical to the known-z case with indicators replaced by responsibilities (notes page 152).</p>
+</div>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The responsibility machine. The lesson's 1-D example: two Gaussians with means −1.97 and 2.03, unit variance, equal mixing weights. Type an x and the toy returns the responsibilities wⱼ = p(z = j | x).</p>
+<p>x: <input class="text" id="emx" value="0.5" style="max-width:100px" aria-label="x"></p>
+<p><button class="btn" id="embtn">Compute responsibilities</button></p>
+<div class="chips" id="emout"></div>
+<p class="small muted">Try x = 0 (maximally uncertain) and x = −2 (hardly uncertain). Responsibilities sum to 1 over j.</p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §k-means as a limit, §Computed example</span></p>
+<p>Let all Σⱼ = σ²I with σ → 0. The posteriors harden to 0/1: each point assigned to the nearest mean. EM becomes k-means. Soft contains hard as a special case. The computed example: two 1-D Gaussians, means −2 and 2, n = 300. EM from a bad start (means 0, 0.5): log likelihood rises from −812 to −654 over 25 iterations, means converge to −1.97 and 2.03. k-means on the same data: 94 percent agreement with the true labels. EM: 97 percent.</p>
+</div>
+<figure>
+<div id="chart-em"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Computed example</span> Log likelihood rises from −812 to −654 over 25 iterations, never decreasing. The anchors are the lesson's. The trend between them is drawn for illustration.</figcaption>
+</figure>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Failure case</span></p>
+<p>Singular collapse: one Gaussian shrinks onto a single point and the likelihood explodes to infinity. The "monotone improvement" then improves toward a degenerate answer. Constrain or regularize covariances.</p>
+</div>
+<div class="nugget" id="nugget-soft">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §k-means as a limit</span></h4>
+<p class="big">Soft contains hard. Let σ → 0 and EM's posteriors harden into k-means' assignments.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Two algorithms that looked unrelated are one algorithm with a knob. The hard version is the soft version at zero temperature.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When two methods look like rivals, look for the parameter that turns one into the other.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · SL-04 · C08, C09, C10</p>
+<h2>Why guessing labels climbs the likelihood</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Source anchor, §Mental model</span></p>
+<p>Jensen's inequality: E[f(X)] ≥ f(E[X]) for convex f. The log of a sum is hard. Jensen builds a lower bound (the ELBO) that touches the true likelihood at the current parameters: the E-step chooses the posterior Q, which makes the bound tight. Maximizing the bound (M-step) pushes the true likelihood up because the bound touches it. Touch, push, repeat.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §The proof</span></p>
+<p>l(θ) = Σᵢ log Σ_z p(xⁱ, z) under parameters θ. For any Q: l ≥ Σᵢ E_Q[log p(x, z)/Q(z)] (Jensen, log is concave). The E-step picks Qᵢ = p(z|xⁱ. θ⁽ᵗ⁾), giving equality at θ⁽ᵗ⁾. The M-step picks θ⁽ᵗ⁺¹⁾ maximizing the bound, so l(θ⁽ᵗ⁺¹⁾) ≥ bound(θ⁽ᵗ⁺¹⁾) ≥ bound(θ⁽ᵗ⁾) = l(θ⁽ᵗ⁾). Monotone ascent (notes page 160).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §What it does not prove, §Failure case</span></p>
+<p>Monotone ascent to a local maximum, not the global one. EM inherits k-means' seed sensitivity. Multiple restarts remain the practice. Stopping on parameter change instead of likelihood change: near a flat optimum parameters crawl after the likelihood converged. Monitor the likelihood.</p>
+</div>
+<div class="nugget" id="nugget-touch">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Mental model</span></h4>
+<p class="big">Touch, push, repeat. The E-step makes the bound tight, the M-step pushes the bound, and the true likelihood rises with it.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The proof is a mechanism, not a magic spell: you cannot push on the likelihood directly, so you push on a surrogate that touches it.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When the objective is untouchable, build a touching surrogate. Optimize the surrogate, and the objective follows.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · Synthesis</p>
+<h2>The arc, end to end</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 to SL-04</span></p>
+<p>The arc, end to end. With no labels, you still optimize: the distortion J(c, μ) = Σᵢ ||xⁱ − μ_{c(i)}||², and k-means is coordinate descent on it, alternating nearest assignment with mean update (SL-01). J is monotone non-increasing and bounded below by 0, so J converges: to a local minimum, not the global one, with the parameters possibly still moving. Lower J does not mean truer clusters, and k stays a modeling choice (SL-02).</p>
+<p>Latent labels turn the hard problem soft: EM guesses responsibilities by Bayes' rule, then runs the known-z MLE with indicators replaced by responsibilities (SL-03). At σ → 0 the soft posteriors harden into k-means. The guarantee: Jensen's bound touches the likelihood at the current parameters, the M-step pushes the bound, and the likelihood rises with it, monotonically, to a local maximum (SL-04). Both algorithms inherit seed sensitivity. Both want restarts.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">§Research reading, §Role bridges</span></p>
+<p>Where the unit points next, in the lesson's own forward links. The extension: compare hard and soft assignments as the component overlap grows. The falsifiable claim: EM's advantage over k-means grows with overlap. The ELBO derivation is the foundation for VI, VAEs, and diffusion (U11-U12). For the ML engineer: k-means with restarts is the baseline segmentation tool, and EM fits probabilistic mixtures when soft assignment matters. Report seed sensitivity honestly.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>Five nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-alternate"><span class="wnum">01</span>Fix one, the other is trivial <span class="muted">· SL-01</span></a></li>
+<li><a href="#nugget-jconverges"><span class="wnum">02</span>J converges, to a local minimum <span class="muted">· SL-02</span></a></li>
+<li><a href="#nugget-lowerj"><span class="wnum">03</span>Lower J is not truer clusters <span class="muted">· SL-02</span></a></li>
+<li><a href="#nugget-soft"><span class="wnum">04</span>Soft contains hard <span class="muted">· SL-03</span></a></li>
+<li><a href="#nugget-touch"><span class="wnum">05</span>Touch, push, repeat <span class="muted">· SL-04</span></a></li>
+</ol>
+</section>
+
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>v2-pack/cs229/lessons/u10/lesson-10-clustering-em.md</code> (437 lines, dated 2026-10-06). No lecture transcript and no lecture video exist for this unit, so nothing here quotes the lecturer. Per the lesson's Source mapping, SRC-01 chapters 10 and 11 were read in substantial part on 2026-10-06. Every number on this page comes from the lesson's computed examples with section citations: the k-means distortion run (7.96 to 0.98), the EM likelihood ascent (−812 to −654), the label agreement (94 percent, 97 percent). The charts re-plot those numbers with native tooltips. The watercolor is original to this companion and labeled as such. The k-means toy runs the lesson's algorithm on invented data, labeled <span class="tag tag-toy">Illustration</span>. k-means++ is standard material beyond the notes, labeled as such.</p>
+<p><strong>Quotes.</strong> This page quotes 0 words directly from the source. All phrasing is the companion's.</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>. Tenth of 17 CS229 companions.</p>
+</footer>
+</div>
+<script>
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  for (const k in attrs) { n.setAttribute(k, attrs[k]) }
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function jChart() {
+  const host = document.getElementById("chart-j")
+  if (!host) { return }
+  const W = 760
+  const H = 300
+  const padL = 56
+  const padB = 44
+  const padT = 18
+  const X = function(t) { return padL + (t / 4) * (W - padL - 30) }
+  const Y = function(v) { return padT + (1 - v / 9) * (H - padT - padB) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const xticks = [0, 1, 2, 3, 4]
+  xticks.forEach(function(t) {
+    const tx = svgEl("text", {x: X(t), y: H - padB + 22, "font-size": 12, fill: MUT, "font-family": MONO, "text-anchor": "middle"})
+    tx.textContent = t
+    svg.appendChild(tx)
+  })
+  const yticks = [0, 2, 4, 6, 8]
+  yticks.forEach(function(v) {
+    const tx = svgEl("text", {x: padL - 10, y: Y(v) + 5, "font-size": 12, fill: MUT, "font-family": MONO, "text-anchor": "end"})
+    tx.textContent = v
+    svg.appendChild(tx)
+  })
+  const pts = []
+  Array.from({length: 101}).forEach(function(_, i) {
+    const t = 4 * (i / 100)
+    pts.push([t, 0.98 + (7.96 - 0.98) * Math.exp(-1.4 * t)])
+  })
+  const d = pts.map(function(p, i) { return (i === 0 ? "M" : "L") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1) }).join(" ")
+  const path = svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3, "stroke-dasharray": "7 5"})
+  const tip = svgEl("title", {})
+  tip.textContent = "J falls from 7.96 to 0.98 in 4 iterations, monotone (illustrative trend between lesson anchors)"
+  path.appendChild(tip)
+  svg.appendChild(path)
+  const c1 = svgEl("circle", {cx: X(0), cy: Y(7.96), r: 6, fill: CLAY})
+  const t1 = svgEl("title", {})
+  t1.textContent = "initial J: 7.96 (lesson anchor)"
+  c1.appendChild(t1)
+  svg.appendChild(c1)
+  const c2 = svgEl("circle", {cx: X(4), cy: Y(0.98), r: 6, fill: CLAY})
+  const t2 = svgEl("title", {})
+  t2.textContent = "converged J: 0.98 after 4 iterations (lesson anchor)"
+  c2.appendChild(t2)
+  svg.appendChild(c2)
+  const xl = svgEl("text", {x: W / 2, y: H - 8, "font-size": 13, fill: MUT, "font-family": SANS, "text-anchor": "middle"})
+  xl.textContent = "iteration (dotted trend: illustrative)"
+  svg.appendChild(xl)
+  host.appendChild(svg)
+}
+
+function emChart() {
+  const host = document.getElementById("chart-em")
+  if (!host) { return }
+  const W = 760
+  const H = 300
+  const padL = 64
+  const padB = 44
+  const padT = 18
+  const X = function(t) { return padL + (t / 25) * (W - padL - 30) }
+  const Y = function(v) { return padT + (1 - (v + 850) / 250) * (H - padT - padB) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const xticks = [0, 5, 10, 15, 20, 25]
+  xticks.forEach(function(t) {
+    const tx = svgEl("text", {x: X(t), y: H - padB + 22, "font-size": 12, fill: MUT, "font-family": MONO, "text-anchor": "middle"})
+    tx.textContent = t
+    svg.appendChild(tx)
+  })
+  const yticks = [-800, -750, -700, -650]
+  yticks.forEach(function(v) {
+    const tx = svgEl("text", {x: padL - 10, y: Y(v) + 5, "font-size": 12, fill: MUT, "font-family": MONO, "text-anchor": "end"})
+    tx.textContent = v
+    svg.appendChild(tx)
+  })
+  const pts = []
+  Array.from({length: 101}).forEach(function(_, i) {
+    const t = 25 * (i / 100)
+    pts.push([t, -654 - (-654 + 812) * Math.exp(-0.18 * t)])
+  })
+  const d = pts.map(function(p, i) { return (i === 0 ? "M" : "L") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1) }).join(" ")
+  const path = svgEl("path", {d: d, fill: "none", stroke: INDIGO, "stroke-width": 3, "stroke-dasharray": "7 5"})
+  const tip = svgEl("title", {})
+  tip.textContent = "log likelihood rises from -812 to -654 over 25 iterations, never decreasing (illustrative trend between lesson anchors)"
+  path.appendChild(tip)
+  svg.appendChild(path)
+  const c1 = svgEl("circle", {cx: X(0), cy: Y(-812), r: 6, fill: INDIGO})
+  const t1 = svgEl("title", {})
+  t1.textContent = "start: -812 (lesson anchor)"
+  c1.appendChild(t1)
+  svg.appendChild(c1)
+  const c2 = svgEl("circle", {cx: X(25), cy: Y(-654), r: 6, fill: INDIGO})
+  const t2 = svgEl("title", {})
+  t2.textContent = "after 25 iterations: -654 (lesson anchor)"
+  c2.appendChild(t2)
+  svg.appendChild(c2)
+  const xl = svgEl("text", {x: W / 2, y: H - 8, "font-size": 13, fill: MUT, "font-family": SANS, "text-anchor": "middle"})
+  xl.textContent = "EM iteration (dotted trend: illustrative)"
+  svg.appendChild(xl)
+  host.appendChild(svg)
+}
+
+function mulberry32(a) {
+  return function() {
+    a = a | 0
+    a = (a + 0x6D2B79F5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function toyData() {
+  const rnd = mulberry32(7)
+  const pts = []
+  const g = function() { return (rnd() + rnd() + rnd() - 1.5) * 2 }
+  Array.from({length: 22}).forEach(function() { pts.push([130 + g() * 40, 150 + g() * 34]) })
+  Array.from({length: 22}).forEach(function() { pts.push([260 + g() * 40, 90 + g() * 34]) })
+  return pts
+}
+
+function kmeans(pts, seeds) {
+  let mu = seeds.map(function(s) { return [s[0], s[1]] })
+  const js = []
+  const hist = []
+  let assign = []
+  let iter = 0
+  while (true) {
+    assign = pts.map(function(p) {
+      const d0 = (p[0] - mu[0][0]) * (p[0] - mu[0][0]) + (p[1] - mu[0][1]) * (p[1] - mu[0][1])
+      const d1 = (p[0] - mu[1][0]) * (p[0] - mu[1][0]) + (p[1] - mu[1][1]) * (p[1] - mu[1][1])
+      return d0 <= d1 ? 0 : 1
+    })
+    const J = pts.reduce(function(s, p, i) {
+      const m = mu[assign[i]]
+      return s + (p[0] - m[0]) * (p[0] - m[0]) + (p[1] - m[1]) * (p[1] - m[1])
+    }, 0)
+    js.push(J)
+    hist.push([assign.slice(), mu.map(function(m) { return [m[0], m[1]] })])
+    iter += 1
+    const nm = [0, 1].map(function(j) {
+      const cl = pts.filter(function(_, i) { return assign[i] === j })
+      if (cl.length === 0) { return mu[j] }
+      return [cl.reduce(function(s, p) { return s + p[0] }, 0) / cl.length, cl.reduce(function(s, p) { return s + p[1] }, 0) / cl.length]
+    })
+    const moved = Math.abs(nm[0][0] - mu[0][0]) + Math.abs(nm[0][1] - mu[0][1]) + Math.abs(nm[1][0] - mu[1][0]) + Math.abs(nm[1][1] - mu[1][1])
+    mu = nm
+    if (moved < 1e-6 || iter >= 20) { break }
+  }
+  return {js: js, final: hist[hist.length - 1]}
+}
+
+function drawKmeans(res) {
+  const svg = document.getElementById("kmsvg")
+  svg.innerHTML = ""
+  const colors = [INDIGO, CLAY]
+  res.final[0].forEach(function(a, i) {
+    const p = ptsGlobal[i]
+    const c = svgEl("circle", {cx: p[0], cy: p[1], r: 5, fill: colors[a], opacity: 0.85})
+    const tip = svgEl("title", {})
+    tip.textContent = "point in cluster " + (a + 1)
+    c.appendChild(tip)
+    svg.appendChild(c)
+  })
+  res.final[1].forEach(function(m, j) {
+    const r = svgEl("rect", {x: m[0] - 7, y: m[1] - 7, width: 14, height: 14, fill: "#fffdf8", stroke: INK, "stroke-width": 2.5})
+    const tip = svgEl("title", {})
+    tip.textContent = "centroid " + (j + 1)
+    r.appendChild(tip)
+    svg.appendChild(r)
+  })
+}
+
+let ptsGlobal = []
+
+document.addEventListener("DOMContentLoaded", function() {
+  jChart()
+  emChart()
+  ptsGlobal = toyData()
+
+  function run(seedId) {
+    const seeds = {
+      kmb1: [[140, 160], [250, 80]],
+      kmb2: [[60, 200], [80, 185]],
+      kmb3: [[200, 60], [200, 180]]
+    }
+    const res = kmeans(ptsGlobal, seeds[seedId])
+    drawKmeans(res)
+    const out = document.getElementById("kmout")
+    out.innerHTML = ""
+    out.appendChild(el("span", "chip", "iterations: " + res.js.length))
+    out.appendChild(el("span", "chip plain", "J: " + res.js.map(function(v) { return Math.round(v) }).join(" -> ")))
+    const mono = res.js.every(function(v, i) { return i === 0 || v <= res.js[i - 1] + 1e-9 })
+    out.appendChild(el("span", mono ? "chip eow" : "chip plain", mono ? "J monotone non-increasing" : "J increased: bug"))
+    out.appendChild(el("span", "chip", "final J: " + Math.round(res.js[res.js.length - 1])))
+  }
+  document.getElementById("kmb1").addEventListener("click", function() { run("kmb1") })
+  document.getElementById("kmb2").addEventListener("click", function() { run("kmb2") })
+  document.getElementById("kmb3").addEventListener("click", function() { run("kmb3") })
+
+  document.getElementById("embtn").addEventListener("click", function() {
+    const x = parseFloat(document.getElementById("emx").value)
+    const out = document.getElementById("emout")
+    out.innerHTML = ""
+    if (!isFinite(x)) {
+      out.appendChild(el("span", "chip plain", "a real x"))
+      return
+    }
+    const gauss = function(v, m) { return Math.exp(-0.5 * (v - m) * (v - m)) / Math.sqrt(2 * Math.PI) }
+    const n1 = 0.5 * gauss(x, -1.97)
+    const n2 = 0.5 * gauss(x, 2.03)
+    const w1 = n1 / (n1 + n2)
+    const w2 = n2 / (n1 + n2)
+    out.appendChild(el("span", "chip", "w(x = " + x + " | comp 1) = " + w1.toFixed(3)))
+    out.appendChild(el("span", "chip", "w(comp 2) = " + w2.toFixed(3)))
+    const hard = Math.abs(w1 - w2) < 0.2
+    out.appendChild(el("span", hard ? "chip eow" : "chip plain", hard ? "soft: the point is genuinely uncertain" : "hard: the point nearly commits"))
+  })
+})
+
+</script>
+</body>
+</html>
