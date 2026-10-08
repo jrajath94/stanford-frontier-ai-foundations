@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inference algorithms and serving · CS336</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.pairtable td.rank{font-weight:700}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS336 · Unit 11 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Inference algorithms and serving</h1>
+<p class="dek">The first token is slow, the rest are expensive. This companion walks the inference unit: prefill vs decode, the KV cache, sharing, continuous batching, paging, speculative decoding, sampling controls, quantization, latency tails, and the load-quality-cost triangle.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>u11_inference.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no full lecture transcript exists for this session. The page narrates the lesson document <code>content/v2/cs336/lessons/u11_inference.md</code>, not a video. Claim class: REQUESTED-BRANCH. Standing note: no GPU on the lesson's build box. Serving claims are time models and numpy simulations. Reference inference model: L=32. Every number carries the lesson section that reports it.</p>
+</div>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Two phases</a>
+<a href="#s2">2 KV cache</a>
+<a href="#s3">3 Sharing</a>
+<a href="#s4">4 Batching</a>
+<a href="#s5">5 Speculation</a>
+<a href="#s6">6 Sampling</a>
+<a href="#s7">7 Shrinking</a>
+<a href="#s8">8 Tails</a>
+<a href="#s9">9 Triangle</a>
+<a href="#s10">10 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<figure>
+<img class="illus" src="assets/u11-hero-phases.jpg" alt="Watercolor of a wide fast river beside a narrow winding stream">
+<figcaption><span class="tag tag-toy">Illustration</span> Prefill and decode as two waterways: the wide fast one processes the whole prompt at once, the narrow one carries one token at a time. Watercolor, original to this companion.</figcaption>
+</figure>
+<section class="block" id="s1">
+<p class="secnum">Section 1 · Remediation, C01</p>
+<h2>Two phases, opposite bottlenecks</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation, C01 §2, §5, §6</span></p>
+<p>Why is the first token slow and the rest fast-ish but expensive? Inference has two phases. Prefill processes the whole prompt at once: compute-bound, like training. Decode generates one token at a time: memory-bound, because each step re-reads all the weights. The lesson's toy from <code>compute_u11.py</code>: prefill at T=2048 has intensity about 2048 FLOP/byte, decode sits at 1.0 FLOP/byte. One decode token reads 14.0 GB of weights on the 7B bf16 reference. Prefill is a wide matmul: the weights are read once and reused across T tokens. Decode is a skinny matvec: the weights are read once per token. Same weights, opposite bottlenecks. Decode FLOPs per token are about 2N, bytes read about 2N: intensity about 1 FLOP/byte. Prefill reuses each weight read across T positions: intensity about T. The roofline knee decides which side each phase lands on.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §9, §10, §11</span></p>
+<p>The toy ignores attention FLOPs in prefill (O(T^2)) and the KV write cost. At long T, prefill attention dominates. Split long prompts into chunks (chunked prefill) when prefill latency spikes. Use plain prefill otherwise. The failure case: batch 64 at T=8192, where the KV cache alone is 68.7 GB and decode stops being a pure weight-read story. The assumption "decode reads only weights" breaks. Cache traffic joins the bottleneck.</p>
+</div>
+<figure>
+<div id="chart-phases"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §6</span> Arithmetic intensity in FLOP/byte: prefill at T=2048 is compute-bound at about 2048, decode is memory-bound at 1.0. From <code>visuals/compute_u11.py</code> (executed 2026-10-06).</figcaption>
+</figure>
+<div class="nugget" id="nugget-phases">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation, C01</span></h4>
+<p class="big">Prefill is compute-bound, decode is memory-bound. Every serving decision below flows from this split.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The two phases want opposite optimizations. Any serving plan that treats generation as one phase misprices both.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When one workload has two phases with opposite bottlenecks, optimize them separately.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C02</p>
+<h2>Where the memory goes</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §5, §6</span></p>
+<p>Where does the memory go during a long generation? Each decode step appends one K and one V vector per layer per head. The cache grows linearly in tokens. It is the price of never recomputing attention over the past. 2 (K and V) x 32 layers x 8 heads x 128 dims x 2 bytes = 131,072 bytes per token. The lesson's run, executed 2026-10-06: 128.0 KB per token. Batch 1 at T=2048 needs 0.27 GB, batch 16 at T=4096 needs 8.59 GB, batch 64 at T=8192 needs 68.72 GB.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §9, §10, §11</span></p>
+<p>The cache competes with weights and activations for HBM. At 68.7 GB it exceeds the 14 GB weights by 5x. Recomputing K/V from scratch each step costs quadratic work. The cache always wins past a few dozen tokens. The failure case: the lesson assumes 8 KV heads (GQA). With full MHA (32 KV heads) the per-token cost is 512 KB, 4x more, and the batch-16 case jumps to 34 GB. The assumption "8 KV heads" breaks per architecture. Recompute per model.</p>
+</div>
+<figure>
+<div id="chart-kv"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §6</span> KV cache bytes for three (batch, T) pairs: 0.27, 8.59, 68.72 GB. From <code>visuals/compute_u11.py</code> (executed 2026-10-06).</figcaption>
+</figure>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §5</span> KV cache toy. 128 KB per token on the reference.</p>
+<p class="small">Batch <input class="text" id="kvb" value="16" style="max-width:70px" aria-label="Batch"> Tokens <input class="text" id="kvt" value="4096" style="max-width:70px" aria-label="Tokens"></p>
+<p><button class="btn" id="kvbtn">Compute cache</button></p>
+<p class="small" id="kvout">Press the button.</p>
+<p class="small muted">At the defaults: 16 × 4096 × 128 KB = 8.59 GB, matching C02 §6.</p>
+</div>
+<div class="nugget" id="nugget-cache">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02</span></h4>
+<p class="big">128 KB per token. At batch 64 and T=8192 the cache is 68.72 GB: 5x the weights.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The cache, not the weights, sets the batch limit at long context. Capacity planning starts here.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Price the auxiliary structure, not just the artifact. The cache is the real tenant.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C03, C09</p>
+<h2>Sharing and reusing prefixes</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §5, §6</span></p>
+<p>Ten requests share a 2000-token system prompt. Do you store it ten times? The prefix K/V depends only on the prefix tokens, not on who asked. Store it once, point every request at it. K/V are deterministic functions of the input tokens (no sampling inside). Identical inputs give identical cache blocks, so one copy serves all readers. From the C02 per-token value: unshared 2.62 GB, shared once 0.26 GB, saving 2.36 GB. Sharing is a memory optimization with zero quality change. The cost: reference counting and eviction. A shared block cannot be freed while any request reads it. The bookkeeping is small, the bug surface is real. The failure case: prefixes that differ by one token share nothing. The hash is all-or-nothing. The assumption "prefixes match" breaks with per-user system prompts, and sharing saves zero.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §5, §6</span></p>
+<p>A chat session sends the full history every turn. Must the prefill redo it all? No. With the prefix cache, turn n reuses turns 1 through n-1 and prefills only the new tokens. The lesson's toy: history 1500 tokens, new turn 100. Prefill work falls from 1600 to 100 token-equivalents. The cache saves 1500 x 128 KB = 192 MB of recompute traffic per turn, plus the attention FLOPs. Storing per-session caches costs memory between turns. The eviction policy decides the hit rate. The failure case: the template version changes mid-session. Token sequences shift and the cache is silently wrong if the hash ignores the template. The assumption "template fixed" breaks. Version the cache key.</p>
+</div>
+<div class="nugget" id="nugget-share">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03</span></h4>
+<p class="big">Store the shared prefix once: 2.62 GB unshared becomes 0.26 GB. Zero quality change.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Identical inputs give identical blocks. Sharing is free memory with no tradeoff, which is rare enough to take.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When many consumers share an input, store the derived state once and reference it.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C04, C05</p>
+<h2>Batching without the wait</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §5, §6</span></p>
+<p>Four requests take 100, 400, 250, 800 steps. Static batching waits 800 steps for all. At each decode iteration, evict finished sequences and insert waiting ones (after their prefill). Slot utilization stays near 100 percent whenever the queue is nonempty. The lesson's run, executed 2026-10-06: continuous batching with 2 slots finishes the same token count in 775 steps of slot-time against 800 steps of wall time for the static batch, and new requests start immediately instead of waiting for the batch. Static batching is a bus that waits for every passenger. Continuous batching is a taxi rank: a finished request leaves, a new one takes its slot at the next iteration. No slot idles while work waits. The cost: prefill of an inserted request stalls the decode batch for one iteration (the prefill/decode interference). Chunked prefill (C01) bounds the stall. The failure case: all requests arrive at once with identical length. Continuous batching gains nothing over static. The assumption "lengths vary" breaks, and the extra scheduler complexity buys zero.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §5, §6</span></p>
+<p>Requests have different lengths. Contiguous allocation wastes the gaps. Operating-system paging for the KV cache: split each sequence into fixed blocks, allocate blocks on demand, translate logical position to physical block. Waste drops to less than one block per sequence. Contiguous reserves max length per slot: waste = (maxT*n - sum)/(maxT*n). Paged reserves ceil(len/16) blocks: waste under 16 tokens per sequence. The lesson's run on lengths [512, 2048, 4096, 1024, 3072, 1536], executed 2026-10-06: contiguous waste 50.0 percent, paged waste with block 16 is 0.0 percent (all lengths are multiples of 16 here). The attention kernel must gather through the block table: extra indirection per memory access. Block size trades waste against table size. The failure case: block size 4096 with 100-token requests. Internal fragmentation returns and paging saves nothing. The assumption "block much smaller than length" breaks. Size blocks to the workload.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u11-taxi.jpg" alt="Watercolor of taxis at a stand, one departing and one arriving">
+<figcaption><span class="tag tag-toy">Illustration</span> Continuous batching as a taxi rank: finished requests leave, new ones take the slot at the next iteration. No slot idles while work waits. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-taxi">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04</span></h4>
+<p class="big">The taxi rank beats the bus whenever request lengths vary, which is always.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Iteration-level scheduling removes the tail wait for free. Static batching is the baseline you beat.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Replace lockstep batches with slot-level turnover when work items have different lengths.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C06, C07</p>
+<h2>Speculative decoding</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §5, §6</span></p>
+<p>A small model guesses 3 tokens, the big model checks them in one pass. When does this win? The draft model proposes, the target model disposes in a single parallel verify. Accepted tokens are free. A rejection costs the draft work but still yields the corrected token. Throughput follows the acceptance rate. Expected accepted run length for k drafts: E = (1 - alpha^{k+1})/(1 - alpha). Cost per step = k*c_draft + 1. Speedup = E / cost. The lesson's run, executed 2026-10-06: alpha = 0.7, k = 3 gives E = 2.53 tokens per verify step, with draft cost 0.1 the speedup is 1.95x. More: 0.3 gives 1.09x, 0.5 gives 1.44x, 0.9 gives 2.65x. Draft forwards cost memory bandwidth too. k too large wastes draft work on likely rejections. The failure case: draft and target disagree on style (different fine-tunes). Alpha collapses to 0.2 and the speedup falls below 1. The assumption "draft approximates target" breaks. Align the draft or drop the scheme.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §5, §6</span></p>
+<p>If the draft is wrong half the time, does the output still match the big model? Yes, with the right acceptance rule: accept token x with probability min(1, p_target(x)/p_draft(x)), else resample from the adjusted distribution. Rejection sampling: the draft proposes, the target corrects. The acceptance probability exactly compensates the proposal bias. The output law equals the target law, token by token. On rejection, sample from norm(max(0, p - q)). The lesson's toy: p = [0.7, 0.3], q = [0.5, 0.5]. Token 1 accepted with min(1, 1.4) = 1.0, token 2 with min(1, 0.6) = 0.6. The mixture recovers p. Exactness costs the resampling branch and the extra distribution arithmetic. Approximate acceptance (always take the draft) is cheaper and wrong. The failure case: a draft with zero mass on a token the target can emit. The support assumption breaks and exactness fails. The fix is a draft with full support (temperature above 0).</p>
+</div>
+<figure>
+<div id="chart-spec"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §6</span> Speculative speedup at k=3, draft cost 0.1, across acceptance rates: 1.09x, 1.44x, 1.95x, 2.65x. From <code>visuals/compute_u11.py</code> (executed 2026-10-06).</figcaption>
+</figure>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §5</span> Speculation toy. E = (1 - alpha^{k+1})/(1 - alpha), speedup = E/(k × 0.1 + 1).</p>
+<p class="small">Acceptance alpha <input class="text" id="spa" value="0.7" style="max-width:70px" aria-label="Acceptance rate"> Drafts k <input class="text" id="spk" value="3" style="max-width:70px" aria-label="Draft count"></p>
+<p><button class="btn" id="spbtn">Compute speedup</button></p>
+<p class="small" id="spout">Press the button.</p>
+<p class="small muted">At the defaults: E = 2.53 tokens per verify, speedup 1.95x, matching C06 §6.</p>
+</div>
+<div class="nugget" id="nugget-spec">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06</span></h4>
+<p class="big">Throughput follows the acceptance rate: 0.7 gives 1.95x, 0.3 gives 1.09x.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Speculation is only as good as the draft's agreement with the target. Measure alpha before you commit.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>A cheap guess plus an exact verifier beats a slow exactor, but only if the guesses are good.</dd>
+</dl>
+</div>
+<div class="nugget" id="nugget-exact">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07</span></h4>
+<p class="big">Accept with min(1, p_target/p_draft), else resample from norm(max(0, p - q)). The output law equals the target law.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Speed without exactness is a different model. The acceptance rule keeps the speedup honest.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When a fast heuristic proposes, correct with the exact acceptance rule to keep the output distribution unchanged.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C08</p>
+<h2>Sampling controls</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §5, §6</span></p>
+<p>Logits [3, 2, 1, 0]: what does temperature do? Temperature divides the logits: low temp sharpens, high temp flattens. Top-p keeps the smallest set with cumulative mass p. Top-k keeps k tokens. All three trade diversity against focus. p_i = softmax(z_i / T). As T goes to 0, p concentrates on the argmax. As T goes to infinity, p flattens to uniform. Top-p truncates and renormalizes. The lesson's run, executed 2026-10-06: temp 0.5 gives top-1 prob 0.865 and entropy 0.66 bits. Temp 1.0 gives 0.644 and 1.37 bits. Temp 2.0 gives 0.455 and 1.80 bits. Top-p 0.9 keeps 3 of 4 tokens. Truncation discards tail mass that sometimes holds the right answer. Temperature 0 kills diversity and exploration. Beam search is the deterministic, expensive alternative for exact-ish decoding. Sampling is for diversity and pass@k metrics. The failure case: top-p 0.9 on a flat distribution keeps nearly everything. The control does nothing. The assumption "the head holds the mass" breaks on high-entropy steps.</p>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C10</p>
+<h2>Shrinking the serving artifact</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §5, §6</span></p>
+<p>The 7B model needs 14.0 GB in fp16. What do int8 and int4 buy? Memory = N x bytes-per-param. Halving the bits halves the weight traffic per decode token, which is the decode bottleneck (C01). The lesson's run, executed 2026-10-06: int8 7.0 GB, int4 3.50 GB. The quality delta is not computed here: it must be measured on evals (U12), never assumed. Quantization stores weights in fewer bits. The matmul may dequantize on the fly or compute in low precision. Distillation trains a small student on a big teacher's outputs: a different, smaller model, not a compressed one. Quality risk concentrates in outliers and at small scales. Calibration data and evals (U12) are the real cost. Distill (new small model, needs teacher outputs and training) instead of overtraining from scratch. Quantize (same model, needs evals) for fast wins. The failure case: per-tensor int4 on a model with large activation outliers. Quality collapses on math tasks while prose looks fine. The assumption "quality holds" breaks. Evaluate per capability slice (U12-C10).</p>
+</div>
+<figure>
+<div id="chart-quant"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §6</span> Serving footprint of the 7B model: fp16 14.0 GB, int8 7.0 GB, int4 3.50 GB. From <code>visuals/compute_u11.py</code> (executed 2026-10-06).</figcaption>
+</figure>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C11</p>
+<h2>The p99 decides</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §5, §6</span></p>
+<p>Mean latency looks fine, but users complain. What is the tail? TTFT measures prefill plus queueing. TPOT measures decode pacing. Means hide the tail. The p99 decides the user experience. For an exponential with mean m, p99 = m * ln(100) = 4.6m. The lesson's toy with exponential service times, executed 2026-10-06: TTFT mean 120 ms, p99 533 ms. TPOT mean 8.0 ms, p99 38.1 ms. The p99 is 4-5x the mean. The toy shows 533/120 = 4.4 and 38.1/8 = 4.8, matching the theory within sampling noise. Real tails come from queueing, prefill interference, and retries, not just service variance. The toy understates the real p99. SLOs on p50 are cheap to meet while users still suffer. SLOs on p99 are the honest contract for user-facing serving. The failure case: a traffic spike makes queueing dominate. p99 explodes while the service-time toy stays calm. The assumption "no queueing" breaks. Model the queue (C12).</p>
+</div>
+<div class="nugget" id="nugget-p99">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11</span></h4>
+<p class="big">The p99 is 4-5x the mean: TTFT 120/533 ms, TPOT 8.0/38.1 ms. Means hide the tail.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The SLO that matters is the one users feel. p50 SLOs are cheap to meet and worth little.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Report the tail, not the mean. The 99th percentile is the honest contract.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C12</p>
+<h2>Load, quality, cost: pick the edge</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §5, §6</span></p>
+<p>Load doubles. What gives: quality, cost, or latency? Something must: serve a smaller/quantized model (quality), add GPUs (cost), or let the queue grow (latency). A triangle with load, quality, and cost at the corners. Latency is the slack variable. Every serving decision moves along an edge. Name the edge before deciding. Capacity per GPU = 1 / (mean service time). GPUs needed = peak RPS / capacity, rounded up with headroom. Quality enters through the model choice, cost through the GPU count. The lesson's toy: TPOT 8 ms/token, 100 output tokens: 0.8 s decode per request per GPU slot. At 10 RPS with 2 slots per GPU, 5 GPUs serve the mean load. The p99 needs headroom on top. The toy ignores prefill, batching efficiency, and traffic shape. Real sizing needs the measured distributions. Overprovision is simple and expensive. Autoscale is complex and lags spikes. A fixed pool with queue SLOs is the middle path. The failure case: provisioned for the mean RPS. The p99 traffic hour queues and the SLO burns. The assumption "mean load" breaks. Provision for a high quantile of demand.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u11-triangle.jpg" alt="Watercolor of a brass mobile with three hanging weights at the corners of a triangle">
+<figcaption><span class="tag tag-toy">Illustration</span> The serving triangle as a mobile: load, quality, and cost at the corners, latency as the slack that absorbs the tilt. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-edge">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12</span></h4>
+<p class="big">Something must give: smaller model, more GPUs, or a longer queue. Name the edge before deciding.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The triangle makes the tradeoff explicit. Unnamed tradeoffs get paid in the currency you did not choose.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>For any three-way tradeoff, name which edge you are on before you decide.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · Synthesis</p>
+<h2>The serving stack, end to end</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span> The arc, end to end. Prefill is compute-bound, decode is memory-bound (remediation, C01). The KV cache grows at 128 KB per token and sets the batch limit (C02). Shared prefixes store once (C03). Growing prefixes append (C09). Continuous batching turns the bus into a taxi rank (C04). Paging kills fragmentation (C05). Speculation converts acceptance rate into speedup, exactly (C06, C07). Temperature, top-p, and top-k reshape the distribution (C08). Quantization halves the weight traffic per bit halved. The quality delta is measured, never assumed (C10). The p99 is 4-5x the mean (C11). Load, quality, and cost form the triangle. Latency is the slack (C12).</p>
+<p><span class="tag tag-lesson">From the lesson</span> Where the unit points next, in the lesson's own forward links: U06 supplies the roofline that classifies the two phases. U09 supplies the inference-parallelism choice (TP for latency, PP for throughput). U10 supplies the inference-optimal objective that decides model size. U12 supplies the evals that certify quantization and distillation quality.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>8 nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-phases"><span class="wnum">01</span>Optimize the two phases separately <span class="muted">· Remediation, C01</span></a></li>
+<li><a href="#nugget-cache"><span class="wnum">02</span>Price the auxiliary structure <span class="muted">· C02</span></a></li>
+<li><a href="#nugget-share"><span class="wnum">03</span>Store the shared prefix once <span class="muted">· C03</span></a></li>
+<li><a href="#nugget-taxi"><span class="wnum">04</span>Turn the bus into a taxi rank <span class="muted">· C04</span></a></li>
+<li><a href="#nugget-spec"><span class="wnum">05</span>Measure alpha before you commit <span class="muted">· C06</span></a></li>
+<li><a href="#nugget-exact"><span class="wnum">06</span>Keep the speedup honest <span class="muted">· C07</span></a></li>
+<li><a href="#nugget-p99"><span class="wnum">07</span>Report the tail, not the mean <span class="muted">· C11</span></a></li>
+<li><a href="#nugget-edge"><span class="wnum">08</span>Name the edge before you decide <span class="muted">· C12</span></a></li>
+</ol>
+</section>
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>content/v2/cs336/lessons/u11_inference.md</code>. No full lecture transcript exists for this session. Quoted words from the lesson source: 22. No lecture anecdotes appear. Claim class REQUESTED-BRANCH. The charts re-plot the lesson's computed numbers with section citations. The lab script is <code>visuals/compute_u11.py</code>, executed 2026-10-06. Interactive toys run the lesson's formulas and are labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p class="small">Readings and forward links named by the lesson: U06 (roofline), U09 (inference parallelism), U10 (inference-optimal), U12 (evals).</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>.</p>
+</footer>
+</div>
+<script>
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  const keys = Object.keys(attrs)
+  keys.forEach(function(k) { n.setAttribute(k, attrs[k]) })
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function barChart(id, rows, maxV, unit, labelW) {
+  labelW = labelW || 210
+  const host = document.getElementById(id)
+  const W = 760
+  const rowH = 46
+  const padT = 14
+  const padB = 10
+  const H = padT + rows.length * rowH + padB
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  rows.forEach(function(r, i) {
+    const y = padT + i * rowH
+    const lab = svgEl("text", {x: 12, y: y + 27, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - labelW - 110) * (r[1] / maxV)
+    const bar = svgEl("rect", {x: labelW, y: y + 9, width: Math.max(bw, 3), height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1] + unit
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: labelW + Math.max(bw, 3) + 10, y: y + 27, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1] + unit
+    svg.appendChild(val)
+  })
+  host.appendChild(svg)
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id)
+  const data = opts.data
+  const W = 760
+  const H = 400
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const yMin = opts.yMin
+  const yMax = opts.yMax
+  function X(i) { return mL + i * ((W - mL - mR) / (data.length - 1)) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / (yMax - yMin)) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const grids = opts.grid || []
+  grids.forEach(function(g) {
+    svg.appendChild(svgEl("line", {x1: mL, x2: W - mR, y1: Y(g), y2: Y(g), stroke: "#e2d7c2", "stroke-width": 1}))
+    const t = svgEl("text", {x: 10, y: Y(g) + 5, "font-size": 13, fill: MUT, "font-family": SANS})
+    if (opts.yfmt) { t.textContent = opts.yfmt(g) } else { t.textContent = String(g) }
+    svg.appendChild(t)
+  })
+  let d = ""
+  data.forEach(function(v, i) {
+    if (i === 0) { d = d + "M" } else { d = d + "L" }
+    d = d + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "
+  })
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  data.forEach(function(v, i) {
+    const c = svgEl("circle", {cx: X(i), cy: Y(v), r: 8, fill: CLAY})
+    const tip = svgEl("title", {})
+    tip.textContent = opts.tip(i, v)
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const xl = svgEl("text", {x: X(i), y: H - 32, "font-size": 13, fill: MUT, "text-anchor": "middle", "font-family": SANS})
+    xl.textContent = opts.xlabels[i]
+    svg.appendChild(xl)
+  })
+  if (opts.ylabel) {
+    const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+    yl.textContent = opts.ylabel
+    svg.appendChild(yl)
+  }
+  if (opts.xlabel) {
+    const xcap = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+    xcap.textContent = opts.xlabel
+    svg.appendChild(xcap)
+  }
+  host.appendChild(svg)
+}
+
+
+barChart("chart-phases", [
+  ["Prefill at T=2048", 2048, INDIGO],
+  ["Decode", 1, CLAY]
+], 2100, " FLOP/byte", 170)
+
+barChart("chart-kv", [
+  ["batch 1, T=2048", 0.27, INDIGO],
+  ["batch 16, T=4096", 8.59, CLAY],
+  ["batch 64, T=8192", 68.72, SAGE]
+], 70, " GB", 170)
+
+barChart("chart-spec", [
+  ["alpha 0.3", 1.09, INDIGO],
+  ["alpha 0.5", 1.44, INDIGO],
+  ["alpha 0.7", 1.95, CLAY],
+  ["alpha 0.9", 2.65, SAGE]
+], 2.8, "x", 170)
+
+barChart("chart-quant", [
+  ["fp16", 14.0, INDIGO],
+  ["int8", 7.0, CLAY],
+  ["int4", 3.5, SAGE]
+], 14.5, " GB", 170)
+
+function renderKv() {
+  const b = parseFloat(document.getElementById("kvb").value) || 16
+  const t = parseFloat(document.getElementById("kvt").value) || 4096
+  const gb = b * t * 128 * 1024 / 1e9
+  const o = document.getElementById("kvout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "Cache = " + b + " × " + t + " × 128 KB = " + gb.toFixed(2) + " GB."))
+  let note = "At the defaults: 8.59 GB, matching C02 §6."
+  if (Math.abs(gb - 8.59) / 8.59 > 0.01) { note = "The lesson's cases: 0.27, 8.59, 68.72 GB (C02 §6)." }
+  o.appendChild(el("p", "small muted", note))
+}
+document.getElementById("kvbtn").addEventListener("click", renderKv)
+renderKv()
+
+function renderSp() {
+  const a = parseFloat(document.getElementById("spa").value) || 0.7
+  const k = parseFloat(document.getElementById("spk").value) || 3
+  const e = (1 - Math.pow(a, k + 1)) / (1 - a)
+  const su = e / (k * 0.1 + 1)
+  const o = document.getElementById("spout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "E = " + e.toFixed(2) + " tokens per verify step, speedup = " + su.toFixed(2) + "x."))
+  let note = "At the defaults: E = 2.53, speedup 1.95x, matching C06 §6."
+  if (Math.abs(su - 1.95) / 1.95 > 0.05) { note = "The lesson's table: 1.09x, 1.44x, 1.95x, 2.65x across alpha 0.3 to 0.9 (C06 §6)." }
+  o.appendChild(el("p", "small muted", note))
+}
+document.getElementById("spbtn").addEventListener("click", renderSp)
+renderSp()
+
+
+</script>
+</body>
+</html>
