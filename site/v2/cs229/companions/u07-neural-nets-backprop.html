@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U07 Companion: Neural networks and backpropagation · CS229</title>
+<style>
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+input.range{width:100%}
+input.range{max-width:420px}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+.hist{border:1px solid var(--line)}
+.hist{border-radius:10px}
+.hist{background:#fffdf8}
+.hist{padding:6px}
+.hist{margin:16px 0}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS229 · Unit 07 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Neural networks and backpropagation</h1>
+<p class="dek">House prices cannot go negative. A line says they can. This companion walks the full arc of Unit 07: the ReLU kink, the module zoo, initialization, backpropagation as message passing, batch vectorization, gradient checks, and the failure catalog.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>lesson-07-neural-nets-backprop.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no lecture transcript exists for this unit, and no lecture video is named in the lesson. The lesson's Source mapping states that SRC-01 chapter 7 (PDF pages 81 to 114) was read in substantial part on 2026-10-06: sections 7.1 to 7.3 and 7.4.1 to 7.4.2 read, 7.4.3 to 7.4.4 only partially. Leaf rows carry SOURCE ATTRIBUTION PENDING until the RUN 6 pass, so the strict fact-vs-interpretation tagging here is the guardrail.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u07-stacked-kinks.jpg" alt="Watercolor of stacked glass panes with kinked lines forming a smooth curve">
+<figcaption><span class="tag tag-toy">Illustration</span> Depth composes simple kinks into complex curves. Each pane bends once. The stack bends smoothly. Watercolor, original to this companion.</figcaption>
+</figure>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Kinks</a>
+<a href="#s2">2 Modules</a>
+<a href="#s3">3 Init</a>
+<a href="#s4">4 Backprop</a>
+<a href="#s5">5 Batching</a>
+<a href="#s6">6 Grad check</a>
+<a href="#s7">7 Failures</a>
+<a href="#s8">8 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<section class="block" id="s1">
+<p class="secnum">Section 1 · SL-01 · C01, C02</p>
+<h2>The kink: one neuron, one floor</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Source anchor, §Mental model</span></p>
+<p>House prices cannot go negative. A line says they can. What is the smallest change that fixes this? One neuron: ReLU(wᵀx + b) = max(wᵀx + b, 0). The kink at zero floors the price. Stack neurons: each hidden unit computes one derived feature. The output layer combines them. Depth composes simple kinks into complex curves.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Objects</span></p>
+<p>Two-layer net: zⱼ = wⱼ⁽¹⁾ᵀx + bⱼ⁽¹⁾, aⱼ = ReLU(zⱼ), output = w⁽²⁾ᵀa + b⁽²⁾. x in R^d, m hidden units, wⱼ⁽¹⁾ in R^d, w⁽²⁾ in R^m. Vectorized: Z⁽¹⁾ = W⁽¹⁾x + b⁽¹⁾, A⁽¹⁾ = ReLU(Z⁽¹⁾), with W⁽¹⁾ in R^(m×d).</p>
+</div>
+<table class="data">
+<tr><th>ReLU neuron: w = 0.3, b = −400</th><th>x = 2000 sqft</th><th>x = 1000 sqft</th></tr>
+<tr><td>Score: 0.3x − 400</td><td class="num">200</td><td class="num">−100</td></tr>
+<tr><td>ReLU(score)</td><td class="num">200 (thousand)</td><td class="num">0, floored</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Computed example</span> The kink floors at zero.</figcaption>
+<figure>
+<div id="chart-relu"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Computed example</span> The line 0.3x − 400 against its ReLU. The kink at x = 1333 floors every prediction below it at zero. Recomputed for this page.</figcaption>
+</figure>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Why the nonlinearity is load-bearing</span></p>
+<p>Stack two linear layers: W⁽²⁾(W⁽¹⁾x) = (W⁽²⁾W⁽¹⁾)x. Still linear. Without activation, depth adds nothing. The activation is what makes depth matter.</p>
+</div>
+<div class="nugget" id="nugget-kink">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Why the nonlinearity is load-bearing</span></h4>
+<p class="big">Without activation, depth adds nothing. Two linear layers collapse to one.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Depth is not the innovation. The kink is. Every layer that lacks a nonlinearity is a layer that does no work.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Complexity that collapses under algebra was never real. Test each added layer for what it changes.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · SL-02 · C03, C08, C10</p>
+<h2>The module zoo</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Source anchor, §The module list</span></p>
+<p>Linear: z = Wx + b, the workhorse. ReLU: max(z, 0), gradient through where z > 0, else zero. Sigmoid and tanh: squashing activations with g(1 − g) backward. Gradients vanish at saturation. Softmax: vector to distribution (U03). Conv1D: zᵢ = Σⱼ wⱼx_{i+j}, shared weights, O(km) time, k parameters against m² for dense.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §The module list</span></p>
+<p>LayerNorm: z → (z − mean)/std, then scale and shift by learnable γ, β. Key property (notes 7.45): LN(αWx) = LN(Wx) for α > 0. Scaling the weights does not change the output. This stabilizes training. RMSNorm: like LayerNorm without mean-centering, used in LLaMA and Qwen (notes 7.51). BatchNorm normalizes over the batch, not the features: different statistics, different train and test behavior.</p>
+</div>
+<table class="data">
+<tr><th>LayerNorm on z = [1, 2, 3]</th><th>Value</th></tr>
+<tr><td>Mean, std</td><td class="num">2, 0.8165</td></tr>
+<tr><td>Normalized</td><td class="num">[−1.2247, 0, 1.2247]</td></tr>
+<tr><td>Scale by α = 5 first: [5, 10, 15]</td><td class="num">mean 10, std 4.0825</td></tr>
+<tr><td>Normalized after scaling</td><td class="num">[−1.2247, 0, 1.2247], identical</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Computed example</span> The invariance, by hand. Recomputed for this page.</figcaption>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The norm probe. Type a vector and a scale α. The toy normalizes z and αz and compares. The lesson's invariance appears as two identical outputs.</p>
+<p>z: <input class="text" id="lnz" value="1, 2, 3" style="max-width:200px" aria-label="z"> α: <input class="text" id="lna" value="5" style="max-width:100px" aria-label="alpha"></p>
+<p><button class="btn" id="lnbtn">Normalize</button></p>
+<div class="chips" id="lnout"></div>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Failure case</span></p>
+<p>Forgetting the model is in train versus eval mode for BatchNorm: test uses stale batch statistics and predictions shift. LayerNorm has no such mode split, one reason language models prefer it.</p>
+</div>
+<div class="nugget" id="nugget-inv">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §The module list</span></h4>
+<p class="big">LN(αWx) = LN(Wx). Scaling the weights changes nothing downstream. The normalization absorbs it.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Invariances remove degrees of freedom the optimizer would otherwise waste steps exploring. The effective parameter space is smaller than the weight count.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Name what your pipeline is invariant to. Each invariance is a direction the optimizer cannot get lost in.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · SL-03 · C09</p>
+<h2>Initialization: break the symmetry</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Source anchor, §Mental model</span></p>
+<p>All weights start at zero. What happens? Every hidden unit computes the same thing, gets the same gradient, and stays identical forever. Symmetry never breaks. Random init breaks it. Scale matters too. Too large, activations explode. Too small, they vanish. Xavier and Kaiming set the variance so the signal keeps its scale across layers: Var(W) = 1/fan_in (Xavier) or 2/fan_in (Kaiming for ReLU).</p>
+</div>
+<table class="data">
+<tr><th>1000×1000 matrix, entries N(0, 1), x unit variance</th><th>Value</th></tr>
+<tr><td>Var(zᵢ)</td><td class="num">1000 × 1 × 1 = 1000</td></tr>
+<tr><td>Explosion per layer</td><td class="num">√1000 ≈ 31.6</td></tr>
+<tr><td>With Xavier scaling 1/√1000</td><td class="num">Var preserved at 1</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Computed example</span> Unscaled init compounds geometrically with depth.</figcaption>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The variance machine. Set fan_in. The toy shows the activation variance after one layer under N(0, 1) init and under Xavier scaling, then compounds it over your chosen depth.</p>
+<p>fan_in: <input class="text" id="ivf" value="1000" style="max-width:120px" aria-label="fan_in"> layers: <input class="text" id="ivl" value="10" style="max-width:100px" aria-label="layers"></p>
+<p><button class="btn" id="ivbtn">Compound</button></p>
+<div class="chips" id="ivout"></div>
+<p class="small muted">After init, activation variance across a batch should be O(1) at every layer. Measure it.</p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Failure case</span></p>
+<p>Zero init on a 3-layer net: the network trains as a linear model no matter the depth. Silent and common in hand-rolled code.</p>
+</div>
+<div class="nugget" id="nugget-sym">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Mental model</span></h4>
+<p class="big">Zero init never breaks symmetry. Every hidden unit learns the same thing forever, and depth is wasted.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The failure is silent: the loss falls, the net looks alive, and it trains as a linear model. Randomness is not noise here. It is the mechanism that lets units differ.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Identical agents with identical updates stay identical. Diversity must be seeded, not hoped for.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · SL-04 · C04, C05, C06</p>
+<h2>Backprop: one forward, one backward, all gradients</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Source anchor, §Mental model</span></p>
+<p>The loss depends on 1e6 parameters through 50 layers. How do we get all 1e6 derivatives without 1e6 forward passes? Forward pass: compute and store every intermediate. Backward pass: start with dJ/dJ = 1 and walk backward. Each module answers one question: given dJ/d(output), what is dJ/d(input) and dJ/d(params)? The chain rule composes these answers. Cost: one forward plus one backward, O(N) total (notes Theorem 7.4.1).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §The backward contract</span></p>
+<p>For u = g(z) with J scalar: dJ/dzᵢ = Σⱼ dJ/duⱼ · dgⱼ/dzᵢ. The map from dJ/du to dJ/dz is linear. The map itself depends on z. Each module implements this map using only local info: its input and the upstream gradient. Vectorized: dJ/dW⁽¹⁾ = (dJ/dZ⁽¹⁾) xᵀ, dJ/db⁽¹⁾ = dJ/dZ⁽¹⁾, dJ/dx = W⁽¹⁾ᵀ (dJ/dZ⁽¹⁾). If Z⁽¹⁾ is (m,), dJ/dZ is (m,), dJ/dW⁽¹⁾ is (m, d). Every backward equation must balance shapes.</p>
+</div>
+<table class="data">
+<tr><th>One ReLU neuron: x = [1, 2], w = [0.5, −0.5], b = 0.5, y = 1</th><th>Forward</th><th>Backward</th></tr>
+<tr><td>z = 0.5 − 1 + 0.5</td><td class="num">0</td><td class="num">-</td></tr>
+<tr><td>a = ReLU(z)</td><td class="num">0</td><td class="num">-</td></tr>
+<tr><td>J = (1/2)(a − y)²</td><td class="num">0.5</td><td class="num">-</td></tr>
+<tr><td>dJ/da = a − y</td><td class="num">-</td><td class="num">−1</td></tr>
+<tr><td>ReLU at z = 0: subgradient, take 0</td><td class="num">-</td><td class="num">dJ/dz = −1 × 0 = 0</td></tr>
+<tr><td>dJ/dw, dJ/db</td><td class="num">-</td><td class="num">[0, 0], 0: dead neuron, nothing learns</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Worked example</span> The dead neuron. Change b to 1.5: z = 1.0, a = 1.0, J = 0, dJ/da = 0, already perfect, no update. Change y to 3: dJ/da = −2, dJ/dz = −2, dJ/dw = [−2, −4], dJ/db = −2.</figcaption>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The neuron lab. The lesson's one-neuron circuit, generalized. Set x, w, b, y. The toy runs the full forward and backward pass and reports whether the neuron is dead or alive.</p>
+<p>x: <input class="text" id="nrx" value="1, 2" style="max-width:120px" aria-label="x"> w: <input class="text" id="nrw" value="0.5, -0.5" style="max-width:140px" aria-label="w"> b: <input class="text" id="nrb" value="0.5" style="max-width:80px" aria-label="b"> y: <input class="text" id="nry" value="1" style="max-width:80px" aria-label="y"></p>
+<p><button class="btn" id="nrbtn">Run the circuit</button></p>
+<div class="chips" id="nrout"></div>
+<p class="small muted">Try b = 1.5, y = 3 to reproduce the lesson's live neuron: dJ/dw = [−2, −4].</p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Failure case</span></p>
+<p>Forgetting to store the forward intermediates: recomputing them wrong, for example with dropout on, gives wrong gradients. Frameworks cache them for this reason. Forward-mode autodiff is efficient for few inputs and many outputs. Reverse mode, backprop, wins for many parameters and one loss.</p>
+</div>
+<div class="nugget" id="nugget-dead">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Worked example</span></h4>
+<p class="big">A dead neuron kills the gradient. z ≤ 0 means dJ/dz = 0, and nothing downstream of the kink learns.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Dead neurons are silent capacity loss. The loss still falls on the living units, so the damage hides in the aggregate.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Monitor the living fraction, not just the loss. Capacity that never activates is capacity you do not have.</dd>
+</dl>
+</div>
+</section>
+<section class="block" id="s5">
+<p class="secnum">Section 5 · SL-05 · C07</p>
+<h2>Batch vectorization: feed the GPU</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Source anchor, §Mental model</span></p>
+<p>Looping over 10,000 examples in Python takes seconds. The GPU sits idle. How do we feed it? Stack B examples into a matrix X of shape (B, d). Z = XWᵀ + b: one matrix multiply does B examples at once. The backward pass is the same story with batched outer products. Mini-batch SGD (notes Algorithm 2) averages B gradients per step: less noise than SGD, more parallelism than full batch.</p>
+</div>
+<table class="data">
+<tr><th>B = 32, d = 10, m = 20</th><th>Shape</th></tr>
+<tr><td>X</td><td class="num">(32, 10)</td></tr>
+<tr><td>W</td><td class="num">(20, 10)</td></tr>
+<tr><td>Z = X @ Wᵀ</td><td class="num">(32, 20)</td></tr>
+<tr><td>dJ/dZ</td><td class="num">(32, 20)</td></tr>
+<tr><td>dJ/dW = (dJ/dZ)ᵀ @ X</td><td class="num">(20, 10)</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Computed example</span> Shapes balance on both sides.</figcaption>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Correctness checks, §Failure case</span></p>
+<p>Batched loss equals the mean of per-example losses: test on B = 4 by hand. dJ/dW from the batch equals the mean of per-example dJ/dW: test this. The failure case: a broadcasting bug, X (B, d) times W (d, m) versus W (m, d). A silent wrong answer if B == m. Shape audits catch it.</p>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · SL-06 · C11</p>
+<h2>Gradient checks: the ultimate arbiter</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Source anchor, §Mental model</span></p>
+<p>You wrote backprop by hand. How do you know it is right? Finite differences: dJ/dθᵢ ≈ [J(θ + h·eᵢ) − J(θ − h·eᵢ)] / (2h). Slow, two forward passes per parameter, but independent of your backward code. Use it on a tiny net with few parameters, compare, then trust backprop at scale.</p>
+</div>
+<table class="data">
+<tr><th>J(w) = (1/2)(ReLU(2w) − 1)² at w = 1, h = 1e−5</th><th>Value</th></tr>
+<tr><td>J(1)</td><td class="num">0.5</td></tr>
+<tr><td>Analytic: dJ/dw = (2 − 1) × 2</td><td class="num">2</td></tr>
+<tr><td>J(1 + h)</td><td class="num">0.50002</td></tr>
+<tr><td>J(1 − h)</td><td class="num">0.49998</td></tr>
+<tr><td>Finite difference</td><td class="num">0.00004 / 2e−5 = 2, match</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Computed example</span> Recomputed for this page: 2.000000000002.</figcaption>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The check machine. The lesson's J(w) = (1/2)(ReLU(2w) − 1)². Move w. The toy compares the analytic derivative against the finite difference with your h.</p>
+<p>w: <input class="range" type="range" id="gcw" min="-1" max="2" step="0.1" value="1" aria-label="w"> <span class="chip" id="gcwv">1.0</span> h: <input class="text" id="gch" value="0.00001" style="max-width:120px" aria-label="h"></p>
+<div class="chips" id="gcout"></div>
+<p class="small muted">Protocol from the lesson: check on a small net, relative error below 1e−5 for smooth modules. At the ReLU kink (w = 0), skip or expect mismatch.</p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Protocol, §Failure case</span></p>
+<p>The check passes before any training run with new backward code. Analytic and numeric agree to 1e−7 on linear modules. The failure case: gradient checking a 1e6-parameter net. Two million forward passes. Check small, scale with confidence. Do not check through dropout or other randomness.</p>
+</div>
+<div class="nugget" id="nugget-arbiter">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Mental model</span></h4>
+<p class="big">The gradient check is the ultimate arbiter. Two implementations that agree were probably both right. One that disagrees is certainly wrong somewhere.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Backprop bugs are silent: the net trains, the loss falls slowly, and nobody knows the gradients are wrong. The check is the only witness that does not share the suspect's code.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Verify clever code with dumb code. The slow independent method is the audit trail.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · SL-07 · C12</p>
+<h2>The failure catalog</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-07 §Source anchor, §The failure catalog</span></p>
+<p>The loss flatlines at a bad value. What broke? Dead ReLUs: a large gradient pushes z below 0 for all data. The neuron never recovers, the gradient is zero there. Diagnose: fraction of zero activations near 1. Fix: lower LR, better init, LeakyReLU. Vanishing gradients: sigmoid and tanh stacks shrink gradients geometrically. Diagnose: gradient norms per layer decay to zero. Fix: ReLU, residuals, normalization. Exploding gradients: large weights compound. Diagnose: gradient norm spikes, loss NaN. Fix: gradient clipping, smaller init, normalization. Bad conditioning: ravines in the loss. Diagnose: slow zigzag progress. Fix: Adam, normalization. Saddle points: gradient zero, not a minimum. Flat regions slow progress.</p>
+</div>
+<figure>
+<div id="chart-vanish"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-07 §Computed example</span> 50-layer sigmoid MLP, each layer scaling the gradient by at most 0.25. Total shrink: 0.25^50 ≈ 7.9e−31. The first layers learn nothing. Log scale. Recomputed for this page.</figcaption>
+</figure>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-07 §Correctness checks</span></p>
+<p>Log gradient norms per layer per 100 steps. A healthy run keeps them within a few orders of magnitude. Activation histograms: not all-saturated, not all-dead.</p>
+</div>
+<div class="nugget" id="nugget-blame">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-07 §Failure case</span></h4>
+<p class="big">Blaming the model for an optimizer failure: the architecture was fine, the learning rate was 10x too high. Always check the training curves first.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Architecture redesign is expensive and slow. A learning-rate fix is one number. The curves tell you which one you need before you pay for the wrong one.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Diagnose the cheap causes first. The failure catalog is ordered by fix cost, not by glamour.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · Synthesis</p>
+<h2>The arc, end to end</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 to SL-07</span></p>
+<p>The arc, end to end. One kink floors the price at zero, and stacking kinks builds curves the line could never draw (SL-01). The modules each carry a forward rule and a backward contract: linear, ReLU, squashing activations, softmax, LayerNorm with its scaling invariance, convolution with shared weights (SL-02). Random init breaks the symmetry that zero init preserves, and Xavier and Kaiming set the scale so the signal survives depth (SL-03).</p>
+<p>Backprop walks the stored intermediates backward from dJ/dJ = 1: one forward plus one backward buys all 1e6 derivatives in O(N) (SL-04). Batches stack into matrices so one multiply feeds the GPU, and mini-batch SGD averages B gradients per step (SL-05). The gradient check arbitrates every hand-written backward pass: finite differences on a tiny net, then trust at scale (SL-06). And when the loss flatlines, read the catalog: dead ReLUs, vanishing or exploding gradients, bad conditioning, saddle flats, and always the training curves before the architecture (SL-07).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">§Research reading, §Nearest alternatives</span></p>
+<p>Where the unit points next, in the lesson's own forward links. Kernel methods (U05): fixed nonlinear features, convex training, no learned representation. Pretrained init (U13): start from a trained model instead of random. Forward-mode autodiff: efficient for few inputs and many outputs. Reverse mode wins for many parameters and one loss. Read SRC-01 chapter 7 in full, finishing 7.4.3 to 7.4.4. The extension: train depth {2, 10, 50} ReLU MLPs on a synthetic task and log per-layer gradient norms. The falsifiable claim: without normalization the 50-layer gradient norm ratio (first to last) exceeds 1e6, and with LayerNorm it stays under 1e2.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>Six nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-kink"><span class="wnum">01</span>Without activation, depth adds nothing <span class="muted">· SL-01</span></a></li>
+<li><a href="#nugget-inv"><span class="wnum">02</span>Scaling the weights changes nothing <span class="muted">· SL-02</span></a></li>
+<li><a href="#nugget-sym"><span class="wnum">03</span>Zero init never breaks symmetry <span class="muted">· SL-03</span></a></li>
+<li><a href="#nugget-dead"><span class="wnum">04</span>A dead neuron kills the gradient <span class="muted">· SL-04</span></a></li>
+<li><a href="#nugget-arbiter"><span class="wnum">05</span>The gradient check is the ultimate arbiter <span class="muted">· SL-06</span></a></li>
+<li><a href="#nugget-blame"><span class="wnum">06</span>Check the training curves first <span class="muted">· SL-07</span></a></li>
+</ol>
+</section>
+
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>v2-pack/cs229/lessons/u07/lesson-07-neural-nets-backprop.md</code> (551 lines, dated 2026-10-06). No lecture transcript and no lecture video exist for this unit, so nothing here quotes the lecturer. Per the lesson's Source mapping, SRC-01 chapter 7 was read in substantial part on 2026-10-06 (sections 7.1 to 7.3 and 7.4.1 to 7.4.2 read, 7.4.3 to 7.4.4 only partially). Every number on this page comes from the lesson's computed examples with section citations: the ReLU toy (200, 0), the LayerNorm hand computation ([−1.2247, 0, 1.2247]), the init variance (1000, 31.6), the neuron backward pass ([0, 0] dead, [−2, −4] live), the batch shapes (32/10/20), the gradient check (0.5, 2, match), the vanishing factor (0.25^50 ≈ 7.9e−31). The charts re-plot those numbers with native tooltips. The watercolor is original to this companion and labeled as such. Interactive toys run the lesson's rules over the lesson's own toy values, with any invented inputs labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p><strong>Quotes.</strong> This page quotes 0 words directly from the source. All phrasing is the companion's.</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>. Seventh of 17 CS229 companions.</p>
+</footer>
+</div>
+<script>
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  for (const k in attrs) { n.setAttribute(k, attrs[k]) }
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function reluChart() {
+  const host = document.getElementById("chart-relu")
+  if (!host) { return }
+  const W = 760
+  const H = 340
+  const padL = 60
+  const padB = 44
+  const padT = 18
+  const X = function(x) { return padL + (x / 3000) * (W - padL - 30) }
+  const Y = function(v) { return padT + (1 - (v + 100) / 600) * (H - padT - padB) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const xticks = [0, 1000, 2000, 3000]
+  xticks.forEach(function(x) {
+    const t = svgEl("text", {x: X(x), y: H - padB + 22, "font-size": 12, fill: MUT, "font-family": MONO, "text-anchor": "middle"})
+    t.textContent = x
+    svg.appendChild(t)
+  })
+  const yticks = [-100, 0, 200, 400]
+  yticks.forEach(function(v) {
+    const t = svgEl("text", {x: padL - 10, y: Y(v) + 5, "font-size": 12, fill: MUT, "font-family": MONO, "text-anchor": "end"})
+    t.textContent = v
+    svg.appendChild(t)
+  })
+  const linePts = []
+  const reluPts = []
+  Array.from({length: 121}).forEach(function(_, i) {
+    const x = 3000 * (i / 120)
+    const s = 0.3 * x - 400
+    linePts.push([x, s])
+    reluPts.push([x, Math.max(0, s)])
+  })
+  const draw = function(pts, color, name) {
+    const d = pts.map(function(p, i) { return (i === 0 ? "M" : "L") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1) }).join(" ")
+    const p = svgEl("path", {d: d, fill: "none", stroke: color, "stroke-width": 3})
+    const tip = svgEl("title", {})
+    tip.textContent = name
+    p.appendChild(tip)
+    svg.appendChild(p)
+  }
+  draw(linePts, MUT, "line: 0.3x - 400, goes negative")
+  draw(reluPts, CLAY, "ReLU: floors at zero")
+  const mk = svgEl("circle", {cx: X(2000), cy: Y(200), r: 7, fill: INDIGO})
+  const tip = svgEl("title", {})
+  tip.textContent = "lesson toy: x=2000, ReLU = 200"
+  mk.appendChild(tip)
+  svg.appendChild(mk)
+  const xl = svgEl("text", {x: W / 2, y: H - 8, "font-size": 13, fill: MUT, "font-family": SANS, "text-anchor": "middle"})
+  xl.textContent = "living area x (sqft)"
+  svg.appendChild(xl)
+  host.appendChild(svg)
+}
+
+function vanishChart() {
+  const host = document.getElementById("chart-vanish")
+  if (!host) { return }
+  const W = 760
+  const H = 320
+  const padL = 70
+  const padB = 44
+  const padT = 18
+  const X = function(k) { return padL + (k / 50) * (W - padL - 30) }
+  const Y = function(v) { return padT + (v / 31) * (H - padT - padB) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const yticks = [0, 10, 20, 30]
+  yticks.forEach(function(v) {
+    const t = svgEl("text", {x: padL - 10, y: Y(v) + 5, "font-size": 12, fill: MUT, "font-family": MONO, "text-anchor": "end"})
+    t.textContent = "1e-" + v
+    svg.appendChild(t)
+  })
+  const xticks = [0, 10, 20, 30, 40, 50]
+  xticks.forEach(function(k) {
+    const t = svgEl("text", {x: X(k), y: H - padB + 22, "font-size": 12, fill: MUT, "font-family": MONO, "text-anchor": "middle"})
+    t.textContent = k
+    svg.appendChild(t)
+  })
+  const pts = []
+  Array.from({length: 51}).forEach(function(_, i) {
+    const v = -Math.log10(Math.pow(0.25, i + 1))
+    pts.push([i + 1, v])
+  })
+  const d = pts.map(function(p, i) { return (i === 0 ? "M" : "L") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1) }).join(" ")
+  const p = svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3})
+  const tip = svgEl("title", {})
+  tip.textContent = "gradient scale after k layers: 0.25^k, at k=50 about 7.9e-31"
+  p.appendChild(tip)
+  svg.appendChild(p)
+  const xl = svgEl("text", {x: W / 2, y: H - 8, "font-size": 13, fill: MUT, "font-family": SANS, "text-anchor": "middle"})
+  xl.textContent = "layers k (log scale on the gradient)"
+  svg.appendChild(xl)
+  host.appendChild(svg)
+}
+
+function layernorm(z) {
+  const m = z.reduce(function(a, b) { return a + b }, 0) / z.length
+  const v = z.reduce(function(a, b) { return a + (b - m) * (b - m) }, 0) / z.length
+  const s = Math.sqrt(v)
+  return z.map(function(a) { return (a - m) / s })
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  reluChart()
+  vanishChart()
+
+  document.getElementById("lnbtn").addEventListener("click", function() {
+    const z = document.getElementById("lnz").value.split(",").map(function(s) { return parseFloat(s.trim()) })
+    const a = parseFloat(document.getElementById("lna").value)
+    const out = document.getElementById("lnout")
+    out.innerHTML = ""
+    if (z.length < 2 || z.some(function(v) { return !isFinite(v) }) || !isFinite(a)) {
+      out.appendChild(el("span", "chip plain", "a vector of 2+ numbers and a real alpha"))
+      return
+    }
+    const n1 = layernorm(z)
+    const n2 = layernorm(z.map(function(v) { return v * a }))
+    const fmt = function(v) { return v.map(function(x) { return x.toFixed(4) }).join(", ") }
+    out.appendChild(el("span", "chip plain", "LN(z) = [" + fmt(n1) + "]"))
+    out.appendChild(el("span", "chip plain", "LN(" + a + "z) = [" + fmt(n2) + "]"))
+    const same = n1.every(function(v, i) { return Math.abs(v - n2[i]) < 1e-9 })
+    out.appendChild(el("span", same ? "chip eow" : "chip plain", same ? "identical: invariance holds" : "differ"))
+  })
+
+  document.getElementById("ivbtn").addEventListener("click", function() {
+    const f = parseFloat(document.getElementById("ivf").value)
+    const L = parseInt(document.getElementById("ivl").value, 10)
+    const out = document.getElementById("ivout")
+    out.innerHTML = ""
+    if (!(f > 0 && L > 0)) {
+      out.appendChild(el("span", "chip plain", "positive numbers"))
+      return
+    }
+    out.appendChild(el("span", "chip plain", "N(0,1) init: Var(z) = " + f.toFixed(0) + " after one layer"))
+    out.appendChild(el("span", "chip eow", "after " + L + " layers: ~" + Math.pow(f, L).toExponential(1)))
+    out.appendChild(el("span", "chip", "Xavier 1/sqrt(" + f.toFixed(0) + "): Var = 1 at every layer"))
+  })
+
+  document.getElementById("nrbtn").addEventListener("click", function() {
+    const x = document.getElementById("nrx").value.split(",").map(function(s) { return parseFloat(s.trim()) })
+    const w = document.getElementById("nrw").value.split(",").map(function(s) { return parseFloat(s.trim()) })
+    const b = parseFloat(document.getElementById("nrb").value)
+    const y = parseFloat(document.getElementById("nry").value)
+    const out = document.getElementById("nrout")
+    out.innerHTML = ""
+    if (x.length !== 2 || w.length !== 2 || [b, y].concat(x, w).some(function(v) { return !isFinite(v) })) {
+      out.appendChild(el("span", "chip plain", "x and w are 2-D, b and y real"))
+      return
+    }
+    const z = w[0] * x[0] + w[1] * x[1] + b
+    const a = Math.max(0, z)
+    const J = 0.5 * (a - y) * (a - y)
+    const dJda = a - y
+    const reluD = z > 0 ? 1 : 0
+    const dJdz = dJda * reluD
+    const dJdw = [dJdz * x[0], dJdz * x[1]]
+    out.appendChild(el("span", "chip plain", "z = " + z.toFixed(3) + ", a = " + a.toFixed(3) + ", J = " + J.toFixed(4)))
+    out.appendChild(el("span", "chip plain", "dJ/da = " + dJda.toFixed(3)))
+    out.appendChild(el("span", "chip", "dJ/dz = " + dJdz.toFixed(3) + ", dJ/dw = [" + dJdw[0].toFixed(3) + ", " + dJdw[1].toFixed(3) + "], dJ/db = " + dJdz.toFixed(3)))
+    out.appendChild(el("span", reluD === 0 ? "chip eow" : "chip plain", reluD === 0 ? "dead neuron: nothing learns here" : "alive: gradient flows"))
+  })
+
+  const gcw = document.getElementById("gcw")
+  function gcShow() {
+    const w = parseFloat(gcw.value)
+    const h = parseFloat(document.getElementById("gch").value)
+    document.getElementById("gcwv").textContent = w.toFixed(1)
+    const out = document.getElementById("gcout")
+    out.innerHTML = ""
+    if (!(h > 0)) {
+      out.appendChild(el("span", "chip plain", "h must be positive"))
+      return
+    }
+    const J = function(v) { return 0.5 * Math.pow(Math.max(0, 2 * v) - 1, 2) }
+    const analytic = w > 0 ? 2 * (2 * w - 1) : 0
+    const fd = (J(w + h) - J(w - h)) / (2 * h)
+    out.appendChild(el("span", "chip plain", "analytic = " + analytic.toFixed(4)))
+    out.appendChild(el("span", "chip", "finite diff = " + fd.toFixed(4)))
+    const rel = Math.abs(analytic - fd) / (Math.abs(analytic) + 1e-12)
+    out.appendChild(el("span", rel < 1e-5 ? "chip eow" : "chip plain", "relative error " + rel.toExponential(1) + (rel < 1e-5 ? ": match" : ": mismatch")))
+    if (Math.abs(w) < 1e-9) { out.appendChild(el("span", "chip plain", "at the kink: expect mismatch")) }
+  }
+  gcw.addEventListener("input", gcShow)
+  document.getElementById("gch").addEventListener("input", gcShow)
+  gcShow()
+})
+
+</script>
+</body>
+</html>
