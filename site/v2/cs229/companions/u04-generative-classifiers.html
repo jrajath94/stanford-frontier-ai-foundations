@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U04 Companion: Generative classifiers and density assumptions · CS229</title>
+<style>
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+input.range{width:100%}
+input.range{max-width:420px}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+.hist{border:1px solid var(--line)}
+.hist{border-radius:10px}
+.hist{background:#fffdf8}
+.hist{padding:6px}
+.hist{margin:16px 0}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS229 · Unit 04 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Generative classifiers and density assumptions</h1>
+<p class="dek">Instead of drawing a line between the classes, model what each class looks like, then ask which model fits a new point better. This companion walks the full arc of Unit 04: the multivariate Gaussian, Gaussian discriminant analysis, the generative-discriminative split, naive Bayes, Laplace smoothing, the two event models, and what breaks when the density is wrong.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>lesson-04-generative-classifiers.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no lecture transcript exists for this unit, and no lecture video is named in the lesson. The lesson's Source mapping states that SRC-01 chapter 4 (PDF pages 36 to 48) was read in full on 2026-10-06. Leaf rows carry SOURCE ATTRIBUTION PENDING until the RUN 6 pass, so the strict fact-vs-interpretation tagging here is the guardrail. The Bayes portrait below is a real image, included for history, not as lecture content.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u04-two-clouds.jpg" alt="Watercolor of two overlapping flocks of birds, blue-gray and amber, with a dashed line between them">
+<figcaption><span class="tag tag-toy">Illustration</span> The generative idea in one image: model each flock's shape, then ask which flock a new bird belongs to. The dashed line is the boundary that falls out. Watercolor, original to this companion.</figcaption>
+</figure>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Gaussian</a>
+<a href="#s2">2 GDA</a>
+<a href="#s3">3 Gen vs disc</a>
+<a href="#s4">4 Naive Bayes</a>
+<a href="#s5">5 Smoothing</a>
+<a href="#s6">6 Event models</a>
+<a href="#s7">7 Calibration</a>
+<a href="#s8">8 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<section class="block" id="s1">
+<p class="secnum">Section 1 · SL-01 · C01</p>
+<h2>The multivariate Gaussian: one cloud, one formula</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Source anchor, §Mental model</span></p>
+<p>How do you describe a cloud of points in d dimensions with one formula? A Gaussian is a bell curve in d dimensions. The mean μ is where the cloud sits. The covariance Σ is how it spreads: diagonal entries are per-axis variances, off-diagonals tilt the cloud. Contours are ellipses.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Objects</span></p>
+<p>Density: p(x, μ, Σ) = 1/((2π)^(d/2) |Σ|^(1/2)) exp(−(1/2)(x − μ)ᵀ Σ⁻¹ (x − μ)). μ in R^d, Σ in R^(d×d), symmetric positive definite. Assumption: Σ invertible, and the data really clusters in an elliptical cloud.</p>
+</div>
+<table class="data">
+<tr><th>d = 2, μ = [0, 0], Σ = [[1, 0.8], [0.8, 1]]</th><th>Value</th></tr>
+<tr><td>Determinant</td><td class="num">1 − 0.64 = 0.36</td></tr>
+<tr><td>|Σ|^(1/2)</td><td class="num">0.6</td></tr>
+<tr><td>Σ⁻¹</td><td class="num">[[2.778, −2.222], [−2.222, 2.778]]</td></tr>
+<tr><td>Quadratic form at x = [1, 1]</td><td class="num">2.778 − 2.222 − 2.222 + 2.778 = 1.112</td></tr>
+<tr><td>Density at x = [1, 1]</td><td class="num">1/(2π × 0.6) × exp(−0.556) = 0.2653 × 0.5735 = 0.1522</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Computed example</span> The hand computation, every step. Recomputed for this page.</figcaption>
+<figure>
+<div id="chart-ellipse"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Mental model</span> The lesson's Σ as contours. Eigenvalues of [[1, 0.8], [0.8, 1]] are 1.8 and 0.2, with axes along (1, 1) and (1, −1). The off-diagonal 0.8 tilts the cloud. Recomputed for this page.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The density probe. Type any point. The toy walks the lesson's five-step computation: determinant, inverse, quadratic form, normalizer, density.</p>
+<p>x₁: <input class="text" id="gx1" value="1" style="max-width:100px" aria-label="x1"> x₂: <input class="text" id="gx2" value="1" style="max-width:100px" aria-label="x2"></p>
+<p><button class="btn" id="gbtn">Compute density</button></p>
+<div class="chips" id="gout"></div>
+<p class="small muted">Fixed: μ = [0, 0], Σ = [[1, 0.8], [0.8, 1]], the lesson's cloud.</p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Correctness checks, §Failure case</span></p>
+<p>Two checks. The density integrates to 1: numerically integrate on a grid for d = 1 to verify. Σ must be symmetric with positive eigenvalues: check both. The failure case: Σ singular, points on a line in 2-D. The density is undefined, |Σ| = 0. The model needs full-rank data or a regularized Σ.</p>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · SL-02 · C02, C03, C04, C09</p>
+<h2>GDA: model each side, then compare</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Source anchor, §Mental model</span></p>
+<p>Instead of drawing a line between elephants and dogs, can we model what elephants look like and what dogs look like, then ask which model fits a new animal better? Fit one Gaussian per class, sharing the covariance. The class prior φ is the fraction of class-1 examples. To classify, use Bayes rule: p(y = 1 | x) is proportional to p(x | y = 1) p(y = 1). The denominator is not needed for the argmax.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Derivation</span></p>
+<p>The model: y ~ Bernoulli(φ), x | y = 0 ~ N(μ0, Σ), x | y = 1 ~ N(μ1, Σ). The joint log likelihood splits: the φ terms separate from the Gaussian terms. Maximizing over φ: φ = (1/n) Σ 1{y⁽ⁱ⁾ = 1}. Maximizing over μ0: the class-0 mean. Same for μ1. Σ: the pooled average of (x⁽ⁱ⁾ − μ_{y⁽ⁱ⁾})(x⁽ⁱ⁾ − μ_{y⁽ⁱ⁾})ᵀ over all n examples (notes page 40).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Why the boundary is linear</span></p>
+<p>With shared Σ the quadratic terms −(1/2) xᵀΣ⁻¹x cancel in the log odds, leaving a linear function of x. The posterior is logistic: p(y = 1 | x) = g(θᵀx) for a θ built from φ, Σ, μ0, μ1 (notes page 41). Separate covariances would leave a quadratic boundary: quadratic discriminant analysis.</p>
+</div>
+<figure>
+<img class="illus" src="assets/bayes.png" alt="Portrait commonly identified as Thomas Bayes" style="max-width:360px">
+<figcaption>Portrait commonly identified as Thomas Bayes (1701-1761). Public domain image via Wikimedia Commons. Shown for the history of the rule that turns the class densities into a classifier. Real image, not an AI image, and not lecture content.</figcaption>
+</figure>
+<table class="data">
+<tr><th>Four-point toy</th><th>Class 0: (0,0), (1,0)</th><th>Class 1: (0,2), (1,2)</th></tr>
+<tr><td>φ</td><td class="num" colspan="2">0.5</td></tr>
+<tr><td>μ0, μ1</td><td class="num">(0.5, 0)</td><td class="num">(0.5, 2)</td></tr>
+<tr><td>Pooled Σ</td><td class="num" colspan="2">[[0.25, 0], [0, 0]], singular. The lesson adds ridge 1e−6 for the demo</td></tr>
+<tr><td>Boundary</td><td class="num" colspan="2">the horizontal line y = 1, halfway between the class means</td></tr>
+<tr><td>New point (0.5, 1.5)</td><td class="num" colspan="2">closer to μ1, predict 1</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Computed example</span> Centered points per class: (−0.5, 0), (0.5, 0). Pooled Σ = (1/4)[[1, 0],[0, 0]].</figcaption>
+<figure>
+<div id="chart-gda"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Computed example</span> The lesson's four points, the class means, and the boundary y = 1. Hover any marker for its lesson values.</figcaption>
+</figure>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Correctness checks, §Failure case</span></p>
+<p>Class means must lie inside their class clouds. Σ is pooled from both classes and divided by n, the MLE. The unbiased version divides by n − 2, but the notes use the MLE. Posterior probabilities sum to 1 across classes. The failure case: classes with different spreads, one tight, one wide. Shared Σ fits neither well, and the linear boundary misclassifies the wide class's far side. Fix: separate covariances, or drop the Gaussian assumption.</p>
+</div>
+<div class="nugget" id="nugget-linear">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Why the boundary is linear</span></h4>
+<p class="big">Shared covariance makes the boundary linear. The quadratic terms cancel in the log odds, and a line falls out of two clouds.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The linearity is not a modeling choice. It is an algebraic consequence of the shared-Σ assumption. Change the assumption and the boundary curves.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When a simple shape emerges, find the cancellation that produced it. The assumption that cancels is the one to audit.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · SL-03 · C05</p>
+<h2>Generative versus discriminative: model the side, or draw the line</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Source anchor, §Mental model</span></p>
+<p>Discriminative models learn p(y | x) or a direct map. Generative models learn p(x | y) and p(y), then use Bayes rule. Discriminative: draw the boundary. Generative: model each side, then compare. Generative makes stronger assumptions, the shape of p(x | y), and is more data-efficient when they hold. Discriminative makes weaker assumptions and degrades less when they fail.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §The asymmetry</span></p>
+<p>The asymmetry is one-way. If p(x | y) is Gaussian with shared Σ, p(y | x) is logistic. The converse is false: logistic p(y | x) does not imply Gaussian p(x | y). Poisson features give logistic posteriors too (notes page 42). GDA's assumption set is strictly stronger.</p>
+</div>
+<table class="data">
+<tr><th>True data</th><th>Small n</th><th>Large n</th></tr>
+<tr><td>Gaussian features</td><td class="num">GDA wins: fewer examples needed</td><td class="num">Logistic catches up</td></tr>
+<tr><td>Poisson features</td><td class="num">Logistic wins</td><td class="num">Logistic wins (notes page 42)</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Computed comparison</span> Expected results from the notes. The lesson's extension measures the crossover n where logistic overtakes GDA on Gaussian data as class overlap varies.</figcaption>
+<div class="nugget" id="nugget-assume">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Failure case</span></h4>
+<p class="big">Generative is not always better with little data. With misspecified densities, GDA can lose at every sample size.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Data efficiency is conditional on the assumption holding. An unchecked assumption is not a strategy. It is a hope with a formula.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Stronger assumptions buy efficiency and sell robustness. Price both sides before you choose.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · SL-04 · C06</p>
+<h2>Naive Bayes: independence given the class</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Source anchor, §Mental model</span></p>
+<p>The vocabulary has 50,000 words. A full joint distribution needs 2^50000 parameters. How do we classify anyway? Assume words are independent given the class: knowing the email is spam, seeing "buy" tells you nothing new about "price". Then p(x | y) = Πⱼ p(xⱼ | y): only 2 × 50,000 parameters. The assumption is usually false and the classifier usually works.</p>
+</div>
+<table class="data">
+<tr><th>Vocabulary {buy, hello}</th><th>Spam (3 emails)</th><th>Non-spam (2 emails)</th></tr>
+<tr><td>Emails</td><td class="num">[1,0], [1,1], [0,0]</td><td class="num">[0,1], [0,0]</td></tr>
+<tr><td>φ_y</td><td class="num" colspan="2">3/5 = 0.6</td></tr>
+<tr><td>φ_{buy|y}</td><td class="num">2/3</td><td class="num">0/2 = 0</td></tr>
+<tr><td>φ_{hello|y}</td><td class="num">1/3</td><td class="num">1/2</td></tr>
+<tr><td>New email [1, 0]</td><td class="num">0.6 × (2/3) × (2/3) = 0.2667</td><td class="num">0.4 × 0 × (1/2) = 0</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Computed example</span> Zero. The unseen combination kills class 0 entirely. This is the zero problem that Laplace smoothing (SL-05) fixes.</figcaption>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The spam machine. The lesson's tiny corpus and the lesson's formulas. Toggle smoothing and classify any [buy?, hello?] email.</p>
+<p>buy present: <input class="text" id="nbb" value="1" style="max-width:80px" aria-label="buy"> hello present: <input class="text" id="nbh" value="0" style="max-width:80px" aria-label="hello"></p>
+<p><button class="btn ghost" id="nbraw">Raw fractions</button><button class="btn" id="nbsmooth">Laplace smoothed</button></p>
+<div class="chips" id="nbout"></div>
+<p class="small muted">Corpus: spam [1,0], [1,1], [0,0]. Non-spam: [0,1], [0,0]. Smoothing: (1 + count)/(2 + n_y).</p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Correctness checks, §Failure case</span></p>
+<p>The independence is conditional on y, not marginal. Compute p(xⱼ | y) within each class. The failure case: strongly correlated features, "New" and "York" always co-occurring. Naive Bayes double-counts the evidence and becomes overconfident. The probabilities are miscalibrated even when the classifications are right (SL-07).</p>
+</div>
+<div class="nugget" id="nugget-zero">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Computed example</span></h4>
+<p class="big">One zero count zeroes the whole product. An unseen word combination kills its class entirely, no matter the other evidence.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Multiplicative models have a single point of failure per factor. Absence of evidence becomes evidence of absence, which is a modeling bug, not a fact.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>In any product of estimates, ask what a zero factor does. If it vetoes everything, smooth it or bound it.</dd>
+</dl>
+</div>
+</section>
+<section class="block" id="s5">
+<p class="secnum">Section 5 · SL-05 · C07</p>
+<h2>Laplace smoothing: one fake observation</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Source anchor, §Mental model</span></p>
+<p>A word never appeared in training. Is its probability really zero? Add one fake observation of each outcome. For a Bernoulli word feature: φ_{j|y} = (1 + count)/(2 + n_y). For a k-sided multinomial: (1 + count_j)/(k + n). Zero counts become small but nonzero probabilities. The estimates still sum to 1.</p>
+</div>
+<table class="data">
+<tr><th>After smoothing</th><th>Class 0 (non-spam)</th><th>Class 1 (spam)</th></tr>
+<tr><td>φ_{buy|y}</td><td class="num">(1 + 0)/(2 + 2) = 0.25</td><td class="num">(1 + 2)/(2 + 3) = 0.6</td></tr>
+<tr><td>φ_{hello|y}</td><td class="num">(1 + 1)/(2 + 2) = 0.5</td><td class="num">(1 + 1)/(2 + 3) = 0.4</td></tr>
+<tr><td>Email [1, 0] score</td><td class="num">0.4 × 0.25 × 0.5 = 0.05</td><td class="num">0.6 × 0.6 × 0.6 = 0.216</td></tr>
+<tr><td>Decision</td><td class="num" colspan="2">Predict spam (0.216 > 0.05). No more 0/0.</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Computed example</span> Continuing the SL-04 toy. Note the class-1 hello probability uses smoothing too: (1 + 1)/(2 + 3) = 0.4, and its complement for absent hello is 0.6.</figcaption>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Correctness checks, §Failure case</span></p>
+<p>Smoothed probabilities sum to 1 over the k outcomes. No parameter is exactly 0 or 1 after smoothing. As n grows, smoothing vanishes: the estimate tends to the raw fraction. The failure case: smoothing with the wrong k, for example k = 2 on a 50,000-word multinomial. The denominator is wrong and probabilities do not sum to 1. Match k to the outcome count.</p>
+</div>
+<div class="nugget" id="nugget-fake">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Mental model</span></h4>
+<p class="big">Add one fake observation of each outcome. The prior is small, explicit, and it vanishes as real data arrives.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Smoothing is a prior wearing work clothes. Naming it as a prior tells you exactly when it matters: at small n, and never at large n.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every zero-avoidance hack is a hidden prior. Write it as one and its strength becomes a tunable, honest number.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · SL-06 · C08</p>
+<h2>Two event models: checklist or word stream</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Source anchor, §Mental model</span></p>
+<p>Bernoulli event model: the email is a checklist over the vocabulary. xⱼ = 1 if word j appears. Absences count as evidence. Multinomial event model: the email is a sequence of d draws from a word distribution. xⱼ is the identity of position j. Counts matter. Absences do not.</p>
+</div>
+<table class="data">
+<tr><th>Email "buy buy now", vocabulary {buy, now, hello}</th><th>Bernoulli</th><th>Multinomial</th></tr>
+<tr><td>Representation</td><td class="num">x = [1, 1, 0]</td><td class="num">d = 3, x = (buy, buy, now)</td></tr>
+<tr><td>"buy" twice</td><td class="num">counts once</td><td class="num">contributes its probability twice</td></tr>
+<tr><td>Absent words</td><td class="num">evidence: (1 − φ) terms</td><td class="num">ignored</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Computed example</span> On long emails the multinomial usually wins (notes page 47).</figcaption>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Correctness checks, §Failure case</span></p>
+<p>The Bernoulli likelihood includes (1 − φ) terms for absent words. Forgetting them is the classic bug. The multinomial likelihood has no absence terms, and the document length d varies per email. The failure case: Bernoulli on long documents. Absence of 49,997 words dominates the product and drowns the signal. Use the multinomial model there.</p>
+</div>
+<div class="nugget" id="nugget-checklist">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Mental model</span></h4>
+<p class="big">Two models, one vocabulary, opposite treatment of absence. Bernoulli counts absences. Multinomial counts repetitions.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The event story decides which evidence the model sees. Pick the story that matches the document: short checklist or long stream.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Representation is a claim about the world. State the claim and check it against the data's shape.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · SL-07 · C10, C11, C12</p>
+<h2>When the density lies: misspecification, calibration, imbalance</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-07 §Mental model</span></p>
+<p>The classifier is 90 percent accurate. Should you trust its "90 percent confident" claims? And what if only 1 percent of emails are spam? Misspecification: the assumed density shape is wrong, so the fitted parameters answer the wrong question. Calibration: predicted probabilities match observed frequencies. A model can classify well and be badly calibrated. Naive Bayes double-counting is the textbook case.</p>
+</div>
+<figure>
+<div id="chart-calib"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-07 §Computed examples</span> Bin 100 predictions at 0.8 confidence. 62 are correct. The model is overconfident by 0.18. A calibrated model sits on the diagonal.</figcaption>
+</figure>
+<table class="data">
+<tr><th>1000 emails, 10 spam</th><th>Accuracy</th><th>Precision</th><th>Recall</th></tr>
+<tr><td>Always predict ham</td><td class="num">0.99</td><td class="num">undefined</td><td class="num">0.0</td></tr>
+<tr><td>Model: 8 caught, 5 false alarms</td><td class="num">(987 + 8)/1000 = 0.995</td><td class="num">8/13 = 0.615</td><td class="num">0.8</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-07 §Computed examples</span> Accuracy barely distinguishes the two rows. The PR numbers do. With imbalance, never report accuracy alone.</figcaption>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The calibration audit. Bin your model's predictions: type the confidence it claimed and how many of 100 were right. The toy reports the overconfidence gap.</p>
+<p>Claimed confidence: <input class="text" id="calc" value="0.8" style="max-width:100px" aria-label="claimed"> Correct of 100: <input class="text" id="caln" value="62" style="max-width:100px" aria-label="correct"></p>
+<p><button class="btn" id="calbtn">Audit</button></p>
+<div class="chips" id="calout"></div>
+<p class="small muted">Reliability diagram rule from the lesson: predicted vs observed frequency per bin, near the diagonal.</p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-07 §Correctness checks, §Nearest alternative, §Failure case</span></p>
+<p>Fixes: Platt scaling or isotonic regression, post-hoc calibration maps. Class weights or threshold tuning for imbalance. The failure case: tuning the decision threshold on the test set. The reported precision and recall are then optimistic. Tune on validation, report once on test.</p>
+</div>
+<div class="nugget" id="nugget-ninetynine">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-07 §Computed examples</span></h4>
+<p class="big">99 percent accuracy can mean nothing. On 1000 emails with 10 spam, always predicting ham scores 0.99 with recall 0.0.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Accuracy on imbalanced data measures the majority class, not the model. The metric answers a question nobody asked.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Match the metric to the rare event you care about. Precision and recall name the errors. Accuracy hides them.</dd>
+</dl>
+</div>
+<div class="nugget" id="nugget-calib">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-07 §Mental model</span></h4>
+<p class="big">Right answers do not imply honest confidence. A model can classify well and be badly calibrated at the same time.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Decisions consume probabilities, not labels. An overconfident 0.99 that is right 70 percent of the time corrupts every downstream bet.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Audit the confidence separately from the accuracy. The reliability diagram is the receipt.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · Synthesis</p>
+<h2>The arc, end to end</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 to SL-07</span></p>
+<p>The arc, end to end. One formula describes an elliptical cloud: mean for position, covariance for spread and tilt (SL-01). Fit one Gaussian per class with a shared covariance, apply Bayes rule, and the quadratic terms cancel into a linear boundary (SL-02). Generative models model each side and compare. Discriminative models draw the boundary. The stronger assumptions buy data efficiency and sell robustness (SL-03).</p>
+<p>Naive Bayes assumes words are independent given the class: usually false, usually works, until one zero count vetoes a whole class (SL-04). Laplace smoothing adds one fake observation per outcome: the zero disappears and the estimates still sum to 1 (SL-05). The event story decides the evidence: Bernoulli checklists count absences, multinomial streams count repetitions (SL-06). And when the density is wrong, the parameters answer the wrong question: audit calibration separately from accuracy, and never report accuracy alone on imbalanced data (SL-07).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">§Research reading, §Nearest alternatives</span></p>
+<p>Where the unit points next, in the lesson's own forward links. Mixture of Gaussians (U10): several clouds instead of one. Kernel density: no parametric shape at all. Logistic regression on the same word features: no independence assumption, needs more data. TF-IDF with logistic regression: the strong discriminative baseline in practice. The extension: on synthetic Poisson data, fit GDA and logistic regression across n in {50, 200, 1000, 5000} and plot test error. The falsifiable claim: logistic wins at all n, and the gap stabilizes as n grows.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>Seven nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-linear"><span class="wnum">01</span>Shared covariance makes the boundary linear <span class="muted">· SL-02</span></a></li>
+<li><a href="#nugget-assume"><span class="wnum">02</span>Stronger assumptions buy efficiency, sell robustness <span class="muted">· SL-03</span></a></li>
+<li><a href="#nugget-zero"><span class="wnum">03</span>One zero count vetoes a whole class <span class="muted">· SL-04</span></a></li>
+<li><a href="#nugget-fake"><span class="wnum">04</span>One fake observation per outcome <span class="muted">· SL-05</span></a></li>
+<li><a href="#nugget-checklist"><span class="wnum">05</span>Checklist or word stream: absence counts or it does not <span class="muted">· SL-06</span></a></li>
+<li><a href="#nugget-ninetynine"><span class="wnum">06</span>99 percent accuracy can mean nothing <span class="muted">· SL-07</span></a></li>
+<li><a href="#nugget-calib"><span class="wnum">07</span>Right answers do not imply honest confidence <span class="muted">· SL-07</span></a></li>
+</ol>
+</section>
+
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>v2-pack/cs229/lessons/u04/lesson-04-generative-classifiers.md</code> (567 lines, dated 2026-10-06). No lecture transcript and no lecture video exist for this unit, so nothing here quotes the lecturer. Per the lesson's Source mapping, SRC-01 chapter 4 (PDF pages 36 to 48) was read in full on 2026-10-06. Every number on this page comes from the lesson's computed examples with section citations: the Gaussian hand computation (det 0.36, density 0.1522), the GDA four-point toy (φ = 0.5, boundary y = 1), the naive Bayes fractions (0.2667 vs 0), the smoothed scores (0.05 vs 0.216), the calibration gap (0.18), the imbalance table (0.99/0.0 vs 0.995/0.615/0.8). The charts re-plot those numbers with native tooltips. The Bayes portrait is a real image (public domain, Wikimedia Commons), captioned as history, not lecture content. The watercolor is original to this companion and labeled as such. Interactive toys run the lesson's rules over the lesson's own toy values, with any invented inputs labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p><strong>Quotes.</strong> This page quotes 11 words directly from the lesson: the "buy buy now" email example (the lesson's vocabulary sentence) and "90 percent confident" (the lesson's motivating question). All other phrasing is the companion's.</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>. Fourth of 17 CS229 companions.</p>
+</footer>
+</div>
+<script>
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  for (const k in attrs) { n.setAttribute(k, attrs[k]) }
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function ellipseChart() {
+  const host = document.getElementById("chart-ellipse")
+  if (!host) { return }
+  const W = 560
+  const H = 400
+  const cx = W / 2
+  const cy = H / 2
+  const S = 90
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const rings = [{c: 1, col: CLAY}, {c: 2, col: INDIGO}, {c: 3, col: SAGE}]
+  rings.forEach(function(r) {
+    const e = svgEl("ellipse", {
+      cx: cx, cy: cy,
+      rx: r.c * Math.sqrt(1.8) * S, ry: r.c * Math.sqrt(0.2) * S,
+      fill: "none", stroke: r.col, "stroke-width": 2.5,
+      transform: "rotate(45 " + cx + " " + cy + ")"
+    })
+    const tip = svgEl("title", {})
+    tip.textContent = "contour at Mahalanobis distance " + r.c + ": eigenvalues 1.8 and 0.2"
+    e.appendChild(tip)
+    svg.appendChild(e)
+  })
+  const mu = svgEl("circle", {cx: cx, cy: cy, r: 6, fill: INK})
+  const mt = svgEl("title", {})
+  mt.textContent = "mean mu = [0, 0]"
+  mu.appendChild(mt)
+  svg.appendChild(mu)
+  const lab = svgEl("text", {x: cx + 12, y: cy - 10, "font-size": 13, fill: MUT, "font-family": SANS})
+  lab.textContent = "mu = [0, 0]"
+  svg.appendChild(lab)
+  host.appendChild(svg)
+}
+
+function gdaChart() {
+  const host = document.getElementById("chart-gda")
+  if (!host) { return }
+  const W = 560
+  const H = 420
+  const padL = 50
+  const padB = 40
+  const padT = 20
+  const X = function(x) { return padL + (x / 1.6) * (W - padL - 30) }
+  const Y = function(y) { return padT + (1 - (y + 0.4) / 2.8) * (H - padT - padB) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const bl = svgEl("line", {x1: padL, y1: Y(1), x2: W - 30, y2: Y(1), stroke: CLAY, "stroke-width": 3, "stroke-dasharray": "10 6"})
+  const bt = svgEl("title", {})
+  bt.textContent = "boundary y = 1, halfway between the class means"
+  bl.appendChild(bt)
+  svg.appendChild(bl)
+  const pts = [
+    {x: 0, y: 0, c: 0}, {x: 1, y: 0, c: 0},
+    {x: 0, y: 2, c: 1}, {x: 1, y: 2, c: 1}
+  ]
+  pts.forEach(function(p) {
+    const col = p.c === 0 ? INDIGO : AMBER
+    const c = svgEl("circle", {cx: X(p.x), cy: Y(p.y), r: 9, fill: col})
+    const tip = svgEl("title", {})
+    tip.textContent = "class " + p.c + " point (" + p.x + ", " + p.y + ")"
+    c.appendChild(tip)
+    svg.appendChild(c)
+  })
+  const means = [{x: 0.5, y: 0, lab: "mu0 = (0.5, 0)"}, {x: 0.5, y: 2, lab: "mu1 = (0.5, 2)"}]
+  means.forEach(function(m) {
+    const c = svgEl("circle", {cx: X(m.x), cy: Y(m.y), r: 5, fill: "#fffdf8", stroke: INK, "stroke-width": 2.5})
+    const tip = svgEl("title", {})
+    tip.textContent = m.lab
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const t = svgEl("text", {x: X(m.x) + 12, y: Y(m.y) + 5, "font-size": 13, fill: INK, "font-family": MONO})
+    t.textContent = m.lab
+    svg.appendChild(t)
+  })
+  const xt = svgEl("text", {x: padL, y: Y(1) - 10, "font-size": 13, fill: CLAY, "font-family": SANS})
+  xt.textContent = "boundary y = 1"
+  svg.appendChild(xt)
+  host.appendChild(svg)
+}
+
+function calibChart() {
+  const host = document.getElementById("chart-calib")
+  if (!host) { return }
+  const W = 760
+  const H = 300
+  const padL = 200
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const rows = [
+    ["claimed confidence", 0.80, INDIGO],
+    ["observed frequency", 0.62, CLAY]
+  ]
+  rows.forEach(function(r, i) {
+    const y = 40 + i * 70
+    const lab = svgEl("text", {x: 12, y: y + 26, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - padL - 120) * r[1]
+    const bar = svgEl("rect", {x: padL, y: y + 8, width: bw, height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1].toFixed(2)
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: padL + bw + 10, y: y + 26, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1].toFixed(2)
+    svg.appendChild(val)
+  })
+  const note = svgEl("text", {x: 12, y: 220, "font-size": 14, fill: MUT, "font-family": SANS})
+  note.textContent = "Overconfidence gap: 0.80 - 0.62 = 0.18. A calibrated model sits on the diagonal."
+  svg.appendChild(note)
+  host.appendChild(svg)
+}
+
+const GDET = 0.36
+const GINV = [[2.7778, -2.2222], [-2.2222, 2.7778]]
+const GNORM = 1 / (2 * Math.PI * 0.6)
+
+const NB = {
+  spam: [[1, 0], [1, 1], [0, 0]],
+  ham: [[0, 1], [0, 0]],
+  py: 0.6
+}
+function nbParams(smooth) {
+  function frac(emails, j, val) {
+    const n = emails.length
+    const c = emails.filter(function(e) { return e[j] === val }).length
+    if (smooth) { return (1 + c) / (2 + n) }
+    return c / n
+  }
+  return {
+    buy1: frac(NB.spam, 0, 1), hello1: frac(NB.spam, 1, 1),
+    buy0: frac(NB.ham, 0, 1), hello0: frac(NB.ham, 1, 1)
+  }
+}
+function nbShow(smooth) {
+  const b = parseInt(document.getElementById("nbb").value, 10)
+  const h = parseInt(document.getElementById("nbh").value, 10)
+  const out = document.getElementById("nbout")
+  out.innerHTML = ""
+  if (!((b === 0 || b === 1) && (h === 0 || h === 1))) {
+    out.appendChild(el("span", "chip plain", "word presence is 0 or 1"))
+    return
+  }
+  const p = nbParams(smooth)
+  const s1 = NB.py * (b ? p.buy1 : (1 - p.buy1)) * (h ? p.hello1 : (1 - p.hello1))
+  const s0 = (1 - NB.py) * (b ? p.buy0 : (1 - p.buy0)) * (h ? p.hello0 : (1 - p.hello0))
+  out.appendChild(el("span", "chip", "spam score: " + s1.toFixed(4)))
+  out.appendChild(el("span", "chip", "ham score: " + s0.toFixed(4)))
+  if (s1 === 0 || s0 === 0) {
+    out.appendChild(el("span", "chip plain", "a zero factor vetoed a class: the zero problem"))
+  } else {
+    out.appendChild(el("span", s1 > s0 ? "chip eow" : "chip plain", s1 > s0 ? "predict spam" : "predict ham"))
+  }
+  if (smooth) {
+    out.appendChild(el("span", "chip plain", "smoothed: (1+count)/(2+n_y)"))
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  ellipseChart()
+  gdaChart()
+  calibChart()
+
+  document.getElementById("gbtn").addEventListener("click", function() {
+    const x1 = parseFloat(document.getElementById("gx1").value)
+    const x2 = parseFloat(document.getElementById("gx2").value)
+    const out = document.getElementById("gout")
+    out.innerHTML = ""
+    if (!isFinite(x1) || !isFinite(x2)) {
+      out.appendChild(el("span", "chip plain", "type real numbers"))
+      return
+    }
+    const qf = GINV[0][0] * x1 * x1 + 2 * GINV[0][1] * x1 * x2 + GINV[1][1] * x2 * x2
+    const dens = GNORM * Math.exp(-0.5 * qf)
+    out.appendChild(el("span", "chip plain", "det = 0.36"))
+    out.appendChild(el("span", "chip plain", "quadratic form = " + qf.toFixed(3)))
+    out.appendChild(el("span", "chip", "density = " + dens.toFixed(4)))
+    if (Math.abs(x1 - 1) < 1e-9 && Math.abs(x2 - 1) < 1e-9) {
+      out.appendChild(el("span", "chip eow", "the lesson's point: 0.1522"))
+    }
+  })
+
+  document.getElementById("nbraw").addEventListener("click", function() { nbShow(false) })
+  document.getElementById("nbsmooth").addEventListener("click", function() { nbShow(true) })
+
+  document.getElementById("calbtn").addEventListener("click", function() {
+    const c = parseFloat(document.getElementById("calc").value)
+    const n = parseFloat(document.getElementById("caln").value)
+    const out = document.getElementById("calout")
+    out.innerHTML = ""
+    if (!(c > 0 && c < 1) || !(n >= 0 && n <= 100)) {
+      out.appendChild(el("span", "chip plain", "confidence in (0,1), correct in [0,100]"))
+      return
+    }
+    const gap = c - n / 100
+    out.appendChild(el("span", "chip", "observed = " + (n / 100).toFixed(2)))
+    out.appendChild(el("span", gap > 0.05 ? "chip eow" : "chip plain", "gap = " + gap.toFixed(2) + (gap > 0.05 ? ": overconfident" : gap < -0.05 ? ": underconfident" : ": calibrated")))
+  })
+})
+
+</script>
+</body>
+</html>
