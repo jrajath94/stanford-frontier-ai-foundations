@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Optimization and training correctness · CS336</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.pairtable td.rank{font-weight:700}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS336 · Unit 05 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Optimization and training correctness</h1>
+<p class="dek">Training is a loop: loss, gradient, update. This companion makes every piece honest, from the numerically stable cross-entropy through the decoupled decay of AdamW, bias correction, clipping, schedules, and batch accumulation, down to the checkpoints and gradient checks that prove the machinery works.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>u05_optimization.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no full lecture transcript exists for this session. The page narrates the lesson document <code>content/v2/cs336/lessons/u05_optimization.md</code>, not a video. Claim class: REQUESTED-BRANCH. Every number carries the lesson section that reports it. The reference implementation is <code>visuals/compute_u05.py</code>, executed 2026-10-06.</p>
+</div>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 The loop</a>
+<a href="#s2">2 Stable CE</a>
+<a href="#s3">3 Label shift</a>
+<a href="#s4">4 AdamW</a>
+<a href="#s5">5 Decay vs L2</a>
+<a href="#s6">6 Clipping</a>
+<a href="#s7">7 Schedules</a>
+<a href="#s8">8 Accumulation</a>
+<a href="#s9">9 muP</a>
+<a href="#s10">10 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<figure>
+<img class="illus" src="assets/u05-hero-descent.jpg" alt="Watercolor of a hiker descending a mountain valley toward a glowing point">
+<figcaption><span class="tag tag-toy">Illustration</span> Optimization as a descent: one step at a time, against the gradient, toward the low point. Watercolor, original to this companion.</figcaption>
+</figure>
+<section class="block" id="s1">
+<p class="secnum">Section 1 · Remediation</p>
+<h2>Loss, gradient, update</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></p>
+<p>Training minimizes the mean negative log probability of the true next token (cross-entropy). One step: compute the loss on a batch, differentiate (reverse mode), and move parameters against the gradient scaled by the learning rate. Adam keeps running averages of the gradient (m) and its square (v) and scales each parameter's update by 1/sqrt(v).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></p>
+<p>The worked check the lesson opens with: logits [1000, 1001, 999], true class 1. Naive softmax overflows to nan. The stable form (subtract max first) gives CE = 0.4076. From <code>visuals/compute_u05.py</code>, executed 2026-10-06.</p>
+</div>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §6</span> Naive versus stable, side by side. Same inputs as the lesson's check.</p>
+<table class="data">
+<tr><th>Form</th><th>CE (true class 1)</th><th>Why</th></tr>
+<tr><td>Naive softmax, then log</td><td class="num">nan</td><td>exp(1001) overflows before log can rescue it</td></tr>
+<tr><td>Stable: subtract max first</td><td class="num">0.4076</td><td>every exp lands in [0, 1], math unchanged</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation, C01 §6</span> Computed by <code>visuals/compute_u05.py</code>, executed 2026-10-06.</figcaption>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C01</p>
+<h2>Stable cross-entropy: subtract the max</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §3, §5</span></p>
+<p>Why does the loss go to nan on the first step? Cross-entropy = log(sum(exp(logits))) - logit_true. The exp of large numbers overflows. Subtracting the max first keeps every exp in [0, 1] without changing the math: log(sum(exp(x))) = m + log(sum(exp(x - m))) with m = max(x). Then CE = lse - x_true. The gradient is softmax(logits) - one_hot: the familiar form falls out.</p>
+</div>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §5</span> Live stable-CE toy. Type logits (comma separated) and the true class. The toy runs the lesson's stable form.</p>
+<p><input class="text" id="celog" value="1000, 1001, 999" aria-label="Logits"> <input class="text" id="cecls" value="1" style="max-width:90px" aria-label="True class"></p>
+<p><button class="btn" id="cebtn">Compute CE</button></p>
+<p class="small" id="ceout">Press the button.</p>
+<p class="small muted">CE = (max + log(sum(exp(x - max)))) - x_true. The naive path is not run here: exp(1001) overflows by design.</p>
+</div>
+<div class="nugget" id="nugget-max">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §11</span></h4>
+<p class="big">Computing softmax then log separately lets exp overflow before log can rescue it. The loss is nan from step one.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "the framework handles it" breaks for hand-rolled losses. Always fuse.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Fuse the numerically fragile chain into one stable kernel. Never split exp from its log.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §9, §10</span></p>
+<p>Costs: O(B*T*V) time and memory for the full logits. The stability is free. At extreme V, sampled softmax or hierarchical variants approximate. Exact stable CE is the default.</p>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C02</p>
+<h2>The label shift: predict the next token</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §3, §5, §6</span></p>
+<p>What is the target at position t? The toy from <code>compute_u05.py</code>: ids [10, 20, 30, 40] give inputs [10, 20, 30] and labels [20, 30, 40]. Predict the next token. The model reads tokens 0..T-2 and is scored on tokens 1..T-1. Training feeds the true past (teacher forcing), and the causal mask (U03-C04) keeps the prediction honest. The autoregressive factorization P(x) = product over t of P(x_t | x before t) becomes a classification task per position. The shift aligns logits[t] with ids[t+1].</p>
+</div>
+<div class="nugget" id="nugget-shift">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §11</span></h4>
+<p class="big">Shift the wrong way (labels = inputs) and the model learns the identity function. Loss drops to near zero, and sampling produces repetitions of the prompt.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "the shift is obviously right" breaks silently. The symptom is a too-good loss.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Distrust a loss that looks too good. Check what the model is actually asked to predict.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §9, §10</span></p>
+<p>Free to implement. Getting it wrong off-by-one trains the model to predict the current token: loss looks fine, generation babbles. Prefix-LM and fill-in-the-middle use different shifts. The standard shift is for autoregressive LMs.</p>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C03, C05</p>
+<h2>AdamW: adaptive steps, then the correction</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §3, §5</span></p>
+<p>Why not plain SGD? Adam tracks a moving average of gradients (m, direction with momentum) and of squared gradients (v, per-parameter scale). Each parameter steps by m/sqrt(v): fast for rare features, calm for noisy ones. m_t = b1*m_{t-1} + (1-b1)*g_t. v_t = b2*v_{t-1} + (1-b2)*g_t^2. Bias correction divides by (1-b^t) (C05). AdamW update: w -= lr * (mhat/(sqrt(vhat)+eps) + lam*w).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §6, §9</span></p>
+<p>The lesson's hand step, executed 2026-10-06: one AdamW step moves w=[1.0, -0.5] to [0.99899, -0.498995] with per-parameter adaptive scaling. Correction factors at t=1: 10.0 and 1000.0. Costs: two extra states per parameter, the 16 bytes of U02-C05. Compute is elementwise: cheap. AdamW is the default for transformers.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §3, §5, §6</span></p>
+<p>Why divide by (1-b^t)? m and v start at zero, so early averages are biased toward zero. Dividing unbiases them: at t=1 the averages equal the first gradient exactly. E[m_t] = (1-b^t) E[g]: the geometric series sums to (1-b^t)/(1-b), times (1-b). The lesson's numbers: 1/(1-0.9) = 10.0, 1/(1-0.999) = 1000.0 at t=1. Without them the first updates would be 10x and 1000x too small.</p>
+</div>
+<figure>
+<div id="chart-bias"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §6</span> Bias-correction factors 1/(1-b^t) at t = 1: 10.0 for b1 = 0.9, 1000.0 for b2 = 0.999. From <code>visuals/compute_u05.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<div class="nugget" id="nugget-correction">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §11, C05 §11</span></h4>
+<p class="big">eps = 0 with a zero v (dead parameter) means division by zero: nan. And skipping bias correction with a large lr makes the first steps tiny, then the effective step jumps as (1-b^t) approaches 1, mimicking a warmup spike that destabilizes.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "v stays positive" breaks at init without eps: eps is load-bearing. The assumption "correction hardly matters" breaks at large lr.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Keep the exact correction over the convenient approximation. Two scalar ops buy the first hundred steps.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §10, C05 §10</span></p>
+<p>Alternatives to AdamW: SGD with momentum (less memory, needs more tuning), Lion, Adafactor (C09). Warmup (C07) partially covers the same need as bias correction, and some implementations skip correction and rely on warmup. Keep the correction: it is exact.</p>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C04</p>
+<h2>Weight decay is not L2 under Adam</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §3, §5</span></p>
+<p>Is weight_decay just L2? L2 adds lam*w to the gradient, so Adam's adaptive denominator scales the regularization too: parameters with large gradients get less decay. Decoupled decay (AdamW) subtracts lam*w directly: every parameter decays at the same rate. Adam+L2: w -= lr * (m(g+lam*w))/sqrt(v). AdamW: w -= lr * m(g)/sqrt(v) - lr*lam*w. The lam*w term escapes the adaptive scaling in AdamW.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §6</span></p>
+<p>The lesson's toy, executed 2026-10-06: with w=0.5, g=0.1, lam=0.1, AdamW applies decay 0.0500 outside the adaptive scaling, while L2-style adds 0.05 to the gradient, giving an L2-style grad of 0.1500 entangled with 1/sqrt(v).</p>
+</div>
+<div class="nugget" id="nugget-decay">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §11</span></h4>
+<p class="big">Decaying the norms and biases (or the embedding) regularizes parameters that should not be regularized that way. The standard recipe excludes them.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "decay everything" breaks. Apply decay to matrices only.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Regularization is not uniform by default. Scope it to the parameters it was designed for.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §9, §10</span></p>
+<p>Identical compute. The difference is purely in dynamics. With SGD, L2 and decoupled decay coincide. Use AdamW's decoupled form with Adam.</p>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C06</p>
+<h2>Clipping: cap the step, keep the direction</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §3, §5, §6</span></p>
+<p>What stops one bad batch from wrecking the weights? Clipping rescales the whole gradient when its global norm exceeds a threshold: g *= min(1, c/norm). It caps the step size without changing the direction. The update norm is bounded by lr*c regardless of the raw gradient. This prevents explosion from rare spikes: bad batches, numerical events. The lesson's toy, executed 2026-10-06: [3, 4, 0, ...] has norm 5.0, clipped to norm 1.0000. Direction kept, magnitude capped.</p>
+</div>
+<figure>
+<div id="chart-clip"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §6</span> Global-norm clipping on the lesson's toy vector: raw norm 5.0, clipped to 1.0. From <code>visuals/compute_u05.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<figure>
+<img class="illus" src="assets/u05-clipping.jpg" alt="Watercolor of a taut rope with a firm knot in the middle">
+<figcaption><span class="tag tag-toy">Illustration</span> Clipping as a knot in the rope: the pull can be strong, but the knot caps how far it travels. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-clip">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §11</span></h4>
+<p class="big">Clipping every step, with c far below the typical norm, trains on directions only at an effectively fixed step size. Worse, it hides a real instability, like bad data.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "clipping is a safety net" breaks when it becomes the regime. Log the clip frequency.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>A safety mechanism that fires constantly is a symptom, not a setting. Measure how often it fires.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §9, §10</span></p>
+<p>One extra norm over parameters per step: cheap. Alternatives: per-parameter clipping, adaptive clipping. Global-norm is the standard.</p>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C07</p>
+<h2>Schedules: warmup, cosine, WSD</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §3, §5</span></p>
+<p>Why not a constant lr? Warmup starts at 0 and ramps up: early gradients are noisy and moments uninitialized. Cosine decays smoothly to a floor: large steps early, fine steps late. WSD (warmup, stable, decay) holds constant after warmup, then decays fast over the last 10 to 20 percent: it lets you stop early or extend without retuning the decay horizon. Warmup: lr = peak * t/warm. Cosine: floor + 0.5*(peak-floor)*(1+cos(pi*(t-warm)/(total-warm))).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §6</span></p>
+<p>The lesson's toy (warmup 100, total 1000, peak 3e-4, floor 3e-5), executed 2026-10-06: lr at steps 0/50/100/550/1000 = 0, 1.5e-4, 3e-4, 1.65e-4, 3e-5.</p>
+</div>
+<figure>
+<div id="chart-sched"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §6</span> Warmup-plus-cosine schedule on the lesson's toy config. From <code>visuals/compute_u05.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §5</span> Schedule toy. Set the config and a step. The toy runs the lesson's warmup-plus-cosine formula.</p>
+<p class="small">warmup <input class="text" id="sw" value="100" style="max-width:80px" aria-label="Warmup steps"> total <input class="text" id="st" value="1000" style="max-width:80px" aria-label="Total steps"></p>
+<p class="small">peak <input class="text" id="sp" value="0.0003" style="max-width:90px" aria-label="Peak lr"> floor <input class="text" id="sf" value="0.00003" style="max-width:90px" aria-label="Floor lr"> step <input class="text" id="ss" value="550" style="max-width:80px" aria-label="Step"></p>
+<p><button class="btn" id="sbtn">Compute lr</button></p>
+<p class="small" id="sout">Press the button.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u05-schedule.jpg" alt="Watercolor of a sunrise ramp curving into a descending arc">
+<figcaption><span class="tag tag-toy">Illustration</span> The schedule as a day: ramp up with the sunrise, arc down toward evening. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-schedule">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §9, §11</span></h4>
+<p class="big">Cosine with the wrong total, when the job stops at half, never decays. The final model is under-converged.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "total is known" breaks on preempted runs. WSD exists for this. The schedule is the cheapest hyperparameter with the largest effect.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When the horizon is uncertain, pick the schedule that survives an early stop.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §10</span></p>
+<p>Selection boundary: cosine for fixed budgets, WSD for open-ended runs. Older: constant lr with decay-on-plateau, linear decay.</p>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C08</p>
+<h2>Accumulation: the big batch, in pieces</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §3, §5, §6</span></p>
+<p>The batch does not fit. Now what? Gradient accumulation sums (or averages) microbatch gradients before the optimizer step. The math equals one big batch, the memory equals one microbatch. The price is time: a accumulation steps per update. grad(mean over a*m samples) = mean over a of grad(microbatch means). Summing microbatch grads and dividing by a is algebraically identical. The lesson's toy, executed 2026-10-06: ([0.2, 0.4] + [0.6, -0.2]) / 2 = [0.4, 0.1] exactly.</p>
+</div>
+<div class="nugget" id="nugget-mean">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §11</span></h4>
+<p class="big">Forgetting to divide by a multiplies the effective lr by a, and training diverges.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "sum is enough" breaks. The mean is the contract. Some frameworks sum the loss, so check the convention.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When the code splits a sum into pieces, the reassembly rule is part of the correctness proof.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §9, §10</span></p>
+<p>Memory of one microbatch, time of a. Batchnorm-style statistics (not used in LMs) would differ. Norms per microbatch are fine. Alternatives: a smaller global batch (changes optimization dynamics), a distributed batch (U08).</p>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C09, C10</p>
+<h2>Other optimizers, and muP</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §3, §5</span></p>
+<p>Is AdamW the only answer? All optimizers are update rules with states. SGD with momentum: velocity = mu*v + g, step lr*v, with 4 bytes/param of state. Lion: sign(momentum) steps, smaller state. Adafactor: factored second moments for memory. Each is a branch: verify against its paper before trusting a reimplementation. The lab hand-steps SGD+m and Lion on w=[1.0], g=[0.5] with default hparams. Values are in the lab key. The trap: copying Lion's lr from an AdamW recipe diverges the run. Lion's sign updates need much smaller lr. The assumption "lr transfers across optimizers" breaks. Retune.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §3, §5</span></p>
+<p>Why retune the lr for every model size? muP is a parameterization: each layer's init and lr scale with width so that feature learning stays O(1) per coordinate. Tune on the small model, the large model inherits the hyperparameters. Standard param: init 1/fan_in, lr O(1). muP: hidden layers init O(1/fan_in) with lr O(1/n), output layer init O(1/n) with lr O(1). The scalings keep updates width-independent in the infinite-width limit. The lab tabulates init std and lr multiplier for widths 128/512/2048 under standard versus muP rules.</p>
+</div>
+<div class="nugget" id="nugget-mup">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §11</span></h4>
+<p class="big">Mixing muP init with standard lr makes the scales fight: training diverges or stalls.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "one of the two suffices" breaks. Both must match.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Coupled scalings travel as a pair. Adopt half the pair and you adopt none of it.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §9, §10, C10 §9, §10</span></p>
+<p>AdamW stays the default. Alternatives are for memory-constrained or research-comparison settings, verified first. muP pays off when tuning is expensive. At moderate scale, standard parameterization with fresh tuning per size remains the common practice.</p>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · C11, C12, synthesis</p>
+<h2>Checkpoints, RNG, and the gradient check</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §3, §5, §6</span></p>
+<p>What must a checkpoint contain to resume bit-identically? The training state: weights, optimizer moments, step, scheduler state, RNG states, data loader position. Missing any one breaks exact resumption, and the RNG is the most commonly forgotten. Dropout masks, data shuffling, and init noise all draw from the RNG. Restoring the exact state continues the identical stream. The lesson's toy, executed 2026-10-06: save state, draw 3 numbers, restore, draw again, identical.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §11</span></p>
+<p>Resuming with a fresh RNG changes the data order and dropout. The loss jumps, and the run looks like a hyperparameter change. The assumption "weights are enough" breaks. The symptom mimics a bad resume. Weights-only checkpoints are fine for eval, not for resume.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §3, §5, §6</span></p>
+<p>How do you know the backward pass is right? Finite differences are the ground truth for gradients: (f(w+e) - f(w-e)) / 2e, with O(e^2) error for central differences. Compare relatively: |a-n| / (|a|+|n|) < 1e-5. The lab run on a (4, 3) linear layer: max relative error 1.88e-10 in fp64. Loss invariants are cheap alarms: loss finite, loss decreases on a tiny overfit batch, gradient norm finite and nonzero. Checking in fp16 lets rounding dominate and fails correct code. Use fp64.</p>
+<p><span class="tag tag-lesson">From the lesson</span> The arc, end to end. The loss is cross-entropy, computed stable by subtracting the max (C01). Targets shift by one: the model reads the past, predicts the next token (C02). AdamW adapts per parameter and decouples the decay (C03, C04). Bias correction unbiases the early moments (C05). Clipping caps the step, not the direction (C06). Warmup ramps, cosine decays, WSD survives early stops (C07). Accumulation trades time for memory at identical math (C08). SGD, Lion, and Adafactor are verified branches (C09). muP transfers hyperparameters across widths (C10). The checkpoint holds the full state, RNG included (C11). Finite differences prove the backward pass (C12).</p>
+<p><span class="tag tag-lesson">From the lesson</span> Where the unit points next, in the lesson's own forward links: U02-C05 prices the optimizer states at 16 bytes per parameter. U03-C04 supplies the causal mask that keeps teacher forcing honest. U08-C06 distributes the batch. Assignment 1 asks for the transformer LM, the cross-entropy, the training loop, and the optimizer: the toys on this page are the shape of that assignment, not a substitute for it.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>8 nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-max"><span class="wnum">01</span>Fuse the numerically fragile chain <span class="muted">· C01</span></a></li>
+<li><a href="#nugget-shift"><span class="wnum">02</span>Distrust a loss that looks too good <span class="muted">· C02</span></a></li>
+<li><a href="#nugget-correction"><span class="wnum">03</span>Keep the exact correction <span class="muted">· C03, C05</span></a></li>
+<li><a href="#nugget-decay"><span class="wnum">04</span>Scope regularization to its parameters <span class="muted">· C04</span></a></li>
+<li><a href="#nugget-clip"><span class="wnum">05</span>A safety mechanism that fires constantly is a symptom <span class="muted">· C06</span></a></li>
+<li><a href="#nugget-schedule"><span class="wnum">06</span>Pick the schedule that survives an early stop <span class="muted">· C07</span></a></li>
+<li><a href="#nugget-mean"><span class="wnum">07</span>The mean is the contract <span class="muted">· C08</span></a></li>
+<li><a href="#nugget-mup"><span class="wnum">08</span>Coupled scalings travel as a pair <span class="muted">· C10</span></a></li>
+</ol>
+</section>
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>content/v2/cs336/lessons/u05_optimization.md</code>. No full lecture transcript exists for this session. Quoted words from the lesson source: 31. No lecture anecdotes appear. Claim class REQUESTED-BRANCH. The charts re-plot the lesson's computed numbers with section citations. The lab script is <code>visuals/compute_u05.py</code>, executed 2026-10-06. Interactive toys run the lesson's formulas and are labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p class="small">Readings and forward links named by the lesson: U02-C05 (optimizer memory), U03-C04 (causal mask), U08-C06 (distributed batch), Assignment 1.</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>.</p>
+</footer>
+</div>
+<script>
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  const keys = Object.keys(attrs)
+  keys.forEach(function(k) { n.setAttribute(k, attrs[k]) })
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function barChart(id, rows, maxV, unit, labelW) {
+  labelW = labelW || 210
+  const host = document.getElementById(id)
+  const W = 760
+  const rowH = 46
+  const padT = 14
+  const padB = 10
+  const H = padT + rows.length * rowH + padB
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  rows.forEach(function(r, i) {
+    const y = padT + i * rowH
+    const lab = svgEl("text", {x: 12, y: y + 27, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - labelW - 110) * (r[1] / maxV)
+    const bar = svgEl("rect", {x: labelW, y: y + 9, width: Math.max(bw, 3), height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1] + unit
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: labelW + Math.max(bw, 3) + 10, y: y + 27, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1] + unit
+    svg.appendChild(val)
+  })
+  host.appendChild(svg)
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id)
+  const data = opts.data
+  const W = 760
+  const H = 400
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const yMin = opts.yMin
+  const yMax = opts.yMax
+  function X(i) { return mL + i * ((W - mL - mR) / (data.length - 1)) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / (yMax - yMin)) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const grids = opts.grid || []
+  grids.forEach(function(g) {
+    svg.appendChild(svgEl("line", {x1: mL, x2: W - mR, y1: Y(g), y2: Y(g), stroke: "#e2d7c2", "stroke-width": 1}))
+    const t = svgEl("text", {x: 10, y: Y(g) + 5, "font-size": 13, fill: MUT, "font-family": SANS})
+    if (opts.yfmt) { t.textContent = opts.yfmt(g) } else { t.textContent = String(g) }
+    svg.appendChild(t)
+  })
+  let d = ""
+  data.forEach(function(v, i) {
+    if (i === 0) { d = d + "M" } else { d = d + "L" }
+    d = d + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "
+  })
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  data.forEach(function(v, i) {
+    const c = svgEl("circle", {cx: X(i), cy: Y(v), r: 8, fill: CLAY})
+    const tip = svgEl("title", {})
+    tip.textContent = opts.tip(i, v)
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const xl = svgEl("text", {x: X(i), y: H - 32, "font-size": 13, fill: MUT, "text-anchor": "middle", "font-family": SANS})
+    xl.textContent = opts.xlabels[i]
+    svg.appendChild(xl)
+  })
+  if (opts.ylabel) {
+    const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+    yl.textContent = opts.ylabel
+    svg.appendChild(yl)
+  }
+  if (opts.xlabel) {
+    const xcap = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+    xcap.textContent = opts.xlabel
+    svg.appendChild(xcap)
+  }
+  host.appendChild(svg)
+}
+
+
+barChart("chart-bias", [
+  ["1/(1-b1), b1=0.9", 10.0, INDIGO],
+  ["1/(1-b2), b2=0.999", 1000.0, CLAY]
+], 1100, "", 200)
+
+barChart("chart-clip", [
+  ["Raw gradient norm", 5.0, INDIGO],
+  ["Clipped norm", 1.0, CLAY]
+], 5.5, "", 200)
+
+lineChart("chart-sched", {
+  data: [0, 0.00015, 0.0003, 0.000165, 0.00003],
+  xlabels: ["0", "50", "100", "550", "1000"],
+  yMin: 0, yMax: 0.00035,
+  grid: [0, 0.0001, 0.0002, 0.0003],
+  yfmt: function(g) { return (g * 10000).toFixed(0) + "e-4" },
+  tip: function(i, v) { return "step " + ["0", "50", "100", "550", "1000"][i] + ": lr " + v },
+  ylabel: "learning rate",
+  xlabel: "step"
+})
+
+function renderCE() {
+  const raw = document.getElementById("celog").value
+  const cls = parseInt(document.getElementById("cecls").value, 10) || 0
+  const xs = raw.split(",").map(function(s) { return parseFloat(s.trim()) }).filter(function(v) { return !isNaN(v) })
+  const o = document.getElementById("ceout")
+  o.textContent = ""
+  if (xs.length === 0 || cls < 0 || cls >= xs.length) {
+    o.appendChild(el("p", "small", "Give comma-separated logits and a valid class index."))
+    return
+  }
+  let m = xs[0]
+  xs.forEach(function(v) { if (v > m) { m = v } })
+  let s = 0
+  xs.forEach(function(v) { s = s + Math.exp(v - m) })
+  const ce = m + Math.log(s) - xs[cls]
+  o.appendChild(el("p", "small", "Stable CE = " + ce.toFixed(4) + " (max = " + m + ", true logit = " + xs[cls] + ")."))
+  let note = "Matches the lesson check (0.4076) at the default inputs."
+  if (Math.abs(ce - 0.4076) > 0.0001) { note = "The lesson's check gives 0.4076 for [1000, 1001, 999], class 1." }
+  o.appendChild(el("p", "small muted", note))
+}
+document.getElementById("cebtn").addEventListener("click", renderCE)
+renderCE()
+
+function renderSched() {
+  const warm = parseFloat(document.getElementById("sw").value) || 100
+  const total = parseFloat(document.getElementById("st").value) || 1000
+  const peak = parseFloat(document.getElementById("sp").value) || 0.0003
+  const floor = parseFloat(document.getElementById("sf").value) || 0.00003
+  const step = parseFloat(document.getElementById("ss").value) || 0
+  let lr = 0
+  if (step <= warm) { lr = peak * step / warm }
+  else {
+    const frac = (step - warm) / (total - warm)
+    const c = Math.min(Math.max(frac, 0), 1)
+    lr = floor + 0.5 * (peak - floor) * (1 + Math.cos(Math.PI * c))
+  }
+  const o = document.getElementById("sout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "lr at step " + step + " = " + lr.toExponential(3) + "."))
+  let note = "Matches the lesson toy (1.65e-4 at step 550) at the default config."
+  if (Math.abs(lr - 0.000165) > 0.00001) { note = "The lesson toy gives 1.65e-4 at step 550 with warmup 100, total 1000." }
+  o.appendChild(el("p", "small muted", note))
+}
+document.getElementById("sbtn").addEventListener("click", renderSched)
+renderSched()
+
+
+</script>
+</body>
+</html>
