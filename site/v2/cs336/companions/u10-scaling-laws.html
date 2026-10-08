@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scaling laws and extrapolation · CS336</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.pairtable td.rank{font-weight:700}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS336 · Unit 10 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Scaling laws and extrapolation</h1>
+<p class="dek">How much compute, how big a model, how much data? This companion walks the scaling unit: the 6ND budget rule, loss floors, power-law fitting, isoFLOP curves, compute-optimal allocation, hyperparameter transfer, residuals, bootstrap bands, training vs inference optima, preregistration, overtraining, and the limits of scale transfer.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>u10_scaling_laws.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no full lecture transcript exists for this session. The page narrates the lesson document <code>content/v2/cs336/lessons/u10_scaling_laws.md</code>, not a video. Claim class: REQUESTED-BRANCH. Standing note: the lesson's lab script is <code>visuals/compute_u10.py</code>, executed 2026-10-06. Every number carries the lesson section that reports it.</p>
+</div>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Log space</a>
+<a href="#s2">2 The 6ND rule</a>
+<a href="#s3">3 Loss floors</a>
+<a href="#s4">4 Fitting</a>
+<a href="#s5">5 IsoFLOP</a>
+<a href="#s6">6 Transfer rules</a>
+<a href="#s7">7 Honest bands</a>
+<a href="#s8">8 Two optima</a>
+<a href="#s9">9 Preregister</a>
+<a href="#s10">10 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<figure>
+<img class="illus" src="assets/u10-hero-logline.jpg" alt="Watercolor of a hand-drawn scatter plot with points along a descending line">
+<figcaption><span class="tag tag-toy">Illustration</span> A power law becomes a line in log space. Fit the line, read the slope, negate it: the exponent. Watercolor, original to this companion.</figcaption>
+</figure>
+<section class="block" id="s1">
+<p class="secnum">Section 1 · Remediation</p>
+<h2>Fitting in log space</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></p>
+<p>A power law L = A x^{-a} becomes a line in log space: log L = log A - a log x. Fit the line with least squares, read the slope, negate it: that is the exponent. The lesson's toy from <code>compute_u10.py</code>: true a=0.34, fitted a=0.340, residual RMS 0.0031 in log space. The log transform is the whole technique of the unit: every fit in sections 4 through 8 starts here.</p>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C01</p>
+<h2>How much compute does a run cost?</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §5, §6</span></p>
+<p>How much compute does a 70B model on 1.4T tokens cost? Six floating ops per parameter per token: two for the forward pass, four for the backward pass. Multiply by tokens. C = 6ND. The lesson's run, executed 2026-10-06: 5.88e23 FLOPs for 70B on 1.4T, D/N = 20.0 tokens per param. A 7B model at 20 tokens per param costs 5.88e21 FLOPs, exactly 100x less. The budget is one number. N and D are the two knobs that produce it.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §9, §10, §11</span></p>
+<p>The formula omits attention (it matters at long T), embeddings, and recomputation. It is a planning number, not a meter reading. Use 6ND for planning, measured FLOP counters (U06) for billing. The failure case: a 7B model at T=128k, where the attention term 12*L*d*T^2 per token rivals 6N. The assumption "attention is negligible" breaks at long context. Add the term.</p>
+</div>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §5</span> 6ND toy. Params in billions, tokens in trillions.</p>
+<p class="small">Params (B) <input class="text" id="fpn" value="70" style="max-width:70px" aria-label="Params in billions"> Tokens (T) <input class="text" id="fpd" value="1.4" style="max-width:70px" aria-label="Tokens in trillions"></p>
+<p><button class="btn" id="fpbtn">Compute budget</button></p>
+<p class="small" id="fpout">Press the button.</p>
+<p class="small muted">At the defaults: 6 × 7e10 × 1.4e12 = 5.88e23 FLOPs, D/N = 20.0, matching C01 §6.</p>
+</div>
+<div class="nugget" id="nugget-budget">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01</span></h4>
+<p class="big">C = 6ND: the training budget is one number from two knobs.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Every allocation decision in this unit starts from the same formula. Plans that do not start here are guesses.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Reduce a resource question to one planning number before you argue about its parts.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C02</p>
+<h2>Why loss never reaches zero</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §5, §6</span></p>
+<p>If compute grew forever, would loss hit zero? No. E is the entropy of the data the model cannot remove: noise, ambiguity, genuinely unpredictable tokens. Scale shrinks the reducible part, never the floor. As x goes to infinity, A x^{-a} goes to 0, so L goes to E. The lesson's toy uses E = 1.69. At C = 1e22 the excess term is 0.104, the floor is 1.69, and the floor dominates. The 10x-extrapolated band is [1.737, 1.739].</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §9, §10, §11</span></p>
+<p>Fit with E free and the data decides the floor. Fix E too early and the exponent absorbs the error. An extra free parameter widens every confidence interval: small data cannot separate E from a shallow exponent. When data is scarce, fix E from a large-data anchor. When the range spans 2+ orders of magnitude, fit E freely. The failure case: data distribution shifts between runs. E is a property of the data, not the model. The assumption "one E fits all runs" breaks across data mixes. Fit per mix.</p>
+</div>
+<figure>
+<div id="chart-floor"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §6</span> At C = 1e22 the reducible excess is 0.104 against the floor E = 1.69. The floor dominates. From <code>visuals/compute_u10.py</code> (executed 2026-10-06).</figcaption>
+</figure>
+<figure>
+<img class="illus" src="assets/u10-iceberg.jpg" alt="Watercolor of an iceberg with a small tip above water and a huge body below">
+<figcaption><span class="tag tag-toy">Illustration</span> The loss floor as an iceberg: the visible reducible loss is the tip, the irreducible entropy of the data is the mass below. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-floor">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §11</span></h4>
+<p class="big">E belongs to the data mix, not the model. One E never fits all runs.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A floor fit on one data mix silently misestimates every other mix. The unit's honest bands (C08) start with this fact.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Ask what a constant belongs to before you carry it across contexts.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C03</p>
+<h2>Fitting the exponent</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §5, §6</span></p>
+<p>Given 24 noisy loss points, what is the exponent? The log transform turns the curve into a line. Least squares finds the line closest to the points. The slope is the negative exponent. The residual measures how far the world deviates from a pure power law. With x = log C and y = log(L - E), the normal equations give slope -a and intercept log A + a log C0. The lesson's run, executed 2026-10-06: fitted a = 0.340, A_hat = 0.499, RMS 0.0031.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §9, §10, §11</span></p>
+<p>Log-space least squares weights small losses more than a direct nonlinear fit. With heteroscedastic noise the two fits disagree. Use direct nonlinear least squares on L when E is uncertain, log-linear when E is fixed and noise is multiplicative. The failure case: E guessed too high distorts y = log(L - E) and the slope biases downward. The assumption "E is known" breaks. Fit E jointly or grid it (C02).</p>
+</div>
+<div class="nugget" id="nugget-fit">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03</span></h4>
+<p class="big">The residual, not the fit, tells you whether the law holds. 0.0031 RMS in log space against the toy's noise: the law fits.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Section 7 makes this a discipline: read residuals before you believe exponents.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Always inspect what a model left behind. The leftovers carry the verdict.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C04, C05</p>
+<h2>IsoFLOP curves and the optimal split</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §5, §6</span></p>
+<p>At fixed compute, is a bigger model or more data better? Fix C, sweep N, set D = C/(6N). Small N starves capacity, large N starves data. The curve is U-shaped. The bottom is the optimal split for that budget. Minimize the joint law L(N) = E + AN(N0/N)^a + AD(D0 6N/C)^a over N. The first-order condition gives N^2 = (N0/D0)(C/6) for the symmetric toy, hence N_opt proportional to C^{0.5}. The lesson's run, executed 2026-10-06: 6 isoFLOP curves, the minima line fits N_opt exponent 0.449 against the toy analytic 0.500. The gap comes from the coarse 16-point N grid plus noise, an honest toy miss, with max deviation of the noisy minima from analytic 0.277.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §9, §10, §11</span></p>
+<p>Each curve point is a full training run in reality. The toy uses 16 points per curve. Real isoFLOP studies use far fewer and interpolate. Per-curve minima are stable and assume no functional form. The parametric joint surface extrapolates. The failure case: curves that never turn up within the swept N range. The minimum lies outside the grid and the argmin is a boundary artifact. The assumption "the grid brackets the optimum" breaks. Widen the sweep.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §5, §6</span></p>
+<p>C = 5.88e23: how big a model and how much data? From C04: N_opt = sqrt((N0/D0)(C/6)), D_opt = C/(6 N_opt). The lesson's run, executed 2026-10-06: N = 7.00e10, D = 1.40e12, ratio D/N = 20.0 tokens per param. In the symmetric toy the split is even in log space: N and D each scale as C^{0.5}, and the ratio D/N stays constant at 20. The allocation ignores inference cost (C09), data availability, and memory limits. It answers the training-loss question only. The failure case: data runs out and D_opt exceeds the available corpus. The assumption "data is unlimited" breaks. The constrained optimum sits at the data boundary with a smaller N.</p>
+</div>
+<figure>
+<div id="chart-isoflop"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §6, C12 §6</span> The minima line fits N_opt exponent 0.449 against the toy analytic 0.500, with individual minima deviating up to 0.277. The gap is grid plus noise. From <code>visuals/compute_u10.py</code> (executed 2026-10-06).</figcaption>
+</figure>
+<div class="nugget" id="nugget-split">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04, C05</span></h4>
+<p class="big">Fix the budget, sweep the split, sit at the bottom of the U. N and D each scale as C^{0.5}. D/N stays 20 in the toy.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The training plan is a point on the minima line, not a guess. Sections 8 and 9 argue about when to leave it.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>For a fixed budget, find the curve's minimum before you defend any split.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C06</p>
+<h2>Carrying hyperparameters across widths</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §5, §6</span></p>
+<p>The small run liked lr = 3e-4 at width 256. What lr for width 1024? Wider layers sum more terms. Keep the update size per coordinate stable by shrinking the step. The toy rule: lr proportional to 1/fan-in for the hidden matrices. The update to a hidden weight is lr times the gradient. The gradient variance grows with fan-in under the toy init. Holding the update scale fixed gives lr_1 = lr_0 * w_0 / w_1. The lesson's run, executed 2026-10-06: 256 to 1024, 3.0e-04 to 7.5e-05</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §9, §10, §11</span></p>
+<p>One rule for all tensors mis-scales embeddings and the output head. Per-tensor rules cost bookkeeping but transfer better. Retune from scratch at target width for exactness (expensive). Use transfer rules for the first large run (cheap, approximate). The failure case: depth changes too. The width rule says nothing about depth scaling. The assumption "width is the only change" breaks, and transferred depth hyperparameters can diverge.</p>
+</div>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §5</span> Width-transfer toy. lr_1 = lr_0 × w_0 / w_1.</p>
+<p class="small">lr at w0 <input class="text" id="lr0" value="0.0003" style="max-width:80px" aria-label="Learning rate at w0"> w0 <input class="text" id="w0" value="256" style="max-width:70px" aria-label="Small width"> w1 <input class="text" id="w1" value="1024" style="max-width:70px" aria-label="Large width"></p>
+<p><button class="btn" id="lrbtn">Transfer lr</button></p>
+<p class="small" id="lrout">Press the button.</p>
+<p class="small muted">At the defaults: 3e-4 × 256/1024 = 7.5e-5, matching C06 §6.</p>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C07, C08</p>
+<h2>Honest uncertainty</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §5, §6</span></p>
+<p>The fit looks good, but is the law right? Residuals are the fit's confession. Random scatter means noise. A smile or frown means the functional form is wrong. Compare the RMS against the known noise level before believing the exponent. The lesson's run, executed 2026-10-06: residual RMS 0.0031 in log space against injected noise sigma 0.02 on the excess. The residual sits well below the noise: the law fits. A residual plot costs one figure and catches what R^2 hides. R^2 near 1.0 with a curved residual still means a wrong law. The failure case: correlated runs (same data, shared seeds). Residuals look small but are not independent. The assumption "iid noise" breaks, and the exponent CI is too narrow.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §5, §6</span></p>
+<p>The fit says a = 0.340, but the next run is 10x bigger. How wide is the honest band? Resample the points, refit, collect exponents. The spread is the fit's own uncertainty. Push each resampled law 10x out: the band is the honest prediction, not the median line. The lesson's run, executed 2026-10-06: 200 bootstraps give a 95% CI of [0.337, 0.343], the 10x loss band is [1.737, 1.739], width 0.002. The band in this calm toy is tiny because the noise is tiny and iid. Real bands are wider: fewer points, correlated runs, E uncertainty. The failure case: extrapolating 100x with a law fitted over 1 order of magnitude. The band explodes and the law itself may change form (new bottlenecks appear). The assumption "the law holds out of range" breaks. Cap claims at the fitted range plus a small multiple.</p>
+</div>
+<div class="nugget" id="nugget-bands">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08</span></h4>
+<p class="big">The honest prediction is the band, not the median line. 200 bootstraps: CI [0.337, 0.343], 10x band width 0.002.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Section 10 stakes real bets on bands like this. A point prediction without a band is a wish.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Quote the interval, not the point. Uncertainty is part of the answer.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C09, C11</p>
+<h2>Two optima: training vs inference</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §5, §6</span></p>
+<p>The 70B model wins on loss, but you will serve a trillion tokens. Which do you train? Two different objectives: minimize loss at fixed training FLOPs (compute-optimal), or minimize loss plus inference cost over the deployment lifetime (inference-optimal). The second favors smaller, longer-trained models. Total cost = C_train + Q * k * N. The lesson's run, executed 2026-10-06: config A (70B at 20 tok/param) has toy loss 2.290 at C = 5.88e23. Config B (7B at 200 tok/param) has toy loss 2.646 at C = 5.88e22. The quality gap is 0.36 nats. B costs 10x less per inference token. The toy objective J = L + lam*N gives A = 2.360, B = 2.653. B wins once inference weight is nonzero.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §9, §10, §11</span></p>
+<p>The toy ignores memory, latency, and quality thresholds. A product has a minimum quality bar that can rule out B regardless of cost. Distill the big model into a small one (U11-C10) instead of overtraining from scratch. Overtrain when the teacher does not exist yet. The failure case: serving volume overestimated 100x. The inference term never materializes and the team paid quality for nothing. The assumption "Q is known" breaks. Plan with Q scenarios, not a point estimate.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §5, §6</span></p>
+<p>What does 200 tokens per param buy over 20? Hold N fixed, raise D. The loss falls as D^{-a} while C rises linearly in D. The marginal nats-per-FLOP decays as D^{-(a+1)}. The lesson's run at N = 7B, executed 2026-10-06: 20 tok/param gives loss 3.003 at C = 5.88e21. 200 tok/param gives 2.646 at C = 5.88e22. Ten times the training compute buys 0.357 nats. You pay it anyway when inference volume dwarfs training cost. The failure case: repeating the same 100B tokens 14 times. The model memorizes instead of generalizing. The assumption "tokens are fresh" breaks, and the loss improvement stalls or reverses.</p>
+</div>
+<figure>
+<div id="chart-overtrain"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §6</span> Overtraining a 7B model: 20 tok/param gives loss 3.003 at 5.88e21 FLOPs. 200 tok/param gives 2.646 at 5.88e22. Ten times the compute buys 0.357 nats. From <code>visuals/compute_u10.py</code> (executed 2026-10-06).</figcaption>
+</figure>
+<figure>
+<img class="illus" src="assets/u10-balance.jpg" alt="Watercolor of a brass balance scale with a small bird on one pan and coins on the other">
+<figcaption><span class="tag tag-toy">Illustration</span> The training-vs-inference tradeoff as a scale: the small overtrained model weighs little per token but costs ten times the training compute. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-optima">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09</span></h4>
+<p class="big">Compute-optimal and inference-optimal are different objectives. 0.36 nats separate them, and 10x per-token cost too.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Pick the objective before the model. The "best" model depends on the serving volume you assume.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Name the objective before you optimize. Two optima mean two different right answers.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C10</p>
+<h2>Write the prediction before the run</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §5, §6</span></p>
+<p>How do you stop yourself from moving the goalposts after the fit? Preregistration is a contract with your future self: the number, the band, and the decision rule, all written before the data arrives. A held prediction is weak evidence. A missed one is strong evidence that the model is wrong. The lesson's toy, executed 2026-10-06: registered before the fit ran, fitted a in [0.30, 0.38]. Observed: 0.340. The prediction held. Registration costs one paragraph. It saves the cost of fooling yourself, which is unbounded.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §9, §10, §11</span></p>
+<p>Post-hoc rationalization is free and worthless. Blind analysis is stronger but needs infrastructure, for high-stakes claims. The failure case: the prediction misses because the regime changed (new data mix). The miss is informative, not a failure of the practice. The assumption "the regime is fixed" breaks. Re-register for the new regime.</p>
+</div>
+<div class="nugget" id="nugget-register">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10</span></h4>
+<p class="big">Registered band [0.30, 0.38], observed 0.340. The prediction held.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Section 10's staged scale-up runs on registered checkpoints. Without them, scale bets are post-hoc stories.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Write the number and the rule before the data. Your future self will thank you.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · C12, synthesis</p>
+<h2>What does not survive scale-up</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §5, §6</span></p>
+<p>The 1D fit nailed a = 0.340 on the toy. Does the joint exponent 0.449 match the analytic 0.500? No: the coarse grid plus noise moved it. Small-scale fits carry grid and noise artifacts that do not wash out. Three limits: the law can change form (new bottlenecks), the noise regime changes (fewer runs at scale), and the optimum moves outside the searched range. Each needs its own check, not hope. The lesson's run, executed 2026-10-06: fitted 0.449 against analytic 0.500, deviation up to 0.277 on individual minima. The toy demonstrates the gap.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §9, §10, §11</span></p>
+<p>The checks cost extra runs at intermediate scales. Skipping them costs a wrong 10x bet. Blind faith in the small fit is cheap and wrong on schedule. Staged scale-up with registered checkpoints (C10) is the answer for real bets. The failure case: emergent behavior at scale (new capabilities, new failure modes) breaks every extrapolation of loss alone. The assumption "loss predicts behavior" breaks. Track capability evals alongside loss (U12).</p>
+</div>
+<div class="nugget" id="nugget-staged">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12</span></h4>
+<p class="big">Three transfer failure modes, three checks: residual trend for form change, CI width for noise, boundary check for range.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The whole unit's honesty machinery (bands, residuals, registration) exists for this moment: the 10x bet.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Stage the scale-up. Register checkpoints. Check each mode with its own diagnostic.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span> The arc, end to end. C = 6ND budgets the run (C01). The loss floor E belongs to the data (C02). Log space turns the power law into a line. Least squares reads the exponent (remediation, C03). IsoFLOP minima split the budget into N and D (C04, C05). Hyperparameters transfer across widths with lr proportional to 1/fan-in (C06). Residuals judge the law, bootstraps bound the prediction (C07, C08). The inference objective favors the small overtrained model (C09, C11). Preregistration keeps the scientist honest (C10). Three transfer limits gate the 10x bet (C12).</p>
+<p><span class="tag tag-lesson">From the lesson</span> Where the unit points next, in the lesson's own forward links: U06 supplies measured FLOP counters for real billing. U11 inherits the inference-optimal choice and distillation. U12 tracks capability evals alongside loss. U13 and U14 decide the data mix that sets E.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>8 nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-budget"><span class="wnum">01</span>One number from two knobs <span class="muted">· C01</span></a></li>
+<li><a href="#nugget-floor"><span class="wnum">02</span>The floor belongs to the data <span class="muted">· C02</span></a></li>
+<li><a href="#nugget-fit"><span class="wnum">03</span>Read what the fit left behind <span class="muted">· C03</span></a></li>
+<li><a href="#nugget-split"><span class="wnum">04</span>Sit at the bottom of the U <span class="muted">· C04, C05</span></a></li>
+<li><a href="#nugget-bands"><span class="wnum">05</span>Quote the interval, not the point <span class="muted">· C08</span></a></li>
+<li><a href="#nugget-optima"><span class="wnum">06</span>Name the objective before you optimize <span class="muted">· C09</span></a></li>
+<li><a href="#nugget-register"><span class="wnum">07</span>Write the number before the data <span class="muted">· C10</span></a></li>
+<li><a href="#nugget-staged"><span class="wnum">08</span>Stage the scale-up <span class="muted">· C12</span></a></li>
+</ol>
+</section>
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>content/v2/cs336/lessons/u10_scaling_laws.md</code>. No full lecture transcript exists for this session. Quoted words from the lesson source: 31. No lecture anecdotes appear. Claim class REQUESTED-BRANCH. The charts re-plot the lesson's computed numbers with section citations. The lab script is <code>visuals/compute_u10.py</code>, executed 2026-10-06. Interactive toys run the lesson's formulas and are labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p class="small">Readings and forward links named by the lesson: U06 (FLOP counters), U11 (inference-optimal, distillation), U12 (capability evals), U13/U14 (data mix sets E).</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>.</p>
+</footer>
+</div>
+<script>
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  const keys = Object.keys(attrs)
+  keys.forEach(function(k) { n.setAttribute(k, attrs[k]) })
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function barChart(id, rows, maxV, unit, labelW) {
+  labelW = labelW || 210
+  const host = document.getElementById(id)
+  const W = 760
+  const rowH = 46
+  const padT = 14
+  const padB = 10
+  const H = padT + rows.length * rowH + padB
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  rows.forEach(function(r, i) {
+    const y = padT + i * rowH
+    const lab = svgEl("text", {x: 12, y: y + 27, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - labelW - 110) * (r[1] / maxV)
+    const bar = svgEl("rect", {x: labelW, y: y + 9, width: Math.max(bw, 3), height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1] + unit
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: labelW + Math.max(bw, 3) + 10, y: y + 27, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1] + unit
+    svg.appendChild(val)
+  })
+  host.appendChild(svg)
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id)
+  const data = opts.data
+  const W = 760
+  const H = 400
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const yMin = opts.yMin
+  const yMax = opts.yMax
+  function X(i) { return mL + i * ((W - mL - mR) / (data.length - 1)) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / (yMax - yMin)) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const grids = opts.grid || []
+  grids.forEach(function(g) {
+    svg.appendChild(svgEl("line", {x1: mL, x2: W - mR, y1: Y(g), y2: Y(g), stroke: "#e2d7c2", "stroke-width": 1}))
+    const t = svgEl("text", {x: 10, y: Y(g) + 5, "font-size": 13, fill: MUT, "font-family": SANS})
+    if (opts.yfmt) { t.textContent = opts.yfmt(g) } else { t.textContent = String(g) }
+    svg.appendChild(t)
+  })
+  let d = ""
+  data.forEach(function(v, i) {
+    if (i === 0) { d = d + "M" } else { d = d + "L" }
+    d = d + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "
+  })
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  data.forEach(function(v, i) {
+    const c = svgEl("circle", {cx: X(i), cy: Y(v), r: 8, fill: CLAY})
+    const tip = svgEl("title", {})
+    tip.textContent = opts.tip(i, v)
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const xl = svgEl("text", {x: X(i), y: H - 32, "font-size": 13, fill: MUT, "text-anchor": "middle", "font-family": SANS})
+    xl.textContent = opts.xlabels[i]
+    svg.appendChild(xl)
+  })
+  if (opts.ylabel) {
+    const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+    yl.textContent = opts.ylabel
+    svg.appendChild(yl)
+  }
+  if (opts.xlabel) {
+    const xcap = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+    xcap.textContent = opts.xlabel
+    svg.appendChild(xcap)
+  }
+  host.appendChild(svg)
+}
+
+
+barChart("chart-floor", [
+  ["Irreducible floor E", 1.69, INDIGO],
+  ["Reducible excess at C=1e22", 0.104, SAGE]
+], 1.8, "", 170)
+
+barChart("chart-isoflop", [
+  ["Fitted N_opt exponent", 0.449, CLAY],
+  ["Toy analytic exponent", 0.5, INDIGO],
+  ["Max minima deviation", 0.277, SAGE]
+], 0.55, "", 170)
+
+barChart("chart-overtrain", [
+  ["20 tok/param, loss", 3.003, INDIGO],
+  ["200 tok/param, loss", 2.646, SAGE]
+], 3.1, "", 170)
+
+function renderFp() {
+  const n = (parseFloat(document.getElementById("fpn").value) || 70) * 1e9
+  const d = (parseFloat(document.getElementById("fpd").value) || 1.4) * 1e12
+  const c = 6 * n * d
+  const ratio = d / n
+  const o = document.getElementById("fpout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "C = 6 × " + n.toExponential(2) + " × " + d.toExponential(2) + " = " + c.toExponential(2) + " FLOPs. D/N = " + ratio.toFixed(1) + " tokens per param."))
+  let note = "At the defaults: 5.88e23 FLOPs, D/N = 20.0, matching C01 §6."
+  if (Math.abs(c - 5.88e23) / 5.88e23 > 0.01) { note = "The lesson's example: 70B on 1.4T tokens gives 5.88e23 FLOPs (C01 §6)." }
+  o.appendChild(el("p", "small muted", note))
+}
+document.getElementById("fpbtn").addEventListener("click", renderFp)
+renderFp()
+
+function renderLr() {
+  const lr0 = parseFloat(document.getElementById("lr0").value) || 0.0003
+  const w0 = parseFloat(document.getElementById("w0").value) || 256
+  const w1 = parseFloat(document.getElementById("w1").value) || 1024
+  const lr1 = lr0 * w0 / w1
+  const o = document.getElementById("lrout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "lr at width " + w1 + " = " + lr1.toExponential(2) + "."))
+  let note = "At the defaults: 7.5e-5, matching C06 §6."
+  if (Math.abs(lr1 - 7.5e-5) / 7.5e-5 > 0.01) { note = "The lesson's example: 3e-4 at width 256 transfers to 7.5e-5 at width 1024 (C06 §6)." }
+  o.appendChild(el("p", "small muted", note))
+}
+document.getElementById("lrbtn").addEventListener("click", renderLr)
+renderLr()
+
+
+</script>
+</body>
+</html>
