@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS229S Unit 05 companion: Quantization, sparsity, structured operators</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+input.range{width:100%}
+input.range{max-width:420px}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS229S · Unit 05 companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Unit 05 companion · narrated from the lesson document</p>
+<h1>Quantization, sparsity, and structured operators</h1>
+<p class="dek">Twelve concepts, one arc: how 8 bits stand in for 32, how zeros get skipped for real, and how structured math replaces dense math, all gated by proof of quality.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>lesson-05-quantization-sparsity.md</code>. The phrasing is the companion’s.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion’s.</p>
+<p class="small muted">Provenance: no lecture transcript exists for this session. Calendar session titles anchor the lesson to Week 4, Oct 14 (Memory Efficient Neural Networks, presented by Simran). This page narrates the lesson document, not a video. Claim class for every lesson leaf: PLANNED / SOURCE ATTRIBUTION PENDING. One internal inconsistency found during the build is disclosed on-page with recomputation (C05 calibration assert).</p>
+</div>
+<figure>
+<img class="illus" src="assets/u05-ruler.jpg" alt="Watercolor of a wooden ruler with evenly spaced marks and a brass zero pin">
+<figcaption><span class="tag tag-toy">Illustration</span> The unit’s first idea in one image: a ruler with even marks, and a pin that says which mark means zero. Watercolor, original to this companion.</figcaption>
+</figure>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Scale and zero</a>
+<a href="#s2">2 Rounding and clipping</a>
+<a href="#s3">3 Per-channel</a>
+<a href="#s4">4 Weights vs acts</a>
+<a href="#s5">5 Calibration</a>
+<a href="#s6">6 Sparsity</a>
+<a href="#s7">7 Pruning</a>
+<a href="#s8">8 Kernel speed</a>
+<a href="#s9">9 Butterfly</a>
+<a href="#s10">10 Monarch</a>
+<a href="#s11">11 Error growth</a>
+<a href="#s12">12 Validation</a>
+<a href="#s13">Synthesis</a>
+<a href="#wisdom">Nuggets</a>
+</div></nav>
+
+<section class="block" id="s1">
+<p class="secnum">Section 1 · C01</p>
+<h2>Scale and zero point: the ruler</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §3</span></p>
+<p>32 bits carry a float. How do 8 bits stand in? Picture a ruler with 16 marks. The scale s sets the spacing between marks. The zero point z names the mark that means zero. Each float snaps to its nearest mark, and the marks are evenly spaced.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §4, §6</span></p>
+<p>s = (max − min) / (2^b − 1), and z = round(−min / s), the integer decoding to 0.0. Forward: x_q = clamp(round(x / s) + z, 0, 2^b − 1). Back: x_hat = s · (x_q − z). The toy with min = −1, max = 1, b = 4: s = 2/15 = 0.1333, z = round(1/0.1333) = 8. For x = 0.5, x_q = round(3.75) + 8 = 12 and x_hat = 0.1333 · 4 = 0.5333, error 0.0333. The lesson’s check: quantize(0.5) = 12, with dequantize(quantize(0)) = 0 exactly.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §7, §9</span></p>
+<p>Quantization costs O(N) once and then saves 4x memory traffic on every inference step after, fp32 to int8. But the range must cover the data. A single weight at 100 among values in [−1, 1] stretches s to 101/255 = 0.396, collapsing everything under 0.2 onto one level. Clip the range or go per-channel (C02, C03).</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Ruler with 16 marks, zero pin at mark 8, value 0.5 snapping to mark 12">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">The 4-bit ruler on [−1, 1]: 0.5 snaps to mark 12</text>
+<g font-family="sans-serif" font-size="12">
+<line x1="60" y1="120" x2="580" y2="120" stroke="#221a12" stroke-width="2"/>
+<g stroke="#31405e" stroke-width="2">
+<line x1="60" y1="110" x2="60" y2="130"/><line x1="94" y1="110" x2="94" y2="130"/><line x1="128" y1="110" x2="128" y2="130"/><line x1="162" y1="110" x2="162" y2="130"/><line x1="196" y1="110" x2="196" y2="130"/><line x1="230" y1="110" x2="230" y2="130"/><line x1="264" y1="110" x2="264" y2="130"/><line x1="298" y1="110" x2="298" y2="130"/><line x1="332" y1="110" x2="332" y2="130"/><line x1="366" y1="110" x2="366" y2="130"/><line x1="400" y1="110" x2="400" y2="130"/><line x1="434" y1="110" x2="434" y2="130"/><line x1="468" y1="110" x2="468" y2="130"/><line x1="502" y1="110" x2="502" y2="130"/><line x1="536" y1="110" x2="536" y2="130"/><line x1="570" y1="110" x2="570" y2="130"/>
+</g>
+<circle cx="298" cy="120" r="9" fill="#5d7050"/><text x="298" y="155" text-anchor="middle" fill="#5d7050">z = 8 (zero)</text>
+<circle cx="434" cy="120" r="9" fill="#a94f27"/><text x="434" y="155" text-anchor="middle" fill="#a94f27">x_q = 12 (0.5)</text>
+<text x="60" y="155">−1</text><text x="570" y="155">1</text>
+<text x="320" y="190" text-anchor="middle">one rule: snap to the nearest mark</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §3, §6</span> The toy ruler: 16 marks over [−1, 1], zero pinned at mark 8.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Ruler lab. Enter a value. The widget applies the lesson’s quantize and dequantize at s = 0.1333, z = 8, 4 bits.</p>
+<p>Value x: <input class="text" id="qzX" value="0.5" inputmode="decimal" aria-label="Value to quantize"></p>
+<p><button class="btn" id="qzBtn">Snap to the ruler</button></p>
+<div class="chips" id="qzOut"></div>
+<p class="small" id="qzNote"></p>
+</div>
+<div class="nugget" id="nugget-ruler">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §7</span></h4>
+<p class="big">The range must cover the data. A lone outlier stretches the ruler and crushes small values onto one mark.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The scale is set by the extremes, so the extremes deserve suspicion. A ruler fitted to a giant measures everyone else badly.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Any discretization inherits its range from the data. Check the tails before trusting the bins.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C02</p>
+<h2>Two ways to miss: rounding and clipping</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §3</span></p>
+<p>Missing comes in two flavors. Rounding: the target lands between marks, with error capped at s/2. Clipping: the target lies past the last mark, with unbounded error. Rounding is the ruler’s price, and clipping means the ruler is wrong.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §4, §6</span></p>
+<p>On the same 4-bit ruler at s = 0.1333: x = 0.5 misses by rounding, error 0.0333 within s/2 = 0.0667. x = 1.5 falls past the last mark and clips to level 15, x_hat = 0.1333 · 7 = 0.9333, error 0.5667. Total MSE adds rounding MSE and clipping MSE, and the optimal range balances them (C05).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §7, §9</span></p>
+<p>Rounding error stays bounded and predictable, but clipping error does neither. A wider range clips less but coarsens every mark, lifting rounding error. Choosing the range is the tradeoff, and calibration (C05) settles it by measurement.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Error bars: small rounding error for 0.5, large clipping error for 1.5">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Two misses: rounding (bounded) vs clipping (unbounded)</text>
+<g font-family="sans-serif" font-size="12" text-anchor="middle">
+<line x1="80" y1="180" x2="300" y2="180" stroke="#221a12" stroke-width="1.5"/>
+<line x1="150" y1="180" x2="150" y2="150" stroke="#5d7050" stroke-width="4"/>
+<text x="150" y="140" fill="#5d7050">0.0333</text>
+<text x="150" y="205">x = 0.5: rounding</text>
+<text x="150" y="222" font-size="11" fill="#6f6355">within s/2</text>
+<line x1="380" y1="180" x2="600" y2="180" stroke="#221a12" stroke-width="1.5"/>
+<line x1="490" y1="180" x2="490" y2="60" stroke="#a94f27" stroke-width="4"/>
+<text x="490" y="50" fill="#a94f27">0.5667</text>
+<text x="490" y="205">x = 1.5: clipped</text>
+<text x="490" y="222" font-size="11" fill="#6f6355">past the last mark</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §6</span> Same ruler, two misses. The clipping bar is 17x the rounding bar.</figcaption>
+</figure>
+<div class="nugget" id="nugget-miss">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §7</span></h4>
+<p class="big">Rounding pays the ruler’s price, and clipping indicts the ruler. One is bounded, the other is not.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Bounded errors can be budgeted, but unbounded ones cannot. The range decision is really a clipping decision.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Separate your error sources by boundedness. Fix the unbounded one first.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C03</p>
+<h2>Per-channel rulers: thermostats</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §3</span></p>
+<p>One thermostat for the house or one per room? Per-tensor quantization uses a single (s, z) everywhere: the loudest channel dictates the scale while the quiet channel is left with one mark. Per-channel quantization hands every channel its own ruler.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §4, §6</span></p>
+<p>The toy: W rows r1 in [−100, 100] and r2 in [−1, 1], 4 bits. Under per-tensor, r2’s values all collapse onto z, a single level. Under per-channel, r2 keeps all 16 levels, and the quiet channel’s MSE falls about 200x against per-tensor. The lesson’s check: per-channel s[0] exceeds 10x s[1], following each row’s own range.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §7, §9</span></p>
+<p>Finer granularity always lifts quality and always bills metadata. One (s, z) per channel, or per group of channels in the middle. Per-tensor is one ruler for the house, per-group one per floor, per-channel one per room. Spend granularity where channels differ most.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u05-thermostats.jpg" alt="Watercolor of a house cutaway with a thermostat in each room glowing different colors">
+<figcaption><span class="tag tag-toy">Illustration</span> The C03 mental model: one thermostat per room beats one for the house when the rooms differ. Watercolor, original to this companion.</figcaption>
+</figure>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Per-tensor uses one scale for both channels while per-channel gives each its own">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">One ruler for the house, one per room</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="58" font-weight="bold">per-tensor: one (s, z)</text>
+<rect x="20" y="70" width="560" height="26" fill="#31405e" opacity="0.75"/>
+<text x="30" y="88" fill="#fff">r1 [−100, 100]</text>
+<rect x="20" y="104" width="6" height="26" fill="#a94f27"/>
+<text x="34" y="122">r2 [−1, 1]: one mark</text>
+<text x="20" y="158" font-weight="bold">per-channel: own (s, z) each</text>
+<rect x="20" y="170" width="560" height="26" fill="#31405e" opacity="0.75"/>
+<text x="30" y="188" fill="#fff">r1 [−100, 100]</text>
+<rect x="20" y="204" width="560" height="26" fill="#5d7050" opacity="0.75"/>
+<text x="30" y="222" fill="#fff">r2 [−1, 1]: all 16 marks</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §4, §6</span> The toy rows: per-tensor gives the quiet row one level, per-channel restores all 16.</figcaption>
+</figure>
+<div class="nugget" id="nugget-thermostat">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §7</span></h4>
+<p class="big">Never let the loud channel rule the quiet one’s ruler. Granularity is quality with a metadata price.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A 200x MSE gap between per-tensor and per-channel is not a tuning detail. It is the difference between a working model and a broken one.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When one scale serves many populations, the noisiest population wins and the rest lose. Partition the scale.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C04</p>
+<h2>Weights versus activations: two kinds of luggage</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §3</span></p>
+<p>Luggage comes in two kinds. Weights are packed at the factory, measured once and quantized once, static. Activations are packed at the gate: each batch measured and quantized live, which is dynamic, or typical batches pre-measured, which is static with calibration.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §4, §6</span></p>
+<p>The toy: W (8, 8) static int8, x (8,) dynamic per batch. Weights are known in advance, so their (s, z) freezes. Activations shift per batch, so dynamic quantization measures each one, trading per-batch overhead for a tighter range. The lesson’s check: s stays positive with 0 ≤ z ≤ 255 across the int8 dynamic range.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §7, §9</span></p>
+<p>Static costs less at runtime, and dynamic adapts per batch. Static with calibration splits the difference: typical batches are pre-measured once, the range freezes, and the per-batch cost vanishes. The failure mode is distribution shift, where calibration on yesterday’s batches mismeasures today’s.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Weights packed once at the factory, activations measured per batch at the gate">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Two kinds of luggage</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="20" y="50" width="260" height="150" fill="none" stroke="#31405e" stroke-width="2"/>
+<text x="36" y="76" font-weight="bold">factory: weights W (8, 8)</text>
+<text x="36" y="100">measure once</text>
+<text x="36" y="120">quantize once</text>
+<text x="36" y="140">static: (s, z) frozen</text>
+<text x="36" y="164" fill="#5d7050">cheap at runtime</text>
+<rect x="360" y="50" width="260" height="150" fill="none" stroke="#a94f27" stroke-width="2"/>
+<text x="376" y="76" font-weight="bold">gate: activations x (8,)</text>
+<text x="376" y="100">measure each batch</text>
+<text x="376" y="120">quantize on the fly</text>
+<text x="376" y="140">dynamic, or calibrated static</text>
+<text x="376" y="164" fill="#a94f27">adapts per batch</text>
+<line x1="280" y1="125" x2="360" y2="125" stroke="#221a12" stroke-width="2"/>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §4, §6</span> Weights freeze their range at the factory, and activations measure theirs at the gate.</figcaption>
+</figure>
+<div class="nugget" id="nugget-luggage">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §7</span></h4>
+<p class="big">Weights pack at the factory, and activations pack at the gate. Static costs less, and dynamic adapts.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The quantization strategy follows the data lifecycle. Known-ahead data gets frozen ranges, and live data gets measured ranges.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Match the measurement schedule to the data schedule. Static assumptions on live data are a distribution-shift bug.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C05</p>
+<h2>Calibration: fitting the ruler to the crowd</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §3</span></p>
+<p>Fitting the ruler to the crowd means ignoring the giant. Min/max fits the tallest person, the outlier, and hands everyone else a bad ruler. A percentile, say 99.9%, fits the crowd while clipping the giant. MSE measured on the crowd picks the winner.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §4, §6</span></p>
+<p>The toy: 9999 values in [−1, 1] plus one at 1000. Min/max gives s = 1001/255 = 3.925, and the 99.9 percentile gives s ≈ 2/255 = 0.0078. Rounding MSE grows with s², so min/max runs about (3.925/0.0078)² ≈ 250000x worse on the bulk. The percentile ruler clips a single giant and measures everyone else finely.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §7, §9</span></p>
+<p>Calibration turns the range decision into a measurement. Min/max stays hostage to the single largest value, while percentile spends one clip to buy the crowd a fine ruler. When calibration data stops matching deployment, the assumption breaks. Recalibrate as the crowd changes.</p>
+</div>
+<div class="callout">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §6</span> <strong>Disclosed inconsistency.</strong> The lesson’s prose toy (9999 values in [−1, 1], one at 1000) gives s = 3.925 for min/max and s ≈ 0.0078 for the percentile, matching the claimed ~250000x MSE ratio. But the lesson’s code toy differs: 999 uniform values plus one at 100.0. On that code, s_mm = 0.3961 and s_pc = 0.2021, so the assert <code>s_mm > 50 * s_pc</code> fails (0.3961 against 10.1074). The prose numbers are correct for the prose toy, but the code asserts a claim its own toy does not satisfy.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Min-max ruler stretched by one giant versus percentile ruler fitted to the crowd">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Fitting the ruler to the crowd</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="58" font-weight="bold">min/max: s = 3.925</text>
+<line x1="20" y1="80" x2="620" y2="80" stroke="#221a12" stroke-width="2"/>
+<rect x="20" y="70" width="14" height="20" fill="#5d7050"/>
+<text x="20" y="106">9999 values crushed here</text>
+<circle cx="610" cy="80" r="7" fill="#a94f27"/>
+<text x="540" y="106" fill="#a94f27">one giant at 1000</text>
+<text x="20" y="146" font-weight="bold">99.9 percentile: s = 0.0078</text>
+<line x1="20" y1="168" x2="620" y2="168" stroke="#221a12" stroke-width="2"/>
+<rect x="20" y="158" width="560" height="20" fill="#5d7050" opacity="0.6"/>
+<text x="20" y="194">crowd spread over fine marks</text>
+<text x="600" y="150" fill="#a94f27">giant clipped</text>
+<text x="20" y="226">MSE ratio ≈ 250000x on the bulk</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §4, §6</span> One clip buys the crowd a fine ruler, while min/max lets the giant stretch it.</figcaption>
+</figure>
+<div class="nugget" id="nugget-crowd">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §7</span></h4>
+<p class="big">Fit the ruler to the crowd and clip the giant. One clip buys fine measurement for everyone else.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A 250000x MSE ratio between min/max and percentile is the whole game. The range decision dwarfs every other quantization choice.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Percentile statistics beat naive extremes whenever one outlier can set the scale. Percentiles are the default.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C06</p>
+<h2>Structured versus random sparsity: assigned seating</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §3</span></p>
+<p>Assigned seating or free choice? With unstructured, random zeros, everyone sits wherever they want and the usher, the hardware, cannot plan ahead. With 2:4 structured sparsity, every group of 4 holds exactly 2 zeros, so the usher recognizes the pattern and skips quickly. Block sparsity empties whole tables: easy to skip, but coarser.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §4, §6</span></p>
+<p>The toy: 8 weights in pattern [1,0,0,1, 0,1,1,0]. Each group of 4 carries exactly two zeros, so the pattern is valid 2:4. The pattern [1,1,1,1, 0,0,0,0] packs four zeros into the second group, so it is invalid. The lesson’s check: is_24 accepts the first and rejects the second, and sparse tensor cores exploit the 2:4 pattern directly.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §7, §9</span></p>
+<p>Only structured zeros are skippable. Random zeros save nothing without gather support, so the pattern is the product. Block sparsity exchanges granularity for skippability: whole blocks vanish, taking fine detail with them.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Two groups of four cells, each with exactly two filled and two empty">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">2:4 structured: every group of 4 holds exactly 2 zeros</text>
+<g font-family="sans-serif" font-size="12" text-anchor="middle">
+<g stroke="#221a12" stroke-width="1.5">
+<rect x="80" y="80" width="60" height="60" fill="#31405e"/><rect x="140" y="80" width="60" height="60" fill="#fffdf8"/><rect x="200" y="80" width="60" height="60" fill="#fffdf8"/><rect x="260" y="80" width="60" height="60" fill="#31405e"/>
+<rect x="340" y="80" width="60" height="60" fill="#fffdf8"/><rect x="400" y="80" width="60" height="60" fill="#31405e"/><rect x="460" y="80" width="60" height="60" fill="#31405e"/><rect x="520" y="80" width="60" height="60" fill="#fffdf8"/>
+</g>
+<text x="170" y="165">group 1: valid</text>
+<text x="430" y="165">group 2: valid</text>
+<text x="320" y="205">one rule: the usher knows the pattern</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §3, §6</span> The lesson’s toy pattern. Fixed 2:4 lets the hardware skip without thinking.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Seating checker. Enter 8 ones and zeros, comma-separated. The widget applies the lesson’s <code>is_24()</code>.</p>
+<p>Pattern: <input class="text" id="sp24P" value="1,0,0,1,0,1,1,0" aria-label="Sparsity pattern"></p>
+<p><button class="btn" id="sp24Btn">Check the seating</button></p>
+<div class="chips" id="sp24Out"></div>
+<p class="small" id="sp24Note"></p>
+</div>
+<div class="nugget" id="nugget-seating">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §7</span></h4>
+<p class="big">Skippability needs structure. Random zeros are invisible savings, but the pattern is the product.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Sparsity without hardware support is a smaller file, not a faster kernel. The 2:4 pattern is the contract the hardware signed.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Constraints that the executor understands beat freedom it cannot use. Design the pattern for the usher.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C07</p>
+<h2>Pruning: cutting branches</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §3</span></p>
+<p>Which weights can go? Picture pruning a tree. Magnitude pruning takes the thinnest branches, the smallest |w|. Sensitivity analysis tests each cut: remove it, measure the loss change, and keep only the harmless cuts. Regression-based methods solve directly for the best sparse fit.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §4, §6</span></p>
+<p>The toy: |W| = [0.1, 2.0, 0.05, 1.5]. Pruning 50% zeroes the two smallest, 0.1 and 0.05, leaving [0, 2.0, 0, 1.5]. The lesson’s check: the mask reads [0, 1, 0, 1], exactly the largest half kept. Gradual pruning beats one-shot removal because survivors get time to compensate.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §7, §9</span></p>
+<p>Magnitude ranks cheaply, and sensitivity judges truly. Small weights are usually expendable, but usually carries weight here: sensitivity analysis finds the small weight the loss actually needs. Prune gradually and let the survivors compensate.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 220" role="img" aria-label="Four weights pruned by magnitude to a mask of 0 1 0 1">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Cut the thinnest branches: prune 50%</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="58">|W| = [0.1, 2.0, 0.05, 1.5]</text>
+<g>
+<rect x="20" y="70" width="70" height="44" fill="#a94f27" opacity="0.5"/><text x="40" y="97">0.1</text>
+<rect x="100" y="70" width="70" height="44" fill="#5d7050" opacity="0.7"/><text x="118" y="97">2.0</text>
+<rect x="180" y="70" width="70" height="44" fill="#a94f27" opacity="0.5"/><text x="196" y="97">0.05</text>
+<rect x="260" y="70" width="70" height="44" fill="#5d7050" opacity="0.7"/><text x="278" y="97">1.5</text>
+</g>
+<line x1="350" y1="92" x2="410" y2="92" stroke="#221a12" stroke-width="2"/>
+<text x="20" y="140">mask = [0, 1, 0, 1] → kept: [0, 2.0, 0, 1.5]</text>
+<text x="20" y="164">the two smallest go, and the largest half stays</text>
+<text x="20" y="196" fill="#5d7050">gradual beats one-shot: survivors compensate</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §4, §6</span> Magnitude keeps the largest half, and gradual pruning lets survivors compensate.</figcaption>
+</figure>
+<div class="nugget" id="nugget-prune">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §7</span></h4>
+<p class="big">Magnitude proposes cheaply, and sensitivity disposes truly. Prune gradually and let the survivors compensate.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>One-shot pruning shocks the network, but gradual pruning lets remaining weights absorb the load. The schedule is part of the method.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Cheap proxies rank candidates, and expensive tests confirm them. Never ship on the proxy alone.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C08</p>
+<h2>Realized speed: the toll booths</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §3</span></p>
+<p>A shortcut through a maze, but the maze charges tolls. Skipping zeros saves steps, yet every index lookup pays a toll. Unstructured sparsity pays per nonzero at the gather booth. 2:4 rides the express lane, sparse tensor cores, where the toll is tiny.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §4, §6</span></p>
+<p>The toy: dense GEMM at 100 us. Unstructured 50% spends 50 us on math plus 45 us on gather, totaling 95 us, about 1.05x. 2:4 spends 50 us on math plus 5 us, totaling 55 us, about 1.8x. The lesson’s check: realized(100, 0.5, 0.45) = 95 and realized(100, 0.5, 0.05) = 55. The formula: dense × ((1 − sparsity) + gather_frac).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §7, §9</span></p>
+<p>Theoretical sparsity speedups price the toll at zero. It never is. Unstructured sparsity at 50% nets about 1.05x after gather: a tolled shortcut is barely a shortcut. Measure realized time, not the zero count.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 280" role="img" aria-label="Bars: dense 100, unstructured 95, 2:4 55 microseconds">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Realized time: the toll eats the unstructured win</text>
+<g font-family="sans-serif" font-size="12" text-anchor="middle">
+<rect x="100" y="80" width="90" height="150" fill="#31405e"/>
+<text x="145" y="70">100</text><text x="145" y="248">dense</text>
+<rect x="260" y="85" width="90" height="95" fill="#a94f27"/>
+<rect x="260" y="180" width="90" height="50" fill="#6f6355"/>
+<text x="305" y="70">95</text><text x="305" y="248">unstructured 50%</text>
+<text x="305" y="200" font-size="10" fill="#fffdf8">toll</text>
+<rect x="420" y="150" width="90" height="55" fill="#5d7050"/>
+<rect x="420" y="205" width="90" height="25" fill="#8a9a7b"/>
+<text x="465" y="140">55</text><text x="465" y="248">2:4</text>
+<text x="320" y="272">one rule: count the toll</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §6</span> Recomputed from the lesson’s <code>realized()</code>: the gather toll (dark band) erases the unstructured win.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Toll calculator. Enter dense time, sparsity, and gather fraction. The widget applies the lesson’s <code>realized()</code>.</p>
+<p>Dense us: <input class="text" id="rlD" value="100" inputmode="decimal" aria-label="Dense microseconds"></p>
+<p>Sparsity: <input class="text" id="rlS" value="0.5" inputmode="decimal" aria-label="Sparsity"></p>
+<p>Gather fraction: <input class="text" id="rlG" value="0.45" inputmode="decimal" aria-label="Gather fraction"></p>
+<p><button class="btn" id="rlBtn">Price the shortcut</button></p>
+<div class="chips" id="rlOut"></div>
+<p class="small" id="rlNote"></p>
+</div>
+<div class="nugget" id="nugget-toll">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §7</span></h4>
+<p class="big">Paper speedups price the toll at zero. It never is. Measure realized time, not the zero count.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>50% sparsity at 1.05x realized is a rounding error with extra complexity. The gather fraction is the whole story.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every shortcut has a toll. Price the toll before celebrating the shortcut.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C09</p>
+<h2>Butterfly matrices: the tournament bracket</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §3</span></p>
+<p>A tournament bracket built for mixing. Each factor pairs entries and blends them in 2x2 blocks on a fixed pattern. After log n factors, each output depends on each input: full mixing, FFT-butterfly style, at O(n log n) cost.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §4, §6</span></p>
+<p>The toy: n = 8 with factors of 2x2 blocks. Multiplying the log n factors leaves no exact zeros, which verifies full mixing. A dense n x n multiply costs O(n²), and the butterfly factorization costs O(n log n). The lesson’s check: every product entry is nonzero.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §7, §9</span></p>
+<p>Structure buys asymptotics, O(n log n) against O(n²) for equal mixing. The fixed pattern means a fixed hardware plan. The price is expressivity, since not every matrix factors this way.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 260" role="img" aria-label="Butterfly mixing: 8 inputs pair and mix across 3 factors to 8 outputs">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Butterfly: 8 inputs mix fully in log2(8) = 3 factors</text>
+<g font-family="sans-serif" font-size="11" text-anchor="middle" stroke="#31405e">
+<g fill="#e2e7f0">
+<circle cx="80" cy="60" r="10"/><circle cx="80" cy="90" r="10"/><circle cx="80" cy="120" r="10"/><circle cx="80" cy="150" r="10"/><circle cx="80" cy="180" r="10"/><circle cx="80" cy="210" r="10"/>
+</g>
+<g fill="#f7ecd4" stroke="#8a5a17">
+<circle cx="260" cy="60" r="10"/><circle cx="260" cy="90" r="10"/><circle cx="260" cy="120" r="10"/><circle cx="260" cy="150" r="10"/><circle cx="260" cy="180" r="10"/><circle cx="260" cy="210" r="10"/>
+</g>
+<g fill="#e4e9da" stroke="#5d7050">
+<circle cx="440" cy="60" r="10"/><circle cx="440" cy="90" r="10"/><circle cx="440" cy="120" r="10"/><circle cx="440" cy="150" r="10"/><circle cx="440" cy="180" r="10"/><circle cx="440" cy="210" r="10"/>
+</g>
+<g stroke="#6f6355" stroke-width="1">
+<line x1="90" y1="60" x2="250" y2="60"/><line x1="90" y1="90" x2="250" y2="90"/><line x1="90" y1="60" x2="250" y2="90"/><line x1="90" y1="90" x2="250" y2="60"/>
+<line x1="270" y1="120" x2="430" y2="120"/><line x1="270" y1="150" x2="430" y2="150"/><line x1="270" y1="120" x2="430" y2="150"/><line x1="270" y1="150" x2="430" y2="120"/>
+</g>
+<text x="170" y="235" stroke="none">factor 1: pairs</text>
+<text x="350" y="235" stroke="none">factor 2: pairs of pairs</text>
+<text x="520" y="235" stroke="none">factor 3: full</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §3</span> Sketch: fixed pairing patterns compose into full mixing.</figcaption>
+</figure>
+<div class="nugget" id="nugget-butterfly">
+<h4>Nugget 9 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §7</span></h4>
+<p class="big">Structure buys asymptotics: fixed patterns compose into full mixing at O(n log n).</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The FFT trick generalizes: any fixed mixing pattern with log n stages beats dense. The pattern is the algorithm.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Look for factorizations before accepting the dense cost. Staged mixing is a recurring win.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · C10</p>
+<h2>Monarch matrices: city blocks</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §3</span></p>
+<p>City blocks laced with avenues. Monarch matrices permute the city into districts, mix inside districts along block-diagonal avenues, permute back, then mix across districts. The butterfly pattern generalizes to two block-diagonal factors plus permutations.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §4, §6</span></p>
+<p>The toy: n = 16 from two block-diagonal factors plus permutations. The lesson’s check: the product M has shape (16, 16), with Monarch block structure inside each factor. More flexible than butterfly yet still hardware-friendly, because block-diagonal multiplies are dense tiles the hardware already runs fast.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §7, §9</span></p>
+<p>Monarch trades some butterfly rigidity for expressivity while keeping the block structure hardware likes. Permutations move data for free, and the block-diagonal factors do the work. When a task outgrows butterfly’s fixed pattern, Monarch is the next rung.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Monarch factorization as permute, block-diagonal, permute, block-diagonal">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">City blocks with avenues: M = P2 B2 P1 B1</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="60">P1</text><rect x="20" y="70" width="70" height="70" fill="none" stroke="#31405e" stroke-width="2"/><text x="32" y="110">permute</text>
+<text x="110" y="60">B1</text>
+<rect x="110" y="70" width="35" height="35" fill="#31405e" opacity="0.7"/><rect x="145" y="70" width="35" height="35" fill="none" stroke="#31405e"/><rect x="110" y="105" width="35" height="35" fill="none" stroke="#31405e"/><rect x="145" y="105" width="35" height="35" fill="#31405e" opacity="0.7"/>
+<text x="110" y="156">block-diagonal</text>
+<text x="210" y="60">P2</text><rect x="210" y="70" width="70" height="70" fill="none" stroke="#31405e" stroke-width="2"/><text x="222" y="110">permute</text>
+<text x="300" y="60">B2</text>
+<rect x="300" y="70" width="35" height="35" fill="#31405e" opacity="0.7"/><rect x="335" y="70" width="35" height="35" fill="none" stroke="#31405e"/><rect x="300" y="105" width="35" height="35" fill="none" stroke="#31405e"/><rect x="335" y="105" width="35" height="35" fill="#31405e" opacity="0.7"/>
+<text x="300" y="156">block-diagonal</text>
+<text x="400" y="110">= M (16 × 16)</text>
+<text x="20" y="196">permutations move data for free, and block-diagonal factors do the work</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §4, §6</span> Two block-diagonal factors plus permutations: the butterfly pattern generalized.</figcaption>
+</figure>
+<div class="nugget" id="nugget-monarch">
+<h4>Nugget 10 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §7</span></h4>
+<p class="big">Permutations move data for free, and block-diagonal factors do the work. Aim the work at the hardware.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Block-diagonal multiplies run as dense tiles, so Monarch gets structure without exotic kernels. The hardware plan stays simple.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Prefer structured forms that decompose into dense blocks. Exotic sparsity needs exotic kernels.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s11">
+<p class="secnum">Section 11 · C11</p>
+<h2>Error propagation: whisper down the lane</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §3</span></p>
+<p>A whisper down the lane. Each layer contributes its own error and forwards earlier errors, possibly magnified by the layer’s Lipschitz constant, so small per-layer errors can snowball.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §4, §6</span></p>
+<p>The bound walks layers back to front, multiplying each layer’s error by every later layer’s amplification. The toy: 2 layers at e = 0.01 each. With lips [1.0, 1.0] the total caps at 0.02, the plain sum. With lips [1.0, 1.5] the first layer’s error grows 1.5x through the later layer, capping the total at 0.01·1.5 + 0.01 = 0.025. The lesson’s check: error_bound matches both.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §7, §9</span></p>
+<p>A layer with a large Lipschitz constant magnifies every upstream error, so it keeps its bits. Quantize hard where L sits near 1, and spend precision where L runs large. Across 12 layers, amplification reaching 1.1^11 ≈ 2.85x turns small early errors into large late ones.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Error bound with unit Lipschitz versus amplified Lipschitz">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Whisper down the lane: e = 0.01 each</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="58" font-weight="bold">lips [1.0, 1.0]: plain sum</text>
+<rect x="20" y="70" width="140" height="30" fill="#5d7050" opacity="0.6"/><text x="30" y="90">0.01 × 1.0</text>
+<text x="170" y="90">+</text>
+<rect x="190" y="70" width="140" height="30" fill="#5d7050" opacity="0.6"/><text x="200" y="90">0.01</text>
+<text x="345" y="90">= 0.02</text>
+<text x="20" y="130" font-weight="bold">lips [1.0, 1.5]: amplified</text>
+<rect x="20" y="142" width="140" height="30" fill="#a94f27" opacity="0.6"/><text x="30" y="162">0.01 × 1.5</text>
+<text x="170" y="162">+</text>
+<rect x="190" y="142" width="140" height="30" fill="#5d7050" opacity="0.6"/><text x="200" y="162">0.01</text>
+<text x="345" y="162">= 0.025</text>
+<text x="20" y="206">the later layer magnifies the earlier whisper</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §4, §6</span> With lips [1.0, 1.5] the first layer’s error grows 1.5x: bound 0.025 against 0.02.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Whisper calculator. Enter per-layer errors and Lipschitz constants as comma-separated lists. The widget applies the lesson’s <code>error_bound()</code>.</p>
+<p>Errors: <input class="text" id="ebE" value="0.01,0.01" aria-label="Per-layer errors"></p>
+<p>Lipschitz: <input class="text" id="ebL" value="1.0,1.5" aria-label="Lipschitz constants"></p>
+<p><button class="btn" id="ebBtn">Trace the whisper</button></p>
+<div class="chips" id="ebOut"></div>
+<p class="small" id="ebNote"></p>
+</div>
+<div class="nugget" id="nugget-whisper">
+<h4>Nugget 11 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §7</span></h4>
+<p class="big">Big Lipschitz constants magnify every upstream error. Those layers keep their bits.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Uniform quantization wastes precision where it does not matter and starves it where it does. The Lipschitz map is the precision budget.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Error budgets compound through amplification. Find the amplifiers and protect them first.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s12">
+<p class="secnum">Section 12 · C12</p>
+<h2>Quality validation: the road test</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §3</span></p>
+<p>Think road test, not weigh-in. Perplexity is one gauge, and the task evals are the road, where a 1% perplexity rise alongside flat task scores ships. Flat perplexity beside a broken long-range task does not.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §4, §6</span></p>
+<p>The protocol runs fp16 baseline numbers, then compressed numbers on the same evals, then a delta table, then ship or no-ship against the policy, then a canary in prod. Three gates: perplexity delta, task accuracy deltas, latency and throughput targets. The toy: ppl 12.0 to 12.1 (+0.8%), quiz 4/4 to 4/4, latency 20 to 12 ms gives ship. The counter-toy: ppl flat with long-range retrieval 90% to 70% gives no-ship. The lesson’s check: ship_decision(0.008, 0.0, 12.0) is true while ship_decision(0.008, −0.05, 12.0) is false.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §7, §9</span></p>
+<p>Validation spends eval compute, and skipping it spends broken deployments. Perplexity under-predicts long-range task damage, so perplexity alone never gates. Thresholds are policy, declared up front: say ppl +2% max and task −1% max. All three gates must pass.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u05-roadtest.jpg" alt="Watercolor of a car approaching three signal lights, two green and one red">
+<figcaption><span class="tag tag-toy">Illustration</span> The C12 mental model: three gate lights, and one red stops the ship. Watercolor, original to this companion.</figcaption>
+</figure>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Three ship gates with pass lights">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Three gates, all must pass</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="20" y="50" width="180" height="110" fill="none" stroke="#221a12" stroke-width="2"/>
+<circle cx="110" cy="80" r="12" fill="#5d7050"/><text x="60" y="112">ppl +0.8%</text><text x="80" y="132">PASS</text>
+<rect x="230" y="50" width="180" height="110" fill="none" stroke="#221a12" stroke-width="2"/>
+<circle cx="320" cy="80" r="12" fill="#5d7050"/><text x="272" y="112">task 0%</text><text x="290" y="132">PASS</text>
+<rect x="440" y="50" width="180" height="110" fill="none" stroke="#221a12" stroke-width="2"/>
+<circle cx="530" cy="80" r="12" fill="#5d7050"/><text x="468" y="112">latency 20→12 ms</text><text x="500" y="132">PASS</text>
+<text x="20" y="196">counter-toy: ppl flat, long-range 90% → 70%: no-ship</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §4, §6</span> The toy ships on all three gates, and the counter-toy fails the task gate.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Ship gate. Enter perplexity delta, task delta, and latency. The widget applies the lesson’s <code>ship_decision()</code>.</p>
+<p>PPL delta: <input class="text" id="shP" value="0.008" inputmode="decimal" aria-label="Perplexity delta"></p>
+<p>Task delta: <input class="text" id="shT" value="0.0" inputmode="decimal" aria-label="Task delta"></p>
+<p>Latency ms: <input class="text" id="shL" value="12" inputmode="decimal" aria-label="Latency ms"></p>
+<p><button class="btn" id="shBtn">Run the gates</button></p>
+<div class="chips" id="shOut"></div>
+<p class="small" id="shNote"></p>
+</div>
+<div class="nugget" id="nugget-roadtest">
+<h4>Nugget 12 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §7</span></h4>
+<p class="big">Perplexity is one gauge and the task evals are the road. Every gate must pass.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Flat perplexity hid a 20-point long-range retrieval collapse in the counter-toy. The gauge is not the road.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Proxy metrics never gate alone. Ship on the task suite, or do not ship.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s13">
+<p class="secnum">Section 13 · Synthesis</p>
+<h2>What this unit buys you</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 to C12</span></p>
+<p>The arc, end to end. Numbers become marks on a ruler with a pinned zero (C01). The misses split into bounded rounding and unbounded clipping (C02). Each channel gets its own ruler when the loud one would rule them all (C03). Weights pack at the factory, activations at the gate (C04). The ruler is fitted to the crowd, not the giant (C05). Zeros get structure the hardware can skip, 2:4 (C06), chosen by magnitude and confirmed by sensitivity (C07). The toll is counted before the shortcut is celebrated (C08). Mixing factorizes into butterflies (C09) and city blocks (C10). Errors whisper down the lane, amplified by Lipschitz (C11), and nothing ships without passing all three gates (C12).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Unit chapter plate</span></p>
+<p>The unit chapter plate states the program in one line: “Shrink the bytes. Prove the quality.” The role bridge: the research engineer owns the (s, z) arithmetic and granularity choice as daily inference-optimization tools. MLOps owns the three gates as the ship checklist for every compressed model. The LLM engineer reads error propagation to decide which layers keep their bits. One disclosure stands on this page: the C05 assert fails on the lesson’s own code toy, recomputed above.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>Twelve nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-ruler"><span class="wnum">01</span>The range must cover the data <span class="muted">· C01</span></a></li>
+<li><a href="#nugget-miss"><span class="wnum">02</span>Rounding is bounded, clipping is not <span class="muted">· C02</span></a></li>
+<li><a href="#nugget-thermostat"><span class="wnum">03</span>One ruler per room <span class="muted">· C03</span></a></li>
+<li><a href="#nugget-luggage"><span class="wnum">04</span>Pack at the factory or the gate <span class="muted">· C04</span></a></li>
+<li><a href="#nugget-crowd"><span class="wnum">05</span>Fit the ruler to the crowd <span class="muted">· C05</span></a></li>
+<li><a href="#nugget-seating"><span class="wnum">06</span>Structure is what hardware skips <span class="muted">· C06</span></a></li>
+<li><a href="#nugget-prune"><span class="wnum">07</span>Magnitude proposes, sensitivity disposes <span class="muted">· C07</span></a></li>
+<li><a href="#nugget-toll"><span class="wnum">08</span>Count the toll <span class="muted">· C08</span></a></li>
+<li><a href="#nugget-butterfly"><span class="wnum">09</span>Structure buys asymptotics <span class="muted">· C09</span></a></li>
+<li><a href="#nugget-monarch"><span class="wnum">10</span>Permutations are free movement <span class="muted">· C10</span></a></li>
+<li><a href="#nugget-whisper"><span class="wnum">11</span>Protect the amplifiers <span class="muted">· C11</span></a></li>
+<li><a href="#nugget-roadtest"><span class="wnum">12</span>Ship on the task suite <span class="muted">· C12</span></a></li>
+</ol>
+</section>
+
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>lessons/u05/lesson-05-quantization-sparsity.md</code> (baseline 2026-10-06). No lecture transcript exists for this session, so nothing here quotes a lecturer and no lecture anecdotes appear. Calendar anchor: Week 4, Oct 14 (Memory Efficient Neural Networks, presented by Simran). Charts re-plot the lesson’s computed numbers with section citations. All plotted values were recomputed from the lesson’s formulas on 2026-10-08. One inconsistency surfaced and is disclosed on-page (C05: the code toy’s assert fails, and the prose toy’s numbers verify). Claim class: every lesson leaf PLANNED / SOURCE ATTRIBUTION PENDING. Interactive toys run the lesson’s rules over your inputs and are labeled <span class="tag tag-toy">Illustration</span>. Direct quotes from the lesson document: 6 words (the unit chapter plate line), recounted by hand.</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>. No video exists for this session, so no embed appears.</p>
+</footer>
+</div>
+<script>
+function chip(text, cls){
+  var s=document.createElement("span")
+  if(cls){s.className="chip "+cls}
+  else{s.className="chip"}
+  s.textContent=text
+  return s
+}
+function out(id){
+  var e=document.getElementById(id)
+  e.innerHTML=""
+  return e
+}
+document.getElementById("qzBtn").addEventListener("click",function(){
+  var x=parseFloat(document.getElementById("qzX").value)
+  var s=2/15
+  var z=8
+  var xq=Math.round(x/s)+z
+  if(xq<0){xq=0}
+  if(xq>15){xq=15}
+  var xh=(xq-z)*s
+  var o=out("qzOut")
+  o.appendChild(chip("x_q = "+xq,"plain"))
+  o.appendChild(chip("x_hat = "+xh.toFixed(4),"plain"))
+  o.appendChild(chip("error = "+Math.abs(x-xh).toFixed(4),"plain"))
+  if(Math.abs(x-xh)<=s/2+1e-9){document.getElementById("qzNote").textContent="Inside s/2: rounding only."}
+  else{document.getElementById("qzNote").textContent="Past s/2: clipping at work."}
+})
+document.getElementById("sp24Btn").addEventListener("click",function(){
+  var raw=document.getElementById("sp24P").value
+  var parts=raw.split(",")
+  var vals=[]
+  var k=0
+  while(k<parts.length){
+    vals.push(parseInt(parts[k],10))
+    k=k+1
+  }
+  var ok=vals.length===8
+  var g=0
+  while(g<2&&ok){
+    var ones=0
+    var j=0
+    while(j<4){
+      if(vals[g*4+j]===1){ones=ones+1}
+      j=j+1
+    }
+    if(ones!==2){ok=false}
+    g=g+1
+  }
+  var o=out("sp24Out")
+  if(ok){o.appendChild(chip("valid 2:4","plain"))}
+  else{o.appendChild(chip("invalid 2:4","plain"))}
+  document.getElementById("sp24Note").textContent=ok?"The usher can skip this.":"Some group breaks the pattern."
+})
+document.getElementById("rlBtn").addEventListener("click",function(){
+  var d=parseFloat(document.getElementById("rlD").value)
+  var sp=parseFloat(document.getElementById("rlS").value)
+  var gf=parseFloat(document.getElementById("rlG").value)
+  var t=d*((1-sp)+gf)
+  var o=out("rlOut")
+  o.appendChild(chip("realized: "+t.toFixed(1)+" us","plain"))
+  o.appendChild(chip("speedup: "+(d/t).toFixed(2)+"x","plain"))
+  if(d/t<1.2){document.getElementById("rlNote").textContent="The toll ate the win."}
+  else{document.getElementById("rlNote").textContent="The express lane pays."}
+})
+document.getElementById("ebBtn").addEventListener("click",function(){
+  function parseList(id){
+    var raw=document.getElementById(id).value
+    var parts=raw.split(",")
+    var vals=[]
+    var k=0
+    while(k<parts.length){
+      vals.push(parseFloat(parts[k]))
+      k=k+1
+    }
+    return vals
+  }
+  var errs=parseList("ebE")
+  var lips=parseList("ebL")
+  var total=0
+  var amp=1
+  var i=errs.length-1
+  while(i>=0){
+    total=total+errs[i]*amp
+    amp=amp*lips[i]
+    i=i-1
+  }
+  var o=out("ebOut")
+  o.appendChild(chip("bound: "+total.toFixed(4),"plain"))
+  document.getElementById("ebNote").textContent="Walk back to front, amplifying as you go."
+})
+document.getElementById("shBtn").addEventListener("click",function(){
+  var pd=parseFloat(document.getElementById("shP").value)
+  var td=parseFloat(document.getElementById("shT").value)
+  var lat=parseFloat(document.getElementById("shL").value)
+  var ship=pd<=0.02&&td>=-0.01&&lat<=15.0
+  var o=out("shOut")
+  if(ship){o.appendChild(chip("SHIP","plain"))}
+  else{o.appendChild(chip("NO-SHIP","plain"))}
+  var why=[]
+  if(pd>0.02){why.push("ppl over budget")}
+  if(td<-0.01){why.push("task under budget")}
+  if(lat>15.0){why.push("latency over target")}
+  if(why.length===0){document.getElementById("shNote").textContent="All three gates green."}
+  else{document.getElementById("shNote").textContent="Blocked: "+why.join(", ")+"."}
+})
+</script>
+</body>
+</html>
