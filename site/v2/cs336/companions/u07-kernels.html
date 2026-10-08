@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kernels and IO-aware attention · CS336</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.pairtable td.rank{font-weight:700}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS336 · Unit 07 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Kernels and IO-aware attention</h1>
+<p class="dek">FLOPs are cheap. Bytes are dear. This companion walks the kernel unit: tiling for SRAM, the online softmax that lets attention stream, the tiled forward and backward of FlashAttention, block sparsity, fusion, Triton, and the reference comparisons and invariants that keep tiled code honest.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>u07_kernels.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no full lecture transcript exists for this session. The page narrates the lesson document <code>content/v2/cs336/lessons/u07_kernels.md</code>, not a video. Claim class: REQUESTED-BRANCH. Standing note: no GPU on the lesson's build box. Kernel algorithms are studied as numpy tiled reference implementations on CPU. Every number is computed. Each carries the lesson section that reports it.</p>
+</div>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Tiling</a>
+<a href="#s2">2 Sizing a tile</a>
+<a href="#s3">3 Online softmax</a>
+<a href="#s4">4 Tiled forward</a>
+<a href="#s5">5 Tiled backward</a>
+<a href="#s6">6 Sparsity and fusion</a>
+<a href="#s7">7 Triton</a>
+<a href="#s8">8 Correctness</a>
+<a href="#s9">9 Precision and claims</a>
+<a href="#s10">10 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<figure>
+<img class="illus" src="assets/u07-hero-tiles.jpg" alt="Watercolor of a mosaic assembled tile by tile from a warehouse to a small workbench">
+<figcaption><span class="tag tag-toy">Illustration</span> Tiling in one image: the warehouse is HBM, the workbench is SRAM, and the mosaic is built one carried tile at a time. Watercolor, original to this companion.</figcaption>
+</figure>
+<section class="block" id="s1">
+<p class="secnum">Section 1 · Remediation</p>
+<h2>Tiling and the memory wall</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></p>
+<p>Fast memory (SRAM) is small, slow memory (HBM) is large. A kernel that streams data once from HBM and reuses it in SRAM beats one that re-reads it, even with identical FLOPs. Tiling splits the work into blocks that fit in SRAM. The online softmax lets attention tile over the sequence.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></p>
+<p>The worked check, from <code>visuals/compute_u07.py</code> (executed 2026-10-06): materializing (B=2, h=8, T=4096) bf16 scores moves 537 MB. Streaming Q/K/V once moves 25.2 MB. Same math, 21x less traffic.</p>
+</div>
+<figure>
+<div id="chart-traffic"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation, C03 §6</span> HBM traffic for attention at B=2, h=8, T=4096, bf16: 537 MB naive versus 25.2 MB tiled. From <code>visuals/compute_u07.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<div class="nugget" id="nugget-stream">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></h4>
+<p class="big">Identical FLOPs can move 21x different bytes. The FLOP count never sees the memory wall.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>On memory-bound ops, traffic is the performance. Count bytes first, FLOPs second.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When two designs cost the same in one currency, price them in the other. The hidden currency usually decides.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C01, C10</p>
+<h2>Sizing a tile from the SRAM budget</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §3, §5, §6</span></p>
+<p>How big a block fits? SRAM holds the working tiles, HBM holds the matrices. The tile size is the largest block with all live tiles fitting: 4 * Bc * dh * bytes <= SRAM. Bigger tiles mean fewer HBM passes and better reuse. The loop nest streams K/V blocks for each Q block, and total HBM reads scale with the block count. The lesson's toy, executed 2026-10-06: 100 KB SRAM, dh=64, bf16, 4 resident tiles gives Bc = 200, and T=4096 needs 21 blocks.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §3, §5, §6</span></p>
+<p>The budget equation, generalized: tiles * Bc * dh * bytes + stats <= SRAM. More resident tiles shrink Bc, smaller Bc means more blocks and more passes. Bc = (SRAM - stats) // (tiles * dh * bytes). The lab tabulates: 4 tiles gives 200, 5 tiles gives 160, and dh=128 with 4 tiles gives 100.</p>
+</div>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §5</span> Block-size toy. The lesson's budget equation, your numbers. Bc = SRAM // (tiles * dh * bytes).</p>
+<p class="small">SRAM (KB) <input class="text" id="bcsram" value="100" style="max-width:80px" aria-label="SRAM KB"> dh <input class="text" id="bcdh" value="64" style="max-width:70px" aria-label="Head dim"> bytes <input class="text" id="bcby" value="2" style="max-width:70px" aria-label="Bytes per element"> tiles <input class="text" id="bcti" value="4" style="max-width:70px" aria-label="Resident tiles"></p>
+<p><button class="btn" id="bcbtn">Compute Bc</button></p>
+<p class="small" id="bcout">Press the button.</p>
+<p class="small muted">Stats term omitted in the toy (the lesson subtracts it first). At the defaults: 200, matching C01 §6.</p>
+</div>
+<figure>
+<div id="chart-bc"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §6</span> Block sizes from the lab table: 4 resident tiles give Bc = 200, 5 tiles give 160, and dh = 128 with 4 tiles gives 100.</figcaption>
+</figure>
+<div class="nugget" id="nugget-query">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §11, C10 §11</span></h4>
+<p class="big">Tiles sized for the wrong SRAM spill silently to slower memory: 2 to 5x slower with correct results. And ignoring the statistics (m, l, accumulators) spills the kernel mid-loop.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "the budget is right" breaks across devices. Query it, do not hardcode. The assumption "tiles are the whole story" breaks: count everything resident.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Size every working set from the actual budget, and count every resident, not just the obvious ones.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C02</p>
+<h2>Online softmax: stream the max</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §3, §5</span></p>
+<p>Softmax needs the max first, so how can it stream? Keep a running max m and normalizer l. A new block with max mb rescales: m' = max(m, mb), l' = l * exp(m - m') + sum(exp(block - m')). The rescaling corrects the old terms to the new max. The mechanism: exp(x - m') = exp(x - m) * exp(m - m'). The alpha factor rescales both the accumulator and the normalizer. Induction over blocks gives the exact softmax.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §6, §9</span></p>
+<p>The lesson's toy, executed 2026-10-06: blocks [1, 2], [3, 4] give m = 4.0, l = 1.5530, exactly matching the full computation. O(T) extra exp calls for the rescaling: negligible. The alternative is two-pass softmax, which needs the full row in SRAM. Online is the streaming answer.</p>
+</div>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §5</span> Online-softmax toy. Give two blocks (comma separated each). The toy runs the lesson's rescaling update.</p>
+<p><input class="text" id="osb1" value="1, 2" aria-label="Block 1"> <input class="text" id="osb2" value="3, 4" aria-label="Block 2"></p>
+<p><button class="btn" id="osbtn">Run online softmax</button></p>
+<p class="small" id="osout">Press the button.</p>
+<p class="small muted">Update: m' = max(m, mb), l' = l * exp(m - m') + sum(exp(block - m')). At the defaults: m = 4.0, l = 1.5530, matching C02 §6.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u07-online-softmax.jpg" alt="Watercolor of a running tally being rescaled with a red stamp as new sections arrive">
+<figcaption><span class="tag tag-toy">Illustration</span> The online softmax as a tally clerk: each new section rescales the old marks to the new max. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-fp32">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §11, C11 §11</span></h4>
+<p class="big">Accumulating l in fp16 lets the rescaling underflow: rows go to nan. fp16 accumulators on long sequences saturate the running sum, and attention collapses to uniform.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "any dtype works" breaks. The statistics stay in fp32. The assumption "accumulator dtype is a detail" breaks at scale.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Keep the reduction in the wide type even when the data is narrow. The accumulator is not a detail.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C03</p>
+<h2>FlashAttention forward: never materialize the scores</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §3, §5</span></p>
+<p>Attention without the T-squared matrix? Outer loop over Q blocks, each fitting in SRAM. Inner loop over K/V blocks: compute scores, update the online softmax statistics, accumulate O. Never materialize the full scores. Output rescaling happens once at the end per row. The inner loop is exactly the online softmax with the V-weighted sum folded in: acc' = acc * alpha + exp(S - m') V. Dividing by l at the end gives softmax(S) V.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §6, §9</span></p>
+<p>The lesson's run, executed 2026-10-06: the tiled forward matches naive to 3.33e-16, with traffic 537 MB versus 25.2 MB. Same FLOPs as naive, HBM traffic O(T) instead of O(T^2). SRAM-sized tiles bound the inner loop. Alternatives: naive attention (simple, memory-bound), linear attention (U04, approximate). FlashAttention is exact and IO-aware.</p>
+</div>
+<div class="nugget" id="nugget-division">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §11</span></h4>
+<p class="big">Forgetting the final division by l leaves outputs scaled by the row normalizer, and the model trains on garbage.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "acc is the answer" breaks. The division is load-bearing.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>In a streaming algorithm, the last normalization is the step most worth double-checking.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C04</p>
+<h2>The backward pass: recompute, do not store</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §3, §5</span></p>
+<p>The forward never stored the scores, so what does backward use? It stores only m and l per row (O(T)) and recomputes the score tiles in the backward pass. Backward needs dO, then per tile: recompute S, P = softmax(S) from stored m/l, accumulate dQ, dK, dV terms. dV = P-transpose dO. dP = dO V-transpose. dS = P * (dP - rowsum(dP * P)). dQ = dS K. dK = dS-transpose Q. Each tiled with the same blocking.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §6, §9, §11</span></p>
+<p>The lab: tiled-style dQ matches finite differences to 3.41e-07 max relative error on the toy. Costs: about 2.5x the forward FLOPs (recompute), HBM stays O(T). The alternative stores scores: simple, O(T^2) memory. Recompute is the IO-aware answer. Recomputation trades FLOPs (cheap) for HBM (the bottleneck). One qualifier: storing m/l in fp16 makes recomputed P mismatch and gradients come out wrong. The assumption "statistics are cheap to store" needs the fp32 qualifier.</p>
+</div>
+<div class="nugget" id="nugget-recompute">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §3, U02-C07</span></h4>
+<p class="big">Recompute trades cheap FLOPs for dear bytes. It also moves the training-step rule: the U02 3x rule becomes about 4x under recomputation.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Every memory trick reprices the compute budget. Update the rule when the setup changes.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Spend the cheap resource to save the dear one, and reprice the plan after the trade.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C05, C06</p>
+<h2>Skip blocks, fuse passes</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §3, §5, §6</span></p>
+<p>What if most blocks are masked anyway? The mask becomes a block mask: fully-masked blocks are skipped entirely, no loads, no math. Savings need coarse structure: random sparsity does not tile well. Skipped fraction = masked blocks / total blocks. The inner loop checks the block mask before loading. The lab: a sliding-window mask at block granularity, window w=3 blocks of 21, skips 18 of 21 inner iterations, 6x fewer (causal + window).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §11</span></p>
+<p>The trap: a checkerboard mask at element granularity leaves no block fully masked. Zero savings, plus mask overhead. The assumption "sparsity helps" breaks without block structure.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §3, §5, §6</span></p>
+<p>Dropout, add, norm: three passes or one? Elementwise chains are memory-bound: each pass streams the tensor. Fusing them into one kernel streams it once. The rule: fuse while the working set fits in SRAM and the ops stay elementwise. Traffic = passes * elements * bytes. Fusing n passes into 1 divides traffic by n. The lesson's toy, executed 2026-10-06: 101 MB separate versus 34 MB fused for (B=2, T=4096, d=2048) bf16.</p>
+</div>
+<figure>
+<div id="chart-fusion"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §6</span> Traffic for the dropout-add-norm chain at B=2, T=4096, d=2048, bf16: 101 MB as three passes, 34 MB fused. From <code>visuals/compute_u07.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<figure>
+<img class="illus" src="assets/u07-fusion.jpg" alt="Watercolor of three colored streams merging into one river">
+<figcaption><span class="tag tag-toy">Illustration</span> Fusion: three passes become one stream. Same water, one trip downhill. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-fuse">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §11</span></h4>
+<p class="big">Fusing a reduction across the sequence with an elementwise op breaks the tile-at-a-time pattern: the reduction needs the whole row.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "any chain fuses" breaks at reductions. They need their own blocking (C02).</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Fusion has a boundary: the op that needs the whole input. Respect it.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §9, §10</span></p>
+<p>3x traffic cut here, at the price of compile and code complexity. Framework fusion (torch.compile) versus hand fusion: hand fusion for the hot path.</p>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C07</p>
+<h2>Triton: tiles as programs</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §3, §5</span></p>
+<p>How do you write a tiled kernel without CUDA? Triton: each program instance handles one tile. tl.arange builds indices, tl.load/store move tiles, the compiler handles the rest. The program id maps to the tile index: the grid is the loop over tiles. pid = tl.program_id(0), offs = pid*BLOCK + tl.arange(0, BLOCK), x = tl.load(ptr+offs, mask=...). The mask handles the tail. The lab annotates a numpy-block add against the Triton lines.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §9, §10, §11</span></p>
+<p>CUDA gives full control with more code. torch.compile needs no kernel code. Triton fits custom tiled ops. The trap: a BLOCK that is not a power of two makes the compiler pad, and the mask logic silently covers garbage. The assumption "any BLOCK works" breaks. Powers of two are the contract.</p>
+</div>
+<div class="nugget" id="nugget-pow2">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §11</span></h4>
+<p class="big">A non-power-of-two BLOCK pads silently, and the mask covers garbage.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Silent padding is silent corruption. The contract is powers of two.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When the compiler pads for you, verify what the padding contains.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C08, C12</p>
+<h2>Correctness: the reference and the invariants</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §3, §5, §6</span></p>
+<p>The tiled kernel runs. Is it right? Every tiled kernel gets a naive reference on small random inputs. Compare with allclose at a stated tolerance. Test the tails (non-divisible T), the causal variant, and block-size 1. The protocol: (1) tiny hand case, (2) random small vs naive, (3) edge shapes, (4) dtype variants. Each layer catches different bugs. The lesson's run, executed 2026-10-06: max deviation 3.33e-16 on the toy. Minutes on CPU. The alternative is wrong kernels.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §3, §5, §6</span></p>
+<p>What cheap checks catch kernel bugs before the reference comparison? Invariants: attention rows sum to 1, outputs lie in the convex hull of V rows, causal outputs at t do not depend on future inputs, block-size changes do not change results. Each follows from the math: softmax rows sum to 1, softmax(S)V is a convex combination, the online rescaling is block-size independent. The lab runs all four on the tiled toy. The broken variant (missing alpha) fails invariant 4. Seconds, run before the expensive comparisons.</p>
+</div>
+<div class="nugget" id="nugget-invariants">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §11, C12 §11</span></h4>
+<p class="big">Invariants pass but the kernel is still wrong: a permuted-block bug preserves all four. And comparing in fp16 with a 1e-8 tolerance fails on correct code.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "invariants suffice" breaks: they complement, not replace, the reference. The assumption "tight is better" breaks: the tolerance must match the dtype.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Layer your checks: cheap invariants first, reference comparison second, tolerance matched to precision always.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C09, C11</p>
+<h2>Speedup claims and precision rules</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §3, §5, §6</span></p>
+<p>"3x faster attention": faster than what? A speedup claim is a ratio: optimized over baseline under conditions. Verify the baseline (naive or best known?), the shapes (long or short context?), and the dtype. The 537-to-25.2 MB traffic ratio bounds the plausible speedup. The protocol from U06-C09 applied to kernels: quote, reproduce conditions, measure, explain the gap. The lab dissects the toy claim "21x less traffic" (537/25.2) with the stated shapes. The trap: a claim measured against an unoptimized baseline is real and meaningless. The assumption "faster means better" breaks. The baseline defines the claim.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §3, §5</span></p>
+<p>The tiled kernel disagrees with naive in bf16. Why? Tiled kernels reorder floating-point sums, and in low precision the order matters. The rules: statistics (m, l) in fp32, accumulators in fp32, inputs/outputs in the working dtype. Error bounds grow with the number of reordered terms. fp32 accumulators keep the tiled result within 1e-5 of naive in bf16. The lab shows the deviation shrinking when accumulators move to fp32. fp32 accumulators cost registers. The alternative is wrong answers. Full fp32 is slower and simpler. Mixed precision is the standard.</p>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · Synthesis</p>
+<h2>What this buys you</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span> The arc, end to end. SRAM is small and fast, HBM large and slow, and the kernel that streams once wins (remediation). Tile size solves from the SRAM budget with every resident counted (C01, C10). The online softmax rescales running statistics block by block, exact (C02). The tiled forward never materializes the T-squared matrix and matches naive to 3.33e-16 (C03). The tiled backward stores m and l and recomputes the rest (C04). Block masks skip whole masked blocks, fusion merges elementwise passes (C05, C06). Triton writes tiles as programs with power-of-two contracts (C07). Naive references and four invariants verify the result (C08, C12). Statistics and accumulators stay in fp32, speedup claims get dissected (C09, C11).</p>
+<p><span class="tag tag-lesson">From the lesson</span> Where the unit connects, in the lesson's own links: U04-C02 supplies the sliding-window mask that becomes a block mask. U06-C03 states the fusion rule. U05-C12 supplies the reference-comparison protocol. U02-C07 reprices the training-step rule under recomputation. The standing note holds for the whole unit: no GPU on the build box, numpy tiled references on CPU, every number computed.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>8 nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-stream"><span class="wnum">01</span>Count bytes first, FLOPs second <span class="muted">· Remediation</span></a></li>
+<li><a href="#nugget-query"><span class="wnum">02</span>Size from the actual budget <span class="muted">· C01, C10</span></a></li>
+<li><a href="#nugget-fp32"><span class="wnum">03</span>The accumulator is not a detail <span class="muted">· C02, C11</span></a></li>
+<li><a href="#nugget-division"><span class="wnum">04</span>Double-check the last normalization <span class="muted">· C03</span></a></li>
+<li><a href="#nugget-recompute"><span class="wnum">05</span>Reprice the plan after the trade <span class="muted">· C04</span></a></li>
+<li><a href="#nugget-fuse"><span class="wnum">06</span>Respect the fusion boundary <span class="muted">· C05, C06</span></a></li>
+<li><a href="#nugget-pow2"><span class="wnum">07</span>Verify what the padding contains <span class="muted">· C07</span></a></li>
+<li><a href="#nugget-invariants"><span class="wnum">08</span>Layer your checks <span class="muted">· C08, C12</span></a></li>
+</ol>
+</section>
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>content/v2/cs336/lessons/u07_kernels.md</code>. No full lecture transcript exists for this session. Quoted words from the lesson source: 45. No lecture anecdotes appear. Claim class REQUESTED-BRANCH. The charts re-plot the lesson's computed numbers with section citations. The lab script is <code>visuals/compute_u07.py</code>, executed 2026-10-06. Interactive toys run the lesson's formulas and are labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p class="small">Readings and links named by the lesson: U04-C02 (block-sparse windows), U06-C03 (fusion rule), U05-C12 (reference protocol), U02-C07 (recompute repricing).</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>.</p>
+</footer>
+</div>
+<script>
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  const keys = Object.keys(attrs)
+  keys.forEach(function(k) { n.setAttribute(k, attrs[k]) })
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function barChart(id, rows, maxV, unit, labelW) {
+  labelW = labelW || 210
+  const host = document.getElementById(id)
+  const W = 760
+  const rowH = 46
+  const padT = 14
+  const padB = 10
+  const H = padT + rows.length * rowH + padB
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  rows.forEach(function(r, i) {
+    const y = padT + i * rowH
+    const lab = svgEl("text", {x: 12, y: y + 27, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - labelW - 110) * (r[1] / maxV)
+    const bar = svgEl("rect", {x: labelW, y: y + 9, width: Math.max(bw, 3), height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1] + unit
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: labelW + Math.max(bw, 3) + 10, y: y + 27, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1] + unit
+    svg.appendChild(val)
+  })
+  host.appendChild(svg)
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id)
+  const data = opts.data
+  const W = 760
+  const H = 400
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const yMin = opts.yMin
+  const yMax = opts.yMax
+  function X(i) { return mL + i * ((W - mL - mR) / (data.length - 1)) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / (yMax - yMin)) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const grids = opts.grid || []
+  grids.forEach(function(g) {
+    svg.appendChild(svgEl("line", {x1: mL, x2: W - mR, y1: Y(g), y2: Y(g), stroke: "#e2d7c2", "stroke-width": 1}))
+    const t = svgEl("text", {x: 10, y: Y(g) + 5, "font-size": 13, fill: MUT, "font-family": SANS})
+    if (opts.yfmt) { t.textContent = opts.yfmt(g) } else { t.textContent = String(g) }
+    svg.appendChild(t)
+  })
+  let d = ""
+  data.forEach(function(v, i) {
+    if (i === 0) { d = d + "M" } else { d = d + "L" }
+    d = d + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "
+  })
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  data.forEach(function(v, i) {
+    const c = svgEl("circle", {cx: X(i), cy: Y(v), r: 8, fill: CLAY})
+    const tip = svgEl("title", {})
+    tip.textContent = opts.tip(i, v)
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const xl = svgEl("text", {x: X(i), y: H - 32, "font-size": 13, fill: MUT, "text-anchor": "middle", "font-family": SANS})
+    xl.textContent = opts.xlabels[i]
+    svg.appendChild(xl)
+  })
+  if (opts.ylabel) {
+    const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+    yl.textContent = opts.ylabel
+    svg.appendChild(yl)
+  }
+  if (opts.xlabel) {
+    const xcap = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+    xcap.textContent = opts.xlabel
+    svg.appendChild(xcap)
+  }
+  host.appendChild(svg)
+}
+
+
+barChart("chart-traffic", [
+  ["Naive (materialized scores)", 537, INDIGO],
+  ["Tiled (streamed Q/K/V)", 25.2, CLAY]
+], 560, " MB", 240)
+
+barChart("chart-fusion", [
+  ["Three separate passes", 101, INDIGO],
+  ["Fused", 34, CLAY]
+], 110, " MB", 220)
+
+barChart("chart-bc", [
+  ["4 tiles, dh=64", 200, INDIGO],
+  ["5 tiles, dh=64", 160, SAGE],
+  ["4 tiles, dh=128", 100, CLAY]
+], 220, "", 170)
+
+function renderBc() {
+  const sram = (parseFloat(document.getElementById("bcsram").value) || 100) * 1024
+  const dh = parseFloat(document.getElementById("bcdh").value) || 64
+  const by = parseFloat(document.getElementById("bcby").value) || 2
+  const ti = parseFloat(document.getElementById("bcti").value) || 4
+  const bc = Math.floor(sram / (ti * dh * by))
+  const o = document.getElementById("bcout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "Bc = floor(" + sram + " / (" + ti + " x " + dh + " x " + by + ")) = " + bc + "."))
+  let note = "Matches C01 §6 (200) at the default config."
+  if (bc !== 200) { note = "The lesson gives 200 at 100 KB, dh=64, bf16, 4 tiles (C01 §6)." }
+  o.appendChild(el("p", "small muted", note))
+}
+document.getElementById("bcbtn").addEventListener("click", renderBc)
+renderBc()
+
+function renderOs() {
+  function parse(s) {
+    return s.split(",").map(function(x) { return parseFloat(x.trim()) }).filter(function(v) { return !isNaN(v) })
+  }
+  const b1 = parse(document.getElementById("osb1").value)
+  const b2 = parse(document.getElementById("osb2").value)
+  const o = document.getElementById("osout")
+  o.textContent = ""
+  if (b1.length === 0 || b2.length === 0) {
+    o.appendChild(el("p", "small", "Give two comma-separated blocks."))
+    return
+  }
+  function blockMax(b) {
+    let m = b[0]
+    b.forEach(function(v) { if (v > m) { m = v } })
+    return m
+  }
+  function blockSum(b, mm) {
+    let s = 0
+    b.forEach(function(v) { s = s + Math.exp(v - mm) })
+    return s
+  }
+  const m1 = blockMax(b1)
+  const l1 = blockSum(b1, m1)
+  const m2 = blockMax(b2)
+  const m = Math.max(m1, m2)
+  const l = l1 * Math.exp(m1 - m) + blockSum(b2, m)
+  const all = b1.concat(b2)
+  const mf = blockMax(all)
+  const lf = blockSum(all, mf)
+  o.appendChild(el("p", "small", "Online: m = " + m.toFixed(4) + ", l = " + l.toFixed(4) + ". Full: m = " + mf.toFixed(4) + ", l = " + lf.toFixed(4) + ". Match: " + (Math.abs(m - mf) < 1e-12 && Math.abs(l - lf) < 1e-9) + "."))
+  let note = "Matches C02 §6 (m = 4.0, l = 1.5530) at the default blocks."
+  if (Math.abs(m - 4.0) > 1e-9 || Math.abs(l - 1.553) > 0.001) { note = "The lesson toy gives m = 4.0, l = 1.5530 for blocks [1,2], [3,4]." }
+  o.appendChild(el("p", "small muted", note))
+}
+document.getElementById("osbtn").addEventListener("click", renderOs)
+renderOs()
+
+
+</script>
+</body>
+</html>
