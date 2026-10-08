@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U03 Companion: Transformer accounting and speculative inference · CS229S</title>
+<style>
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+input.range{width:100%}
+input.range{max-width:420px}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS229S · Unit 03 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Unit 03 companion · narrated from the lesson document</p>
+<h1>Transformer accounting and speculative inference</h1>
+<p class="dek">Twelve concepts, one arc: the full FLOP and byte account of training and serving, then the draft-and-verify trick that buys back latency without changing the distribution.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>lesson-03-accounting-speculative.md</code>. The phrasing is the companion’s.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion’s.</p>
+<p class="small muted">Provenance: no lecture transcript exists for this session. Calendar session titles anchor the lesson to Week 2, Oct 04 (Analyzing the Performance of Transformers, presented by Azalia: FLOP measurement, autoregressive generation, KV caching, speculative decoding). This page narrates the lesson document, not a video. Claim class for every lesson leaf: PLANNED / SOURCE ATTRIBUTION PENDING. Speculative decoding follows Leviathan et al. and Chen et al. (2023), taught from the papers. One internal inconsistency found during the build is disclosed on-page with recomputation (C04 prefill assert).</p>
+</div>
+<figure>
+<img class="illus" src="assets/u03-intern-editor.jpg" alt="Watercolor of an intern typing fast handing a paper ribbon to an editor who reads it all at once">
+<figcaption><span class="tag tag-toy">Illustration</span> The unit’s star idea in one image: the intern drafts fast, the editor verifies in one parallel pass. Watercolor, original to this companion.</figcaption>
+</figure>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Training FLOPs</a>
+<a href="#s2">2 Decode FLOPs</a>
+<a href="#s3">3 KV cache</a>
+<a href="#s4">4 Prefill</a>
+<a href="#s5">5 Intensity split</a>
+<a href="#s6">6 Batching</a>
+<a href="#s7">7 Draft model</a>
+<a href="#s8">8 Verification</a>
+<a href="#s9">9 Rejection rule</a>
+<a href="#s10">10 Exactness</a>
+<a href="#s11">11 Acceptance rate</a>
+<a href="#s12">12 Latency tradeoff</a>
+<a href="#s13">13 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<section class="block" id="s1">
+<p class="secnum">Section 1 · C01</p>
+<h2>Training FLOPs: the bill has two lines</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §3</span></p>
+<p>What does one training step cost? Picture a restaurant bill with two lines. The food line is the dense work: every parameter meets every token three times, once on the way forward and twice on the way back. The tip line is attention: it scales with the square of the sequence length, so it balloons at long tables.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §4, §6</span></p>
+<p>The formula is C = 6PD + 12LnTD, with D tokens arriving in sequences of length T. The dense term 6PD comes from Unit 01. The attention term per sequence per layer is 4T²n forward plus 8T²n backward, totaling 12T²n. The toy (P = 1664, D = 31, L = 2, n = 8, T = 4): 6PD = 309,504, attention = 23,808, total 333,312. Real scale (P = 7e9, D = 1e12, L = 32, n = 4096, T = 2048): 6PD = 4.2e22, attention = 3.2e21, total about 4.5e22, with attention near 7 percent.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §7, §9</span></p>
+<p>At standard T the dense term rules. Near T = 6n and above, attention matters (Unit 01). The 6PD-only estimate breaks at long context: at T = 32768 with n = 4096, attention runs 1.33x the dense term, so the shortcut undercounts by 2.3x. Price both lines before training at long context.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 300" role="img" aria-label="Stacked bars of dense versus attention FLOPs at T 2048 and T 32768">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Training FLOPs: dense vs attention share at two context lengths</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="140" y="80" width="90" height="170" fill="#31405e"/><rect x="140" y="60" width="90" height="20" fill="#a94f27"/>
+<text x="185" y="50" text-anchor="middle">4.5e22</text><text x="185" y="268" text-anchor="middle">T = 2048</text><text x="185" y="284" text-anchor="middle" font-size="11">attention 7%</text>
+<rect x="360" y="120" width="90" height="130" fill="#31405e"/><rect x="360" y="60" width="90" height="60" fill="#a94f27"/>
+<text x="405" y="50" text-anchor="middle">2.3x of 6PD</text><text x="405" y="268" text-anchor="middle">T = 32768</text><text x="405" y="284" text-anchor="middle" font-size="11">attention 57%</text>
+<rect x="100" y="296" width="12" height="12" fill="#31405e"/><text x="118" y="306" font-size="11">dense 6PD</text>
+<rect x="230" y="296" width="12" height="12" fill="#a94f27"/><text x="248" y="306" font-size="11">attention 12LnTD</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §6, §9</span> Recomputed shares: 7 percent attention at T = 2048, about 57 percent at T = 32768. One rule: add the quadratic term.</figcaption>
+</figure>
+<div class="nugget" id="nugget-bill">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §7</span></h4>
+<p class="big">The bill has two lines. 6PD plans the run. 12LnTD plans the long context. Cite one without the other and the budget misleads.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>At T = 32768 the attention line exceeds the dense line. A 6PD-only estimate undercounts by 2.3x, which is a blown budget, not a rounding error.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every cost model has a regime where its small term becomes the big term. Find the crossover before you trust the formula.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C02</p>
+<h2>Decode FLOPs: the taxi meter</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §3</span></p>
+<p>How many FLOPs buy 100 tokens? Picture a taxi meter. Every token is one ride past the full weight set: 2P FLOPs with no backward pass, and the KV cache is the loyalty discount: nothing recomputed, only read.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §4, §6</span></p>
+<p>Per token the meter reads 2P for the weights plus 4LTn for attention over the cached keys, each layer each step. The toy (P = 1664, L = 2, n = 8, cache length 5): 2 × 1664 = 3328 plus 320, totaling 3648 FLOPs per token. For 100 tokens: 364,800. Real scale (P = 7e9): 2P = 1.4e10 per token, 1.4e12 for 100 tokens. At 1e14 FLOP/s that is 14 ms of compute on paper, but decode is bandwidth-bound, so the bytes set the clock (C05).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §7, §9</span></p>
+<p>Decode FLOPs are small next to the training bill. What matters is latency per token, and that follows memory traffic, not FLOPs. Fewer FLOPs do not always mean faster: an int8 model with the same 2P FLOPs but 4x fewer bytes decodes about 4x faster at batch 1. Count bytes.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 280" role="img" aria-label="Bars of 2P versus the small attention add-on at toy and real scale">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Per-token decode FLOPs: 2P dominates, attention add-on is small</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="120" y="90" width="80" height="150" fill="#31405e"/><rect x="120" y="76" width="80" height="14" fill="#a94f27"/>
+<text x="160" y="66" text-anchor="middle">3,648</text><text x="160" y="258" text-anchor="middle">toy: 2P + 320</text>
+<rect x="360" y="90" width="80" height="150" fill="#31405e"/><rect x="360" y="86" width="80" height="4" fill="#a94f27"/>
+<text x="400" y="66" text-anchor="middle">1.4e10</text><text x="400" y="258" text-anchor="middle">7B: 2P + add-on</text>
+<text x="320" y="282" text-anchor="middle" font-size="11">the add-on stays under 10 percent of 2P at standard shapes</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §5</span> Recomputed from the lesson’s <code>decode_flops()</code>: the attention add-on is 320 against 3328 in the toy. One rule: drop the backward.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Decode meter. Enter P in billions, layers, width, cache length, and tokens. The widget applies the lesson’s <code>decode_flops()</code>.</p>
+<p>P (billions): <input class="text" id="dcP" value="7" inputmode="decimal" aria-label="Parameters in billions"></p>
+<p>Tokens: <input class="text" id="dcN" value="100" inputmode="numeric" aria-label="Tokens to generate"></p>
+<p><button class="btn" id="dcBtn">Run the meter</button></p>
+<div class="chips" id="dcOut"></div>
+<p class="small" id="dcNote"></p>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C03</p>
+<h2>KV-cache memory: the coat check</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §3</span></p>
+<p>Why does serving run out of memory at long context when the weights fit comfortably? Picture a coat check. Every token leaves two coats, its key and its value, on every floor, every layer. The ticket count multiplies guests by floors, and thousands of guests across 32 floors fill the room even though each coat is small.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §4, §6</span></p>
+<p>Each token at each layer stores 2n numbers, key plus value. The total is 2 × B × T × L × n numbers, times 2 bytes in fp16, which is 4BTLn bytes. The toy (B = 1, T = 5, L = 2, n = 8): 160 numbers, 320 bytes. Real (B = 8, T = 8192, L = 32, n = 4096): 1.7e13 numbers, 34 GB in fp16. That overflows many single-GPU HBM sizes, so the cache sets the batch ceiling, not the weights.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §7, §9</span></p>
+<p>The serving budget must include the cache before batch size and context length are chosen. The cache looks small until it scales: at B = 8, T = 8192 it is 34 GB against 14 GB of weights. A config that holds the weights can still OOM on the first long request when the cache was never sized.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u03-coat-check.jpg" alt="Watercolor of a vast coat check with coats on hooks across many floors">
+<figcaption><span class="tag tag-toy">Illustration</span> The C03 mental model: two coats per guest per floor. At 8 guests, 8192 tokens, 32 floors, the coats fill 34 GB. Watercolor, original to this companion.</figcaption>
+</figure>
+<figure>
+<svg class="chart" viewBox="0 0 640 300" role="img" aria-label="Stacked bars of weights versus cache at two serving points">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Serving memory (GB): weights vs KV cache</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="140" y="200" width="90" height="40" fill="#31405e"/><rect x="140" y="188" width="90" height="12" fill="#a94f27"/>
+<text x="185" y="178" text-anchor="middle">14 + 1</text><text x="185" y="258" text-anchor="middle">B=1, T=2048</text>
+<rect x="380" y="200" width="90" height="40" fill="#31405e"/><rect x="380" y="80" width="90" height="120" fill="#a94f27"/>
+<text x="425" y="70" text-anchor="middle">14 + 34</text><text x="425" y="258" text-anchor="middle">B=8, T=8192</text>
+<rect x="100" y="282" width="12" height="12" fill="#31405e"/><text x="118" y="292" font-size="11">weights 14 GB</text>
+<rect x="250" y="282" width="12" height="12" fill="#a94f27"/><text x="268" y="292" font-size="11">KV cache</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §6</span> Recomputed: at B = 8, T = 8192 the cache (34 GB) is 2.4x the weights. One rule: count coats.</figcaption>
+</figure>
+<div class="nugget" id="nugget-coats">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §7</span></h4>
+<p class="big">Size the cache first. At serving scale the KV cache outweighs the weights, and it grows with every request you accept.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Weights are fixed. The cache is 4BTLn bytes of variable cost. The batch size you can serve is a cache decision wearing a weight decision’s clothes.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Budget the variable cost before the fixed cost. The line item that scales is the one that surprises.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C04</p>
+<h2>Prefill: read the brief, then speak</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §3</span></p>
+<p>Why does the first token take 200 ms while the rest take 20 ms each? Read the brief before the meeting. Prefill runs over all prompt tokens at once, in parallel like training. Decode speaks one token at a time afterward. A long brief plus slow speech.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §4, §6</span></p>
+<p>Prefill FLOPs = T × (2P + 4LTn): the whole training-forward price, paid once on the prompt. At T = 2048 and n = 4096 the dense term dominates, compute-bound, high intensity because weights are reused T times. The toy (T = 4, P = 1664): dense term 2 × 1664 × 4 = 13,312 FLOPs plus attention. Real (P = 7e9, T = 2048): dense term 2 × 7e9 × 2048 = 2.9e13 FLOPs, about 0.3 s at 1e14 FLOP/s, compute-bound. Then decode runs at about 7 ms per token.</p>
+</div>
+<div class="callout">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §5</span> <strong>Disclosed inconsistency.</strong> The lesson defines <code>prefill_flops(P, L, n, T) = T * (2 * P + 4 * L * T * n)</code> and then asserts <code>prefill_flops(1664, 2, 8, 4) == 4 * (3328 + 1280)</code>. The function as written gives 4 × (3328 + 256) = 14,336. The assert expects 18,432. The two disagree by 4,096 FLOPs, so the assert fails on the lesson’s own code. The dense term (13,312) and the real-scale numbers are unaffected.</p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §7, §9</span></p>
+<p>With long prompts, prefill sets time to first token. The always-fast assumption breaks at 128K: naive (128K)² scores need 32 GB per head-set, and prefill can take minutes or OOM. When the score matrix would exceed memory, chunk the prefill. Otherwise run one pass.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Timeline with a long prefill block then small decode ticks">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Request timeline: one long prefill, then decode ticks</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="60" y="80" width="300" height="40" fill="#31405e"/><text x="210" y="105" text-anchor="middle" fill="#faf6ee">prefill: 0.3 s (compute-bound)</text>
+<g fill="#a94f27"><rect x="370" y="88" width="14" height="24"/><rect x="390" y="88" width="14" height="24"/><rect x="410" y="88" width="14" height="24"/><rect x="430" y="88" width="14" height="24"/><rect x="450" y="88" width="14" height="24"/></g>
+<text x="520" y="105">7 ms each</text>
+<text x="210" y="150" text-anchor="middle" font-size="11" fill="#6f6355">builds the full prompt cache in parallel</text>
+<text x="430" y="150" text-anchor="middle" font-size="11" fill="#6f6355">bandwidth-bound</text>
+<text x="320" y="190" text-anchor="middle">one rule: process the prompt in parallel</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §3, §6</span> The two phases to scale: 0.3 s of compute-bound prefill, then 7 ms bandwidth-bound ticks. Time to first token is the prefill.</figcaption>
+</figure>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C05</p>
+<h2>Intensity split: lecture versus tutoring</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §3</span></p>
+<p>One weight set, two phases. Why does one hunger for FLOPs while the other hungers for bytes? A lecture versus tutoring. Prefill addresses T students at once: every weight is reused T times, so intensity runs high. Decode tutors a single student: every weight is spent once, so intensity sits near 1.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §4, §6</span></p>
+<p>Prefill intensity sits near T FLOP/byte in fp16. Decode intensity sits near B at batch B, so near 1 at batch 1. On the toy ridge of 150: prefill at T = 2048 gives I near 2048, compute-bound. Decode at batch 1 gives I near 1, memory-bound, ceiling 2e12 FLOP/s. The split between prefill and decode is the axis the serving design turns on. Tune prefill for compute, decode for bandwidth.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §7, §9</span></p>
+<p>The assumption that decode is always bandwidth-bound breaks at large batch: at batch 512, I near 512 passes the ridge and decode turns compute-bound. Extra bandwidth then buys nothing. Check the batch size first. The falsifiable extension: sweep batch for decode and plot tokens/s. Expect a linear rise then a flat line, with the knee near B = ridge.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 300" role="img" aria-label="Roofline with prefill and decode points placed">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Two phases, two points: prefill right, decode left (ridge 150)</text>
+<g font-family="sans-serif" font-size="12">
+<line x1="70" y1="40" x2="70" y2="250" stroke="#221a12" stroke-width="1.5"/>
+<line x1="70" y1="250" x2="610" y2="250" stroke="#221a12" stroke-width="1.5"/>
+<polyline points="90,230 300,140 560,140" fill="none" stroke="#a94f27" stroke-width="3"/>
+<circle cx="140" cy="212" r="7" fill="#31405e"/><text x="140" y="244" text-anchor="middle" fill="#31405e">decode I≈1</text>
+<circle cx="300" cy="140" r="6" fill="#8a5a17"/><text x="300" y="122" text-anchor="middle" fill="#8a5a17">ridge 150</text>
+<circle cx="480" cy="140" r="7" fill="#5d7050"/><text x="480" y="122" text-anchor="middle" fill="#5d7050">prefill I≈2048</text>
+<text x="340" y="272" text-anchor="middle">intensity (log)</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §5</span> Same weights, opposite sides of the ridge. One rule: reuse decides.</figcaption>
+</figure>
+<div class="nugget" id="nugget-split">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §7</span></h4>
+<p class="big">Prefill wants FLOPs, decode wants bytes. A single optimization cannot serve both.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Buying bandwidth to fix a compute-bound phase spends on the wrong axis. The intensity number tells you which axis you are on.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When one system has two phases, profile them separately. The average of two regimes describes neither.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C06</p>
+<h2>Batching: the bus and the taxi</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §3</span></p>
+<p>One batch of 8 serves eight times the users. Does each of them wait longer? A bus versus a taxi. The bus carries many at a lower cost per rider, but every rider waits for boarding. The taxi departs at once. Pick the vehicle per the SLA.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §4, §6</span></p>
+<p>At batch B, decode reads the weights once and spends them B times. Traffic per token across the batch: 2P plus B times the cache read. The toy: batch 1 gives 50 tok/s at 20 ms per token. Batch 8 gives 296 tok/s total, 37 tok/s per request, 27 ms per token. Batching multiplies intensity by about B, lifts throughput, and usually lifts latency.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §7, §9</span></p>
+<p>Batching is the cheapest way to buy throughput. The price is latency plus KV-cache memory, and C03 caps B. The assumption that batching always helps breaks past the compute roof: batch 1024 at the roof gives the same tokens/s as 512 with double the wait. Find the knee. Use static batching for uniform requests, continuous batching (Unit 08) for varied lengths.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u03-bus-taxi.jpg" alt="Watercolor of a bus boarding many passengers beside a taxi speeding away">
+<figcaption><span class="tag tag-toy">Illustration</span> The C06 mental model: the bus shares one weight read across many riders. The taxi leaves now. Watercolor, original to this companion.</figcaption>
+</figure>
+<figure>
+<svg class="chart" viewBox="0 0 640 300" role="img" aria-label="Throughput rising and saturating versus latency rising with batch size">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Toy batch sweep: throughput saturates, latency keeps rising</text>
+<g font-family="sans-serif" font-size="12">
+<line x1="70" y1="40" x2="70" y2="250" stroke="#221a12" stroke-width="1.5"/>
+<line x1="70" y1="250" x2="610" y2="250" stroke="#221a12" stroke-width="1.5"/>
+<polyline points="90,230 180,150 300,100 430,80 560,75" fill="none" stroke="#31405e" stroke-width="3"/>
+<polyline points="90,230 180,210 300,190 430,160 560,120" fill="none" stroke="#a94f27" stroke-width="3" stroke-dasharray="6,4"/>
+<text x="480" y="60" fill="#31405e">throughput (tok/s)</text>
+<text x="480" y="140" fill="#a94f27">latency (ms, dashed)</text>
+<text x="340" y="272" text-anchor="middle">batch size B</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §5</span> Sketch of the lesson’s toy curve: throughput rises 5.9x by B = 8 then flattens at the roof, latency rises throughout. One rule: share the weight read.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Batch planner. Enter B. The widget applies the lesson’s toy <code>batch_model()</code> (20 ms base).</p>
+<p>Batch size: <input class="text" id="btB" value="8" inputmode="numeric" aria-label="Batch size"></p>
+<p><button class="btn" id="btBtn">Plan the batch</button></p>
+<div class="chips" id="btOut"></div>
+<p class="small" id="btNote"></p>
+</div>
+<div class="nugget" id="nugget-bus">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §7</span></h4>
+<p class="big">Batching is the cheapest throughput lever, and the knee is the whole game. Past the compute roof it buys latency with no throughput.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Throughput flat against batch 16 with latency doubled is the signature of a post-knee batch. The fix is a smaller batch, not a bigger machine.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every scaling lever saturates. Plot both curves, find the knee, stop there.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C07</p>
+<h2>The draft model: intern and editor</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §3</span></p>
+<p>Could a tiny quick model handle the typing while the flagship only proofreads? That is the intern and the editor. The intern, the draft model, types out gamma words at speed. The editor, the target model, reads the whole batch at once and keeps what is good. Reading runs in parallel, so grading 5 words costs barely more than grading 1.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §4, §6</span></p>
+<p>The draft q is a small model with cost ratio c = t_draft / t_target per token, with c much less than 1. Gamma is the tokens proposed per round. The target p checks gamma tokens in a single parallel pass, one prefill-like step covering gamma tokens. For acceptance rate a, the expected accepted tokens are E[k] = (1 − a^(gamma+1)) / (1 − a). Wall-clock per token runs about (gamma × c + 1) / E[k] target-steps.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §7, §9</span></p>
+<p>The toy: c = 0.05, gamma = 5, a = 0.8. E[k] = (1 − 0.8^6) / 0.2 = 3.69. Cost per round: 5 × 0.05 + 1 = 1.25. Per token: 1.25 / 3.69 = 0.34 target-steps. Speedup about 2.9x. Both models must share the tokenizer. The failure case: a slow draft (c near 0.5) or low acceptance (a near 0.3) loses to plain decode. At c = 0.5, gamma = 5, a = 0.3: E[k] = 1.42, cost 3.5, per token 2.46x slower than baseline. Price a and c before anything else.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 260" role="img" aria-label="Draft emits 5 tokens, target checks once">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">One speculative round: draft types 5, target reads once</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="60" y="70" width="150" height="110" fill="#f7ecd4" stroke="#8a5a17" stroke-width="1.5"/>
+<text x="135" y="100" text-anchor="middle">draft q</text><text x="135" y="120" text-anchor="middle" font-size="11">5 serial steps</text><text x="135" y="138" text-anchor="middle" font-size="11">cost 5c = 0.25</text>
+<text x="230" y="130" font-size="20">→</text>
+<rect x="260" y="70" width="150" height="110" fill="#e2e7f0" stroke="#31405e" stroke-width="1.5"/>
+<text x="335" y="100" text-anchor="middle">target p</text><text x="335" y="120" text-anchor="middle" font-size="11">1 parallel pass</text><text x="335" y="138" text-anchor="middle" font-size="11">cost ~1</text>
+<text x="445" y="130" font-size="20">→</text>
+<rect x="480" y="70" width="110" height="110" fill="#e4e9da" stroke="#5d7050" stroke-width="1.5"/>
+<text x="535" y="110" text-anchor="middle">~3.7 tokens</text><text x="535" y="130" text-anchor="middle" font-size="11">per 1.25 steps</text>
+<text x="320" y="210" text-anchor="middle">one rule: draft, then verify</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §3, §6</span> The round with the lesson’s toy numbers: 5 × 0.05 + 1 = 1.25 target-steps for about 3.7 tokens.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Speculative planner. Enter acceptance a, gamma, and cost ratio c. The widget applies the lesson’s <code>expected_accepted()</code> and <code>speedup()</code>.</p>
+<p>Acceptance a: <input class="text" id="spA" value="0.8" inputmode="decimal" aria-label="Acceptance rate"></p>
+<p>Gamma: <input class="text" id="spG" value="5" inputmode="numeric" aria-label="Draft length"></p>
+<p>Cost ratio c: <input class="text" id="spC" value="0.05" inputmode="decimal" aria-label="Draft cost ratio"></p>
+<p><button class="btn" id="spBtn2">Price the bet</button></p>
+<div class="chips" id="spOut2"></div>
+<p class="small" id="spNote2"></p>
+</div>
+<div class="nugget" id="nugget-intern">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §8</span></h4>
+<p class="big">Price the bet with measured a and c before serving a single request. A slow draft or low acceptance turns the speedup negative, and the formula warns you in advance.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The bad case is not neutral: 0.41x means the optimization serves 2.4x slower than baseline. The odds table is the pre-flight check.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Price every bet with its two parameters before placing it. Hope is not a parameter.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C08</p>
+<h2>Verification: grading, not taking</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §3, §4, §6</span></p>
+<p>Checking 5 tokens sounds like 5 steps, but it is 1. Think of a quiz: sitting it is serial work, one answer at a time, while grading it is parallel, every answer on the desk at once. The target scores the gamma drafts in a single forward pass because the draft tokens are already known, which makes the pass read like a prefill. The verification input is (B, gamma, n) tokens, and one pass yields p(x_i | prefix, drafts before i) for every i, including the bonus position. The FLOP count is about gamma × 2P, but intensity near gamma keeps it compute-bound, so the wall clock reads about 1 step. The toy: gamma = 5, verification time about 1.2 target steps, not 5. The lesson models it as 1 + 0.05 × gamma.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §7, §9</span></p>
+<p>Verification is O(gamma) FLOPs but O(1) steps, and latency counts steps. The exactly-1-step assumption breaks at large gamma: the pass turns compute-heavy and exceeds 1 step. At gamma = 50 and long context the verification pass itself drags. Model verification as 1 + slope × gamma, and measure the slope.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Five draft tokens enter one target block, six distributions exit">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Verification: gamma drafts in, gamma + 1 distributions out, one pass</text>
+<g font-family="sans-serif" font-size="12">
+<g fill="#f7ecd4" stroke="#8a5a17">
+<rect x="60" y="90" width="44" height="34"/><rect x="110" y="90" width="44" height="34"/><rect x="160" y="90" width="44" height="34"/><rect x="210" y="90" width="44" height="34"/><rect x="260" y="90" width="44" height="34"/>
+</g>
+<text x="182" y="145" text-anchor="middle">5 draft tokens</text>
+<text x="330" y="112" font-size="20">→</text>
+<rect x="360" y="70" width="110" height="74" fill="#e2e7f0" stroke="#31405e" stroke-width="1.5"/><text x="415" y="100" text-anchor="middle">target p</text><text x="415" y="120" text-anchor="middle" font-size="11">1 forward pass</text>
+<text x="495" y="112" font-size="20">→</text>
+<text x="560" y="100" text-anchor="middle">6 distributions</text><text x="560" y="120" text-anchor="middle" font-size="11">5 + bonus</text>
+<text x="320" y="180" text-anchor="middle">one rule: grade, do not take</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §4</span> The parallel pass with the lesson’s toy numbers. Cost in steps is what latency feels.</figcaption>
+</figure>
+<div class="nugget" id="nugget-grade">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §7</span></h4>
+<p class="big">Verification spends O(gamma) FLOPs but only O(1) steps. Latency counts steps, so the FLOP count misleads and the step count decides.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The whole trick rests on this asymmetry. If verification cost gamma steps, speculative decoding would be pure overhead.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Count what the objective counts. Latency wants steps, throughput wants FLOPs, and the two disagree.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C09</p>
+<h2>The rejection rule: a bouncer with a coin</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §3</span></p>
+<p>The draft offers “cat” while the target prefers “dog”. Which one wins, and with what probability? Picture the bouncer with his coin. The draft’s guest arrives carrying confidence q. The bouncer, the target, waves them in with probability min(1, p/q). Turned-away guests give way to a draw from what is left over: p − q clipped at 0, renormalized.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §4, §6</span></p>
+<p>Accept x_i with probability min(1, p(x_i)/q(x_i)). On the first rejection at position i, sample x_i from norm(max(0, p − q)). Everything after a rejection is discarded. The proof sketch: P(accept x) = q(x) × min(1, p(x)/q(x)) = min(q(x), p(x)). The leftover mass p(x) − min(q(x), p(x)) = max(0, p(x) − q(x)) is picked up by the resample. Total: p(x). The toy: q(cat) = 0.7, p(cat) = 0.2, so the accept probability is 0.2/0.7 = 0.286.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §7, §9</span></p>
+<p>The residual sampling costs O(V) per position, tiny beside model FLOPs. The rare-rejection assumption breaks with a weak draft: most tokens get rejected and each round produces about 1 token at cost gamma × c + 1, slower than baseline. Monitor the acceptance rate in production. Greedy accept works when only the argmax matters. Use the full rule when the distribution must survive.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 260" role="img" aria-label="Bouncer diagram: draft token in, coin flip, accept or resample out">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">The acceptance rule: admit with min(1, p/q), else resample</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="60" y="90" width="110" height="50" fill="#f7ecd4" stroke="#8a5a17" stroke-width="1.5"/><text x="115" y="112" text-anchor="middle">draft token x</text><text x="115" y="130" text-anchor="middle" font-size="11">confidence q(x)</text>
+<text x="190" y="120" font-size="20">→</text>
+<circle cx="250" cy="115" r="34" fill="#fffdf8" stroke="#a94f27" stroke-width="2"/><text x="250" y="110" text-anchor="middle" font-size="11">coin:</text><text x="250" y="126" text-anchor="middle" font-size="11">min(1, p/q)</text>
+<text x="300" y="90" font-size="16">↗</text><text x="300" y="150" font-size="16">↘</text>
+<rect x="330" y="60" width="130" height="44" fill="#e4e9da" stroke="#5d7050" stroke-width="1.5"/><text x="395" y="80" text-anchor="middle">accept x</text><text x="395" y="96" text-anchor="middle" font-size="11">mass min(q, p)</text>
+<rect x="330" y="130" width="130" height="44" fill="#f6e3d3" stroke="#a94f27" stroke-width="1.5"/><text x="395" y="150" text-anchor="middle">resample</text><text x="395" y="166" text-anchor="middle" font-size="11">norm(max(0, p−q))</text>
+<text x="500" y="120" font-size="20">→</text><text x="560" y="120">total: p(x)</text>
+<text x="320" y="210" text-anchor="middle">one rule: accept with min(1, p/q)</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §4</span> The rule as the lesson states it. Accepted mass plus resampled mass equals p exactly.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Bouncer calculator. Enter p(x) and q(x). The widget applies the lesson’s accept probability.</p>
+<p>p(x): <input class="text" id="bnP" value="0.2" inputmode="decimal" aria-label="Target probability"></p>
+<p>q(x): <input class="text" id="bnQ" value="0.7" inputmode="decimal" aria-label="Draft probability"></p>
+<p><button class="btn" id="bnBtn">Flip the coin</button></p>
+<div class="chips" id="bnOut"></div>
+<p class="small" id="bnNote"></p>
+</div>
+<div class="nugget" id="nugget-bouncer">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §4</span></h4>
+<p class="big">Accepted tokens follow p exactly. The bouncer’s coin plus the resample draw form an exact identity, not an approximation.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Exactness is what separates this trick from every approximate shortcut. The proof is three lines, and the code follows the proof.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When a method claims exactness, ask for the identity. “Almost the same” and “exactly the same” are different contracts.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · C10</p>
+<h2>Exactness: a photocopy, not a sketch</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §3</span></p>
+<p>Does speculative decoding give “almost the same” or “exactly the same” as the target? Think photocopy, not sketch. Rejection sampling is exact by proof: the output tokens match p exactly, not approximately. The fine print has two lines: same tokenizer, plus exact resample math.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §4, §6</span></p>
+<p>Two assumptions. A1: draft and target use one shared vocabulary and tokenization, so their supports match. A2: the resample distribution is norm(max(0, p − q)), computed exactly. Then the output distribution equals p, exactly. From C09: accepted mass per token is min(q, p), resample mass is max(0, p − q), and the sum is p. After a full round, the bonus token is drawn from p directly. Each emitted token follows p. Nothing is approximated.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §7, §9</span></p>
+<p>Exactness costs nothing in compute: the innocent-looking sampling code is exactly right. The cost is comprehension, not cycles. The breaking case is different tokenizers: if the draft cuts “cat” as one token and the target cuts it as two, the two distributions live in different spaces and the proof collapses. Mismatched vocabs produce garbage or crashes.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Identity card: output equals p exactly, with two assumption stamps">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Exactness card: output = p, exactly</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="180" y="60" width="280" height="110" fill="#fffdf8" stroke="#221a12" stroke-width="2"/>
+<text x="320" y="95" text-anchor="middle" font-size="16">output distribution = p</text>
+<text x="320" y="118" text-anchor="middle" font-size="12" fill="#5d7050">stamp A1: same tokenizer</text>
+<text x="320" y="140" text-anchor="middle" font-size="12" fill="#5d7050">stamp A2: exact resample math</text>
+<text x="320" y="195" text-anchor="middle" font-size="11" fill="#6f6355">break either stamp and the identity voids</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §4</span> The two assumptions as stamps. One rule: rejection sampling identity.</figcaption>
+</figure>
+<div class="nugget" id="nugget-copy">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §7</span></h4>
+<p class="big">One shared vocabulary carries the whole proof. Two tokenizers mean two different spaces, and the identity voids.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A draft with a different tokenizer does not degrade gracefully. It voids the exactness the whole method sells.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Assumptions are load-bearing. Name them as stamps on the card, and check the stamps before you trust the output.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s11">
+<p class="secnum">Section 11 · C11</p>
+<h2>Acceptance rate: the free-throw streak</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §3</span></p>
+<p>The draft lands 80 percent of its tokens. How many tokens does a round produce? Picture a free-throw streak. Every draft token is one attempt, made with probability a. The streak ends at the first miss, with one bonus token after a full round. Expected makes follow the geometric series: E[k] = (1 − a^(gamma+1)) / (1 − a).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §4, §6</span></p>
+<p>The toy: a = 0.8, gamma = 5. Then 0.8^6 = 0.262144, so E[k] = (1 − 0.262144) / 0.2 = 3.689. A realistic case: a = 0.6, gamma = 4 gives E[k] = 2.31. As a approaches 1, the yield approaches gamma + 1. The main lever is a: E[k] bends concave in a, so the gains pile up near 1.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §7, §9</span></p>
+<p>The constant-a assumption breaks in practice: real acceptance falls with position because later drafts condition on earlier drafts. Measured 2.1 against a formula 3.7 is the signature of falling per-position acceptance. Fit a_i per position instead of one global a.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 300" role="img" aria-label="E of k versus gamma curves for a in 0.5, 0.8, 0.95">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Expected tokens per round vs gamma, for three acceptance rates</text>
+<g font-family="sans-serif" font-size="12">
+<line x1="70" y1="40" x2="70" y2="250" stroke="#221a12" stroke-width="1.5"/>
+<line x1="70" y1="250" x2="610" y2="250" stroke="#221a12" stroke-width="1.5"/>
+<polyline points="90,232 190,196 290,172 390,158 490,150 590,146" fill="none" stroke="#6f6355" stroke-width="2.5"/>
+<polyline points="90,210 190,150 290,110 390,84 490,68 590,58" fill="none" stroke="#a94f27" stroke-width="2.5"/>
+<polyline points="90,200 190,120 290,70 390,48 490,40 590,36" fill="none" stroke="#5d7050" stroke-width="2.5"/>
+<text x="500" y="140" fill="#6f6355">a = 0.5</text>
+<text x="500" y="88" fill="#a94f27">a = 0.8</text>
+<text x="500" y="52" fill="#5d7050">a = 0.95</text>
+<text x="340" y="272" text-anchor="middle">gamma (draft length)</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §5</span> Curves from the lesson’s geometric-series formula. Higher a lifts every gamma. One rule: geometric sum.</figcaption>
+</figure>
+<div class="nugget" id="nugget-streak">
+<h4>Nugget 9 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §7</span></h4>
+<p class="big">Past a point, a better draft beats a faster draft. The concave curve decides where the next unit of effort goes.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A faster draft with worse acceptance can lower the yield. The lever is a, not c, once the draft is cheap enough.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Find the concave lever. Diminishing returns elsewhere mean the steep curve decides.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s12">
+<p class="secnum">Section 12 · C12</p>
+<h2>The latency tradeoff: a bet with known odds</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §3</span></p>
+<p>A draft at 5 percent cost, 80 percent acceptance, gamma 5. Win or lose? A bet with known odds. Each round costs gamma × c + 1 and yields E[k] tokens. The bet wins when the round cost stays below the yield E[k]. The formula is the odds table: price a and c before betting.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §4, §6</span></p>
+<p>Speedup = E[k] / (gamma × c + 1). Break-even sits at E[k] = gamma × c + 1. The toy: 3.689 / 1.25 = 2.95x. The bad case: a = 0.3, c = 0.5, gamma = 5 gives E[k] = 1.42, cost 3.5, speedup 0.41x, a 2.4x slowdown. Measure the tradeoff in target-steps per token. At batch 1, FLOPs and memory are secondary.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §7, §9</span></p>
+<p>The assumption that speculative decoding always helps breaks on low a or high c. The honest workflow prices a on your own workload first, then decides. Pick speculative decoding when latency must fall without quality loss, quantization when bandwidth is the constraint, batching when throughput is the target. With a free draft (c = 0), speedup equals E[k], and the best gamma grows without bound toward 1/(1 − a).</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 300" role="img" aria-label="Speedup surface sketch over acceptance and gamma at c equals 0.05">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Speedup surface (c = 0.05): the break-even contour</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="80" y="60" width="480" height="180" fill="#f3ecdd" stroke="#221a12" stroke-width="1"/>
+<path d="M 120 220 Q 300 160 540 80" fill="none" stroke="#a94f27" stroke-width="3"/>
+<text x="330" y="150" fill="#a94f27">break-even: speedup = 1</text>
+<text x="200" y="100" fill="#5d7050">win region</text>
+<text x="420" y="210" fill="#6f6355">lose region</text>
+<circle cx="330" cy="105" r="7" fill="#31405e"/><text x="330" y="88" text-anchor="middle" fill="#31405e">toy: 2.95x</text>
+<circle cx="180" cy="195" r="7" fill="#6f6355"/><text x="180" y="218" text-anchor="middle" fill="#6f6355">bad case: 0.41x</text>
+<text x="320" y="262" text-anchor="middle">acceptance a →        gamma ↑</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §5</span> Sketch of the lesson’s speedup surface at c = 0.05. The two computed points sit on opposite sides of the contour. One rule: divide by cost.</figcaption>
+</figure>
+<div class="nugget" id="nugget-bet">
+<h4>Nugget 10 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §7</span></h4>
+<p class="big">Pay the round cost only when it stays below the yield. Price a on your workload, then decide. Never the reverse.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Measured 1.2x against a formula 2.9x points at the verification slope or a falling per-position acceptance. The error map is the diagnosis.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every optimization is a bet with odds. Write the odds down, measure the two numbers, then place it.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s13">
+<p class="secnum">Section 13 · Synthesis</p>
+<h2>What this unit buys you</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 to C12</span></p>
+<p>The arc, end to end. Training prices 6PD plus 12LnTD, and the second term takes over at long context (C01). Decode prices 2P per token plus a small attention add-on, and the bytes set the clock (C02). The KV cache is 4BTLn bytes, and at serving scale it outweighs the weights (C03). Prefill is one parallel pass that builds the cache, and decode is the slow speech after (C04). Prefill is compute-bound, decode is bandwidth-bound, and the split steers the serving design (C05). Batching shares one weight read across B requests until the roof (C06). Then the trick: a small draft types gamma tokens while the target grades them in one parallel pass (C07, C08). The bouncer admits each draft with probability min(1, p/q) and resamples the rest, so the output lands exactly on p (C09, C10). The yield is the geometric sum E[k] (C11). The bet wins when the round cost (gamma × c + 1) stays below the yield E[k] (C12).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Unit chapter plate</span></p>
+<p>The unit chapter plate states the tradeoff in one line: “Count the bytes per token. Then buy back latency.” The role bridge: the research engineer runs the speedup formula and its break-even before any speculative serving work. The LLM engineer designs the stack on the prefill and decode intensity split. The FDE carries the latency tradeoff as the stakeholder answer: the conditions where the bet wins and where it loses. One disclosure stands on this page: the C04 prefill assert disagrees with its own function by 4,096 FLOPs, recomputed above.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>Ten nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-bill"><span class="wnum">01</span>The bill has two lines <span class="muted">· C01</span></a></li>
+<li><a href="#nugget-coats"><span class="wnum">02</span>Size the cache first <span class="muted">· C03</span></a></li>
+<li><a href="#nugget-split"><span class="wnum">03</span>Prefill wants FLOPs, decode wants bytes <span class="muted">· C05</span></a></li>
+<li><a href="#nugget-bus"><span class="wnum">04</span>Batching is the cheapest throughput lever <span class="muted">· C06</span></a></li>
+<li><a href="#nugget-intern"><span class="wnum">05</span>Price the bet before placing it <span class="muted">· C07</span></a></li>
+<li><a href="#nugget-grade"><span class="wnum">06</span>Verification is O(gamma) FLOPs but O(1) steps <span class="muted">· C08</span></a></li>
+<li><a href="#nugget-bouncer"><span class="wnum">07</span>Accepted tokens follow p exactly <span class="muted">· C09</span></a></li>
+<li><a href="#nugget-copy"><span class="wnum">08</span>One shared vocabulary carries the proof <span class="muted">· C10</span></a></li>
+<li><a href="#nugget-streak"><span class="wnum">09</span>A better draft beats a faster draft <span class="muted">· C11</span></a></li>
+<li><a href="#nugget-bet"><span class="wnum">10</span>Pay the cost only below the yield <span class="muted">· C12</span></a></li>
+</ol>
+</section>
+
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>lessons/u03/lesson-03-accounting-speculative.md</code> (baseline 2026-10-06). No lecture transcript exists for this session, so nothing here quotes a lecturer and no lecture anecdotes appear. Calendar anchor: Week 2, Oct 04 (Analyzing the Performance of Transformers, presented by Azalia). Charts re-plot the lesson’s computed numbers with section citations. All plotted values were recomputed from the lesson’s formulas on 2026-10-08. One inconsistency surfaced and is disclosed on-page (C04: the prefill assert expects 18,432, the function gives 14,336). Claim class: every lesson leaf PLANNED / SOURCE ATTRIBUTION PENDING. Interactive toys run the lesson’s rules over your inputs and are labeled <span class="tag tag-toy">Illustration</span>. Speculative decoding follows Leviathan et al. and Chen et al. (2023), taught from the papers. Direct quotes from the lesson document: 24 words (the unit chapter plate line, plus the verbatim cat and dog toy terms), recounted by hand.</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>. No video exists for this session, so no embed appears.</p>
+</footer>
+</div>
+<script>
+function chip(text, cls){
+  var s=document.createElement("span")
+  if(cls){s.className="chip "+cls}
+  else{s.className="chip"}
+  s.textContent=text
+  return s
+}
+function out(id){
+  var e=document.getElementById(id)
+  e.innerHTML=""
+  return e
+}
+document.getElementById("dcBtn").addEventListener("click",function(){
+  var P=parseFloat(document.getElementById("dcP").value)*1e9
+  var N=parseInt(document.getElementById("dcN").value,10)
+  var flops=N*2*P
+  var o=out("dcOut")
+  o.appendChild(chip("decode FLOPs: "+(flops/1e12).toFixed(2)+" TFLOP","plain"))
+  o.appendChild(chip("compute time at 1e14: "+(flops/1e14*1000).toFixed(1)+" ms","plain"))
+  document.getElementById("dcNote").textContent="FLOPs only. At batch 1, bytes set the clock, not this number."
+})
+document.getElementById("btBtn").addEventListener("click",function(){
+  var B=parseInt(document.getElementById("btB").value,10)
+  var lat=0.020*(1+0.05*(B-1))
+  var thr=B/lat
+  var o=out("btOut")
+  o.appendChild(chip("latency: "+(lat*1000).toFixed(1)+" ms/token","plain"))
+  o.appendChild(chip("throughput: "+thr.toFixed(0)+" tok/s","plain"))
+  if(B<=6){document.getElementById("btNote").textContent="Inside a 25 ms SLO in the toy model."}
+  else{document.getElementById("btNote").textContent="Past the toy knee: latency keeps rising, throughput flattens."}
+})
+document.getElementById("spBtn2").addEventListener("click",function(){
+  var a=parseFloat(document.getElementById("spA").value)
+  var g=parseInt(document.getElementById("spG").value,10)
+  var c=parseFloat(document.getElementById("spC").value)
+  var ek=(1-Math.pow(a,g+1))/(1-a)
+  var cost=g*c+1
+  var su=ek/cost
+  var o=out("spOut2")
+  o.appendChild(chip("E[k]: "+ek.toFixed(2)+" tokens","plain"))
+  o.appendChild(chip("cost: "+cost.toFixed(2)+" steps","plain"))
+  o.appendChild(chip("speedup: "+su.toFixed(2)+"x","plain"))
+  if(su>1){document.getElementById("spNote2").textContent="The bet pays at these odds."}
+  else{document.getElementById("spNote2").textContent="The bet loses. Raise a, lower c, or shrink gamma."}
+})
+document.getElementById("bnBtn").addEventListener("click",function(){
+  var p=parseFloat(document.getElementById("bnP").value)
+  var q=parseFloat(document.getElementById("bnQ").value)
+  var acc=Math.min(1,p/q)
+  var o=out("bnOut")
+  o.appendChild(chip("accept prob: "+acc.toFixed(3),"plain"))
+  if(acc<1){document.getElementById("bnNote").textContent="On reject, resample from norm(max(0, p - q))."}
+  else{document.getElementById("bnNote").textContent="Always accepted. The draft underclaims this token."}
+})
+</script>
+</body>
+</html>
