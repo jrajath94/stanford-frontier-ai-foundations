@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U08 Companion: Diffusion Variants and Implementation</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.pairtable td.rank{font-weight:700}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford Frontier AI · Math-GenAI · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Unit 08 · DDIM, guidance, and the serving arithmetic</p>
+<h1>U08 Companion: Diffusion Variants and Implementation</h1>
+<p class="dek">Ten steps instead of one hundred, a knob between solving and sampling, a budget sheet for the loss, and the FLOP count that sets the serving price.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>content/v2/math-genai/lessons/u08/lesson-08-diffusion-variants-implementation.md</code>. The phrasing is the companion's. No lecture transcript exists for this unit.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> The idea above the tag carries a lesson anchor. The generalization below it is the companion's own voice.</p>
+<p class="small muted">Narrated from the lesson content. The lesson is locally authored bridge material. It states that it does not reproduce the instructor lectures, and no transcript was inspected. All numbers below were computed in the lesson on 2026-10-06 (numpy 1.26.4, float64, seed 0 where RNG is used, compute_run5b.py reproduces every one). Natural log inside the Gaussian algebra. Log base 2 in bits for likelihood statements.</p>
+</div>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 DDIM construction</a>
+<a href="#s2">2 Stochastic vs deterministic</a>
+<a href="#s3">3 Step schedules</a>
+<a href="#s4">4 U-Net</a>
+<a href="#s5">5 Timestep embedding</a>
+<a href="#s6">6 Loss weighting</a>
+<a href="#s7">7 Mean and score</a>
+<a href="#s8">8 Conditional models</a>
+<a href="#s9">9 Guidance</a>
+<a href="#s10">10 Quality vs diversity</a>
+<a href="#s11">11 Runtime</a>
+<a href="#s12">12 Check battery</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<section class="block" id="s0">
+<p class="secnum">Opening</p>
+<h2>Ten steps, same contract</h2>
+<figure>
+<img class="illus" src="assets/u08-hero.webp" alt="Watercolor of a staircase with one hundred small steps beside a staircase with ten long strides, both arriving at the same landing">
+<figcaption>Illustration. One hundred small steps or ten long strides: DDIM changes the stride so the short staircase lands on the same marginals.</figcaption>
+</figure>
+<p>The running toy continues from U07: scalar x, T = 100, linear betas 1e-4 to 0.02, x_0 = 2.0, drawn noise eps = 0.5, constant network prediction eps_hat = 0.4. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C01-C12</span> The DDIM subsequence is tau = [10, 20, ..., 100] (10 steps). A new toy U-Net (1x8x8 input) enters for the implementation sections. The arc: fewer steps with the same marginals (C01-C03), the network that knows what time it is (C04-C05), steering the reverse process (C06-C09), and shipping it: cost and correctness (C10-C12).</p>
+</section>
+
+<section class="block" id="s1">
+<p class="secnum">C01 · DDIM and the non-Markovian construction</p>
+<h2>The contract</h2>
+<p>The DDPM forward process is Markov: x_t depends on x_{t-1}. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C01</span> The DDIM construction drops the Markov requirement and keeps only the marginals: q(x_t | x_0) = N(sqrt(ab_t) x_0, (1 − ab_t) I), exactly as in DDPM. Any joint process with those marginals trains the same epsilon network, because the training loss only ever sees (x_0, x_t, t) triples drawn from the marginals. The marginals are the contract between training and sampling. The Markov chain was one implementation of the contract. DDIM is another, designed so that big jumps stay exact.</p>
+<p>The DDIM reverse step: x_{t-1} = sqrt(ab_{t-1}) x0_hat + sqrt(1 − ab_{t-1} − sigma²) eps_hat + sigma z. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C01</span> Sigma_t(eta) = eta × sqrt((1 − ab_{t-1})/(1 − ab_t)) × sqrt(1 − ab_t/ab_{t-1}). For the 100 → 90 jump: sigma(eta = 1) = 0.39249806, sigma² = 0.15405473. This is the variance of the 10-step jump, not the single-step beta_tilde_100 = 0.01976684. The subsequence changes which variance eta = 1 recovers. The marginal identity: 0.15405473 + 0.40507252 = 0.55912725 = 1 − ab_90. The marginals hold for every eta. Deterministic jump: x_100 = 1.60480905, x0_hat = 2.13230847, x_90 = sqrt(0.440873) × 2.13230847 + sqrt(0.559127) × 0.4 = 1.71491474.</p>
+<figure>
+<div id="chart-sigma"></div>
+<figcaption>From the lesson, C01. The 100 → 90 jump variance budget at eta = 1: the noise term plus the eps term sum to 1 − ab_90, the DDPM marginal variance.</figcaption>
+</figure>
+<div class="toy">
+<p><strong>Bench.</strong> Turn the eta knob. <span class="tag tag-toy">Illustration</span> Lesson rule for the 100 → 90 jump: sigma = eta × 0.39249806. Lesson values: ab_100 = 0.36356325, ab_90 = 0.440873.</p>
+<p><label for="eta">eta: <span id="etaval">0.00</span></label><br>
+<input type="range" id="eta" min="0" max="100" value="0"></p>
+<p class="small">sigma = <span id="sigmaval" class="num">0.00000</span> · sigma² = <span id="sigma2val" class="num">0.00000</span></p>
+</div>
+<p>The failure case: eta > 1. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C01</span> Sigma exceeds the marginal budget, 1 − ab_{t-1} − sigma² turns negative, the square root fails. The C12 battery asserts sigma below sqrt(1 − ab_{t-1}) for eta in [0, 1].</p>
+<div class="nugget" id="ng1">
+<h4>Nugget 01 · C01</h4>
+<p class="big">The contract.</p>
+<dl>
+<dt>What happened</dt><dd>The Markov requirement was dropped. The marginals stayed. The same trained network ran a 10-step sampler because its training only ever saw the marginals.</dd>
+<dt>Why it matters</dt><dd>Skipping steps with the plain DDPM kernel breaks the small-step Gaussian approximation and the marginals drift. Skipping steps after changing the process keeps them exact. The fix is in the process, not the step count.</dd>
+<dt>Transferable principle</dt><dd>Separate the contract from the implementation. <span class="tag tag-companion">companion</span> When one implementation is too slow, ask what the downstream stage actually needs. Reimplement against the need, not the habit.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">C02 · Stochastic versus deterministic sampling</p>
+<h2>The knob</h2>
+<p>The only randomness in the DDIM reverse step is sigma z. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C02</span> Set eta = 0: sigma = 0, the z term vanishes, and the whole trajectory from x_T to x_0 is a deterministic function of x_T and the network. The initial x_T is still random: different seeds draw different x_T and give different samples. Deterministic means reproducible given x_T, not constant. The lesson mental model: eta = 0 turns the sampler into an ODE solver, eta = 1 keeps it an SDE sampler. The knob interpolates between solving and sampling.</p>
+<p>Fixed x_T, eta = 0, seeds 0 vs 1: max trajectory difference below 1e-12, bit-identical. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C02</span> At eta = 1: above 1e-6, genuinely different. Deterministic endpoint from the fixed x_T: x_0 = 2.408479 (mid-trajectory 1.890616, 2.219587, 2.408479 at taus 80, 50, 20 read backward). The endpoint overshoots 2.0 because the constant net (eps_hat = 0.4 vs true 0.5) errs on every step and the deterministic path accumulates the bias. Stochasticity can mask a biased net. Determinism exposes it. Debug rule: test a new net at eta = 0 first.</p>
+<div class="nugget" id="ng2">
+<h4>Nugget 02 · C02</h4>
+<p class="big">The knob.</p>
+<dl>
+<dt>What happened</dt><dd>One scalar, eta, chose between a reproducible trajectory (bit-identical across seeds) and a genuinely random one, with the same network and the same starting noise.</dd>
+<dt>Why it matters</dt><dd>The deterministic path accumulated the constant net's bias into a visible overshoot (2.408479 vs 2.0). The knob is also a diagnostic: bias hides in noise, and eta = 0 removes the hiding place.</dd>
+<dt>Transferable principle</dt><dd>Make randomness a dial, not a fixture. <span class="tag tag-companion">companion</span> A system that can run deterministically can be debugged. One that only runs stochastically can only be averaged.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">C03 · Step schedules</p>
+<h2>Spend evals where the curve moves</h2>
+<p>Uniform tau = [10, 20, ..., 100] spends evals evenly. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C03</span> But the signal changes fastest where alpha_bar moves fastest: on this schedule ab drops 0.989998 → 0.960553 in the first jump and only 0.440873 → 0.363563 in the last. The subsequence alpha_bars: 0.989998, 0.960553, 0.913363, 0.851104, 0.777180, 0.695412, 0.609714, 0.523788, 0.440873, 0.363563. A late-dense schedule [1, 20, 39, 55, 69, 80, 88, 95, 98, 100] takes three jumps in the last 10 percent of the chain (95 → 98 → 100) where the uniform schedule takes one. The lesson mental model: evals are a budget. Spend them where alpha_bar has the steepest slope, the same way quadrature puts points where the integrand varies.</p>
+<p>Eval counts: DDPM 100, DDIM-10 10, a 10x reduction either way. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C03</span> The failure case: tau with a repeated value. ab_t = ab_{t-1} makes sigma divide by zero and the jump a no-op that still costs an eval. Assert strict increase.</p>
+<div class="nugget" id="ng3">
+<h4>Nugget 03 · C03</h4>
+<p class="big">Spend evals where the curve moves.</p>
+<dl>
+<dt>What happened</dt><dd>The uniform schedule spent one of ten evals on the last 10 percent of the chain, where alpha_bar barely moves. The late-dense schedule spent three there, where the chain moves most.</dd>
+<dt>Why it matters</dt><dd>Compute is a budget, not a metronome. Even spacing is a choice, and on a curve with a steep region it is the wrong one.</dd>
+<dt>Transferable principle</dt><dd>Allocate samples by slope. <span class="tag tag-companion">companion</span> Wherever a budget buys evaluations of a changing quantity, density follows the derivative.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">C04 · The U-Net noise predictor</p>
+<h2>Count the blocks</h2>
+<p>The net eps_theta(x_t, t) takes a noisy image plus a timestep and returns the predicted noise, same shape as the input. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C04</span> The toy U-Net on 1x8x8 input: d1 conv 1→8 gives 80 params, d2 conv 8→16 gives 1168, bottleneck conv 16→16 gives 2320, u1 conv 32→8 gives 2312 (the skip concat doubles the channels: 16 + 16 = 32), u2 conv 16→1 gives 145. Total 6025. The lesson mental model: the encoder asks what the global structure is, the bottleneck holds the compressed answer, the decoder asks where exactly, and the skips hand the decoder the fine detail the bottleneck dropped.</p>
+<p>FLOPs per conv = 2 × C_in × C_out × k² × H × W: 9216 + 36864 + 18432 + 73728 + 18432 = 156672 per forward. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C04</span> DDPM-100 sampling: 15.6672 MFLOP. DDIM-10: 1.56672 MFLOP. The failure case: forgetting the skip concat channel doubling. u1 built as 16→8 instead of 32→8 gives 1160 params and the forward fails at runtime with a channel mismatch. Count channels before building.</p>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">C05 · The timestep embedding</p>
+<h2>The clock face</h2>
+<p>Convs take tensors, not integers. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C05</span> The sinusoidal embedding maps t to a vector: PE(t, 2i) = sin(t / 10000^{2i/d}), PE(t, 2i+1) = cos(t / 10000^{2i/d}). Low indices vary fast with t (fine time resolution), high indices vary slowly (coarse). The lesson mental model: a clock face with many hands. Fast hands tell nearby timesteps apart, slow hands give the rough position in the chain.</p>
+<p>Toy d = 8, emb(50) = [−0.262375, 0.964966, −0.958924, 0.283662, 0.479426, 0.877583, 0.049979, 0.99875]. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C05</span> emb(0) = [0, 1, 0, 1, 0, 1, 0, 1]: at t = 0 all sines are 0, all cosines 1. Nearby t agree: cos(emb49, emb50) = 0.8838. Distant t differ: cos(emb10, emb90) = 0.3594. A time-blind net (no embedding) predicts the same eps_hat at t = 10 and t = 90, which is wrong at one of them.</p>
+<div class="nugget" id="ng4">
+<h4>Nugget 04 · C05</h4>
+<p class="big">The clock face.</p>
+<dl>
+<dt>What happened</dt><dd>An integer timestep became an 8-vector where nearby times point nearly the same way (cosine 0.8838) and distant times point apart (0.3594). The net could read the time.</dd>
+<dt>Why it matters</dt><dd>The denoising task at t = 10 and t = 90 are different tasks. Without the embedding, one network must serve both with no way to tell them apart.</dd>
+<dt>Transferable principle</dt><dd>Give the model the context it needs as geometry. <span class="tag tag-companion">companion</span> A conditioning signal should place similar situations near each other. Similarity as direction is cheap and effective.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">C06 · Loss weighting</p>
+<h2>The budget sheet</h2>
+<p>Each middle ELBO term is a weighted squared error: w(t) ||eps − eps_hat||² with w(t) = beta_t / (2 ab_t (1 − ab_t)) under the sigma_t² = beta_t choice. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C06</span> The simplified DDPM loss drops w(t) and uses weight 1 at every t. The lesson mental model: w(t) is a budget sheet. It says which timesteps the bound cares about. Uniform weight rewrites the sheet to every timestep equal. The net obeys the sheet it is given.</p>
+<p>On the toy: w(1) = 0.50005, w(50) = 0.02873, w(100) = 0.04322. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C06</span> Normalized by w(50): 17.41, 1.00, 1.50. Max over min: 17.74. The ELBO cares 17x more about t = 1 than t = 50 on this schedule. The simplified loss treats them equally. This curve is the item the U07 lesson left stated-not-plotted. The failure case: weighting by 1/ab_t without the (1 − ab_t) factor. It blows up at t = T where ab_t is small, and training diverges on the noisiest steps.</p>
+<figure>
+<div id="chart-weight"></div>
+<figcaption>From the lesson, C06. The ELBO per-timestep weight w(t) at t = 1, 50, 100. The simplified loss replaces all three with 1.</figcaption>
+</figure>
+<div class="nugget" id="ng5">
+<h4>Nugget 05 · C06</h4>
+<p class="big">The budget sheet.</p>
+<dl>
+<dt>What happened</dt><dd>The ELBO's weight fell 17x from t = 1 to t = 50. The shipped loss ignored the sheet and weighted every timestep 1. Same network shape, different capacity allocation.</dd>
+<dt>Why it matters</dt><dd>Uniform weights train better samples and worse likelihood. The weight is a product decision: uniform for generation, ELBO weights when the likelihood number is the metric.</dd>
+<dt>Transferable principle</dt><dd>The weight is the strategy. <span class="tag tag-companion">companion</span> A loss is a budget sheet for the optimizer's attention. Read the sheet before judging the result.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">C07 · The mean and score estimates</p>
+<h2>One object, three views</h2>
+<p>Three views of one object. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C07</span> Epsilon: eps_hat, the predicted noise. Mean: x0_hat = (x_t − sqrt(1 − ab_t) eps_hat) / sqrt(ab_t), the implied clean image. Score: s_hat = −eps_hat / sqrt(1 − ab_t), the estimated gradient of log p(x_t). Tweedie's formula connects the mean and the score: x0_hat = (x_t + (1 − ab_t) s_hat) / sqrt(ab_t). The lesson mental model: eps_hat points from the noisy image toward the added noise. Flip its sign and scale it, and it points uphill on the noisy density. Subtract it, and the noise comes off.</p>
+<p>At t = 50: s_hat = −0.4 / 0.4720356 = −0.84738932. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C07</span> x0_hat via Tweedie: 2.05354466. x0_hat via eps: 2.05354466. Match to 1e-12. The two formulas are the same object, not two approximations. This is the score-based reading of epsilon prediction that U07 forwarded: the DDPM net is a score model in disguise. The failure case: using s_hat at t = 0 in a Langevin corrector. Division by sqrt(1 − ab_0) = 0. Start corrector steps at t ≥ 1.</p>
+<div class="nugget" id="ng6">
+<h4>Nugget 06 · C07</h4>
+<p class="big">One object, three views.</p>
+<dl>
+<dt>What happened</dt><dd>Noise prediction, clean-image estimate, and score estimate turned out to be one object under three formulas, agreeing to 1e-12 on the toy.</dd>
+<dt>Why it matters</dt><dd>The agreement is a check, not a coincidence: any implementation where the two x0_hat paths disagree has an algebra bug. The battery (C12) asserts exactly this.</dd>
+<dt>Transferable principle</dt><dd>Derive it twice, compare. <span class="tag tag-companion">companion</span> Two formulas for the same quantity are a free test. Agreement to numerical precision is the cheapest proof of correct algebra.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">C08 · Conditional models</p>
+<h2>Which class to draw</h2>
+<p>Add a label y to the net: eps_hat(x_t, t, y). <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C08</span> During training, pairs (x_0, y) give the supervision. At sampling, fix y and the reverse chain draws from p(x | y). The unconditional net is the special case where y is dropped. The lesson mental model: conditioning splits one denoiser into many, one per class, sharing all weights except the y pathway.</p>
+<p>Toy: eps_hat(x, t, y) = eps_hat_uncond + delta_y, delta_0 = −0.05, delta_1 = +0.05. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C08</span> At t = 50, x_50 = 1.99917538: y = 1 gives eps_hat = 0.45 and x0_hat = (1.99917538 − 0.4720356 × 0.45) / 0.8815753 = 2.02677249. The label shifts the implied clean image by −0.0268. The failure case: train conditional but sample with y = null and no dropout training. The null path never trained and outputs garbage. Train with conditioning dropout (drop y 10 to 20 percent of the time) so the null path works. This is what classifier-free guidance needs.</p>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">C09 · Classifier and classifier-free guidance</p>
+<h2>Steer without retraining</h2>
+<p>Two methods. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C09</span> Classifier guidance: train a classifier p(y | x_t) on noisy images, then tilt the reverse step along its gradient: eps_tilde = eps_hat − s sqrt(1 − ab_t) grad_x log p(y | x_t). The score of p(x_t | y) is the score of p(x_t) plus the score of p(y | x_t), and the classifier supplies the second term. Classifier-free guidance: train one net with conditioning dropout, giving eps_c and eps_u. Extrapolate: eps_tilde = eps_u + g (eps_c − eps_u). At g = 1 this is the conditional prediction. g > 1 pushes past it toward stronger conditioning. The lesson mental model: classifier guidance steers with an external critic. CFG steers by exaggerating the difference between the conditional and unconditional predictions, no critic needed.</p>
+<p>Toy numbers. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C09</span> Classifier guidance: grad = 0.3, s = 1.0, eps_tilde = 0.4 − 1.0 × 0.4720356 × 0.3 = 0.25838859. CFG: eps_u = 0.35, eps_c = 0.45. g = 0: eps_tilde = 0.3500, x0_hat = 2.080317. g = 1: 0.4500, 2.026772. g = 2: 0.5500, 1.973228. g = 3: 0.6500, 1.919683. Each unit of g moves x0_hat by −0.0535. The blend is linear, so large g extrapolates: g = 10 overshoots far past the data. The lesson states the toy's limit openly: at fixed observation noise, 8 draws give std 0.0298 at g = 1 vs 0.0367 at g = 3, so the toy resolves the mean-shift mechanism, not the diversity claim.</p>
+<div class="toy">
+<p><strong>Bench.</strong> Move the guidance scale. <span class="tag tag-toy">Illustration</span> Lesson rule: eps_tilde = 0.35 + g × 0.10, x0_hat from the t = 50 formula. Lesson values: x_50 = 1.99917538, ab_50 = 0.77718008.</p>
+<p><label for="gg">g: <span id="ggval">1.0</span></label><br>
+<input type="range" id="gg" min="0" max="60" value="20"></p>
+<p class="small">eps_tilde = <span id="etval" class="num">0.4500</span> · x0_hat = <span id="gxval" class="num">2.02677</span></p>
+</div>
+<div class="toy">
+<p><strong>Bench.</strong> Price the serving cost. <span class="tag tag-toy">Illustration</span> Lesson rule: total = evals × 156672 FLOPs. CFG doubles the evals.</p>
+<p><button class="btn" id="cfg-ddpm">DDPM-100</button> <button class="btn" id="cfg-ddim">DDIM-10</button> <button class="btn" id="cfg-ddimcfg">DDIM-10 + CFG</button></p>
+<p class="small">per sample: <span id="flopval" class="num">15.6672</span> MFLOP</p>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">C10 · Quality versus diversity</p>
+<h2>The inverted-U</h2>
+<p>Toy quality proxy: hit-rate = P(|x0_hat − 2.0| < 0.5) over 500 draws with observation noise 0.15. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C10</span> The guidance blend moves the mean: x0_hat(g) = 0.3 + g (2.0 − 0.3). g = 0: mean 0.30, hit-rate 0.000. g = 1: mean 2.00, hit-rate 1.000. g = 2: mean 3.70, hit-rate 0.000. g = 3: mean 5.40, hit-rate 0.000. Seed 2, 500 draws each. The lesson mental model: guidance is a volume knob with a sweet spot. Too low: the condition is ignored. Too high: linear extrapolation overshoots the data. The inverted-U is the mechanism behind the observed quality/diversity tradeoff.</p>
+<figure>
+<div id="chart-guidance"></div>
+<figcaption>From the lesson, C10. Hit-rate against guidance scale. The peak is sharp because the blend is linear and the noise is small.</figcaption>
+</figure>
+<div class="nugget" id="ng7">
+<h4>Nugget 07 · C10</h4>
+<p class="big">The inverted-U.</p>
+<dl>
+<dt>What happened</dt><dd>Guidance scale 1 put the mean exactly on the target (hit-rate 1.000). Scale 2 and 3 overshot to 3.70 and 5.40 (hit-rate 0.000). The curve rose and fell with no plateau.</dd>
+<dt>Why it matters</dt><dd>The blend is linear, so large g is extrapolation, not stronger conditioning. Cap g by watching samples, not by theory. Tune it on held-out prompts, not the training set.</dd>
+<dt>Transferable principle</dt><dd>Find the sweet spot, then distrust the dial. <span class="tag tag-companion">companion</span> A knob that helps then hurts needs a measured setting and a guard rail. More is not better past the peak.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s11">
+<p class="secnum">C11 · Runtime</p>
+<h2>One sample, priced</h2>
+<p>One reverse step costs one network forward plus O(d) algebra. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C11</span> The toy U-Net forward costs 156672 FLOPs. DDPM-100: 100 evals = 15.6672 MFLOP per sample. DDIM-10: 10 evals = 1.56672 MFLOP (10x less). DDIM-10 with CFG: 3.13344 MFLOP. The lesson mental model: sampling cost = evals × cost-per-eval. DDIM cuts evals, the U-Net sets cost-per-eval, CFG multiplies by 2. The failure case: counting only the network and forgetting the O(d) algebra per step at huge d. At d = 1M pixels the memory traffic of the algebra matters. Count bytes, not just FLOPs.</p>
+<figure>
+<div id="chart-flops"></div>
+<figcaption>From the lesson, C11. Serving FLOPs per sample on the toy U-Net. Exact arithmetic, not a benchmark.</figcaption>
+</figure>
+</section>
+
+<section class="block" id="s12">
+<p class="secnum">C12 · Parameterization checks</p>
+<h2>Six asserts, microseconds</h2>
+<p>Six asserts, each catching one bug class. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C12</span> 1. Schedule: ab strictly decreasing in (0, 1]. Catches repeated or unordered tau. 2. Sigma bounds: 0 ≤ sigma(eta) ≤ sqrt(1 − ab_{t-1}) for eta in [0, 1]. Catches eta > 1 and negative roots. 3. Determinism: eta = 0, fixed x_T, two seeds give identical trajectories. Catches stray RNG in the deterministic path. 4. Round-trip: eps → x0_hat → eps recovers eps_hat to 1e-12 (toy: 0.40000000000000024). Catches level-indexing bugs. 5. Tweedie = eps formula: the two x0_hat paths agree to 1e-12 (2.05354466 both ways). Catches algebra mistakes. 6. Marginal identity: sigma² + (1 − ab_{t-1} − sigma²) = 1 − ab_{t-1} to 1e-12 (0.55912725 = 0.55912725). Catches wrong sigma formulas.</p>
+<p>The battery is a contract test for the sampler. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C12</span> The loss cannot catch these: a sampler bug leaves training untouched and corrupts only samples. If assert 4 passes but samples look wrong, the bug is in the net or the schedule, not the sampler algebra. The battery localizes, not solves.</p>
+</section>
+
+<section class="block" id="plate">
+<p class="secnum">Chapter plate</p>
+<h2>The cost ledger</h2>
+<p>The lesson closes with a ledger. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">Chapter plate</span> Cost without the ideas: 100 evals per sample, a time-blind net, an unread budget sheet, and sampler bugs the loss cannot see. Cost with the ideas: one contract (marginals: the 100 → 90 jump lands at 1.71491474), one knob (eta: 0 for solving, 1 for sampling), one schedule (late-dense spends evals where alpha_bar moves), one clock (embedding: 0.8838 near, 0.3594 far), one sheet (weights 17.41/1.00/1.50 vs uniform 1), one object in three views (−0.84738932, 2.05354466, both paths), one sweet spot (g = 1: hit-rate 1.000), one price tag (1.56672 MFLOP, 3.13344 with CFG), and six asserts. Tradeoff in one line: fewer steps buy serving speed at the cost of discretization error, and guidance buys class adherence at the cost of diversity past the sweet spot. Connection: the score-based reading built here is the bridge U09 walks.</p>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>7 nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#ng1"><span class="wnum">01</span>The contract <span class="muted">· C01</span></a></li>
+<li><a href="#ng2"><span class="wnum">02</span>The knob <span class="muted">· C02</span></a></li>
+<li><a href="#ng3"><span class="wnum">03</span>Spend evals where the curve moves <span class="muted">· C03</span></a></li>
+<li><a href="#ng4"><span class="wnum">04</span>The clock face <span class="muted">· C05</span></a></li>
+<li><a href="#ng5"><span class="wnum">05</span>The budget sheet <span class="muted">· C06</span></a></li>
+<li><a href="#ng6"><span class="wnum">06</span>One object, three views <span class="muted">· C07</span></a></li>
+<li><a href="#ng7"><span class="wnum">07</span>The inverted-U <span class="muted">· C10</span></a></li>
+</ol>
+</section>
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates content/v2/math-genai/lessons/u08/lesson-08-diffusion-variants-implementation.md. No lecture transcript exists for this unit. The lesson states that it is locally authored bridge material and does not reproduce the instructor lectures. No lecture anecdotes appear. The running toy (scalar x, T = 100, linear beta 1e-4 to 0.02, x_0 = 2.0, eps = 0.5, constant eps_hat = 0.4, tau = [10..100]) is the lesson toy. Every number traces to the cited lesson section: sigma(eta=1) 0.39249806, sigma squared 0.15405473 vs beta_tilde_100 0.01976684, identity 0.55912725, jump x_100 1.60480905 to x0_hat 2.13230847 to x_90 1.71491474 (C01). Eta 0 diff below 1e-12, eta 1 above 1e-6, endpoint 2.408479, mids 1.890616/2.219587/2.408479 (C02). ab_tau 0.989998 to 0.363563, late-dense [1,20,39,55,69,80,88,95,98,100], 10x eval cut (C03). U-Net blocks 80/1168/2320/2312/145, total 6025 params, FLOPs 9216/36864/18432/73728/18432 = 156672 (C04). emb(50) as listed, emb(0) [0,1,...], cosines 0.8838/0.3594 (C05). w 0.50005/0.02873/0.04322, normalized 17.41/1.00/1.50, max/min 17.74 (C06). s_hat -0.84738932, Tweedie = eps path 2.05354466 to 1e-12 (C07). delta +-0.05, y=1 x0_hat 2.02677249, shift -0.0268 (C08). Classifier eps_tilde 0.25838859, CFG g 0..3 to eps_tilde 0.35/0.45/0.55/0.65 and x0_hat 2.080317/2.026772/1.973228/1.919683, per-g shift -0.0535, std 0.0298 vs 0.0367 (C09). Hit-rate means 0.30/2.00/3.70/5.40, rates 0.000/1.000/0.000/0.000 (C10). 15.6672/1.56672/3.13344 MFLOP (C11). Battery: eps_rec 0.40000000000000024, 1e-12 agreements (C12). Charts re-plot these computed values with section citations.</p>
+<p class="small">Directly quoted words from the lesson: <strong>0</strong> (recounted). No quotes were invented. Interactive benches run the lesson formulas over the lesson values and are labeled Illustration. The watercolor hero image is an AI illustration, not lesson content.</p>
+<p class="small"><a href="../index.html">Back to the Math-GenAI course home</a>. Self-contained: no external libraries, no network calls. Works from <code>file://</code>.</p>
+</footer>
+</div>
+<script>
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  const keys = Object.keys(attrs)
+  keys.forEach(function(k) { n.setAttribute(k, attrs[k]) })
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function barChart(id, rows, maxV, unit, labelW) {
+  labelW = labelW || 210
+  const host = document.getElementById(id)
+  const W = 760
+  const rowH = 46
+  const padT = 14
+  const padB = 10
+  const H = padT + rows.length * rowH + padB
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  rows.forEach(function(r, i) {
+    const y = padT + i * rowH
+    const lab = svgEl("text", {x: 12, y: y + 27, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - labelW - 110) * (r[1] / maxV)
+    const bar = svgEl("rect", {x: labelW, y: y + 9, width: Math.max(bw, 3), height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1] + unit
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: labelW + Math.max(bw, 3) + 10, y: y + 27, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1] + unit
+    svg.appendChild(val)
+  })
+  host.appendChild(svg)
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id)
+  const data = opts.data
+  const W = 760
+  const H = 400
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const yMin = opts.yMin
+  const yMax = opts.yMax
+  function X(i) { return mL + i * ((W - mL - mR) / (data.length - 1)) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / (yMax - yMin)) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const grids = opts.grid || []
+  grids.forEach(function(g) {
+    svg.appendChild(svgEl("line", {x1: mL, x2: W - mR, y1: Y(g), y2: Y(g), stroke: "#e2d7c2", "stroke-width": 1}))
+    const t = svgEl("text", {x: 10, y: Y(g) + 5, "font-size": 13, fill: MUT, "font-family": SANS})
+    if (opts.yfmt) { t.textContent = opts.yfmt(g) } else { t.textContent = String(g) }
+    svg.appendChild(t)
+  })
+  let d = ""
+  data.forEach(function(v, i) {
+    if (i === 0) { d = d + "M" } else { d = d + "L" }
+    d = d + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "
+  })
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  data.forEach(function(v, i) {
+    const c = svgEl("circle", {cx: X(i), cy: Y(v), r: 8, fill: CLAY})
+    const tip = svgEl("title", {})
+    tip.textContent = opts.tip(i, v)
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const xl = svgEl("text", {x: X(i), y: H - 32, "font-size": 13, fill: MUT, "text-anchor": "middle", "font-family": SANS})
+    xl.textContent = opts.xlabels[i]
+    svg.appendChild(xl)
+  })
+  if (opts.ylabel) {
+    const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+    yl.textContent = opts.ylabel
+    svg.appendChild(yl)
+  }
+  if (opts.xlabel) {
+    const xcap = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+    xcap.textContent = opts.xlabel
+    svg.appendChild(xcap)
+  }
+  host.appendChild(svg)
+}
+
+
+barChart("chart-sigma", [
+  ["sigma^2, eta = 1", 0.15405473, "#a94f27"],
+  ["eps term", 0.40507252, "#31405e"],
+  ["sum = 1 - ab_90", 0.55912725, "#5d7050"]
+], 0.62, " variance")
+barChart("chart-weight", [
+  ["w(1)", 0.50005, "#a94f27"],
+  ["w(50)", 0.02873, "#31405e"],
+  ["w(100)", 0.04322, "#5d7050"]
+], 0.55, "")
+barChart("chart-guidance", [
+  ["g = 0", 0, "#a94f27"],
+  ["g = 1", 1, "#5d7050"],
+  ["g = 2", 0, "#a94f27"],
+  ["g = 3", 0, "#a94f27"]
+], 1.1, " hit-rate")
+barChart("chart-flops", [
+  ["DDPM-100", 15.6672, "#a94f27"],
+  ["DDIM-10", 1.56672, "#5d7050"],
+  ["DDIM-10 + CFG", 3.13344, "#31405e"]
+], 17, " MFLOP")
+const eta = document.getElementById("eta")
+const etaval = document.getElementById("etaval")
+const sigmaval = document.getElementById("sigmaval")
+const sigma2val = document.getElementById("sigma2val")
+eta.addEventListener("input", function() {
+  const e = eta.value / 100
+  const s = e * 0.39249806
+  etaval.textContent = e.toFixed(2)
+  sigmaval.textContent = s.toFixed(5)
+  sigma2val.textContent = (s * s).toFixed(5)
+})
+const gg = document.getElementById("gg")
+const ggval = document.getElementById("ggval")
+const etval = document.getElementById("etval")
+const gxval = document.getElementById("gxval")
+gg.addEventListener("input", function() {
+  const g = gg.value / 20
+  const et = 0.35 + g * 0.10
+  const x0h = (1.99917538 - 0.4720356 * et) / 0.8815753
+  ggval.textContent = g.toFixed(1)
+  etval.textContent = et.toFixed(4)
+  gxval.textContent = x0h.toFixed(5)
+})
+document.getElementById("cfg-ddpm").addEventListener("click", function() {
+  document.getElementById("flopval").textContent = "15.6672"
+})
+document.getElementById("cfg-ddim").addEventListener("click", function() {
+  document.getElementById("flopval").textContent = "1.56672"
+})
+document.getElementById("cfg-ddimcfg").addEventListener("click", function() {
+  document.getElementById("flopval").textContent = "3.13344"
+})
+
+</script>
+</body>
+</html>
