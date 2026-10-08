@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Executable tensor programming and resource accounting · CS336</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.pairtable td.rank{font-weight:700}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS336 · Unit 02 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Executable tensor programming and resource accounting</h1>
+<p class="dek">Before a model can learn, its program must run correctly and fit on the device. This companion walks Unit 02 end to end: shapes as contracts, index notation, memory layout, the bytes a run holds, the FLOPs a run costs, and the roofline that says which bound you hit.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>u02_tensor_programming.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no full lecture transcript exists for this session. The page narrates the lesson document <code>content/v2/cs336/lessons/u02_tensor_programming.md</code>, not a video. Claim class: REQUESTED-BRANCH. Every number carries the lesson section that reports it, with the lab script and its execution date.</p>
+</div>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Shape contracts</a>
+<a href="#s2">2 einsum</a>
+<a href="#s3">3 Strides and views</a>
+<a href="#s4">4 Activation memory</a>
+<a href="#s5">5 Optimizer memory</a>
+<a href="#s6">6 Counting FLOPs</a>
+<a href="#s7">7 Roofline</a>
+<a href="#s8">8 Dtypes</a>
+<a href="#s9">9 The ledger</a>
+<a href="#s10">10 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<figure>
+<img class="illus" src="assets/u02-hero-roofline.jpg" alt="Watercolor of a mountain slope that rises steeply then flattens into a plateau, like a roofline plot">
+<figcaption><span class="tag tag-toy">Illustration</span> The unit in one image: performance climbs with arithmetic intensity, then bends at the machine balance and plateaus. The plateau is physics, not a bug. Watercolor, original to this companion.</figcaption>
+</figure>
+<section class="block" id="s1">
+<p class="secnum">Section 1 · Remediation, C01</p>
+<h2>Shapes are contracts, not hints</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></p>
+<p>A tensor has three facts: a shape (the size of each axis), a stride (the storage step per axis), and a dtype (the bytes per element). Element count is the product of the shape entries. Everything in this unit, FLOPs, bytes moved, memory totals, starts from these three facts.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §5</span></p>
+<p>Why do shape bugs eat hours of debugging? Because the code says nothing about what it expects. Take x of shape (4, 256, 512) and W of shape (512, 2048). The product <code>x @ W</code> gives (4, 256, 2048). The reversed product <code>W @ x</code> is illegal: the contract of <code>@</code> needs the inner axes to match. The mental model: every operation is a contract, input shapes in, output shape out.</p>
+<p>Read shapes right to left for matmuls. The last two axes do the work. Leading axes batch. The matmul contract reads: (..., M, K) @ (..., K, N) gives (..., M, N), with leading axes broadcast. Embedding: ids (B, T) plus table (V, d) gives (B, T, d). Softmax over the last axis and layer norm over the last axis leave the shape unchanged.</p>
+</div>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §6</span> Contract check. Batched einsum <code>"bij,bjk-->bik"</code> on (2, 3, 4) and (2, 4, 5) gives (2, 3, 5). The lesson computed this in <code>visuals/compute_u02.py</code> (executed 2026-10-06): the contract prediction matched exactly.</p>
+<table class="data">
+<tr><th>Input A</th><th>Input B</th><th>Predicted</th><th>Computed</th></tr>
+<tr><td class="num">(2, 3, 4)</td><td class="num">(2, 4, 5)</td><td class="num">(2, 3, 5)</td><td class="num">(2, 3, 5)</td></tr>
+</table>
+</div>
+<div class="nugget" id="nugget-contract">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §3, §11</span></h4>
+<p class="big">Write the shape contract as a comment before the code. The comment is the specification the code must meet.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Broadcasting hides bugs. (B, T, d) + (d,) works, and (B, T, d) + (B, d) also works, by aligning the wrong axes and silently adding a per-position bias. The wrong result looks plausible for weeks.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>State the expected shape of every value at every boundary. Silent coercion is the root of silent corruption.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §7, §8, §9</span></p>
+<p>The lesson ships a <code>check_shapes</code> helper: about ten lines, taking a tensor and an expected shape tuple with None as wildcard, and raising a message that names the operation, the expected contract, and the actual shape. Contract tests cover matmul, embedding, softmax, and norm on the toy shapes above. A deliberately wrong contract raises with the operation name in the message. Shape checks cost microseconds. A missed shape bug costs a silent wrong result or a crash deep in a training run.</p>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C02</p>
+<h2>einsum: the contract in one line</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §3</span></p>
+<p>How do you write attention without a forest of transposes? One line: <code>scores = einsum("bhid,bhjd-->bhij", Q, K)</code>. Batch b, head h, query i, key j. No transpose calls. The mental model: an einsum string names each axis with a letter. Repeated letters across inputs multiply and sum. A letter in only one input passes through. The output lists the letters to keep, in order. The string IS the shape contract.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §5, §6</span></p>
+<p>The four patterns the lesson uses everywhere: <code>"ik,kj-->ij"</code> is matrix multiplication, the sum over k of A[i,k]B[k,j]. <code>"bij,bjk-->bik"</code> is batched matmul. <code>"bhid,bhjd-->bhij"</code> is attention scores per head. <code>"bhij,bhjd-->bhid"</code> is scores times values. The lesson verified in <code>visuals/compute_u02.py</code> (executed 2026-10-06) that <code>einsum("ik,kj-->ij")</code> matches <code>A @ B</code> to allclose on random (3, 4) by (4, 5) inputs.</p>
+</div>
+<div class="nugget" id="nugget-einsum">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §11</span></h4>
+<p class="big">One letter differs and the program still runs. <code>"ij,jk-->ik"</code> versus <code>"ij,kj-->ik"</code>: the second silently computes A times B-transpose. Both give (M, N) shapes, so only values differ.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Shape asserts cannot catch this. The lesson's backstop: compare against a reference implementation on fixed data.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When the notation is compact enough to hide a one-letter bug, pair it with a value check, not just a shape check.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §9, §10</span></p>
+<p>Costs are honest here: einsum can run slower than a hand-fused <code>@</code> on some backends, because the optimizer may pick a naive path. For teaching and for non-hot paths the clarity wins. Time the hot path before committing. Selection boundary: use plain operators with written contracts for hot paths, einops rearrange and reduce where readability matters, and einsum for any expression with three or more tensors or tricky axes.</p>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C03</p>
+<h2>A tensor is metadata over flat storage</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §5</span></p>
+<p>Why does <code>.T</code> cost nothing but sometimes make the next op twice as slow? The toy from <code>compute_u02.py</code> answers. A (4, 6) float32 array has strides (24, 4) and is C-contiguous. Its transpose has shape (6, 4), strides (4, 24), shares memory, and is not C-contiguous. The transpose only rewrote metadata. Stride says how many bytes to step per axis. A view reuses storage with new metadata. Contiguous means the metadata matches the natural walk order, which is what fast kernels expect.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u02-strides.jpg" alt="Watercolor of memory cells with a row-by-row path in orange and a column path in indigo">
+<figcaption><span class="tag tag-toy">Illustration</span> The same storage, two walk orders. Row-by-row matches the natural layout. Column walks jump. Contiguity is the match between metadata and walk order. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §6</span></p>
+<p>The lab table, executed 2026-10-06:</p>
+</div>
+<table class="data">
+<tr><th>Object</th><th>Shape</th><th>Strides (bytes)</th><th>C-contiguous</th><th>Shares memory</th></tr>
+<tr><td>C array</td><td class="num">(4, 6)</td><td class="num">(24, 4)</td><td>True</td><td>-</td></tr>
+<tr><td>Transpose</td><td class="num">(6, 4)</td><td class="num">(4, 24)</td><td>False</td><td>True</td></tr>
+<tr><td>Explicit copy</td><td class="num">(6, 4)</td><td class="num">(24, 4)</td><td>True</td><td>False</td></tr>
+</table>
+<div class="nugget" id="nugget-views">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §9, §11</span></h4>
+<p class="big">Views are free. Copies cost bandwidth. A non-contiguous input to a kernel that needs contiguity triggers a hidden copy, and that is the 2x slowdown in the motivating question.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The slowdown appears nowhere in the code. The fix is one call to <code>contiguous</code> after transpose chains, not after every op.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Aliases are cheap until a consumer assumes a layout. Name the layout your fast path assumes.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §11</span></p>
+<p>The failure case runs the other way too. An in-place ReLU on a view that aliases an activation needed for backward corrupts the saved tensor, and the gradients come out wrong. The version-counter error is the symptom. The assumption "in-place is safe" breaks under autograd.</p>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C04</p>
+<h2>Activations: the memory you forgot to count</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §3</span></p>
+<p>The parameters fit, so why does training run out of memory? Backward needs the inputs of every differentiable op. Each layer saves its attention inputs, scores or softmax output, and FFN intermediates. The toy: a 41.55M-parameter model holds about 134 MB of fp16 activations at B=4, T=256, while Adam state holds 665 MB. At larger B and T, activations dominate.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §5, §6</span></p>
+<p>Per layer, the dominant saved tensors: attention input (B, T, d), QKV projections (3 x B, T, d), attention weights (B, h, T, T), FFN up (B, T, dff) and gate (B, T, dff). Sum the elements, multiply by L and by 2 bytes. The T-squared term is what explodes at long context. Computed in <code>visuals/compute_u02.py</code> (executed 2026-10-06): B=4, T=256, d=512, L=8, dff=2048, h=8 gives about 134.2 MB of fp16 activations under the stated estimate formula. The formula is documented in the script. It is an estimate, not a framework measurement.</p>
+</div>
+<div class="nugget" id="nugget-activations">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §11</span></h4>
+<p class="big">The estimate ignores fragmentation and allocator overhead. A model that fits on paper OOMs in practice.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "bytes sum to usable memory" breaks. Keep a 10 to 20 percent margin and measure with the allocator.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Paper budgets need a margin for the machinery they omit. Plan the margin before the first run.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §10</span></p>
+<p>Two exits exist: activation checkpointing (C10) trades compute for memory, and smaller microbatches (U08) trade throughput for memory. Estimate first, then choose.</p>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C05</p>
+<h2>Sixteen bytes per parameter</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §3</span></p>
+<p>How much memory does a 41M-parameter model really need to train? Count bytes per parameter, then multiply. SGD: 4 (param) + 4 (grad) + 4 (momentum) = 12. Adam: plus 4 (v) = 16. Mixed precision Adam: 2 (bf16 param) + 2 (bf16 grad) + 4 (fp32 master) + 4 (m) + 4 (v) = 16.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §5, §6</span></p>
+<p>Each term is params times dtype bytes. The master copy exists because bf16 updates would round to zero at small learning rates. Computed in <code>visuals/compute_u02.py</code> (executed 2026-10-06): 41.55M params give Adam fp32 total 664.8 MB, mixed precision total 664.8 MB. Same total, different split: mixed keeps activations in bf16 (C04) and computes in bf16 (C11). The savings are in activations and compute, not in optimizer state.</p>
+</div>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §3</span> Bytes-per-parameter ladder. Move the slider to scale the model.</p>
+<div style="max-width:480px"><input type="range" id="ledgerp" min="10" max="1000" value="41" step="1" aria-label="Parameters in millions" style="width:100%"></div>
+<p class="small">Parameters: <strong id="ledgerpv">41.55</strong>M</p>
+<table class="data" id="ledgertab">
+<tr><th>Optimizer</th><th>Bytes / param</th><th>Total</th></tr>
+</table>
+<p class="small muted">Totals: SGD with momentum 12 bytes, Adam fp32 16 bytes, mixed precision Adam 16 bytes. From C05 §3, computed live.</p>
+</div>
+<div class="nugget" id="nugget-sixteen">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §11</span></h4>
+<p class="big">Dropping the master copy to save memory in bf16 training lets small updates underflow. Loss stops improving, and the bug looks like a bad learning rate.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "bf16 params suffice" breaks. The master copy is load-bearing.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When a redundant-looking piece resists removal, find what it absorbs before you delete it.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §9, §10</span></p>
+<p>Optimizer state is the largest fixed cost of training, and it does not shrink with batch size. It is the first thing sharded (U08). The alternative: SGD with momentum at 12 bytes, or 8-bit optimizers with quantization risk. Adam stays the default for transformers. Switch only with evidence the task tolerates it.</p>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C06, C07</p>
+<h2>Counting FLOPs, then tripling them</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §5</span></p>
+<p>Where does the compute go in one layer? One multiply-add is 2 FLOPs. A matrix product (M, K) by (K, N) costs 2MNK FLOPs: MNK multiplications and MNK additions. Every linear map (B, T, d_in) to (B, T, d_out) costs 2*B*T*d_in*d_out. Attention scores cost 2*B*h*T*T*d_h, and the mix costs the same again.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §6</span></p>
+<p>The lesson's per-layer split, toy config B=4, T=256, d=512, dff=2048, h=8, computed 2026-10-06: one forward layer costs 8.858 GFLOP. Eight layers: 70.9 GFLOP forward per batch, backward about 141.7 GFLOP.</p>
+</div>
+<figure>
+<div id="chart-flops"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §6</span> Forward GFLOP per layer: QKV 1.611, scores 0.268, output projection 0.537, FFN 6.443. The FFN dominates at 73 percent. Computed by <code>visuals/compute_u02.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §5, §6</span></p>
+<p>Why is a training step about 3x a forward pass? Backward through a linear map computes two matmuls: gradient wrt input (dout times W-transpose) and gradient wrt weight (x-transpose times dout). Each costs about the same as the forward matmul. Across the network the ratio settles near 2x forward, because not every forward op has two backward matmuls. The toy: the layer from C06 costs 8.858 GFLOP forward, backward costs about 17.7 GFLOP, total about 26.6 GFLOP, or 3x forward.</p>
+<p>Derivation detail: y = xW costs 2MNK forward. dx = dout W^T costs 2MNK. dW = x^T dout costs 2MNK. Per op that is 6MNK, or 3x forward for that op. Norms and activations are cheaper on the backward side, which pulls the network ratio to about 2x forward, 3x total.</p>
+</div>
+<div class="nugget" id="nugget-3x">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §11</span></h4>
+<p class="big">Gradient checkpointing without adjusting the rule undercounts by a full forward pass. Recompute adds one forward, so the rule becomes about 4x.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "backward is 2x" breaks under recomputation. The plan overruns its budget.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every rule of thumb carries its conditions. Change the setup, restate the rule.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §11, C07 §10</span></p>
+<p>Two traps to close. First: counting only the FFN and forgetting attention. At T=8192 the scores term (T-squared) dominates and the estimate is off by an order of magnitude. The assumption "FFN always dominates" breaks at long context. Second: counting MACs instead of FLOPs gives half the number with the same information. Use FLOPs to match vendor peak figures. The 3x rule converts forward estimates into training budgets (U10). Use the rule early, the profiler late.</p>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · Remediation, C08, C09</p>
+<h2>Intensity decides the bound</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation, C08 §2, §5</span></p>
+<p>Arithmetic intensity is FLOPs divided by bytes moved. For a matmul: 2MNK FLOPs over about 2(MK + KN + MN) bytes in fp16. A roofline plot compares intensity against the machine balance (peak FLOP/s divided by bandwidth). Below the balance the operation is memory-bound. Above it, compute-bound.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §6</span></p>
+<p>Three shapes, one lesson, computed 2026-10-06. A (512, 512, 512) matmul has intensity 170.7 FLOP/byte: compute-bound on the toy device. A (1, 512, 512) vector-matrix product has 1.0 FLOP/byte: hopelessly memory-bound. Same op family, opposite bottlenecks. Batch size and sequence length move intensity more than model size does.</p>
+</div>
+<figure>
+<div id="chart-intensity"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §6</span> Arithmetic intensity for three matmul shapes, fp16, computed by <code>visuals/compute_u02.py</code> (executed 2026-10-06). The (1, 512, 512) case is the decode regime of U11.</figcaption>
+</figure>
+<div class="lab">
+<p><span class="tag tag-toy">Illustration</span> Roofline toy. Set a shape and a device. The toy computes intensity from the lesson's formula and places the op on the roofline.</p>
+<div class="cols">
+<div>
+<p class="small"><strong>Shape (M, K, N)</strong></p>
+<p><input class="text" id="rim" value="512" aria-label="M"> <input class="text" id="rik" value="512" aria-label="K"> <input class="text" id="rin" value="512" aria-label="N"></p>
+<p class="small"><strong>Device</strong></p>
+<p>Peak <input class="text" id="ripeak" value="100" aria-label="Peak TFLOP/s" style="max-width:120px"> TFLOP/s · Bandwidth <input class="text" id="ribw" value="1" aria-label="Bandwidth TB/s" style="max-width:120px"> TB/s</p>
+<p><button class="btn" id="ribtn">Place on roofline</button></p>
+</div>
+<div>
+<p class="small" id="riout">Press the button.</p>
+<div id="chart-roofline"></div>
+</div>
+</div>
+<p class="small muted">Formulas: FLOPs = 2MNK, bytes = 2(MK + KN + MN), intensity = FLOPs / bytes, cap = min(peak, intensity * bandwidth). From the remediation block and C09 §5.</p>
+</div>
+<div class="nugget" id="nugget-roofline">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §6</span></h4>
+<p class="big">The card says 100 TFLOP/s, the job gets 40. At intensity 50 FLOP/byte on the 100 TFLOP/s, 1 TB/s device, the roofline allows only 50 TFLOP/s. Half the loss is physics, not a bug.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A 40 percent MFU on a memory-bound shape can be excellent. The same MFU on a compute-bound shape is a bug. MFU is meaningful only against the roofline cap, not the raw peak.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Judge efficiency against the true ceiling, not the advertised peak. The ceiling moves with the workload.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §3, §5, §11</span></p>
+<p>The five loss sources the lesson names: memory bound (roofline), kernel launch overhead, low occupancy, extra traffic from unfused ops, and communication. Achieved equals peak times efficiency, and the efficiency factors multiply (occupancy 0.9, fusion 0.8, overlap 0.95 in the lesson's sketch). Two warnings close the section. First: quoting kernel FLOP/s with recomputation counted twice as model FLOP/s makes MFU look great while the job is slow. Always state which count the rate uses. Second: counting only HBM traffic while the kernel is SRAM-bound gives a fine-looking intensity for a stalled kernel. Restate the boundary per kernel, especially for fused kernels (U07).</p>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C11</p>
+<h2>Why bf16, not fp16, for training</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §5</span></p>
+<p>Dtype sets three things: bytes per element (memory and traffic), representable range (overflow risk), and precision (rounding error). fp16 tops out at 65504 with 10 mantissa bits. bf16 keeps the fp32 exponent range with 7 mantissa bits. Gradients with large dynamic range overflow fp16 but fit bf16. The price is coarser precision.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §5, §6</span></p>
+<p>Memory halves going 4 to 2 bytes. Traffic halves, so memory-bound ops speed up up to 2x. On the toy model, activations go from 268.4 MB in fp32 to 134.2 MB in fp16 or bf16 (halved, from the C04 formula). Loss scaling was the historical fix for fp16 overflow. bf16 removes the need for it. The fp32 master copy (C05) absorbs the rounding: bf16 rounds updates below about 2^-8 relative, and the master keeps them alive.</p>
+</div>
+<div class="nugget" id="nugget-dtype">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §11</span></h4>
+<p class="big">fp16 training without loss scaling on a deep model lets gradients underflow to zero in early layers. The model trains only its top layers, and the loss curve looks like a capacity problem.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "dtype is neutral" breaks. The symptom mimics underfitting, so teams add capacity to a numerics bug.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When a system misbehaves at one precision, suspect the representation before the architecture.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §10</span></p>
+<p>The standard answer: mixed precision, not pure low precision. Train in mixed bf16/fp32, debug in fp32, consider fp8 for inference where training support varies. Halved memory and traffic, with new failure modes (overflow, update underflow) as the price.</p>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C10, C12</p>
+<h2>The ledger: fit or no fit, on one page</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §3</span></p>
+<p>Will this config fit on the device? The ledger is a table, not a feeling. Rows: one per memory class. Each row states the formula, the inputs, and the bytes. The sum plus a fragmentation margin is the verdict. The toy ledger for the 41.55M model (B=4, T=256, fp16): params plus grads plus Adam state 664.8 MB, activations about 134.2 MB, total about 799 MB plus workspace. One page, five lines, go or no-go.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u02-ledger.jpg" alt="Watercolor of an open ledger book with tally rows and a brass abacus">
+<figcaption><span class="tag tag-toy">Illustration</span> The resource ledger as an accountant's book: one row per memory class, formulas beside the numbers, a verdict at the bottom. Watercolor, original to this companion.</figcaption>
+</figure>
+<figure>
+<div id="chart-ledger"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §6</span> Toy model ledger, 41.55M params, B=4, T=256, fp16, executed 2026-10-06. Optimizer plus params plus grads 664.8 MB, activations 134.2 MB, subtotal 799.0 MB, with 15 percent margin 918.9 MB. Verdict: fits in 1 GB with margin, fails in 512 MB.</figcaption>
+</figure>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §5, §11</span></p>
+<p>Total equals optimizer bytes (C05) plus activation bytes (C04) plus workspace (temporary buffers, small) plus the input batch. Compare against device memory. If it exceeds, the ledger says which row to attack: shard the optimizer, checkpoint the activations, shrink the batch. The ledger costs minutes and prevents OOMs that cost hours. It is the cheapest performance tool in the course. One warning: the ledger omits data loader workers and NCCL buffers. On 8 GPUs the missing rows exceed the margin and the job OOMs at scale-up. The assumption "five rows suffice" breaks multi-GPU. U08 and U09 add the missing rows.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §5, §6</span></p>
+<p>The unit closes with an honest workflow for a box with no GPU. Every number in U02 was computed on CPU with numpy. Shapes, strides, FLOP counts, and memory estimates are exact on CPU. Only wall-time claims need hardware. The workflow: implement in numpy, verify against analytical cases and finite differences, port the verified logic to torch, measure only on the target device. Separate correctness (shapes, values, invariants) from performance (rates, occupancy, overlap). CPU proves the first completely and informs the second through arithmetic, never through timing. And the discipline cuts both ways: a kernel optimized against CPU timings inverts its ranking on GPU, because the bottleneck differs (cache versus HBM). The lesson's own roofline explains why.</p>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · Synthesis</p>
+<h2>What this buys you</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §3, C05 §3, C06 §5, C10 §3</span></p>
+<p>The arc, end to end. A tensor is shape, stride, and dtype, and every operation on it is a shape contract (C01). einsum writes the contract in one line and names every axis (C02). Storage is flat. Strides and views decide what layout the kernel actually walks (C03). Training memory has two big rows: activations that scale with B, T, L, and d (C04), and optimizer state at 16 bytes per parameter for Adam (C05). Compute counts start at 2MNK per matmul and settle into the 3x rule for a full training step (C06, C07). Arithmetic intensity places each op on the roofline, memory-bound or compute-bound (C08). The roofline, not the raw peak, is the fair judge of MFU (C09). The ledger adds the rows, adds the margin, and gives the verdict (C10). bf16 keeps fp32 range at half the bytes, with the master copy absorbing the rounding (C11). CPU proves correctness. Only the device proves speed (C12).</p>
+<p><span class="tag tag-lesson">From the lesson</span> Where the unit points next, in the lesson's own forward links: U07 restates the memory boundary per kernel, because fused kernels stall on SRAM while the HBM arithmetic looks fine. U08 shards the optimizer state first, since it is the largest fixed cost. U09 adds the multi-GPU rows the ledger omits. U10 turns the FLOP counts into compute budgets. U05 trades batch size against the activation row.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>8 nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-contract"><span class="wnum">01</span>Write the shape contract as a comment before the code <span class="muted">· C01</span></a></li>
+<li><a href="#nugget-einsum"><span class="wnum">02</span>One letter differs and the program still runs <span class="muted">· C02</span></a></li>
+<li><a href="#nugget-views"><span class="wnum">03</span>Views are free, hidden copies cost <span class="muted">· C03</span></a></li>
+<li><a href="#nugget-activations"><span class="wnum">04</span>Paper budgets need a machinery margin <span class="muted">· C04</span></a></li>
+<li><a href="#nugget-sixteen"><span class="wnum">05</span>Sixteen bytes per parameter under Adam <span class="muted">· C05</span></a></li>
+<li><a href="#nugget-3x"><span class="wnum">06</span>The 3x rule carries its conditions <span class="muted">· C06, C07</span></a></li>
+<li><a href="#nugget-roofline"><span class="wnum">07</span>Judge efficiency against the true ceiling <span class="muted">· C08, C09</span></a></li>
+<li><a href="#nugget-dtype"><span class="wnum">08</span>Suspect the representation before the architecture <span class="muted">· C11</span></a></li>
+</ol>
+</section>
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>content/v2/cs336/lessons/u02_tensor_programming.md</code>. No full lecture transcript exists for S02. Quoted words from the lesson source: 17. No lecture anecdotes appear. Claim class REQUESTED-BRANCH. The charts on this page re-plot the lesson's computed numbers with section citations. The lab script is <code>visuals/compute_u02.py</code>, executed 2026-10-06. Interactive toys run the lesson's formulas over your inputs and are labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p class="small">Readings and forward links named by the lesson: U07 (kernels), U08/U09 (sharding rows), U10 (compute budgets), U05 (batch trade).</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>.</p>
+</footer>
+</div>
+<script>
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  const keys = Object.keys(attrs)
+  keys.forEach(function(k) { n.setAttribute(k, attrs[k]) })
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function barChart(id, rows, maxV, unit, labelW) {
+  labelW = labelW || 210
+  const host = document.getElementById(id)
+  const W = 760
+  const rowH = 46
+  const padT = 14
+  const padB = 10
+  const H = padT + rows.length * rowH + padB
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  rows.forEach(function(r, i) {
+    const y = padT + i * rowH
+    const lab = svgEl("text", {x: 12, y: y + 27, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - labelW - 110) * (r[1] / maxV)
+    const bar = svgEl("rect", {x: labelW, y: y + 9, width: Math.max(bw, 3), height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1] + unit
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: labelW + Math.max(bw, 3) + 10, y: y + 27, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1] + unit
+    svg.appendChild(val)
+  })
+  host.appendChild(svg)
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id)
+  const data = opts.data
+  const W = 760
+  const H = 400
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const yMin = opts.yMin
+  const yMax = opts.yMax
+  function X(i) { return mL + i * ((W - mL - mR) / (data.length - 1)) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / (yMax - yMin)) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const grids = opts.grid || []
+  grids.forEach(function(g) {
+    svg.appendChild(svgEl("line", {x1: mL, x2: W - mR, y1: Y(g), y2: Y(g), stroke: "#e2d7c2", "stroke-width": 1}))
+    const t = svgEl("text", {x: 10, y: Y(g) + 5, "font-size": 13, fill: MUT, "font-family": SANS})
+    if (opts.yfmt) { t.textContent = opts.yfmt(g) } else { t.textContent = String(g) }
+    svg.appendChild(t)
+  })
+  let d = ""
+  data.forEach(function(v, i) {
+    if (i === 0) { d = d + "M" } else { d = d + "L" }
+    d = d + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "
+  })
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  data.forEach(function(v, i) {
+    const c = svgEl("circle", {cx: X(i), cy: Y(v), r: 8, fill: CLAY})
+    const tip = svgEl("title", {})
+    tip.textContent = opts.tip(i, v)
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const xl = svgEl("text", {x: X(i), y: H - 32, "font-size": 13, fill: MUT, "text-anchor": "middle", "font-family": SANS})
+    xl.textContent = opts.xlabels[i]
+    svg.appendChild(xl)
+  })
+  if (opts.ylabel) {
+    const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+    yl.textContent = opts.ylabel
+    svg.appendChild(yl)
+  }
+  if (opts.xlabel) {
+    const xcap = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+    xcap.textContent = opts.xlabel
+    svg.appendChild(xcap)
+  }
+  host.appendChild(svg)
+}
+
+
+barChart("chart-flops", [
+  ["QKV projections", 1.611, INDIGO],
+  ["Attention scores", 0.268, SAGE],
+  ["Output projection", 0.537, INDIGO],
+  ["FFN", 6.443, CLAY]
+], 7, " GFLOP", 170)
+
+barChart("chart-intensity", [
+  ["(512, 512, 512)", 170.7, CLAY],
+  ["(1024, 512, 512)", 204.8, CLAY],
+  ["(1, 512, 512)", 1.0, INDIGO]
+], 220, " FLOP/byte", 170)
+
+barChart("chart-ledger", [
+  ["Optimizer + params + grads", 664.8, INDIGO],
+  ["Activations (fp16)", 134.2, SAGE]
+], 700, " MB", 230)
+
+function rooflineCurve(I, peak, bw) {
+  const W = 760
+  const H = 300
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const xMax = 320
+  const yMax = peak * 1.15
+  function X(x) { return mL + x * ((W - mL - mR) / xMax) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / yMax) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const xs = []
+  let x = 1
+  while (x <= xMax) {
+    xs.push(x)
+    x = x + 2
+  }
+  let d = ""
+  xs.forEach(function(xx, i) {
+    const cap = Math.min(peak, xx * bw)
+    if (i === 0) { d = d + "M" } else { d = d + "L" }
+    d = d + X(xx).toFixed(1) + " " + Y(cap).toFixed(1) + " "
+  })
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  const dot = svgEl("circle", {cx: X(Math.min(I, xMax)), cy: Y(Math.min(peak, I * bw)), r: 9, fill: INDIGO})
+  const tip = svgEl("title", {})
+  tip.textContent = "intensity " + I.toFixed(1) + " FLOP/byte, cap " + Math.min(peak, I * bw).toFixed(1) + " TFLOP/s"
+  dot.appendChild(tip)
+  svg.appendChild(dot)
+  const bal = peak / bw
+  const bx = X(Math.min(bal, xMax))
+  svg.appendChild(svgEl("line", {x1: bx, x2: bx, y1: mT, y2: H - mB, stroke: "#8a5a17", "stroke-width": 1.5, "stroke-dasharray": "6 4"}))
+  const bl = svgEl("text", {x: Math.min(bx + 6, W - 150), y: mT + 16, "font-size": 13, fill: "#8a5a17", "font-family": SANS})
+  bl.textContent = "balance " + bal.toFixed(0)
+  svg.appendChild(bl)
+  const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+  yl.textContent = "TFLOP/s cap"
+  svg.appendChild(yl)
+  const xl = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+  xl.textContent = "intensity (FLOP/byte)"
+  svg.appendChild(xl)
+  return svg
+}
+
+function renderRoofline() {
+  const host = document.getElementById("chart-roofline")
+  host.textContent = ""
+  const M = parseFloat(document.getElementById("rim").value) || 512
+  const K = parseFloat(document.getElementById("rik").value) || 512
+  const N = parseFloat(document.getElementById("rin").value) || 512
+  const peak = parseFloat(document.getElementById("ripeak").value) || 100
+  const bw = parseFloat(document.getElementById("ribw").value) || 1
+  const flops = 2 * M * K * N
+  const bytes = 2 * (M * K + K * N + M * N)
+  const I = flops / bytes
+  const cap = Math.min(peak, I * bw)
+  let bound = "compute-bound"
+  if (I * bw < peak) { bound = "memory-bound" }
+  host.appendChild(rooflineCurve(I, peak, bw))
+  const o = document.getElementById("riout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "FLOPs = " + flops.toExponential(2) + ", bytes = " + bytes.toExponential(2) + ", intensity = " + I.toFixed(1) + " FLOP/byte."))
+  o.appendChild(el("p", "small", "Roofline cap = " + cap.toFixed(1) + " TFLOP/s. Verdict: " + bound + "."))
+}
+document.getElementById("ribtn").addEventListener("click", renderRoofline)
+
+function fmtMB(x) {
+  if (x >= 1024) { return (x / 1024).toFixed(2) + " GB" }
+  return x.toFixed(1) + " MB"
+}
+function renderLedger() {
+  const slider = document.getElementById("ledgerp")
+  const pm = parseFloat(slider.value)
+  const params = pm * 1.0e6
+  document.getElementById("ledgerpv").textContent = pm.toFixed(2)
+  const tbl = document.getElementById("ledgertab")
+  tbl.textContent = ""
+  const hr = el("tr")
+  const hdrs = ["Optimizer", "Bytes / param", "Total"]
+  hdrs.forEach(function(h) { hr.appendChild(el("th", null, h)) })
+  tbl.appendChild(hr)
+  const rows = [
+    ["SGD + momentum", 12, 12],
+    ["Adam (fp32)", 16, 16],
+    ["Adam (mixed bf16)", 16, 16]
+  ]
+  rows.forEach(function(r) {
+    const tr = el("tr")
+    tr.appendChild(el("td", null, r[0]))
+    tr.appendChild(el("td", "num", String(r[1])))
+    tr.appendChild(el("td", "num", fmtMB(params * r[2] / 1.0e6)))
+    tbl.appendChild(tr)
+  })
+}
+document.getElementById("ledgerp").addEventListener("input", renderLedger)
+renderLedger()
+renderRoofline()
+
+
+</script>
+</body>
+</html>
