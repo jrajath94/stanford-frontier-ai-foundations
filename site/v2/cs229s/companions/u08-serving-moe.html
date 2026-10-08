@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS229S Unit 08 companion: Serving and sparse MoE</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+input.range{width:100%}
+input.range{max-width:420px}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS229S · Unit 08 companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Unit 08 companion · narrated from the lesson document</p>
+<h1>Serving and sparse MoE</h1>
+<p class="dek">Twelve concepts, one arc: how a server boards requests without idling, guards its memory and its tail, routes each token to two experts out of eight, and turns the whole machine into dollars per million tokens.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>lesson-08-serving-moe.md</code>. The phrasing is the companion’s.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion’s.</p>
+<p class="small muted">Provenance: no lecture transcript exists for this session. Calendar anchors: Week 7, Nov 04 (LLM Serving Efficiency), Nov 08 (Sparse Mixture-of-Experts), and the Nov 11 guest lecture by Dylan Patel (SemiAnalysis) on cluster economics. This page narrates the lesson document, not a video. Claim class for every lesson leaf: PLANNED / SOURCE ATTRIBUTION PENDING. Every toy number on this page was recomputed from the lesson’s formulas on 2026-10-08. No internal inconsistency surfaced in this unit’s toys.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u08-pipeline.jpg" alt="Watercolor of a six-station serving pipeline ending at a brass cash register">
+<figcaption><span class="tag tag-toy">Illustration</span> The unit’s arc in one image: admit, schedule, batch, route, dispatch, bill. Watercolor, original to this companion.</figcaption>
+</figure>
+<p class="tip"><span class="tag tag-companion">companion</span> Chapter plate, companion voice: Board on arrival. Guard the tail. Bill the denominator.</p>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Taxi line</a>
+<a href="#s2">2 Door policy</a>
+<a href="#s3">3 Gulp vs sips</a>
+<a href="#s4">4 Parking lot</a>
+<a href="#s5">5 Tail</a>
+<a href="#s6">6 Receptionist</a>
+<a href="#s7">7 Lane length</a>
+<a href="#s8">8 Skew</a>
+<a href="#s9">9 Mailroom</a>
+<a href="#s10">10 Collectives</a>
+<a href="#s11">11 Batch curve</a>
+<a href="#s12">12 Bill</a>
+<a href="#s13">Synthesis</a>
+<a href="#wisdom">Wisdom</a>
+</div></nav>
+<section class="block" id="s1">
+<p class="secnum">Section 1 · C01</p>
+<h2>Continuous batching: the taxi line</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §3</span></p>
+<p>Static batching runs like a bus on a timetable, where early riders wait out the departure. Continuous batching runs like a taxi stand: each arrival claims the next open seat, and the batch reforms every iteration. The GPU never sits idle awaiting company.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §4, §6</span></p>
+<p>The toy sends 4 requests at t = 0, 1, 2, 3, each needing 10 decode tokens at 0.1 s per token, 1.0 s of work. Under continuous batching each starts on arrival and completes at 1, 2, 3, 4: mean completion 2.5 s, mean latency 1.0 s. Under static pairs, request 1 waits on request 2 and both complete at 2.0, while requests 3 and 4 complete at 4.0: mean completion 3.0 s, mean latency 1.5 s. The 0.5 s win is all wait removed, not speed.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §7, §9</span></p>
+<p>Insertion bills. A huge prefill barging into running decodes stalls every one of them for its full duration. Chunk it or queue it (C03).</p>
+</div>
+<figure>
+<img class="illus" src="assets/u08-taxi.jpg" alt="Watercolor of a taxi stand boarding arrivals beside a waiting scheduled bus">
+<figcaption><span class="tag tag-toy">Illustration</span> The taxi stand against the scheduled bus: board on arrival, never wait for company. Watercolor, original to this companion.</figcaption>
+</figure>
+<figure>
+<svg class="chart" viewBox="0 0 640 260" role="img" aria-label="Timeline bars for continuous versus static batching">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Board on arrival: 1.0 s vs 1.5 s mean latency</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="58" font-weight="bold">continuous: completions 1, 2, 3, 4</text>
+<rect x="60" y="70" width="120" height="22" fill="#5d7050" opacity="0.7"/><text x="66" y="86" fill="#fff">req1</text>
+<rect x="180" y="70" width="120" height="22" fill="#5d7050" opacity="0.7"/><text x="186" y="86" fill="#fff">req2</text>
+<rect x="300" y="70" width="120" height="22" fill="#5d7050" opacity="0.7"/><text x="306" y="86" fill="#fff">req3</text>
+<rect x="420" y="70" width="120" height="22" fill="#5d7050" opacity="0.7"/><text x="426" y="86" fill="#fff">req4</text>
+<text x="20" y="120" font-weight="bold">static pairs: completions 2, 2, 4, 4</text>
+<rect x="60" y="132" width="60" height="22" fill="#a94f27" opacity="0.35"/><text x="66" y="148">wait</text>
+<rect x="120" y="132" width="120" height="22" fill="#a94f27" opacity="0.7"/><text x="126" y="148" fill="#fff">req1+2</text>
+<rect x="300" y="132" width="60" height="22" fill="#a94f27" opacity="0.35"/><text x="306" y="148">wait</text>
+<rect x="360" y="132" width="120" height="22" fill="#a94f27" opacity="0.7"/><text x="366" y="148" fill="#fff">req3+4</text>
+<text x="20" y="182">mean latency 1.0 vs 1.5: the win is wait removed, not speed</text>
+<text x="20" y="208" fill="#5d7050">last request finishes at 4.0 both ways</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §4, §6</span> The toy timelines: continuous never waits for company.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Stand lab. Enter arrival times and seconds per request. The widget compares continuous against static pairs.</p>
+<p>Arrivals: <input class="text" id="cbA" value="0,1,2,3" aria-label="Arrival times"></p>
+<p>Seconds each: <input class="text" id="cbS" value="1.0" inputmode="decimal" aria-label="Seconds per request"></p>
+<p><button class="btn" id="cbBtn">Run both stands</button></p>
+<div class="chips" id="cbOut"></div>
+<p class="small" id="cbNote"></p>
+</div>
+<div class="nugget" id="nugget-taxi">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §7</span></h4>
+<p class="big">Board on arrival. Waiting for company is latency you elected.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Staggered arrivals are the production norm. Continuous batching removes the wait that static batching manufactures.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Reform the batch at every opportunity. Idle capacity is a scheduling bug.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C02</p>
+<h2>Admission and backpressure: the door policy</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §3</span></p>
+<p>The waiting room demands a door policy. Admission control selects who enters the running set, leaving the rest to wait. Backpressure signals upstream to ease off: the room is full. Without that signal the queue swells until memory dies.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §4, §6</span></p>
+<p>The toy fires 10 requests at once at a server running 4 at a time, each costing 1.0 s. Positions 0 to 3 start immediately, 4 to 7 wait one round, and 8 and 9 wait two. Peak queue depth 6, max wait 2.0 s, mean wait 0.8 s. Cap the queue at 4 and requests 9 and 10 get rejected at once, failing fast instead of waiting 2 s.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §7, §9</span></p>
+<p>The deadly case is a queue that never drains. Arrivals permanently outpace service, waits climb without bound, and the server reports healthy while users time out. A p99 rising linearly for an hour is the signature.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Burst of 10 draining in waves of 4">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">10 arrive, 4 run: three waves</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="60">wave 1: positions 0-3, wait 0 s</text>
+<rect x="20" y="70" width="400" height="26" fill="#5d7050" opacity="0.7"/><text x="30" y="88" fill="#fff">4 running</text>
+<text x="20" y="118">wave 2: positions 4-7, wait 1.0 s</text>
+<rect x="20" y="128" width="400" height="26" fill="#31405e" opacity="0.6"/><text x="30" y="146" fill="#fff">4 running</text>
+<text x="20" y="176">wave 3: positions 8-9, wait 2.0 s</text>
+<rect x="20" y="186" width="200" height="26" fill="#a94f27" opacity="0.6"/><text x="30" y="204" fill="#fff">2 running</text>
+<text x="440" y="146">peak queue: 6</text>
+<text x="440" y="170">mean wait: 0.8 s</text>
+<text x="20" y="230" fill="#a94f27">cap the queue at 4: requests 9-10 fail fast</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §4, §6</span> The toy burst: 4 admitted at once, 4 wait a round, 2 wait two.</figcaption>
+</figure>
+<div class="nugget" id="nugget-door">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §7</span></h4>
+<p class="big">Every waiting room demands a door policy. An unbounded queue crashes slowly.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Backpressure converts overload into fast rejection instead of slow timeouts. The queue cap is the kindest setting.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Bound every queue or the queue bounds you. Watch the wait distribution, not just the depth.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C03</p>
+<h2>Prefill and decode: the gulp and the sips</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §3</span></p>
+<p>Prefill arrives as one big parallel gulp: compute-bound and fast per token. Decode arrives as sips: memory-bound and slow per token. A naive scheduler swallows the whole gulp at once while every decoding request waits with held breath. Chunked prefill sips the gulp instead: split the prompt and interleave the pieces.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §4, §6</span></p>
+<p>The toy prefills a 512-token prompt at 2000 tok/s in 0.256 s, while one decode token at 50 tok/s takes 0.02 s. A whole prefill barging in stalls decodes for 0.256 s, roughly 13 decode tokens of stall. Split 2 by 256 and each chunk costs 0.128 s interleaved with decodes, halving the worst stall.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §7, §9</span></p>
+<p>Chunks carry an order: chunk 2 needs chunk 1’s KV. A scheduler bug that runs chunk 2 first feeds attention garbage. Decodes stalling 0.25 s on every new arrival signal missing chunking.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Whole gulp bar versus two chunked sips interleaved with decodes">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">0.256 s gulp vs two 0.128 s sips</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="60">naive: whole gulp stalls decodes</text>
+<rect x="20" y="70" width="440" height="30" fill="#a94f27" opacity="0.6"/><text x="30" y="90" fill="#fff">prefill 512: 0.256 s</text>
+<text x="480" y="90">13 decode tokens of stall</text>
+<text x="20" y="128">chunked 2 x 256: interleaved</text>
+<rect x="20" y="138" width="220" height="30" fill="#5d7050" opacity="0.6"/><text x="30" y="158" fill="#fff">chunk 0.128 s</text>
+<rect x="250" y="138" width="120" height="30" fill="#31405e" opacity="0.5"/><text x="260" y="158" fill="#fff">decodes</text>
+<rect x="380" y="138" width="220" height="30" fill="#5d7050" opacity="0.6"/><text x="390" y="158" fill="#fff">chunk 0.128 s</text>
+<text x="20" y="196">max stall halves to 0.128 s</text>
+<text x="20" y="222" fill="#a94f27">chunk 2 needs chunk 1’s KV: order matters</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §4, §6</span> The toy: chunking halves the worst stall.</figcaption>
+</figure>
+<div class="nugget" id="nugget-gulp">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §7</span></h4>
+<p class="big">Sip the gulp. No single prefill should hold ten decodes hostage.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Phase-aware scheduling is the difference between a stall and a hiccup. The chunk count is the dial.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Big fast jobs and small slow jobs need different lanes. Interleave, do not serialize.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C04</p>
+<h2>Cache management: the parking lot</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §3</span></p>
+<p>The KV cache works like a parking lot with numbered spaces. Each request parks its KV, and LRU tows whichever car sat idle longest. Prefix caching pools the lot: requests sharing a prompt prefix split one parked KV.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §4, §6</span></p>
+<p>The toy sets L = 32 layers, width 4096, fp16. Bytes per token = 2 × 32 × 4096 × 2 = 524,288, or 0.5 MiB, so a 1000-token request parks 500 MiB. The lot holds 4 cars. Accesses run A, B, C, D, A, E: four misses fill the lot, A hits, then E misses and tows B, idle since step 2. One hit in six accesses. A shared 200-token prefix parks its 100 MiB a single time instead of twice.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §7, §9</span></p>
+<p>The lot can thrash. Five hot requests in four spaces means every access tows the next car needed: hit rate zero, recompute forever. Eviction is never cheap under thrash.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Four parking spaces with B being towed">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">4 spaces, 6 arrivals: B gets towed</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="20" y="60" width="120" height="60" fill="#5d7050" opacity="0.5" stroke="#5d7050" stroke-width="2"/><text x="60" y="95">A: hit</text>
+<rect x="160" y="60" width="120" height="60" fill="#a94f27" opacity="0.35" stroke="#a94f27" stroke-width="2"/><text x="190" y="95">B: towed</text>
+<rect x="300" y="60" width="120" height="60" fill="#31405e" opacity="0.4" stroke="#31405e" stroke-width="2"/><text x="340" y="95">C</text>
+<rect x="440" y="60" width="120" height="60" fill="#31405e" opacity="0.4" stroke="#31405e" stroke-width="2"/><text x="480" y="95">D</text>
+<line x1="160" y1="60" x2="280" y2="120" stroke="#a94f27" stroke-width="4"/>
+<line x1="280" y1="60" x2="160" y2="120" stroke="#a94f27" stroke-width="4"/>
+<text x="20" y="150">order: A miss, B miss, C miss, D miss, A hit, E miss</text>
+<text x="20" y="176">B unused since step 2: longest idle, leaves</text>
+<text x="20" y="202">0.5 MiB per token: a 1000-token request parks 500 MiB</text>
+<text x="20" y="228" fill="#5d7050">shared 200-token prefix: 100 MiB parked once</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §4, §6</span> The toy LRU: B is the longest idle when E arrives.</figcaption>
+</figure>
+<div class="nugget" id="nugget-lot">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §7</span></h4>
+<p class="big">Tow the longest-idle car. Park a shared prefix once.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>KV bytes are the serving budget: 0.5 MiB per token prices every request before it runs.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Shared prefixes are free capacity. Deduplicate the common work first.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C05</p>
+<h2>Throughput and tail: the turnstile and the line</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §3</span></p>
+<p>Throughput counts the turnstile, and tail latency measures the longest wait in line. Averages conceal the tail. Teams write SLOs on tails, never on means.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §4, §6</span></p>
+<p>The toy runs 100 requests: 90 finish in 1.0 s, 10 in 3.0 s. Mean 1.2 s, p50 1.0 s, p99 3.0 s. At 50 req/s, Little’s law sets concurrency = 50 × 1.2 = 60 in flight. Kill the tail so everything finishes in 1.0 s and concurrency falls to 50, letting the same hardware serve 60 req/s at equal concurrency.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §7, §9</span></p>
+<p>Tails have causes: long prefills, cache misses. Attribute every slow request and one cause usually dominates. A burst breaks steady-state math: the queue builds while the old mean undercounts the pain.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Histogram with 90 fast bars and 10 slow bars, p50 and p99 marked">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Mean 1.2 s hides the 3.0 s tail</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="60" y="110" width="380" height="80" fill="#5d7050" opacity="0.6"/><text x="200" y="155" fill="#fff">90 at 1.0 s</text>
+<rect x="450" y="60" width="120" height="130" fill="#a94f27" opacity="0.6"/><text x="470" y="130" fill="#fff">10 at 3.0 s</text>
+<line x1="250" y1="100" x2="250" y2="200" stroke="#31405e" stroke-width="3"/><text x="240" y="220" fill="#31405e">p50 1.0</text>
+<line x1="510" y1="50" x2="510" y2="200" stroke="#a94f27" stroke-width="3"/><text x="500" y="220" fill="#a94f27">p99 3.0</text>
+<text x="60" y="240">concurrency at 50 req/s: 60 in flight</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §4, §6</span> The toy: one user in ten waits triple the median.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Tail lab. Enter fast count, fast seconds, slow count, slow seconds, and req/s. The widget returns mean, p50, p99, and concurrency.</p>
+<p>Fast count: <input class="text" id="tlF" value="90" aria-label="Fast request count"></p>
+<p>Fast seconds: <input class="text" id="tlFs" value="1.0" inputmode="decimal" aria-label="Fast seconds"></p>
+<p>Slow count: <input class="text" id="tlS" value="10" aria-label="Slow request count"></p>
+<p>Slow seconds: <input class="text" id="tlSs" value="3.0" inputmode="decimal" aria-label="Slow seconds"></p>
+<p>Req per s: <input class="text" id="tlR" value="50" aria-label="Requests per second"></p>
+<p><button class="btn" id="tlBtn">Measure the tail</button></p>
+<div class="chips" id="tlOut"></div>
+<p class="small" id="tlNote"></p>
+</div>
+<div class="nugget" id="nugget-tail">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §7</span></h4>
+<p class="big">Always report p50, p99, p999. Means alone lie.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Killing the tail buys concurrency for free: 60 in flight becomes 50 at the same hardware.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Distributions beat averages. Find the tail’s cause and the mean follows.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C06</p>
+<h2>Expert routing: the receptionist</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §3</span></p>
+<p>The gate plays receptionist. It scores all eight experts for the token, selects the top 2, and divides the token’s weight between them by softmax. The output blends the two chosen experts by weight.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §4, §6</span></p>
+<p>The toy feeds gate logits [2.1, 0.3, 1.5, −0.2, 0.8, 1.1, −1.0, 0.1]. Softmax yields [0.379, 0.063, 0.208, 0.038, 0.103, 0.140, 0.017, 0.051]. Top-2 lands on experts 0 and 2, renormalized to 0.646 and 0.354, so output = 0.646 E_0(x) + 0.354 E_2(x). The remaining six experts see nothing for this token. That absence is the sparsity.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §7, §9</span></p>
+<p>The receptionist can favor forever: gate collapse. One expert wins early, captures all the gradient, and the other seven starve. Gating costs one small matmul, and the real cost is load balance (C08).</p>
+</div>
+<figure>
+<img class="illus" src="assets/u08-reception.jpg" alt="Watercolor of a receptionist pointing a guest to two lit doors among eight">
+<figcaption><span class="tag tag-toy">Illustration</span> The receptionist: eight doors, two lit, the token walks through both. Watercolor, original to this companion.</figcaption>
+</figure>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Eight expert boxes with two lit, weights 0.646 and 0.354">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Top-2: experts 0 and 2, weights 0.646 and 0.354</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="20" y="60" width="60" height="80" fill="#5d7050" stroke="#5d7050" stroke-width="3"/><text x="32" y="95" fill="#fff">E0</text><text x="28" y="115" fill="#fff">0.646</text>
+<rect x="95" y="60" width="60" height="80" fill="#6f6355" opacity="0.3"/><text x="107" y="95">E1</text>
+<rect x="170" y="60" width="60" height="80" fill="#5d7050" stroke="#5d7050" stroke-width="3"/><text x="182" y="95" fill="#fff">E2</text><text x="178" y="115" fill="#fff">0.354</text>
+<rect x="245" y="60" width="60" height="80" fill="#6f6355" opacity="0.3"/><text x="257" y="95">E3</text>
+<rect x="320" y="60" width="60" height="80" fill="#6f6355" opacity="0.3"/><text x="332" y="95">E4</text>
+<rect x="395" y="60" width="60" height="80" fill="#6f6355" opacity="0.3"/><text x="407" y="95">E5</text>
+<rect x="470" y="60" width="60" height="80" fill="#6f6355" opacity="0.3"/><text x="482" y="95">E6</text>
+<rect x="545" y="60" width="60" height="80" fill="#6f6355" opacity="0.3"/><text x="557" y="95">E7</text>
+<text x="20" y="170">six experts idle for this token: the sparsity</text>
+<text x="20" y="196" fill="#a94f27">gate collapse: one expert wins early, seven starve</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §4, §6</span> The toy routing: the token’s weight splits 0.646 / 0.354.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Receptionist lab. Enter 8 gate logits. The widget routes top-2 and renormalizes.</p>
+<p>Logits: <input class="text" id="gtL" value="2.1,0.3,1.5,-0.2,0.8,1.1,-1.0,0.1" aria-label="Gate logits"></p>
+<p><button class="btn" id="gtBtn">Route the token</button></p>
+<div class="chips" id="gtOut"></div>
+<p class="small" id="gtNote"></p>
+</div>
+<div class="nugget" id="nugget-reception">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §7</span></h4>
+<p class="big">Two experts per token, freshly chosen each time. The gate’s favorites form the failure mode.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Top-k routing is how parameters grow faster than FLOPs per token. The receptionist is cheap, but its bias is expensive.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Sparse selection needs a fairness mechanism from day one. Winners compound.</dd>
+</dl>
+</div>
+</section>
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C07</p>
+<h2>Expert capacity: the lane length</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §3</span></p>
+<p>Each expert works like a checkout lane of fixed length, and capacity is that length. Tokens beyond capacity get dropped: their expert output is skipped while the token continues down the residual path. The capacity factor adds slack for overflow.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §4, §6</span></p>
+<p>The toy routes 64 tokens across 8 experts at top-2 with factor 1.25. Balanced share: 64 × 2 / 8 = 16 per expert, so capacity = 16 × 1.25 = 20. Expert 0 receives 40: 20 run and 20 drop, a 50% drop rate at that lane. Globally 20 of 128 routed slots drop, 15.6%. Factor 2.0 raises capacity to 32 with 8 drops, but the extra slack costs buffer memory.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §7, §9</span></p>
+<p>Drops are never neutral. At factor 1.0 with a spiky gate, the popular expert sheds 30% every step and trains on a biased subset. Eval holds flat until drops pass about 5%, then falls at the knee.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Lane of length 20 with 40 tokens, half dropped">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Lane length 20, 40 arrive: half are dropped</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="20" y="60" width="300" height="40" fill="#5d7050" opacity="0.6"/><text x="30" y="85" fill="#fff">20 run</text>
+<rect x="330" y="60" width="300" height="40" fill="#a94f27" opacity="0.35" stroke="#a94f27" stroke-width="2"/><text x="340" y="85">20 dropped</text>
+<line x1="320" y1="50" x2="320" y2="110" stroke="#221a12" stroke-width="3"/>
+<text x="310" y="130">capacity 20</text>
+<text x="20" y="160">drop rate at expert 0: 50%</text>
+<text x="20" y="186">global: 15.6% of routed slots</text>
+<text x="20" y="212" fill="#5d7050">factor 2.0: capacity 32, 8 drops, bigger buffers</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §4, §6</span> The toy: the lane ends at 20, the rest fall off.</figcaption>
+</figure>
+<div class="nugget" id="nugget-lane">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §7</span></h4>
+<p class="big">Every lane has an end. Dropped tokens train on nothing that step.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Capacity trades memory against drops. The 5% knee is where the tradeoff bites.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Fixed buffers make overload visible as drops. Watch the drop rate, not just the throughput.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C08</p>
+<h2>Load imbalance: the jammed lane</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §3</span></p>
+<p>Imbalance looks like a jammed checkout with seven empty ones beside it. Step time follows the fullest expert. The balance loss plays traffic cop, taxing the gate for uneven assignments.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §4, §6</span></p>
+<p>The toy counts [40, 10, 5, 3, 2, 2, 1, 1]: total 64, mean 8, max 40, so imbalance = 40 / 8 = 5.0. The step pays for 40 tokens of work at expert 0 while seven experts idle, 5x the balanced cost. At capacity 20, expert 0 additionally drops half its tokens, so skew wastes time and tokens together.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §7, §9</span></p>
+<p>The cop can overcorrect. Excess balance weight routes uniformly and experts never specialize, while too little invites collapse back. Sweep the weight and plot imbalance against task score: a U-shape with a sweet spot.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Eight bars with one tower at 40, imbalance 5.0">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">One tower, seven puddles: imbalance 5.0x</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="40" y="60" width="50" height="140" fill="#a94f27" opacity="0.7"/><text x="52" y="216">40</text>
+<rect x="110" y="160" width="50" height="40" fill="#31405e" opacity="0.5"/><text x="122" y="216">10</text>
+<rect x="180" y="180" width="50" height="20" fill="#31405e" opacity="0.5"/><text x="196" y="216">5</text>
+<rect x="250" y="188" width="50" height="12" fill="#31405e" opacity="0.5"/><text x="266" y="216">3</text>
+<rect x="320" y="192" width="50" height="8" fill="#31405e" opacity="0.5"/><text x="336" y="216">2</text>
+<rect x="390" y="192" width="50" height="8" fill="#31405e" opacity="0.5"/><text x="406" y="216">2</text>
+<rect x="460" y="196" width="50" height="4" fill="#31405e" opacity="0.5"/><text x="476" y="216">1</text>
+<rect x="530" y="196" width="50" height="4" fill="#31405e" opacity="0.5"/><text x="546" y="216">1</text>
+<line x1="30" y1="160" x2="590" y2="160" stroke="#5d7050" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="30" y="150" fill="#5d7050">mean 8</text>
+<text x="40" y="50" fill="#a94f27">max 40: 5x the balanced cost</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §4, §6</span> The toy skew: the step waits on expert 0.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Skew lab. Enter 8 expert counts. The widget returns mean, max, and the imbalance ratio.</p>
+<p>Counts: <input class="text" id="skC" value="40,10,5,3,2,2,1,1" aria-label="Expert token counts"></p>
+<p><button class="btn" id="skBtn">Measure the skew</button></p>
+<div class="chips" id="skOut"></div>
+<p class="small" id="skNote"></p>
+</div>
+<div class="nugget" id="nugget-skew">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §7</span></h4>
+<p class="big">The step waits on the fullest lane. Balance the gate or pay 5x for it.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Skew is a step-time multiplier hiding in a routing table. The ratio names it in one number.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Parallel work finishes when the slowest finishes. Balance is a performance feature.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C09</p>
+<h2>Token dispatch: the mailroom</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §3</span></p>
+<p>Dispatch runs the mailroom. Each token gets copied to its 2 experts’ GPUs, and each expert’s output returns by mail. The envelopes are the activations: tokens × k × d floats, sent twice, there and back.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §4, §6</span></p>
+<p>The toy moves 64 tokens at top-2 with d = 4096 in fp16. One way costs 64 × 2 × 4096 × 2 = 1,048,576 bytes, 1 MiB. The round trip costs 2 MiB per layer per step. Across thirty-two MoE layers that is 64 MiB per step of pure dispatch: the all-to-all tax on MoE.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §7, §9</span></p>
+<p>A slow interconnect lets the tax dominate: dispatch outruns compute and the MoE ends up slower than the dense model it displaced. Co-locate experts when the model fits, and shard only when it does not.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Tokens fanning out to 8 GPUs and back, 2 MiB round trip">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">1 MiB each way, 2 MiB round trip per layer</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="20" y="80" width="100" height="60" fill="#31405e" opacity="0.5"/><text x="34" y="115">64 tokens</text>
+<g fill="none" stroke="#5d7050" stroke-width="2">
+<line x1="120" y1="90" x2="220" y2="60"/><line x1="120" y1="100" x2="220" y2="90"/><line x1="120" y1="110" x2="220" y2="120"/><line x1="120" y1="120" x2="220" y2="150"/>
+</g>
+<g>
+<rect x="230" y="50" width="40" height="24" fill="#6f6355" opacity="0.4"/><rect x="230" y="80" width="40" height="24" fill="#6f6355" opacity="0.4"/><rect x="230" y="110" width="40" height="24" fill="#6f6355" opacity="0.4"/><rect x="230" y="140" width="40" height="24" fill="#6f6355" opacity="0.4"/>
+</g>
+<g fill="none" stroke="#a94f27" stroke-width="2">
+<line x1="270" y1="60" x2="370" y2="90"/><line x1="270" y1="90" x2="370" y2="100"/><line x1="270" y1="120" x2="370" y2="110"/><line x1="270" y1="150" x2="370" y2="120"/>
+</g>
+<rect x="380" y="80" width="100" height="60" fill="#31405e" opacity="0.5"/><text x="394" y="115">outputs</text>
+<text x="130" y="170" fill="#5d7050">dispatch: 1 MiB</text>
+<text x="280" y="170" fill="#a94f27">combine: 1 MiB</text>
+<text x="20" y="200">32 layers: 64 MiB per step of pure dispatch</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §4, §6</span> The toy mailroom: every token mailed twice per layer.</figcaption>
+</figure>
+<div class="nugget" id="nugget-mail">
+<h4>Nugget 9 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §7</span></h4>
+<p class="big">Each token is mailed twice per layer. The wire belongs to the model.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Dispatch bytes scale with k. The MoE communication tax is payable in interconnect, not FLOPs.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Distributed designs have a postage budget. Price the mail before the compute.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · C10</p>
+<h2>Communication: huddle versus mail swap</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §3</span></p>
+<p>All-reduce gathers a group huddle where everyone ends holding the same sum, at ring cost 2(n−1)/n × bytes. All-to-all runs a mail swap where everyone posts a different piece to everyone else. Different patterns charge different bills.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §4, §6</span></p>
+<p>The toy wires 8 GPUs with a 1 MiB payload. All-reduce costs 2 × 7/8 × 1 = 1.75 MiB per GPU. All-to-all costs about 1 MiB each way per GPU. The MoE layer pays all-to-all twice, dispatch plus combine, for 2 MiB per GPU round trip. Data parallel spends one all-reduce per sync.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §7, §9</span></p>
+<p>The formulas assume calm links. Incast means all 8 GPUs blasting one peer at once, which collapses the pattern and pushes measured cost to multiples of the formula. Measure instead of assuming.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Ring huddle at 1.75 MiB versus mail swap at 1 MiB per GPU">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Huddle 1.75 MiB, mail swap 1 MiB per GPU</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="70" font-weight="bold">all-reduce: the huddle</text>
+<circle cx="120" cy="130" r="45" fill="none" stroke="#31405e" stroke-width="3"/>
+<text x="100" y="135">1.75 MiB</text>
+<text x="20" y="200">2 × 7/8 × 1 MiB per GPU</text>
+<text x="300" y="70" font-weight="bold">all-to-all: the mail swap</text>
+<g stroke="#5d7050" stroke-width="2">
+<line x1="380" y1="100" x2="460" y2="160"/><line x1="460" y1="100" x2="380" y2="160"/>
+<line x1="380" y1="130" x2="460" y2="130"/><line x1="420" y1="100" x2="420" y2="160"/>
+</g>
+<circle cx="380" cy="100" r="12" fill="#5d7050"/><circle cx="460" cy="100" r="12" fill="#5d7050"/><circle cx="380" cy="160" r="12" fill="#5d7050"/><circle cx="460" cy="160" r="12" fill="#5d7050"/>
+<text x="500" y="135">1 MiB each way</text>
+<text x="300" y="200">MoE layer: 2 MiB/GPU round trip</text>
+<text x="300" y="226" fill="#a94f27">incast: measured cost runs multiples of formula</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §4, §6</span> The toy: name the pattern before you price it.</figcaption>
+</figure>
+<div class="nugget" id="nugget-pattern">
+<h4>Nugget 10 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §7</span></h4>
+<p class="big">Name the pattern before pricing it. Huddle and mail swap charge differently.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Collective choice is a cost choice. The topology sets the constant, and congestion breaks it.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Communication patterns are first-class design. Draw the arrows, then count the bytes.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s11">
+<p class="secnum">Section 11 · C11</p>
+<h2>Batching effects: the bending curve</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §3</span></p>
+<p>Decode runs memory-bound: each step scans the whole model once, then performs B tokens of work. Larger B spreads the read cost over more tokens, but per-token compute keeps growing. The curve bends toward an asymptote it never reaches.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §4, §6</span></p>
+<p>The toy sets seconds per step t(B) = 0.005 + 0.002 B. B = 1 yields 142.9 tok/s. B = 4 yields 307.7 tok/s, a 2.15x gain. B = 8 yields 381.0 tok/s, 1.24x. B = 16 yields 432.4 tok/s, 1.13x. The asymptote sits at 1/0.002 = 500 tok/s, and gains shrink with every doubling.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §7, §9</span></p>
+<p>Memory binds before the asymptote: 64 KV caches may not fit at all. Batch for throughput, and shard for latency.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 260" role="img" aria-label="Throughput curve bending toward 500 tokens per second">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">142.9, 307.7, 381.0, 432.4: gains shrink</text>
+<g font-family="sans-serif" font-size="12">
+<line x1="60" y1="30" x2="60" y2="210" stroke="#221a12" stroke-width="2"/>
+<line x1="60" y1="210" x2="620" y2="210" stroke="#221a12" stroke-width="2"/>
+<line x1="60" y1="60" x2="620" y2="60" stroke="#5d7050" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="70" y="52" fill="#5d7050">asymptote 500 tok/s</text>
+<path d="M90 190 Q200 110 320 95 Q450 85 590 78" fill="none" stroke="#31405e" stroke-width="3"/>
+<circle cx="90" cy="190" r="6" fill="#a94f27"/><text x="80" y="210" fill="#a94f27">142.9</text>
+<circle cx="240" cy="118" r="6" fill="#a94f27"/><text x="230" y="140" fill="#a94f27">307.7</text>
+<circle cx="390" cy="98" r="6" fill="#a94f27"/><text x="380" y="120" fill="#a94f27">381.0</text>
+<circle cx="540" cy="86" r="6" fill="#a94f27"/><text x="530" y="108" fill="#a94f27">432.4</text>
+<text x="90" y="240">1</text><text x="240" y="240">4</text><text x="390" y="240">8</text><text x="540" y="240">16</text>
+<text x="300" y="240">batch B</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §4, §6</span> The toy: 2.15x, then 1.24x, then 1.13x.</figcaption>
+</figure>
+<div class="nugget" id="nugget-bend">
+<h4>Nugget 11 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §7</span></h4>
+<p class="big">The curve bends toward 500 without ever arriving. Size the batch for the knee, not the asymptote.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Diminishing returns are quantifiable: 2.15x, 1.24x, 1.13x. The fourth doubling is barely worth the memory.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every scaling curve has an asymptote. Find it before you scale.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s12">
+<p class="secnum">Section 12 · C12</p>
+<h2>Cost per request: the bill</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §3</span></p>
+<p>Dollars per token equals dollars per second over tokens per second. Each systems win in this unit, continuous batching, chunking, MoE sparsity, lands in the denominator.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §4, §6</span></p>
+<p>The toy prices a GPU at $3/hour, a labeled hypothetical, serving 500 tok/s. Cost = 1e6 / 500 × 3 / 3600 = $1.67 per million tokens, falling to $0.83 at doubled throughput. A 640-token request, 512 prefill plus 128 decode, costs $0.00107 at the base rate. The price is a toy, but the arithmetic carries the lesson.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §7, §9</span></p>
+<p>The toy assumes full utilization. Real utilization at 40% multiplies the true cost by 2.5x. When the bill beats the model, suspect utilization first.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Cost bar halving from 1.67 to 0.83 dollars as throughput doubles">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">$1.67 halves to $0.83 when throughput doubles</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="70">500 tok/s</text>
+<rect x="160" y="54" width="400" height="30" fill="#a94f27" opacity="0.6"/><text x="170" y="74" fill="#fff">$1.67 per million tokens</text>
+<text x="20" y="120">1000 tok/s</text>
+<rect x="160" y="104" width="200" height="30" fill="#5d7050" opacity="0.6"/><text x="170" y="124" fill="#fff">$0.83 per million tokens</text>
+<text x="20" y="170">640-token request at base rate: $0.00107</text>
+<text x="20" y="196" fill="#a94f27">at 40% utilization the true cost is 2.5x</text>
+<text x="20" y="222" fill="#5d7050">every systems win lands in the denominator</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §4, §6</span> The toy bill at the labeled price: double the rate, halve the cost.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Bill lab. Enter throughput, dollars per hour, and utilization. The widget prices a million tokens.</p>
+<p>Tokens per s: <input class="text" id="blR" value="500" aria-label="Throughput"></p>
+<p>$ per hour: <input class="text" id="blP" value="3" inputmode="decimal" aria-label="Dollars per hour"></p>
+<p>Utilization: <input class="text" id="blU" value="1.0" inputmode="decimal" aria-label="Utilization fraction"></p>
+<p><button class="btn" id="blBtn">Price the tokens</button></p>
+<div class="chips" id="blOut"></div>
+<p class="small" id="blNote"></p>
+</div>
+<div class="nugget" id="nugget-bill">
+<h4>Nugget 12 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §7</span></h4>
+<p class="big">Price per token, then multiply by reality. Suspect utilization first.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The formula is trivial, but the inputs are the work. Real R, real price, real utilization.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every optimization has a dollar value through the denominator. Compute it.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s13">
+<p class="secnum">Synthesis</p>
+<h2>The pipeline, end to end</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-companion">companion</span> The arc, end to end. Requests board on arrival like a taxi line (C01), and the waiting room runs a door policy (C02). Prefill gulps get sipped so decodes never hold their breath (C03). KV parks in a lot with LRU towing (C04). The turnstile counts throughput while the tail writes the SLOs (C05). The receptionist routes each token to two of eight experts (C06), each lane has a fixed length (C07), and the gate’s favorites jam one lane (C08). Tokens are mailed to expert GPUs and back (C09), huddle and mail swap bill differently (C10). Batches bend toward an asymptote (C11). And the whole machine divides into dollars per million tokens (C12).</p>
+<p><span class="tag tag-companion">companion</span> The chapter plate in the companion’s own words: Board on arrival. Guard the tail. Bill the denominator. The serving engineer owns the scheduler and the cache policy. The MoE engineer owns the gate, the capacity, and the dispatch tax. The economist owns the tail attribution and the utilization number. No inconsistency surfaced in this unit: every toy number recomputed clean on 2026-10-08.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>Twelve nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-taxi"><span class="wnum">01</span>Board on arrival <span class="muted">· C01</span></a></li>
+<li><a href="#nugget-door"><span class="wnum">02</span>The queue needs a door policy <span class="muted">· C02</span></a></li>
+<li><a href="#nugget-gulp"><span class="wnum">03</span>Sip the gulp <span class="muted">· C03</span></a></li>
+<li><a href="#nugget-lot"><span class="wnum">04</span>Tow the longest-idle car <span class="muted">· C04</span></a></li>
+<li><a href="#nugget-tail"><span class="wnum">05</span>Means alone lie <span class="muted">· C05</span></a></li>
+<li><a href="#nugget-reception"><span class="wnum">06</span>The gate’s favorites are the failure mode <span class="muted">· C06</span></a></li>
+<li><a href="#nugget-lane"><span class="wnum">07</span>The lane ends where it ends <span class="muted">· C07</span></a></li>
+<li><a href="#nugget-skew"><span class="wnum">08</span>Balance the gate or pay 5x <span class="muted">· C08</span></a></li>
+<li><a href="#nugget-mail"><span class="wnum">09</span>The wire is part of the model <span class="muted">· C09</span></a></li>
+<li><a href="#nugget-pattern"><span class="wnum">10</span>Name the pattern first <span class="muted">· C10</span></a></li>
+<li><a href="#nugget-bend"><span class="wnum">11</span>Size for the knee <span class="muted">· C11</span></a></li>
+<li><a href="#nugget-bill"><span class="wnum">12</span>Utilization is the first suspect <span class="muted">· C12</span></a></li>
+</ol>
+</section>
+
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>lessons/u08/lesson-08-serving-moe.md</code> (baseline 2026-10-06). No lecture transcript exists for this session, so nothing here quotes a lecturer and no lecture anecdotes appear. Calendar anchors: Week 7, Nov 04 (LLM Serving Efficiency), Nov 08 (Sparse Mixture-of-Experts), and the Nov 11 guest lecture by Dylan Patel (SemiAnalysis) on cluster economics. Charts re-plot the lesson’s computed numbers with section citations. All plotted values were recomputed from the lesson’s formulas on 2026-10-08. No internal inconsistency surfaced in this unit’s toys. Claim class: every lesson leaf PLANNED / SOURCE ATTRIBUTION PENDING. Interactive toys run the lesson’s rules over your inputs and are labeled <span class="tag tag-toy">Illustration</span>. Direct quotes from the lesson document: 0 words. The chapter plate line is the companion’s own.</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>. No video exists for this session, so no embed appears.</p>
+</footer>
+</div>
+<script>
+function chip(text, cls){
+  var s=document.createElement("span")
+  if(cls){s.className="chip "+cls}
+  else{s.className="chip"}
+  s.textContent=text
+  return s
+}
+function out(id){
+  var e=document.getElementById(id)
+  e.innerHTML=""
+  return e
+}
+function parseList(id){
+  var raw=document.getElementById(id).value
+  var parts=raw.split(",")
+  var vals=[]
+  var k=0
+  while(k<parts.length){
+    vals.push(parseFloat(parts[k]))
+    k=k+1
+  }
+  return vals
+}
+document.getElementById("cbBtn").addEventListener("click",function(){
+  var arr=parseList("cbA")
+  var s=parseFloat(document.getElementById("cbS").value)
+  var cont=[]
+  var i=0
+  while(i<arr.length){
+    cont.push(arr[i]+s)
+    i=i+1
+  }
+  var stat=[]
+  var j=0
+  while(j<arr.length){
+    var p=Math.floor(j/2)*2
+    var a1=arr[p]
+    var a2=arr[p+1]!==undefined?arr[p+1]:arr[p]
+    stat.push(Math.max(a1,a2)+s)
+    j=j+1
+  }
+  var mc=0
+  var ms=0
+  var ma=0
+  var q=0
+  while(q<arr.length){
+    mc=mc+cont[q]
+    ms=ms+stat[q]
+    ma=ma+arr[q]
+    q=q+1
+  }
+  var n=arr.length
+  var o=out("cbOut")
+  o.appendChild(chip("continuous mean: "+(mc/n).toFixed(2)+" s","plain"))
+  o.appendChild(chip("static mean: "+(ms/n).toFixed(2)+" s","plain"))
+  o.appendChild(chip("latency gap: "+((ms-ma/n)-(mc-ma/n)).toFixed(2)+" s","plain"))
+  document.getElementById("cbNote").textContent="The win is wait removed, not speed added."
+})
+document.getElementById("tlBtn").addEventListener("click",function(){
+  var nf=parseInt(document.getElementById("tlF").value,10)
+  var sf=parseFloat(document.getElementById("tlFs").value)
+  var ns=parseInt(document.getElementById("tlS").value,10)
+  var ss=parseFloat(document.getElementById("tlSs").value)
+  var r=parseFloat(document.getElementById("tlR").value)
+  var n=nf+ns
+  var mean=(nf*sf+ns*ss)/n
+  var sorted=[]
+  var i=0
+  while(i<nf){
+    sorted.push(sf)
+    i=i+1
+  }
+  var j=0
+  while(j<ns){
+    sorted.push(ss)
+    j=j+1
+  }
+  sorted.sort(function(a,b){return a-b})
+  var p50=sorted[Math.floor(n/2)]
+  var p99=sorted[Math.min(n-1,Math.floor(0.99*n))]
+  var o=out("tlOut")
+  o.appendChild(chip("mean: "+mean.toFixed(2)+" s","plain"))
+  o.appendChild(chip("p50: "+p50.toFixed(2)+" s","plain"))
+  o.appendChild(chip("p99: "+p99.toFixed(2)+" s","plain"))
+  o.appendChild(chip("in flight: "+(r*mean).toFixed(0),"plain"))
+  document.getElementById("tlNote").textContent="Little's law: concurrency is throughput times mean latency."
+})
+document.getElementById("gtBtn").addEventListener("click",function(){
+  var logits=parseList("gtL")
+  var exps=[]
+  var i=0
+  while(i<logits.length){
+    exps.push(Math.exp(logits[i]))
+    i=i+1
+  }
+  var tot=0
+  var j=0
+  while(j<exps.length){
+    tot=tot+exps[j]
+    j=j+1
+  }
+  var idx=[]
+  var k=0
+  while(k<logits.length){
+    idx.push(k)
+    k=k+1
+  }
+  idx.sort(function(a,b){return exps[b]-exps[a]})
+  var top=[idx[0],idx[1]]
+  var wsum=exps[top[0]]/tot+exps[top[1]]/tot
+  var o=out("gtOut")
+  o.appendChild(chip("experts: "+top[0]+", "+top[1],"plain"))
+  o.appendChild(chip("w: "+(exps[top[0]]/tot/wsum).toFixed(3)+", "+(exps[top[1]]/tot/wsum).toFixed(3),"plain"))
+  document.getElementById("gtNote").textContent="Six experts idle for this token. That is the sparsity."
+})
+document.getElementById("skBtn").addEventListener("click",function(){
+  var counts=parseList("skC")
+  var sum=0
+  var mx=0
+  var i=0
+  while(i<counts.length){
+    sum=sum+counts[i]
+    if(counts[i]>mx){mx=counts[i]}
+    i=i+1
+  }
+  var mean=sum/counts.length
+  var o=out("skOut")
+  o.appendChild(chip("mean: "+mean.toFixed(1),"plain"))
+  o.appendChild(chip("max: "+mx.toFixed(0),"plain"))
+  o.appendChild(chip("imbalance: "+(mx/mean).toFixed(1)+"x","plain"))
+  document.getElementById("skNote").textContent="The step waits on the fullest lane."
+})
+document.getElementById("blBtn").addEventListener("click",function(){
+  var R=parseFloat(document.getElementById("blR").value)
+  var p=parseFloat(document.getElementById("blP").value)
+  var u=parseFloat(document.getElementById("blU").value)
+  var c=1e6/R*p/3600/u
+  var o=out("blOut")
+  o.appendChild(chip("$"+c.toFixed(2)+" per MTok","plain"))
+  o.appendChild(chip("$"+(640*c/1e6).toFixed(5)+" per 640-tok req","plain"))
+  document.getElementById("blNote").textContent="Utilization divides the dream by reality."
+})
+</script>
+</body>
+</html>
