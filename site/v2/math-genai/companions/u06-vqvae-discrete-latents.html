@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U06 Companion: VQ-VAE and Discrete Latents</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.pairtable td.rank{font-weight:700}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford Frontier AI · Math-GenAI · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Unit 06 · Discrete latent modelling and VQ-VAE</p>
+<h1>U06 Companion: VQ-VAE and Discrete Latents</h1>
+<p class="dek">A paintbox with four colors, a wall where gradients die, a useful lie that smuggles them through, and the price list in whole bits.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>content/v2/math-genai/lessons/u06/lesson-06-vqvae-discrete-latents.md</code>. The phrasing is the companion's. No lecture transcript exists for this unit.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> The idea above the tag carries a lesson anchor. The generalization below it is the companion's own voice.</p>
+<p class="small muted">Narrated from the lesson content. The lesson is locally authored bridge material. It states that it does not reproduce the instructor lectures, and no transcript was inspected. All numbers below were computed in the lesson on 2026-10-06 (numpy 1.26.4, float64, seed 0 where RNG is used, compute_run5a.py reproduces every one). Log base 2 in bits.</p>
+</div>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Codebook</a>
+<a href="#s2">2 Nearest vector</a>
+<a href="#s3">3 Three losses</a>
+<a href="#s4">4 Straight-through</a>
+<a href="#s5">5 EMA</a>
+<a href="#s6">6 Dead codes</a>
+<a href="#s7">7 Prior over codes</a>
+<a href="#s8">8 Reconstruction cost</a>
+<a href="#s9">9 Rate/distortion</a>
+<a href="#s10">10 Rounding</a>
+<a href="#s11">11 Decoder effects</a>
+<a href="#s12">12 Ablations</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<section class="block" id="s0">
+<p class="secnum">Opening</p>
+<h2>Four colors in the paintbox</h2>
+<figure>
+<img class="illus" src="assets/u06-hero.webp" alt="Watercolor of a mosaic table with tiny colored tiles and a half-finished tile bird beside a smooth watercolor wash of the same bird">
+<figcaption>Illustration. Discrete tiles against a continuous wash: the VQ-VAE snaps every encoding to the nearest tile.</figcaption>
+</figure>
+<p>The running toy: a codebook with K = 4 entries in R^2. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C01-C12</span> e_1 = [1, 0], e_2 = [0, 1], e_3 = [−1, 0], e_4 = [0, −1]. Encoder output z_e = [0.9, 0.2]. The decoder is the identity (xhat = z_q) unless stated. U05 ended at a wall: reparameterization fails on discrete latents. This unit climbs it.</p>
+<p>The arc: the codebook and the nearest-vector rule (C01-C02), three losses that each move one thing plus the estimator that smuggles gradients through the wall (C03-C05), codebook health and the prior that turns the compressor into a generator (C06-C08), and the price list in whole bits with the ablation discipline (C09-C12).</p>
+</section>
+
+<section class="block" id="s1">
+<p class="secnum">C01 · The codebook</p>
+<h2>The paintbox</h2>
+<p>A codebook is a table of K vectors in R^D, learned like any parameter. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C01</span> Each entry owns a region of the encoder output space: every z_e nearest to e_k. On the toy: four axis vectors, K = 4, D = 2, each of unit norm, pairwise squared distances ||e_1 − e_2||^2 = 2 and ||e_1 − e_3||^2 = 4. The table is the discrete alphabet the model may use.</p>
+<p>Why a table and not a formula? <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C01</span> A formula (like rounding) fixes the quantization in advance. A learned table adapts the alphabet to the data: entries move to where encoder outputs actually land. The lesson mental model: the codebook is a paintbox with K colors, the encoder mixes a custom color z_e, quantization snaps it to the nearest paintbox color, and the fit restocks the paintbox colors to match what the encoder mixes. The price is a new learning problem: how do table entries move when the argmin blocks gradients (mechanism B).</p>
+<div class="nugget" id="ng1">
+<h4>Nugget 01 · C01</h4>
+<p class="big">The paintbox.</p>
+<dl>
+<dt>What happened</dt><dd>The latent alphabet became a learned table of four axis vectors instead of a fixed rounding rule, so the quantization geometry adapts to the data.</dd>
+<dt>Why it matters</dt><dd>A fixed grid never moves, so its cells never adapt to the data distribution. The learned codebook's cells follow the encoder outputs. Same mechanism, adaptive geometry.</dd>
+<dt>Transferable principle</dt><dd>Learn the discretization, not just the representation. <span class="tag tag-companion">companion</span> A fixed bottleneck bakes in assumptions about the data geometry. A learned one discovers them.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">C02 · The nearest vector</p>
+<h2>The wall</h2>
+<p>Compute all K squared distances, take the argmin. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C02</span> On the toy z_e = [0.9, 0.2]: d^2 = [0.05, 1.45, 3.65, 2.25]. Winner: index 0, e_1 = [1, 0]. Margin over the runner-up: 1.40. Nudge z_e a little and the winner does not change. Nudge it across the bisector and the winner flips discontinuously. d z_q / d z_e = 0 almost everywhere, undefined at boundaries. Backprop through it carries nothing. That is the wall.</p>
+<figure>
+<div id="chart-distances"></div>
+<figcaption>From the lesson, C02. Squared distances from z_e = [0.9, 0.2] to the four codes. The winner is e_1 by a margin of 1.40.</figcaption>
+</figure>
+<div class="toy">
+<p><strong>Bench.</strong> Move z_e and watch the winner. <span class="tag tag-toy">Illustration</span> Lesson rule: nearest of the four axis codes wins. Ties go to the first minimum.</p>
+<p><label for="z0">z_e[0]: <span id="z0val">0.90</span></label><br>
+<input type="range" id="z0" min="-100" max="100" value="90"></p>
+<p><label for="z1">z_e[1]: <span id="z1val">0.20</span></label><br>
+<input type="range" id="z1" min="-100" max="100" value="20"></p>
+<p class="small">winner: <span id="winout" class="num">e_1</span> · distances: <span id="dout" class="num">0.05, 1.45, 3.65, 2.25</span></p>
+</div>
+<p>The tie case: z_e = [0.7, 0.7] gives 0.58 to e_1 and 0.58 to e_2. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C02</span> The boundary is the perpendicular bisector, and the arbitrary first-minimum choice can flicker between steps.</p>
+<div class="nugget" id="ng2">
+<h4>Nugget 02 · C02</h4>
+<p class="big">The wall.</p>
+<dl>
+<dt>What happened</dt><dd>The argmin is piecewise constant: zero gradient almost everywhere, a discontinuous flip at the boundary. The chain rule has nothing to carry.</dd>
+<dt>Why it matters</dt><dd>This is the exact point where U05's reparameterization trick dies. Every discrete-latent method is an answer to this wall: STE, Gumbel-softmax, or REINFORCE.</dd>
+<dt>Transferable principle</dt><dd>Name the non-differentiable step before designing around it. <span class="tag tag-companion">companion</span> A piecewise-constant function in the forward pass is a dead gradient in the backward pass. No exceptions.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">C03 · The commitment and codebook losses</p>
+<h2>Each loss moves one thing</h2>
+<p>Three losses: reconstruction ||x − decoder(z_q)||^2, codebook ||sg[z_e] − e_k||^2, commitment beta × ||z_e − sg[e_k]||^2. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C03</span> The stop-gradient operator sg[.] freezes its argument: no gradient flows through it. Each loss moves exactly one thing. The codebook loss moves e_k toward z_e (z_e frozen). The commitment loss moves z_e toward e_k (e_k frozen). The reconstruction moves the decoder, and via the straight-through estimator, the encoder. The lesson mental model: the codebook loss restocks the paintbox toward the mixed colors, the commitment loss fines the encoder for mixing colors far from the paintbox, the reconstruction loss judges the final painting.</p>
+<p>On the toy with beta = 0.25: <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C03</span> recon = 0.05, codebook = 0.05, commitment = 0.0125, total 0.1125. The commitment term is the smallest: the encoder is already near its code. Swap the sg[.] placements and the wrong thing moves: that placement is the load-bearing detail. Beta too large pins the encoder to stale codes. Beta = 0 lets the encoder drift and the quantization error grows unchecked.</p>
+<figure>
+<div id="chart-losses"></div>
+<figcaption>From the lesson, C03, beta = 0.25. The three loss terms on the toy point. Total 0.1125.</figcaption>
+</figure>
+<div class="toy">
+<p><strong>Bench.</strong> Price the commitment fine. <span class="tag tag-toy">Illustration</span> Lesson numbers: ||z_e − z_q||^2 = 0.05, commitment = beta × 0.05.</p>
+<p><label for="cbeta">beta: <span id="cbetaval">0.25</span></label><br>
+<input type="range" id="cbeta" min="0" max="100" value="25"></p>
+<p class="small">commitment = <span id="cout" class="num">0.0125</span> · total = <span id="ctot" class="num">0.1125</span> (recon 0.05 + codebook 0.05 + commitment)</p>
+</div>
+<div class="nugget" id="ng4">
+<h4>Nugget 04 · C03</h4>
+<p class="big">Each loss moves one thing.</p>
+<dl>
+<dt>What happened</dt><dd>Three losses, three movers, with the stop-gradient placements deciding which is which. Swapping a placement moves the wrong thing.</dd>
+<dt>Why it matters</dt><dd>The sg[.] operator is not bookkeeping. It is the mechanism that separates codebook learning from encoder learning. One misplaced freeze and the codebook never learns.</dd>
+<dt>Transferable principle</dt><dd>Freeze deliberately. <span class="tag tag-companion">companion</span> In any multi-part loss, each term must move exactly one part. Audit the freeze placements like code.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">C04 · The straight-through estimator</p>
+<h2>The useful lie</h2>
+<p>Forward: z_q = e_{k*}. Backward: pretend z_q = z_e, i.e. copy the gradient: dL/dz_e := dL/dz_q. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C04</span> In code: z_q = z_e + sg[z_q − z_e]. Forward it equals z_q. Backward the sg[.] kills the correction and the gradient flows to z_e. The copied gradient is not the true gradient. The true d z_q / d z_e is 0 almost everywhere. The STE substitutes a useful lie: the gradient the loss would have if the quantization had not happened.</p>
+<p>On the toy with loss ||z_q − target||^2, target = [1, 0.5]: <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C04</span> STE grad = 2(z_q − target) = [0, −1]. True grad = [0, 0] (finite differences with h = 1e-6: z_q unchanged, loss unchanged). The lie points the encoder down in the second coordinate, toward the target. When ||z_e − z_q|| is large, the copied gradient optimizes a fantasy: it improves the loss at z_e, but the model uses z_q. Monitor the quantization error. Large error means the STE misleads.</p>
+<div class="nugget" id="ng3">
+<h4>Nugget 03 · C04</h4>
+<p class="big">The useful lie.</p>
+<dl>
+<dt>What happened</dt><dd>The true gradient was [0, 0]. The estimator reported [0, −1]. The model trained anyway, because the lie pointed in a useful direction.</dd>
+<dt>Why it matters</dt><dd>The STE is a biased estimator smuggled into backprop. It works in practice and has no convergence certificate. The quantization error is its health metric: small gap, small lie.</dd>
+<dt>Transferable principle</dt><dd>A biased gradient is acceptable when the bias is monitored. <span class="tag tag-companion">companion</span> Usefulness without a certificate demands a dashboard. The error number is the dashboard.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">C05 · EMA updates</p>
+<h2>The codebook without gradients</h2>
+<p>Keep counts N_k and embedding sums m_k per code. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C05</span> On each batch: N_k ← gamma N_k + (1 − gamma) n_k, with gamma = 0.99, then e_k is the running mean of assigned encodings. This is online K-means inside the fit loop: no learning rate, no gradient, a memory horizon of about 100 batches. <span class="tag tag-companion">companion</span> Old counts [10, 2, 0, 1], batch of 6 assigns [3, 2, 0, 1]: new counts [9.93, 2.0, 0.0, 1.0]. e_1 moves from [1, 0] to [0.9998, 0.0004]: barely, because its count is large.</p>
+<p>The dead code keeps count 0 and its stale vector [−1, 0] via the guard. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C05</span> Without the guard the update divides by zero and produces NaN (the audit script caught this before the guard was added). Dead codes never revive under EMA alone: they need restarts (C06).</p>
+<div class="toy">
+<p><strong>Bench.</strong> Run one EMA update. <span class="tag tag-toy">Illustration</span> Lesson numbers: gamma = 0.99, old counts [10, 2, 0, 1], batch assigns [3, 2, 0, 1].</p>
+<p><button class="btn" id="emabtn">Run one EMA update</button> <button class="btn ghost" id="emareset">Reset</button></p>
+<p class="small">counts: [<span id="emaout" class="num">10.00, 2.00, 0.00, 1.00</span>]</p>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">C06 · Dead codes</p>
+<h2>Silent capacity loss</h2>
+<p>A dead code is an entry that no z_e ever selects: usage count 0 over a full pass. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C06</span> On the toy's 8 encodings the winners are [1, 1, 1, 2, 2, 2, 1, 4]: usage [4, 3, 0, 1]. Code 3 is dead. Its EMA count sits at 0 and its vector stays stale at [−1, 0]. The model paid K × D parameters and uses fewer. Causes: bad initialization, encoder drift, or K too large for the data. Mean quantization distortion over the 8: 0.06625.</p>
+<figure>
+<div id="chart-usage"></div>
+<figcaption>From the lesson, C06. Usage over the 8 toy encodings. Code 3 never wins.</figcaption>
+</figure>
+<p>The revival: reassign dead entries to random live encodings plus noise. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C06</span> The failure case: all K codes dead except one. The model is a constant function, and the usage histogram catches it in one glance.</p>
+<div class="nugget" id="ng5">
+<h4>Nugget 05 · C06</h4>
+<p class="big">Dead codes are silent capacity loss.</p>
+<dl>
+<dt>What happened</dt><dd>One of four codes never won. The fit continued, the loss looked fine, and a quarter of the codebook was dead weight.</dd>
+<dt>Why it matters</dt><dd>Dead codes are invisible to the loss. Only the usage histogram sees them. Worse, a uniform prior would still sample the dead entry, feeding the decoder inputs it never saw in training.</dd>
+<dt>Transferable principle</dt><dd>Count the usage, not just the loss. <span class="tag tag-companion">companion</span> Any discrete resource needs a utilization dashboard. Unused capacity is a bug the objective cannot see.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">C07 · The prior over codes</p>
+<h2>A compressor is not a generator</h2>
+<p>The fit gives an encoder that maps x to indices. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C07</span> Generation needs the reverse: a distribution over indices. Fit p(k) on the training indices. On the toy corpus [0, 0, 1, 0, 3, 0, 1, 0]: p = [0.625, 0.25, 0.0, 0.125]. Entropy: 1.2988 bits per code, less than log2(4) = 2 bits. The fitted prior saves 0.7 bits per code by exploiting the skew. The dead code gets prior probability 0, so it never generates: the effective codebook is K = 3.</p>
+<p>The VQ-VAE is a two-stage generative model. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C07</span> Stage 1 (this unit): the autoencoder with the discrete bottleneck. Stage 2: a prior over the discrete codes, often autoregressive over a spatial grid. Skipping stage 2 leaves a compressor, not a generator. The uniform prior is the lazy stage 2: it samples the dead code 12.5 percent of the time even though the encoder never produced it, and the decoder saw no such input during training. The failure case: a prior fitted on stale indices after the codebook moved. Refit the prior after codebook training ends.</p>
+<div class="toy">
+<p><strong>Bench.</strong> Price the prior. <span class="tag tag-toy">Illustration</span> Lesson numbers: fitted [0.625, 0.25, 0.0, 0.125] vs uniform [0.25, 0.25, 0.25, 0.25].</p>
+<p><button class="btn" id="prf">Fitted prior</button> <button class="btn" id="pru">Uniform prior</button></p>
+<p class="small">bits per code: <span id="prout" class="num">1.2988</span> · dead-code sample rate: <span id="prdead" class="num">0%</span></p>
+</div>
+<div class="nugget" id="ng6">
+<h4>Nugget 06 · C07</h4>
+<p class="big">A compressor is not a generator.</p>
+<dl>
+<dt>What happened</dt><dd>The autoencoder stage produced indices but no way to sample new ones. The fitted prior (1.2988 bits per code) completed the generative story. The uniform prior would sample a dead code the decoder never saw.</dd>
+<dt>Why it matters</dt><dd>A VQ-VAE without a fitted prior is not a generative model. It is a compressor. The prior is a second artifact to version with the codebook, not an afterthought.</dd>
+<dt>Transferable principle</dt><dd>Encoding is half the product. <span class="tag tag-companion">companion</span> Any pipeline that compresses must also ship the decompression story. A code without a sampling plan is a dead end.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">C08 · Reconstruction through quantization</p>
+<h2>The price of the bottleneck</h2>
+<p>With the identity decoder, xhat = z_q and the error is ||z_e − z_q||^2 = 0.05 on the toy point. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C08</span> The quantization is the only information loss in this toy: everything downstream is exact. The error decomposes: total error = quantization error + decoder error. Mean over the 8 toy encodings: 0.06625. The worst point: [0.3, −0.8] to e_4 = [0, −1] gives 0.09 + 0.04 = 0.13. Large quantization error with a small codebook means the STE gradient optimizes a fantasy: the error number is the honesty metric.</p>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">C09 · The rate/distortion bridge</p>
+<h2>Whole bits, diminishing returns</h2>
+<p>Rate: log2 K bits per code. Distortion: mean ||z_e − z_q||^2 over data. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C09</span> On the 8 toy encodings: K = 1 gives 0 bits and 0.91625, K = 2 gives 1 bit and 0.19125, K = 4 gives 2 bits and 0.06625. The first bit buys a 4.8x distortion drop (0.91625 to 0.19125). The second bit buys 2.9x (0.19125 to 0.06625). Diminishing returns, as theory predicts. This is the discrete analogue of the VAE's beta tradeoff: beta prices latent use softly, K prices it in whole bits.</p>
+<figure>
+<div id="chart-rd"></div>
+<figcaption>From the lesson, C09. Distortion against codebook size on the 8 toy encodings. K = 1 distortion equals the mean squared norm of the encodings.</figcaption>
+</figure>
+<div class="nugget" id="ng7">
+<h4>Nugget 07 · C09</h4>
+<p class="big">Nominal K lies.</p>
+<dl>
+<dt>What happened</dt><dd>The toy fit had K = 4 with one dead code. The effective codebook was K = 3. The distortion curve read on nominal K = 4 flatters the model.</dd>
+<dt>Why it matters</dt><dd>Rate is a billable quantity: storage, transmission. The stakeholder should see the effective K (codes with nonzero usage), never the nominal one.</dd>
+<dt>Transferable principle</dt><dd>Report the effective resource, not the allocated one. <span class="tag tag-companion">companion</span> Capacity you paid for but never use is not capacity. It is waste with a label.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">C10 · Latent quantization as rounding</p>
+<h2>Rounding in a fancy space</h2>
+<p>Rounding maps a real number to the nearest integer: a fixed codebook with nearest-neighbor assignment. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C10</span> VQ is the same idea with a learned codebook in R^D. The analogy is exact for a fixed grid codebook and breaks for a learned one in one way: the grid never moves, so its cells never adapt to the data distribution. On the toy the two agree by coincidence of the axis-aligned codebook. The failure case: rounding a vector whose components have very different scales. The large component dominates the assignment. Normalize first, or learn the codebook.</p>
+</section>
+
+<section class="block" id="s11">
+<p class="secnum">C11 · Decoder effects</p>
+<h2>Four codes, four possible outputs</h2>
+<p>The decoder input is one of K vectors, not a continuum. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C11</span> Its output can take at most K distinct values per position. On the toy with the identity decoder: 4 possible outputs, 3 reachable (the dead code starves its decoder path). The decoder cannot interpolate between codes. It can only memorize per-code outputs. That is a feature and a bug: the behavior is enumerable and auditable, but fine detail between codes is lost. <span class="tag tag-companion">companion</span> A strong decoder can still recover detail from context, which is why discrete latents pair well with powerful decoders.</p>
+</section>
+
+<section class="block" id="s12">
+<p class="secnum">C12 · The controlled ablation</p>
+<h2>Change one thing</h2>
+<p>A controlled ablation changes exactly one factor and measures the change. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">C12</span> Fix the seed, the data, the encoder init, the decoder. Vary K in {1, 2, 4}. Measure distortion and usage: 0.91625 → 0.19125 → 0.06625. Without the control, any change could come from the seed, the init, or the factor. The audit script fixes seed 0 throughout. The second ablation (beta in {0, 0.25, 1.0}, K = 4 fixed) is stated as lab work: beta = 0 lets the encoder drift, beta = 1 pins it. The failure case: ablating two factors at once. The attribution is lost.</p>
+<table class="data">
+<tr><th>Varied</th><th>Fixed</th><th>Distortion</th></tr>
+<tr><td>K = 1</td><td>seed, data, decoder</td><td class="num">0.91625</td></tr>
+<tr><td>K = 2</td><td>seed, data, decoder</td><td class="num">0.19125</td></tr>
+<tr><td>K = 4</td><td>seed, data, decoder</td><td class="num">0.06625</td></tr>
+</table>
+</section>
+
+<section class="block" id="plate">
+<p class="secnum">Chapter plate</p>
+<h2>The cost ledger</h2>
+<p>The lesson closes with a ledger. <span class="tag tag-lesson">From the lesson</span> <span class="tag tag-ref">Chapter plate</span> Cost without the ideas: discrete latents block every gradient, dead codes waste the codebook silently, and a VQ-VAE without a prior is a compressor wearing a generator's clothes. Cost with the ideas: one rule (nearest code wins), three losses that each move one thing (0.05, 0.05, 0.0125), one useful lie (STE [0, −1] vs true [0, 0]), one gradient-free update (EMA), one health metric (usage counts), one second stage (the prior, 1.2988 bits per code), and one price curve (rate/distortion). Tradeoff in one line: discrete latents buy a countable, transmittable representation at the cost of the estimator trick, and the quantization error prices the lie exactly. Connection: the autoregressive prior over code grids is the bridge a sequence stage builds on.</p>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>7 nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#ng1"><span class="wnum">01</span>The paintbox <span class="muted">· C01</span></a></li>
+<li><a href="#ng2"><span class="wnum">02</span>The wall <span class="muted">· C02</span></a></li>
+<li><a href="#ng3"><span class="wnum">03</span>The useful lie <span class="muted">· C04</span></a></li>
+<li><a href="#ng4"><span class="wnum">04</span>Each loss moves one thing <span class="muted">· C03</span></a></li>
+<li><a href="#ng5"><span class="wnum">05</span>Dead codes are silent capacity loss <span class="muted">· C06</span></a></li>
+<li><a href="#ng6"><span class="wnum">06</span>A compressor is not a generator <span class="muted">· C07</span></a></li>
+<li><a href="#ng7"><span class="wnum">07</span>Nominal K lies <span class="muted">· C09</span></a></li>
+</ol>
+</section>
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates content/v2/math-genai/lessons/u06/lesson-06-vqvae-discrete-latents.md. No lecture transcript exists for this unit. The lesson states that it is locally authored bridge material and does not reproduce the instructor lectures. No lecture anecdotes appear. The running toy (K = 4 axis codebook, z_e = [0.9, 0.2], identity decoder) is the lesson toy. Every number traces to the cited lesson section: pairwise 2/4 (C01). Distances 0.05/1.45/3.65/2.25, margin 1.40, tie 0.58 (C02). Losses 0.05/0.05/0.0125, total 0.1125 (C03). STE [0,-1] vs true [0,0] (C04). EMA to [9.93, 2.0, 0.0, 1.0], e_1 to [0.9998, 0.0004] (C05). Usage [4, 3, 0, 1], distortion 0.06625 (C06). Prior [0.625, 0.25, 0.0, 0.125], 1.2988 bits vs 2.0 (C07). Worst point 0.13 (C08). Rate/distortion 0.91625/0.19125/0.06625, drops 4.8x/2.9x (C09). 4 outputs max, 3 reachable (C11). Charts re-plot these computed values with section citations.</p>
+<p class="small">Directly quoted words from the lesson: <strong>0</strong> (recounted). No quotes were invented. Interactive benches run the lesson rules over the lesson values and are labeled Illustration. The watercolor hero image is an AI illustration, not lesson content.</p>
+<p class="small"><a href="../index.html">Back to the Math-GenAI course home</a>. Self-contained: no external libraries, no network calls. Works from <code>file://</code>.</p>
+</footer>
+</div>
+<script>
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  const keys = Object.keys(attrs)
+  keys.forEach(function(k) { n.setAttribute(k, attrs[k]) })
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function barChart(id, rows, maxV, unit, labelW) {
+  labelW = labelW || 210
+  const host = document.getElementById(id)
+  const W = 760
+  const rowH = 46
+  const padT = 14
+  const padB = 10
+  const H = padT + rows.length * rowH + padB
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  rows.forEach(function(r, i) {
+    const y = padT + i * rowH
+    const lab = svgEl("text", {x: 12, y: y + 27, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - labelW - 110) * (r[1] / maxV)
+    const bar = svgEl("rect", {x: labelW, y: y + 9, width: Math.max(bw, 3), height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1] + unit
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: labelW + Math.max(bw, 3) + 10, y: y + 27, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1] + unit
+    svg.appendChild(val)
+  })
+  host.appendChild(svg)
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id)
+  const data = opts.data
+  const W = 760
+  const H = 400
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const yMin = opts.yMin
+  const yMax = opts.yMax
+  function X(i) { return mL + i * ((W - mL - mR) / (data.length - 1)) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / (yMax - yMin)) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const grids = opts.grid || []
+  grids.forEach(function(g) {
+    svg.appendChild(svgEl("line", {x1: mL, x2: W - mR, y1: Y(g), y2: Y(g), stroke: "#e2d7c2", "stroke-width": 1}))
+    const t = svgEl("text", {x: 10, y: Y(g) + 5, "font-size": 13, fill: MUT, "font-family": SANS})
+    if (opts.yfmt) { t.textContent = opts.yfmt(g) } else { t.textContent = String(g) }
+    svg.appendChild(t)
+  })
+  let d = ""
+  data.forEach(function(v, i) {
+    if (i === 0) { d = d + "M" } else { d = d + "L" }
+    d = d + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "
+  })
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  data.forEach(function(v, i) {
+    const c = svgEl("circle", {cx: X(i), cy: Y(v), r: 8, fill: CLAY})
+    const tip = svgEl("title", {})
+    tip.textContent = opts.tip(i, v)
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const xl = svgEl("text", {x: X(i), y: H - 32, "font-size": 13, fill: MUT, "text-anchor": "middle", "font-family": SANS})
+    xl.textContent = opts.xlabels[i]
+    svg.appendChild(xl)
+  })
+  if (opts.ylabel) {
+    const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+    yl.textContent = opts.ylabel
+    svg.appendChild(yl)
+  }
+  if (opts.xlabel) {
+    const xcap = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+    xcap.textContent = opts.xlabel
+    svg.appendChild(xcap)
+  }
+  host.appendChild(svg)
+}
+
+
+barChart("chart-distances", [
+  ["e1 [1,0]", 0.05, "#5d7050"],
+  ["e2 [0,1]", 1.45, "#31405e"],
+  ["e3 [-1,0]", 3.65, "#a94f27"],
+  ["e4 [0,-1]", 2.25, "#8a5a17"]
+], 3.7, " sq distance")
+barChart("chart-losses", [
+  ["reconstruction", 0.05, "#a94f27"],
+  ["codebook", 0.05, "#31405e"],
+  ["commitment", 0.0125, "#5d7050"]
+], 0.06, "")
+barChart("chart-usage", [
+  ["code 1", 4, "#5d7050"],
+  ["code 2", 3, "#31405e"],
+  ["code 3 dead", 0, "#a94f27"],
+  ["code 4", 1, "#8a5a17"]
+], 4.5, " uses")
+lineChart("chart-rd", {
+  data: [0.91625, 0.19125, 0.06625],
+  yMin: 0, yMax: 1.0,
+  grid: [0.5, 1.0],
+  xlabels: ["K=1, 0 bits", "K=2, 1 bit", "K=4, 2 bits"],
+  xlabel: "codebook size",
+  ylabel: "distortion",
+  tip: function(i, v) { return ["K=1","K=2","K=4"][i] + ": " + v + " (C09)" }
+})
+const codes = [[1, 0], [0, 1], [-1, 0], [0, -1]]
+const cnames = ["e_1", "e_2", "e_3", "e_4"]
+const z0 = document.getElementById("z0")
+const z1 = document.getElementById("z1")
+const z0val = document.getElementById("z0val")
+const z1val = document.getElementById("z1val")
+const winout = document.getElementById("winout")
+const dout = document.getElementById("dout")
+function renderQ() {
+  const ze = [z0.value / 100, z1.value / 100]
+  z0val.textContent = ze[0].toFixed(2)
+  z1val.textContent = ze[1].toFixed(2)
+  const d2 = codes.map(function(c) {
+    return Math.pow(c[0] - ze[0], 2) + Math.pow(c[1] - ze[1], 2)
+  })
+  let k = 0
+  let i = 1
+  while (i < 4) {
+    if (d2[i] < d2[k]) { k = i }
+    i = i + 1
+  }
+  winout.textContent = cnames[k]
+  dout.textContent = d2.map(function(d) { return d.toFixed(2) }).join(", ")
+}
+z0.addEventListener("input", renderQ)
+z1.addEventListener("input", renderQ)
+renderQ()
+const cbeta = document.getElementById("cbeta")
+const cbetaval = document.getElementById("cbetaval")
+const cout = document.getElementById("cout")
+const ctot = document.getElementById("ctot")
+cbeta.addEventListener("input", function() {
+  const b = cbeta.value / 100
+  const c = b * 0.05
+  cbetaval.textContent = b.toFixed(2)
+  cout.textContent = c.toFixed(4)
+  ctot.textContent = (0.1 + c).toFixed(4)
+})
+let emaN = [10, 2, 0, 1]
+const emaout = document.getElementById("emaout")
+function renderEma() {
+  emaout.textContent = emaN.map(function(n) { return n.toFixed(2) }).join(", ")
+}
+renderEma()
+document.getElementById("emabtn").addEventListener("click", function() {
+  const n = [3, 2, 0, 1]
+  const g = 0.99
+  emaN = emaN.map(function(Nk, k) { return g * Nk + (1 - g) * n[k] })
+  renderEma()
+})
+document.getElementById("emareset").addEventListener("click", function() {
+  emaN = [10, 2, 0, 1]
+  renderEma()
+})
+document.getElementById("prf").addEventListener("click", function() {
+  document.getElementById("prout").textContent = "1.2988"
+  document.getElementById("prdead").textContent = "0%"
+})
+document.getElementById("pru").addEventListener("click", function() {
+  document.getElementById("prout").textContent = "2.0000"
+  document.getElementById("prdead").textContent = "25%"
+})
+
+</script>
+</body>
+</html>
