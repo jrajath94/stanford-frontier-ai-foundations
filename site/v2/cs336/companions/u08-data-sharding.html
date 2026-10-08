@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data and optimizer sharding · CS336</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.pairtable td.rank{font-weight:700}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS336 · Unit 08 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Data and optimizer sharding</h1>
+<p class="dek">A 7B model with Adam needs 84 GB, more than one 80 GB GPU holds. This companion walks the distributed unit: data-parallel averaging, all-reduce, the three ZeRO stages, bucketing and overlap, loss scaling, FSDP, checkpoints, scaling efficiency, fault tolerance, deterministic loading, and the invariants that verify it all.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>u08_data_sharding.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no full lecture transcript exists for this session. The page narrates the lesson document <code>content/v2/cs336/lessons/u08_data_sharding.md</code>, not a video. Claim class: REQUESTED-BRANCH. Standing note: no cluster on the lesson's build box. Distributed algorithms are studied as numpy simulations of the math. Every number carries the lesson section that reports it.</p>
+</div>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Why shard</a>
+<a href="#s2">2 DP averaging</a>
+<a href="#s3">3 ZeRO stages</a>
+<a href="#s4">4 Overlap</a>
+<a href="#s5">5 Loss scaling</a>
+<a href="#s6">6 FSDP</a>
+<a href="#s7">7 Scaling</a>
+<a href="#s8">8 Faults</a>
+<a href="#s9">9 Determinism</a>
+<a href="#s10">10 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<figure>
+<img class="illus" src="assets/u08-hero-cake.jpg" alt="Watercolor of a large cake divided into eight equal slices on separate plates">
+<figcaption><span class="tag tag-toy">Illustration</span> Sharding in one image: one cake too big for any plate, eight equal slices, eight plates. Watercolor, original to this companion.</figcaption>
+</figure>
+<section class="block" id="s1">
+<p class="secnum">Section 1 · Remediation</p>
+<h2>84 GB does not fit in 80 GB</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></p>
+<p>A 7B model in fp16 with Adam needs 14 GB params + 14 GB grads + 56 GB optimizer states = 84 GB. More than one 80 GB GPU holds. Data parallelism replicates the model and splits the batch. ZeRO shards the states so the 84 GB divides across GPUs: 10.5 GB/GPU at ZeRO-3 over 8. From <code>visuals/compute_u08.py</code>, executed 2026-10-06.</p>
+</div>
+<figure>
+<div id="chart-84"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span> The 84 GB of a 7B fp16 Adam run: 14 GB params, 14 GB grads, 56 GB optimizer states. From <code>visuals/compute_u08.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<div class="nugget" id="nugget-84">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></h4>
+<p class="big">The optimizer states are the largest row: 56 of 84 GB. That is why ZeRO shards them first.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Attack the largest row first. Sharding the params before the optimizer states would be theater.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Rank the costs, then cut the largest. The ledger from U02 decides the order.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C01, C02</p>
+<h2>Data parallel: the same update, split across ranks</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §3, §5, §6</span></p>
+<p>N GPUs each see 1/N of the batch. What update keeps the math identical? Each rank computes grads on its shard, all-reduces (sums) them, divides by N. The result is the exact gradient of the concatenated batch. grad(mean over N*m) = mean over ranks of grad(shard means). All-reduce sums, dividing by N completes the mean. The lesson's run, executed 2026-10-06: the mean identity holds exactly. DP is algebraically identical to one big batch, up to RNG (U05-C08). The cost: communication of the full grads per step. Memory stays replicated, which is the problem C03 solves.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §3, §5, §6</span></p>
+<p>Which all-reduce for 14 GB over 8 GPUs? Ring: bandwidth-optimal, time ≈ 2*(N-1)/N * bytes/bw, independent of N for large N. Tree: latency-optimal, 2*log2(N) steps, better for small messages. Large grads use ring, small scalars use tree. The lesson's run, executed 2026-10-06: ring takes 0.122 s on 14 GB at 200 GB/s. Ring is the bandwidth-optimal baseline. All-gather and reduce-scatter are the pieces of ring all-reduce, reused in ZeRO.</p>
+</div>
+<div class="nugget" id="nugget-divn">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §11, C02 §11</span></h4>
+<p class="big">Forgetting the /N multiplies the effective lr by N, and training diverges. And tree for 14 GB: the latency terms are fine, but ring wins on the bandwidth term.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Same bug class as U05-C08: the mean is the contract, check the convention. The assumption "fewer steps is better" breaks for large messages, where bandwidth dominates.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Match the algorithm to the message size. One collective does not fit all.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C03</p>
+<h2>ZeRO: shard in three stages</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §3, §5, §6</span></p>
+<p>Where do the 84 GB go? ZeRO-1 shards optimizer states, ZeRO-2 adds grads, ZeRO-3 adds params, gathered on demand per layer. Each stage trades communication for memory: stage 3 adds an all-gather per layer in forward and backward. Bytes/GPU = replicated parts + sharded parts / N. Stage 1: (14 + 14 + 56/8). Stage 2: (14 + (14+56)/8). Stage 3: 84/8. The lesson's run on 7B over 8 GPUs, executed 2026-10-06: ZeRO-1 gives 35.0, ZeRO-2 gives 22.8, ZeRO-3 gives 10.5 GB/GPU.</p>
+</div>
+<figure>
+<div id="chart-zero"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §6</span> Per-GPU GB for a 7B model over 8 GPUs: ZeRO-1 35.0, ZeRO-2 22.8, ZeRO-3 10.5. From <code>visuals/compute_u08.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §5</span> ZeRO toy. Give params in billions and GPU count. The toy runs the lesson's per-stage formulas.</p>
+<p class="small">Params (B) <input class="text" id="zpb" value="7" style="max-width:80px" aria-label="Params billions"> GPUs <input class="text" id="zpn" value="8" style="max-width:80px" aria-label="GPU count"></p>
+<p><button class="btn" id="zpbtn">Compute stages</button></p>
+<p class="small" id="zpout">Press the button.</p>
+<p class="small muted">fp16 params and grads (2 bytes), fp32 optimizer states (8 bytes): P, G, O = 2/2/8 bytes per param. Stage formulas from C03 §5.</p>
+</div>
+<div class="nugget" id="nugget-stage">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §11</span></h4>
+<p class="big">ZeRO-3 with tiny layers: the all-gather latency dominates, and training slows versus ZeRO-2.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "more sharding is better" breaks when communication is latency-bound. Match the stage to the model.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every stronger mechanism has a regime where its overhead wins. Know the regime before you upgrade.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §9, §10</span></p>
+<p>Stage 3's all-gathers add about 50 percent communication. Overlap (C08) hides most of it. The alternative: model parallelism (U09) for single layers that exceed one GPU. ZeRO fits the common case.</p>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C04, C08</p>
+<h2>Hide the communication</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §3, §5, §6</span></p>
+<p>Must the backward finish before any communication? Bucket grads as layers finish, in reverse order, and all-reduce each bucket while the next layer's backward computes. Communication hides behind compute when buckets are sized so all-reduce time <= layer time. Total = max(compute chain, comm chain) + edge effects. With comm <= compute per layer, the total is about compute + one bucket. The lesson's run, executed 2026-10-06: 8 layers at 12 ms compute + 3 ms bucket all-reduce gives 96 ms sequential versus 36 ms overlapped.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §3, §5, §6</span></p>
+<p>When is communication free? Overlap needs independent work: the next layer's compute runs while the previous layer's collective flies. The condition: collective time <= compute time of the overlapping region. Exposed = max(0, comm - compute). Total = compute + exposed. Bucketing (C04) and prefetching shape the schedule to satisfy the condition. The lesson's run: total 36 ms versus 96 sequential.</p>
+</div>
+<figure>
+<div id="chart-overlap"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §6, C08 §6</span> The lesson's simulator output: 96 ms sequential versus 36 ms overlapped, 8 layers at 12 ms compute + 3 ms bucket all-reduce. From <code>visuals/compute_u08.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §5</span> Overlap toy. The toy implements the lesson's schedule formula: sequential = L*(c+m), overlapped ≈ max(L*c, L*m) + min(c, m).</p>
+<p class="small">Layers <input class="text" id="ovl" value="8" style="max-width:70px" aria-label="Layers"> compute ms <input class="text" id="ovc" value="12" style="max-width:70px" aria-label="Compute ms"> comm ms <input class="text" id="ovm" value="3" style="max-width:70px" aria-label="Comm ms"></p>
+<p><button class="btn" id="ovbtn">Compute schedule</button></p>
+<p class="small" id="ovout">Press the button.</p>
+<p class="small muted">The lesson's simulator is the reference output (96 vs 36 above). The toy follows the §5 formula. Note: the §5 formula at these inputs gives 120 sequential / ~99 overlapped, which differs from the simulator's 96/36. The simulator is treated as the reference.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u08-buckets.jpg" alt="Watercolor of two conveyor belts with interleaving buckets">
+<figcaption><span class="tag tag-toy">Illustration</span> Overlap as two braided conveyor belts: compute buckets and communication buckets interleaved, neither waiting on the other. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-bucket">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §11, C08 §11</span></h4>
+<p class="big">Buckets too large: the first all-reduce starts late and the tail stays exposed. And overlapping with the wrong stream dependency serializes the "overlap" so nothing hides.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "any bucketing hides comm" breaks: size buckets so each finishes within its layer's compute. The assumption "async means parallel" breaks without correct stream synchronization.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Hiding work behind work needs the dependency graph to actually allow it. Draw the graph.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §9, §10, C08 §9, §10</span></p>
+<p>Bucketing costs one extra copy of memory and bucket-size tuning. No overlap is simple and slow. Overlap is standard. The alternative to overlap is faster links (money). Overlap is the software answer.</p>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C05</p>
+<h2>Loss scaling: keep tiny grads representable</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §3, §5, §6</span></p>
+<p>Tiny grads vanish in fp16. What now? Keep master weights in fp32, compute in fp16. Multiply the loss by S before backward: grads shift into the representable range. Unscale before the optimizer step, skip the step on overflow, adapt S dynamically. d(S*loss)/dw = S*dloss/dw: linear, so dividing by S recovers the true grad. Overflow in any grad sets the skip flag. The lesson's toy, executed 2026-10-06: grad 6e-8 underflows, scaled by 1024 it is 6.14e-05, representable, unscale after.</p>
+</div>
+<div class="nugget" id="nugget-scaler">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §11</span></h4>
+<p class="big">Fixed S too large: every step overflows and training silently stalls, with all steps skipped.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "bigger S is safer" breaks. Dynamic scaling exists for this.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Amplification needs a governor. Fixed gain on a varying signal eventually clips or starves.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §9, §10</span></p>
+<p>One extra fp32 weight copy. The alternative is divergence. bf16 has wider range and often needs no scaling. fp16 needs the scaler.</p>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C06, C07</p>
+<h2>FSDP: gather, compute, release</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §3, §5, §6</span></p>
+<p>How does ZeRO-3 run a layer whose params live on 8 GPUs? Before a layer: all-gather its params, each rank contributing its shard. Compute. After: release the gathered params, keep the shard. Backward: same, plus reduce-scatter the grads into shards. The cycle's communication per layer: 2 all-gathers (forward + backward) + 1 reduce-scatter. The compute sees full params, memory holds shards. The lab simulates the cycle on a toy layer: 1M params over 4 ranks, gathered 4 MB bf16 per layer use, resident 1 MB.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §9, §10, §11</span></p>
+<p>Communication per layer, mitigated by overlap and large layers. The alternative: ZeRO-2 + DP (less comm, more memory). FSDP when memory binds. The trap: wrapping each tiny op as a unit makes all-gather latency dominate. The assumption "finer is better" breaks. Wrap at layer granularity or larger.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §3, §5, §6</span></p>
+<p>Each rank holds 1/8 of the optimizer. How do you save? Option A: all-gather to rank 0, save one file (simple, slow, memory spike). Option B: each rank saves its shard (fast, N files, needs consolidation to resume on different N). Sharded save: N files of total/N each. Resuming on M != N ranks needs resharding: concatenate then re-split. The lab: 84 GB total, option A writes one 84 GB file, option B writes 8 x 10.5 GB.</p>
+</div>
+<div class="nugget" id="nugget-portable">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §11</span></h4>
+<p class="big">Resuming sharded files on a different N without resharding: shape mismatches, crash.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "checkpoints are portable" breaks. Record N in the metadata.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every sharded artifact must record its sharding. The reader cannot guess it.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C09</p>
+<h2>Scaling efficiency: 8 GPUs, 8x faster?</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §3, §5, §6</span></p>
+<p>Strong scaling: fixed work, more GPUs. Efficiency = T1 / (N * TN). Weak scaling: fixed work per GPU. Ideal TN = T1/N. Efficiency measures the overhead: communication, imbalance, stragglers. The lesson's toy, executed 2026-10-06: 100 s on 1 GPU, 14 s on 8, 89 percent efficiency. 85 to 95 percent is healthy. Below 70 percent, something is wrong.</p>
+</div>
+<figure>
+<div id="chart-scale"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §6</span> 100 s on 1 GPU versus 14 s on 8: 89 percent efficiency. From <code>visuals/compute_u08.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<div class="nugget" id="nugget-straggler">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §11</span></h4>
+<p class="big">One straggler GPU: all collectives wait, efficiency tanks, and the average looks like a communication problem.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "GPUs are identical" breaks. Check per-rank timings.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When a collective metric degrades, look at the distribution across participants, not the mean.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §9, §10</span></p>
+<p>Measurement time costs, the alternative is blind scaling. Profiling the step breakdown goes deeper. Efficiency is the headline number.</p>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C10</p>
+<h2>A GPU dies at 3am</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §3, §5</span></p>
+<p>What is lost? Checkpoint every k steps (U05-C11). On failure, restart from the latest. Lost work <= k steps. Elastic training re-forms the group at a new N, which needs resharding (C07). Expected waste = checkpoint cost + (failure rate * k/2 * step time). Optimize k against the failure rate. The lab: k=100, step 10 s, failure every 24 h, expected waste per failure about 500 s of work + restart.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u08-lifeline.jpg" alt="Watercolor of a lighthouse beam and a tethered lifeboat at night">
+<figcaption><span class="tag tag-toy">Illustration</span> Checkpoint-restart as a lifeline: the rope back to the last known-good point. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-verify-write">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §11</span></h4>
+<p class="big">Checkpointing to the same dying filesystem: the checkpoint is corrupt and the restart fails.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "the checkpoint survived" breaks. Verify writes and keep two.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Never trust the rescue system to the same failure domain as the thing it rescues.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §9, §10</span></p>
+<p>Checkpoint I/O trades against lost work. Redundant compute is the expensive alternative. Checkpoint-restart is standard.</p>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C11, C12</p>
+<h2>Deterministic data, distributed invariants</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §3, §5, §6</span></p>
+<p>Each rank must see different data, deterministically. Shard the dataset by rank (interleaved or contiguous), seed each worker's RNG from (seed, epoch, rank). Resume restores the loader position (U05-C11). Determinism: same (seed, epoch, rank, N) gives the same batches. Rank r takes indices r, r+N, r+2N, ... (or a contiguous chunk). The epoch seed shuffles globally first. The lab: 100 items, 4 ranks, 25 each, disjoint, union = all.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §11</span></p>
+<p>Same seed on all ranks: every rank trains on identical data, the effective batch is 1/N, and the run looks mysteriously slow to converge. The assumption "seeds differ" breaks silently. The symptom is weak scaling of loss.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §3, §5, §6</span></p>
+<p>The loss looks fine. Is the distribution right? Four invariants: (1) DP update equals big-batch update, (2) shards are disjoint and covering, (3) all ranks agree on the step count, (4) checkpoint reshard round-trips exactly. Each is an independent re-derivation of a distributed property from the single-GPU semantics. The lab: all four pass on the correct simulator, and the missing-/N bug fails invariant 1. Seconds, run before scaling up. But invariants pass and NCCL still hangs at scale: the math is right, the system is not. The assumption "math covers systems" breaks. Invariants complement systems testing.</p>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · Synthesis</p>
+<h2>What this buys you</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span> The arc, end to end. 84 GB does not fit in 80 GB, so the states must divide (remediation). Data parallelism averages shard grads into the exact big-batch update, over ring all-reduce for large messages (C01, C02). ZeRO shards optimizer states, then grads, then params: 35.0, 22.8, 10.5 GB/GPU on 7B over 8 (C03). Bucketing overlaps collectives with backward compute (C04, C08). Loss scaling keeps fp16 grads representable (C05). FSDP gathers per layer, computes, releases (C06). Checkpoints save sharded or gathered, with N in the metadata (C07). Efficiency = T1/(N*TN), healthy at 85 to 95 percent (C09). Checkpoint-restart bounds the lost work, on a different filesystem (C10). Sharded deterministic loading keeps ranks disjoint (C11). Four invariants verify the distribution (C12).</p>
+<p><span class="tag tag-lesson">From the lesson</span> Where the unit points next, in the lesson's own forward links: U09 parallelizes the model itself when single layers exceed one GPU. U05-C08 and U05-C11 supply the accumulation math and the checkpoint contents. U06-C08 supplies the link tiers the collectives run on.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>8 nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-84"><span class="wnum">01</span>Rank the costs, then cut the largest <span class="muted">· Remediation</span></a></li>
+<li><a href="#nugget-divn"><span class="wnum">02</span>Match the algorithm to the message size <span class="muted">· C01, C02</span></a></li>
+<li><a href="#nugget-stage"><span class="wnum">03</span>Know the regime before you upgrade <span class="muted">· C03</span></a></li>
+<li><a href="#nugget-bucket"><span class="wnum">04</span>Draw the dependency graph <span class="muted">· C04, C08</span></a></li>
+<li><a href="#nugget-scaler"><span class="wnum">05</span>Amplification needs a governor <span class="muted">· C05</span></a></li>
+<li><a href="#nugget-portable"><span class="wnum">06</span>Record the sharding in the metadata <span class="muted">· C07</span></a></li>
+<li><a href="#nugget-straggler"><span class="wnum">07</span>Look at the distribution, not the mean <span class="muted">· C09</span></a></li>
+<li><a href="#nugget-verify-write"><span class="wnum">08</span>Never trust the rescue to the same failure domain <span class="muted">· C10</span></a></li>
+</ol>
+</section>
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>content/v2/cs336/lessons/u08_data_sharding.md</code>. No full lecture transcript exists for this session. Quoted words from the lesson source: 33. No lecture anecdotes appear. Claim class REQUESTED-BRANCH. The charts re-plot the lesson's computed numbers with section citations. The lab script is <code>visuals/compute_u08.py</code>, executed 2026-10-06. Interactive toys run the lesson's formulas and are labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p class="small">Readings and forward links named by the lesson: U09 (model parallelism), U05-C08/U05-C11 (accumulation, checkpoints), U06-C08 (link tiers).</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>.</p>
+</footer>
+</div>
+<script>
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  const keys = Object.keys(attrs)
+  keys.forEach(function(k) { n.setAttribute(k, attrs[k]) })
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function barChart(id, rows, maxV, unit, labelW) {
+  labelW = labelW || 210
+  const host = document.getElementById(id)
+  const W = 760
+  const rowH = 46
+  const padT = 14
+  const padB = 10
+  const H = padT + rows.length * rowH + padB
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  rows.forEach(function(r, i) {
+    const y = padT + i * rowH
+    const lab = svgEl("text", {x: 12, y: y + 27, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - labelW - 110) * (r[1] / maxV)
+    const bar = svgEl("rect", {x: labelW, y: y + 9, width: Math.max(bw, 3), height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1] + unit
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: labelW + Math.max(bw, 3) + 10, y: y + 27, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1] + unit
+    svg.appendChild(val)
+  })
+  host.appendChild(svg)
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id)
+  const data = opts.data
+  const W = 760
+  const H = 400
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const yMin = opts.yMin
+  const yMax = opts.yMax
+  function X(i) { return mL + i * ((W - mL - mR) / (data.length - 1)) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / (yMax - yMin)) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const grids = opts.grid || []
+  grids.forEach(function(g) {
+    svg.appendChild(svgEl("line", {x1: mL, x2: W - mR, y1: Y(g), y2: Y(g), stroke: "#e2d7c2", "stroke-width": 1}))
+    const t = svgEl("text", {x: 10, y: Y(g) + 5, "font-size": 13, fill: MUT, "font-family": SANS})
+    if (opts.yfmt) { t.textContent = opts.yfmt(g) } else { t.textContent = String(g) }
+    svg.appendChild(t)
+  })
+  let d = ""
+  data.forEach(function(v, i) {
+    if (i === 0) { d = d + "M" } else { d = d + "L" }
+    d = d + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "
+  })
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  data.forEach(function(v, i) {
+    const c = svgEl("circle", {cx: X(i), cy: Y(v), r: 8, fill: CLAY})
+    const tip = svgEl("title", {})
+    tip.textContent = opts.tip(i, v)
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const xl = svgEl("text", {x: X(i), y: H - 32, "font-size": 13, fill: MUT, "text-anchor": "middle", "font-family": SANS})
+    xl.textContent = opts.xlabels[i]
+    svg.appendChild(xl)
+  })
+  if (opts.ylabel) {
+    const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+    yl.textContent = opts.ylabel
+    svg.appendChild(yl)
+  }
+  if (opts.xlabel) {
+    const xcap = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+    xcap.textContent = opts.xlabel
+    svg.appendChild(xcap)
+  }
+  host.appendChild(svg)
+}
+
+
+barChart("chart-84", [
+  ["Params (fp16)", 14, INDIGO],
+  ["Grads (fp16)", 14, SAGE],
+  ["Optimizer states (fp32)", 56, CLAY]
+], 60, " GB", 200)
+
+barChart("chart-zero", [
+  ["ZeRO-1", 35.0, INDIGO],
+  ["ZeRO-2", 22.8, SAGE],
+  ["ZeRO-3", 10.5, CLAY]
+], 40, " GB/GPU", 170)
+
+barChart("chart-overlap", [
+  ["Sequential", 96, INDIGO],
+  ["Overlapped", 36, CLAY]
+], 105, " ms", 170)
+
+barChart("chart-scale", [
+  ["1 GPU", 100, INDIGO],
+  ["8 GPUs", 14, CLAY]
+], 110, " s", 170)
+
+function renderZero() {
+  const P = (parseFloat(document.getElementById("zpb").value) || 7) * 1.0e9
+  const N = parseFloat(document.getElementById("zpn").value) || 8
+  const gb = 1.0e9
+  const s1 = (2 * P + 2 * P + 8 * P / N) / gb
+  const s2 = (2 * P + (2 * P + 8 * P) / N) / gb
+  const s3 = (12 * P / N) / gb
+  const o = document.getElementById("zpout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "ZeRO-1: " + s1.toFixed(1) + " GB/GPU. ZeRO-2: " + s2.toFixed(1) + " GB/GPU. ZeRO-3: " + s3.toFixed(1) + " GB/GPU."))
+  let note = "Matches C03 §6 (35.0, 22.8, 10.5) at 7B over 8 GPUs."
+  if (Math.abs(s1 - 35.0) > 0.1) { note = "The lesson gives 35.0, 22.8, 10.5 GB/GPU at 7B over 8 GPUs (C03 §6)." }
+  o.appendChild(el("p", "small muted", note))
+}
+document.getElementById("zpbtn").addEventListener("click", renderZero)
+renderZero()
+
+function renderOv() {
+  const L = parseFloat(document.getElementById("ovl").value) || 8
+  const c = parseFloat(document.getElementById("ovc").value) || 12
+  const m = parseFloat(document.getElementById("ovm").value) || 3
+  const seq = L * (c + m)
+  const ov = Math.max(L * c, L * m) + Math.min(c, m)
+  const o = document.getElementById("ovout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "Sequential ≈ " + seq.toFixed(0) + " ms. Overlapped ≈ " + ov.toFixed(0) + " ms."))
+}
+document.getElementById("ovbtn").addEventListener("click", renderOv)
+renderOv()
+
+
+</script>
+</body>
+</html>
