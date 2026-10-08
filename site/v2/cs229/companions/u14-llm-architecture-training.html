@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U14 Companion: LLM architecture and training · CS229</title>
+<style>
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+input.range{width:100%}
+input.range{max-width:420px}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+.hist{border:1px solid var(--line)}
+.hist{border-radius:10px}
+.hist{background:#fffdf8}
+.hist{padding:6px}
+.hist{margin:16px 0}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS229 · Unit 14 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>LLM architecture and training</h1>
+<p class="dek">How do you train on raw text with no labels? This companion walks the full arc of Unit 14: tokenization, the autoregressive factorization and the next-token loss, the transformer interface, causal attention computed by hand, the KV cache and its costs, attention variants, mixture of experts, in-context learning and SFT, and the train/inference gap.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>lesson-14-llm-architecture-training.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: the lesson notes that Lecture 14 and 15 transcripts cover LLMs and attention variants (SRC-02), but only their headers were inspected. Transcript content was not read in depth. No lecture video is named. The lesson's Source mapping states that SRC-01 chapter 17 (PDF pages 203 to 219) was read in full on 2026-10-06. Positional schemes, load-balancing losses, and the train/infer mismatch and resource-accounting framings are standard background beyond the notes, labeled as such. All lesson numbers below were independently recomputed for this page and matched. Leaf rows carry SOURCE ATTRIBUTION PENDING until the RUN 6 pass.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u14-weavers-loom.jpg" alt="Watercolor of a weaver's loom with glowing threads connecting each word only to the words before it">
+<figcaption><span class="tag tag-toy">Illustration</span> Causal attention as weaving: every thread reaches left, none reaches right. Watercolor, original to this companion.</figcaption>
+</figure>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Tokens</a>
+<a href="#s2">2 Loss</a>
+<a href="#s3">3 Transformer</a>
+<a href="#s4">4 Attention</a>
+<a href="#s5">5 KV cache</a>
+<a href="#s6">6 Variants</a>
+<a href="#s7">7 MoE</a>
+<a href="#s8">8 ICL/SFT</a>
+<a href="#s9">9 Train/infer</a>
+<a href="#s10">10 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<section class="block" id="s1">
+<p class="secnum">Section 1 · SL-01 · C01</p>
+<h2>Tokenization: the compromise</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Source anchor, §BPE intuition, §The compromise</span></p>
+<p>A language model does not read raw strings. Text is broken into tokens: whole words, word pieces, punctuation, whitespace, bytes, or special markers such as end-of-text. A tokenizer maps a string to x = (x₁, ..., x_T) with x_t in the vocabulary V. Modern models use subword tokenization, usually byte-pair encoding (BPE) [Sennrich et al., 2016]. Start from tiny pieces (bytes or characters). Repeatedly add a new token for the adjacent pair that occurs most often in the corpus. After many merges, common strings ("ing", "tion", whole common words) become single tokens, rare words still split into pieces. The notes' examples: "glioblastoma" becomes glio+blast+oma, "LLMification" becomes LL+M+ification.</p>
+<p>Character-level: tiny vocabulary, long sequences. Word-level: short sequences for common text, but rare words collapse to an unknown token. Subword sits between: the vocabulary |V| is on the order of 1e5 (the notes cite Qwen3.5 at 248,320 tokens) and the sequence length T stays manageable. The tokenizer is fixed before pretraining, and it shapes both |V| and T for everything after.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Failure case</span></p>
+<p>Training with one tokenizer and serving with another: token ids shift meaning and the model's learned embeddings misalign. Silent and catastrophic.</p>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · SL-02 · C02, C03</p>
+<h2>The label is free: it is the next token</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Source anchor, §The training loss, §Mental model</span></p>
+<p>A language model represents p(x₁, ..., x_T). The support has size |V|^T: astronomical. The chain rule factors it: p(x₁, ..., x_T) = p(x₁) p(x₂ | x₁) ... p(x_T | x₁, ..., x_{T-1}) (17.1). Each conditional has support |V|: one distribution over the vocabulary per position. Maximum likelihood, normalized by length: loss = −(1/T) log p_θ(x₁, ..., x_T) = (1/T) Σ_t l_ce(f_θ(x₀, ..., x_{t-1}), x_t) (17.12-17.13), the cross-entropy between the logits and the true next token, averaged over positions and then over sequences. The standard optimizer is AdamW [Loshchilov and Hutter, 2019] on mini-batches of sequences.</p>
+<p>Every position is a classification problem with |V| classes, and the label is free: it is the next token. One long document yields T training examples. The model learns "which sentences are plausible" by learning to continue them.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Correctness checks</span></p>
+<p>The loss at position t may only use x₀, ..., x_{t-1}. Using x_t as input is label leakage (the mask of SL-04 enforces this structurally).</p>
+</div>
+<div class="nugget" id="nugget-free">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Mental model</span></h4>
+<p class="big">Every position is a classification problem with |V| classes, and the label is free: it is the next token.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>One document is T labeled examples. Self-supervision turns the entire internet into a training set with no annotation budget.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When labels are expensive, look for the target hidden inside the input. The best label is the one you never had to write.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · SL-03 · C04</p>
+<h2>The transformer interface</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Source anchor, §Blocks</span></p>
+<p>Tokens become row-vector embeddings e_i in R^{1 × d}, stacked into E in R^{|V| × d} (17.2). A special beginning token x₀ is prepended. The transformer f_θ maps the embedding sequence to logit vectors (u₁, ..., u_{T+1}): p_θ(x_t | x₁, ..., x_{t-1}) = softmax(f_θ(x₀, ..., x_{t-1})) (17.3). Crucially, u_t depends only on x₀, ..., x_{t-1}: the autoregressive property, built into the architecture by the mask. A transformer stacks blocks of multi-head self-attention and position-wise MLPs (GELU or SwiGLU). Modern LLMs use PreNorm, usually with RMSNorm. The MLP acts per position with shared weights. Attention is the only cross-position mixing.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Positional boundary, §Failure case</span></p>
+<p>Self-attention is permutation-equivariant: without extra signal it cannot tell token order. The notes state positional embeddings are important in practice but defer them to a future revision. Boundary: the notes teach the mask fully, positional schemes are standard background, not note-sourced. Forgetting the causal mask in training: the model reads the answer from the future, training loss collapses to near zero, and the model is useless at generation. The mask test (perturb x_{t+1}, check u_t unchanged) catches it.</p>
+</div>
+<div class="nugget" id="nugget-autoreg">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Source anchor</span></h4>
+<p class="big">u_t depends only on x₀, ..., x_{t-1}. The autoregressive property is built into the architecture by the mask.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The property is structural, not hoped for. The mask makes cheating impossible instead of merely unlikely.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Enforce invariants in the architecture, not in the loss. A structural guarantee beats a trained habit.</dd>
+</dl>
+</div>
+</section>
+<section class="block" id="s4">
+<p class="secnum">Section 4 · SL-04 · C05</p>
+<h2>Attention by hand: the causal mask</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Source anchor, §The scaling, §The causal mask</span></p>
+<p>Queries ask "what am I looking for", keys advertise "what I have", values carry the payload: q_t = h^in_t W^Q, k_t = h^in_t W^K, v_t = h^in_t W^V (17.14-17.16). Scores: softmax over q_t k_jᵀ / c (17.17). Output: h^out_t = Σ_j p_{t,j} v_j (17.18). The scaling c = √d_h [Vaswani et al., 2017]: at initialization the dot product has variance d_h, so without scaling the logits grow with head dimension and the softmax saturates (tiny gradients). Dividing by √d_h keeps logit variance near 1. The notes flag this as a heuristic: real queries and keys are not independent.</p>
+<p>For autoregression, position t must not see j > t. Add a mask M before the softmax: H^out = softmax_row(QKᵀ/c + M)V (17.21). Causal mask: M_{t,j} = 0 for j ≤ t, −infinity for j > t. The −infinity entries make softmax probabilities exactly zero (17.22-17.23). The mask also enables parallel training: all positions run in one forward pass while each keeps the left-to-right rule.</p>
+</div>
+<figure>
+<div id="chart-attn"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Computed example</span> The lesson's hand computation, T = 3, d_h = 2. Scores q_t k_jᵀ/√2 with the causal mask. Every number recomputed for this page and matched. Row sums are 1, the upper triangle is exactly 0.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The mask switch. The lesson's Q and K rows are fixed. Toggle the causal mask on row 2 and watch the future leak in.</p>
+<p><button class="btn" id="mskon">Mask on</button> <button class="btn" id="mskoff">Mask off</button></p>
+<div class="chips" id="mskout"></div>
+<p class="small muted">With the mask: [0.3302, 0.6698, 0]. Without: [0.1978, 0.4011, 0.4011]. The future token steals 0.40 of the attention.</p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Failure case</span></p>
+<p>Mask applied after softmax instead of before: the −infinity never enters the normalization and future positions leak. Check exact zeros, not just the row sums.</p>
+</div>
+<div class="nugget" id="nugget-scaling">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §The scaling</span></h4>
+<p class="big">Without scaling, logits grow with head dimension and the softmax saturates. Dividing by √d_h keeps logit variance near 1.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A saturated softmax has tiny gradients: the model stops learning before it starts. One division keeps the whole head alive.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Normalize by the dimension of the dot product. Unscaled inner products grow, and growth saturates.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · SL-05 · C06</p>
+<h2>The KV cache: new rows append, old rows never recompute</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Source anchor, §KV cache, §Memory and compute</span></p>
+<p>Multi-head attention runs n_h single-head modules in parallel (n_h·d_h = d), concatenates the per-head outputs, and applies W^O (17.25). Generation is sequential: each new token feeds back as input. Keys and values of the prefix are recomputed at every step unless cached. The KV cache stores K_{1:t} and V_{1:t}: at step t the output is softmax(q_t K_{1:t}ᵀ/c)V_{1:t} (17.27). New rows append, old rows never recompute. Per head, training attention costs O(T²d_h) operations. Quadratic in T: the main difficulty past 10K tokens, up to 1M in extreme cases. FlashAttention [Dao et al., 2022] streams the score matrix for O(T) memory. Decoding stores the KV cache: O(Td_h) per head in GPU memory.</p>
+</div>
+<table class="data">
+<tr><th>d = 4096, n_h = 32, d_h = 128, fp16, per layer = 2·T·d·2 bytes</th><th>KV cache</th></tr>
+<tr><td>T = 2048</td><td class="num">32.0 MiB</td></tr>
+<tr><td>T = 8192</td><td class="num">128.0 MiB</td></tr>
+<tr><td>T = 32768</td><td class="num">512.0 MiB</td></tr>
+<tr><td>32 layers at T = 8192, one sequence</td><td class="num">4.0 GiB</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Computed example</span> Every number recomputed for this page and matched.</figcaption>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The cache accountant. Type context length T, model width d, KV heads n_g, and bytes per element. The toy reports per-layer and 32-layer cache for one sequence.</p>
+<p>T: <input class="text" id="kvT" value="8192" style="max-width:100px" aria-label="context length"> d: <input class="text" id="kvd" value="4096" style="max-width:100px" aria-label="width"> n_g: <input class="text" id="kvng" value="32" style="max-width:80px" aria-label="kv heads"> bytes: <input class="text" id="kvb" value="2" style="max-width:70px" aria-label="bytes"></p>
+<p><button class="btn" id="kvbtn">Account</button></p>
+<div class="chips" id="kvout"></div>
+</div>
+<div class="nugget" id="nugget-cache">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §KV cache</span></h4>
+<p class="big">New rows append, old rows never recompute. The cache turns quadratic recomputation into linear memory.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Generation without a cache recomputes the whole prefix per token. The cache is the difference between serving and stalling.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Cache every prefix computation that never changes. Recomputation is a tax on forgetting.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · SL-06 · C06</p>
+<h2>Attention variants: a spectrum, not a free win</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Source anchor</span></p>
+<p>MQA [Shazeer, 2019]: many query heads share one key head and one value head. GQA [Ainslie et al., 2023]: query heads are partitioned into groups, each group sharing one key/value head. With n_h queries and n_g key/value heads, query head j uses group g(j) = floor((j−1)/τ) + 1 (17.32-17.34). Standard MHA is n_g = n_h. MQA is n_g = 1. A spectrum trading quality against decoding efficiency: fewer KV heads, smaller cache. Sliding-window attention: each token attends only to the last w tokens. Old keys leave the active cache. QK-Norm [Henry et al., 2020]: normalize queries and keys before the dot product, replacing it with a scaled cosine similarity. Controls logit scale and training stability, adopted in Qwen3 and OLMo2.</p>
+</div>
+<table class="data">
+<tr><th>Same dimensions, T = 8192, fp16, per layer</th><th>KV cache</th></tr>
+<tr><td>MHA (n_g = 32)</td><td class="num">128.0 MiB</td></tr>
+<tr><td>GQA (n_g = 8)</td><td class="num">32.0 MiB</td></tr>
+<tr><td>MQA (n_g = 1)</td><td class="num">4.0 MiB</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Computed example</span> Every number recomputed for this page and matched. The cache scales with n_g, not n_h.</figcaption>
+<figure>
+<div id="chart-kv"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Computed example, SL-06 §Computed example</span> KV cache per layer for MHA, GQA, and MQA at T in {2048, 8192, 32768}. Recomputed for this page. Log scale.</figcaption>
+</figure>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Failure case</span></p>
+<p>Aggressive MQA on a quality-sensitive task: the shared key head bottlenecks distinct query behaviors and quality drops. The notes frame it as a spectrum, pick the point by measurement.</p>
+</div>
+<div class="nugget" id="nugget-ng">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Computed example</span></h4>
+<p class="big">The cache scales with n_g, not n_h. Fewer KV heads, smaller cache.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>GQA with 8 KV heads cuts the cache 4x at T = 8192. Provisioning a GQA deployment with MHA numbers overprovisions memory 4x.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Cost follows the shared resource, not the consumer count. Count the heads that store, not the heads that read.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · SL-07 · C07</p>
+<h2>Mixture of Experts: grow parameters, not per-token compute</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-07 §Source anchor, §Mental model</span></p>
+<p>MoE makes some layers sparse. Instead of one dense MLP per block, the layer holds m expert MLPs E₁, ..., E_m and a router. For token t with hidden state h_t, the router computes r_t = σ(h_t W^R) in R^m. A small set S_t of experts (often top-k) is chosen and their outputs combined with renormalized weights α_{t,s}. The notes' example: DeepSeek-V3 uses 256 routed experts per MoE layer, activates the top 8 per token, plus one shared expert applied to every token [DeepSeek-AI, 2024]. Each token consults a few specialists. Total parameters grow with m, per-token compute grows with k. The shared expert is the common feedforward path, routed experts specialize by token and context.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-07 §Failure case</span></p>
+<p>Router collapse: every token routes to the same few experts and the rest starve. Capacity is then wasted. Load-balancing losses exist to prevent this (standard background beyond the notes).</p>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · SL-08 · C08, C09, C10</p>
+<h2>ICL, zero-shot, SFT: change the text or the weights</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-08 §Source anchor, §Mental model</span></p>
+<p>In-context learning: concatenate labeled examples and the test input into one prompt and let the pretrained model generate the continuation. The notes' example teaches the symbol ~ as addition from two examples, then answers "15 ~ 2" with 17. Demonstrations teach the task, the label space, and the output format [Min et al., 2022]. Zero-shot prompting: no examples, just a natural-language task description ("Answer yes or no."). No training data, no gradient updates. SFT: update parameters on prompt-completion pairs (xⁱ, yⁱ), initialized at θ̂, minimizing the conditional next-token loss (17.36). Implementation: concatenate prompt and answer into one causal sequence zⁱ but apply the loss only at answer positions via a loss mask m_r (0 on prompt tokens, 1 on answer tokens) (17.37). The loss mask is separate from the attention mask: answer tokens still attend to the prompt, but prompt tokens do not contribute to the objective.</p>
+<p>Prompting (ICL, zero-shot) changes the text, not the weights. SFT changes the weights, not the text format: it teaches the model the desired conditional distribution p(y | x). The loss mask is the key detail: the model learns to produce answers, not to predict prompts.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-08 §Correctness checks, §Failure case</span></p>
+<p>The loss mask must be 0 on prompt tokens. If prompt tokens contribute, the model wastes capacity predicting the question. Zero-shot performance must be reported with the exact prompt wording. Wording changes are a different experiment. SFT on a narrow answer style: the model learns the format but forgets the pretraining distribution (format overfitting). Mix SFT data with pretraining-style data to hold the base.</p>
+</div>
+<div class="nugget" id="nugget-lossmask">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-08 §Source anchor</span></h4>
+<p class="big">The loss mask is separate from the attention mask. Answer tokens attend to the prompt, but prompt tokens never contribute to the objective.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Two masks, two jobs: one controls information flow, the other controls what the model learns to produce. Confusing them trains the model to predict questions.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Separate what the system sees from what it is scored on. Visibility and credit are different mechanisms.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · SL-09 · C11, C12</p>
+<h2>Train/infer mismatch and the resource ledger</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-09 §Train/infer mismatch</span></p>
+<p>Training feeds ground-truth prefixes (teacher forcing): every position predicts the next token given the true history. Inference feeds the model's own outputs: each generated token becomes the next input (17.4-17.7). Errors compound: a small mistake early shifts the whole continuation distribution, and the model never saw its own mistakes during training. This is exposure bias. Decoding choices live at inference only: temperature τ (17.8-17.11, τ → 0 is greedy), top-k (keep the k most likely tokens, renormalize), top-p / nucleus (smallest set with total probability at least p, renormalize). They change the sampling distribution, not the model or the training loss. Common setting from the notes: top-p 0.9 with temperature 0.7-1.0.</p>
+</div>
+<table class="data">
+<tr><th>Logits [2.0, 1.0, 0.5, 0.1]</th><th>Softmax</th></tr>
+<tr><td>τ = 0.5</td><td class="num">[0.8282, 0.1121, 0.0412, 0.0185] (sharper)</td></tr>
+<tr><td>τ = 1.0</td><td class="num">[0.5745, 0.2114, 0.1282, 0.0859]</td></tr>
+<tr><td>τ = 2.0</td><td class="num">[0.4056, 0.2460, 0.1916, 0.1569] (flatter)</td></tr>
+<tr><td>Top-p 0.9 at τ = 1</td><td class="num">keeps 3 tokens (cum. 0.9141) → [0.6285, 0.2312, 0.1402]</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-09 §Computed example</span> Every number recomputed for this page and matched.</figcaption>
+<figure>
+<div id="chart-temp"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-09 §Computed example</span> The same logits at three temperatures. Lower τ sharpens, higher τ flattens. Recomputed for this page.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The decoding bench. Type a temperature. The toy applies it to the lesson's logits and reports the distribution plus the top-p 0.9 kept set.</p>
+<p>τ: <input class="text" id="tpt" value="1" style="max-width:90px" aria-label="temperature"></p>
+<p><button class="btn" id="tpbtn">Decode</button></p>
+<div class="chips" id="tpout"></div>
+<p class="small muted">The lesson's check: temperature and top-p are inference settings. They must not appear in any training-loss computation.</p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-09 §Resource accounting</span></p>
+<p>The ledger for a deployment: model weights (params × bytes), KV cache per concurrent sequence (grows with T and batch), and compute per token (grows with T² in prefill, T per step in decode). GQA/MQA and sliding windows cut the cache term. FlashAttention cuts the training memory term. None cut the quadratic compute term.</p>
+</div>
+<div class="nugget" id="nugget-temp">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-09 §Train/infer mismatch</span></h4>
+<p class="big">Temperature changes the sampling distribution, not the model. It lives at inference only.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Decoding knobs are not training knobs. A temperature in the training loss is a bug. At inference it is the main creativity control.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Separate the learned object from the sampling policy. Tune the policy without retraining the object.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · Synthesis</p>
+<h2>The arc, end to end</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 to SL-09</span></p>
+<p>The arc, end to end. Text becomes tokens by BPE, a compromise between tiny vocabularies and long sequences (SL-01). The chain rule factors p(x₁, ..., x_T) into per-position classification problems, and the label is free: the next token (SL-02). The transformer maps embeddings to logits with the autoregressive property built in by the mask (SL-03). Attention divides by √d_h, masks the future, and the lesson's hand computation shows exactly how (SL-04). The KV cache stores keys and values so new rows append and old rows never recompute: 128 MiB per layer at T = 8192 for the 4096-wide model, 4 GiB over 32 layers (SL-05). MQA, GQA, sliding windows, and QK-Norm trade quality against memory: the cache scales with n_g, not n_h (SL-06). MoE grows parameters with m while per-token compute grows with k (SL-07). Prompting changes the text, SFT changes the weights with a loss mask separate from the attention mask (SL-08). Training sees ground-truth prefixes while inference feeds its own outputs: temperature and top-p live at inference only, and the resource ledger counts weights, cache, and quadratic compute (SL-09).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">§Research reading, §Role bridges</span></p>
+<p>Where the unit points next, in the lesson's own forward links. Read SRC-01 chapter 17 in full, Vaswani et al. [2017] sections 1-3, Dao et al. [2022] sections 1-2. The extension: implement a tiny character-level transformer and verify the mask test (u_t invariant to future perturbation). The falsifiable claim: removing the mask drops the loss to near zero on training data while generation coherence collapses. For the ML engineer: the causal mask and the KV cache are the two things that must be right in every serving stack. Test both. For the research engineer: attention variants are quality-vs-memory trades, measure, do not assume. For the LLM engineer: SFT's loss mask is the detail that separates answer training from prompt prediction. Check it first in any finetune pipeline.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>Seven nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-free"><span class="wnum">01</span>The label is free <span class="muted">· SL-02</span></a></li>
+<li><a href="#nugget-autoreg"><span class="wnum">02</span>The mask builds the property <span class="muted">· SL-03</span></a></li>
+<li><a href="#nugget-scaling"><span class="wnum">03</span>Scale by √d_h <span class="muted">· SL-04</span></a></li>
+<li><a href="#nugget-cache"><span class="wnum">04</span>New rows append <span class="muted">· SL-05</span></a></li>
+<li><a href="#nugget-ng"><span class="wnum">05</span>The cache scales with n_g <span class="muted">· SL-06</span></a></li>
+<li><a href="#nugget-lossmask"><span class="wnum">06</span>Two masks, two jobs <span class="muted">· SL-08</span></a></li>
+<li><a href="#nugget-temp"><span class="wnum">07</span>Temperature lives at inference <span class="muted">· SL-09</span></a></li>
+</ol>
+</section>
+
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>v2-pack/cs229/lessons/u14/lesson-14-llm-architecture-training.md</code> (700 lines, dated 2026-10-06). The lesson notes that Lecture 14 and 15 transcripts cover LLMs and attention variants (SRC-02), but only their headers were inspected. No transcript content was read in depth, and no lecture video is named, so nothing here quotes the lecturer. Per the lesson's Source mapping, SRC-01 chapter 17 was read in full on 2026-10-06. Every number on this page was independently recomputed for this companion and matched the lesson: the attention rows, the KV-cache table, the GQA/MQA table, the temperature and top-p values. Positional schemes, load-balancing losses, and the train/infer mismatch and resource-accounting framings are standard background, labeled as such. The charts re-plot those numbers with native tooltips. The watercolor is original to this companion and labeled as such. Interactive toys run the lesson's formulas over the lesson's own toy values.</p>
+<p><strong>Quotes.</strong> This page quotes 0 words directly from the source. All phrasing is the companion's.</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>. Fourteenth of 17 CS229 companions.</p>
+</footer>
+</div>
+<script>
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  for (const k in attrs) { n.setAttribute(k, attrs[k]) }
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function attnChart() {
+  const host = document.getElementById("chart-attn")
+  if (!host) { return }
+  const W = 760
+  const H = 360
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const M = [[1.0, 0.0, 0.0], [0.3302, 0.6698, 0.0], [0.4011, 0.4011, 0.1978]]
+  const ox = 200
+  const oy = 40
+  const cs = 110
+  M.forEach(function(row, t) {
+    row.forEach(function(v, j) {
+      const inten = Math.round(255 - v * 190)
+      const fill = v === 0 ? "#f4efe6" : "rgb(" + Math.round(49 + (255 - 49) * (1 - v)) + "," + Math.round(64 + (255 - 64) * (1 - v)) + "," + Math.round(94 + (255 - 94) * (1 - v)) + ")"
+      const r = svgEl("rect", {x: ox + j * cs, y: oy + t * cs, width: cs - 6, height: cs - 6, rx: 8, fill: fill, stroke: INK, "stroke-width": 1})
+      const tip = svgEl("title", {})
+      tip.textContent = "row " + (t + 1) + ", key " + (j + 1) + ": " + v.toFixed(4) + (j > t ? " (masked, exactly 0)" : "")
+      r.appendChild(tip)
+      svg.appendChild(r)
+      const tx = svgEl("text", {x: ox + j * cs + (cs - 6) / 2, y: oy + t * cs + (cs - 6) / 2 + 6, "font-size": 16, fill: v > 0.5 ? "#fffdf8" : INK, "font-family": MONO, "text-anchor": "middle"})
+      tx.textContent = v.toFixed(4)
+      svg.appendChild(tx)
+    })
+    const rl = svgEl("text", {x: ox - 16, y: oy + t * cs + (cs - 6) / 2 + 6, "font-size": 14, fill: INK, "font-family": SANS, "text-anchor": "end"})
+    rl.textContent = "query " + (t + 1)
+    svg.appendChild(rl)
+  })
+  M[0].forEach(function(_, j) {
+    const kl = svgEl("text", {x: ox + j * cs + (cs - 6) / 2, y: oy - 14, "font-size": 14, fill: INK, "font-family": SANS, "text-anchor": "middle"})
+    kl.textContent = "key " + (j + 1)
+    svg.appendChild(kl)
+  })
+  host.appendChild(svg)
+}
+
+function kvChart() {
+  const host = document.getElementById("chart-kv")
+  if (!host) { return }
+  const W = 760
+  const H = 340
+  const padL = 80
+  const padB = 44
+  const padT = 18
+  const Ts = [2048, 8192, 32768]
+  const vars = [["MHA", 32, INDIGO], ["GQA", 8, CLAY], ["MQA", 1, SAGE]]
+  const X = function(i) { return padL + (i + 0.5) * ((W - padL - 30) / 3) }
+  const Y = function(v) { return padT + (1 - (Math.log10(v) - 0) / (Math.log10(512) - 0)) * (H - padT - padB) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const yticks = [1, 4, 16, 64, 256]
+  yticks.forEach(function(v) {
+    const tx = svgEl("text", {x: padL - 10, y: Y(v) + 5, "font-size": 12, fill: MUT, "font-family": MONO, "text-anchor": "end"})
+    tx.textContent = v
+    svg.appendChild(tx)
+  })
+  const gw = ((W - padL - 30) / 3) / 3.6
+  Ts.forEach(function(T, i) {
+    vars.forEach(function(vv, j) {
+      const val = (T / 64) * (vv[1] / 32)
+      const h = Y(1) - Y(val)
+      const bx = X(i) - gw * 1.5 + j * gw
+      const bar = svgEl("rect", {x: bx, y: Y(val), width: gw * 0.9, height: h, rx: 4, fill: vv[2]})
+      const tip = svgEl("title", {})
+      tip.textContent = vv[0] + " at T=" + T + ": " + val.toFixed(1) + " MiB per layer"
+      bar.appendChild(tip)
+      svg.appendChild(bar)
+    })
+    const lab = svgEl("text", {x: X(i), y: H - padB + 22, "font-size": 13, fill: MUT, "font-family": MONO, "text-anchor": "middle"})
+    lab.textContent = "T=" + T
+    svg.appendChild(lab)
+  })
+  const leg = [["MHA", INDIGO], ["GQA", CLAY], ["MQA", SAGE]]
+  leg.forEach(function(l, i) {
+    const r = svgEl("rect", {x: padL + i * 130, y: 8, width: 14, height: 14, fill: l[1]})
+    svg.appendChild(r)
+    const tx = svgEl("text", {x: padL + i * 130 + 20, y: 20, "font-size": 13, fill: INK, "font-family": SANS})
+    tx.textContent = l[0]
+    svg.appendChild(tx)
+  })
+  const xl = svgEl("text", {x: W / 2, y: H - 8, "font-size": 13, fill: MUT, "font-family": SANS, "text-anchor": "middle"})
+  xl.textContent = "MiB per layer, one sequence (log scale)"
+  svg.appendChild(xl)
+  host.appendChild(svg)
+}
+
+function tempChart() {
+  const host = document.getElementById("chart-temp")
+  if (!host) { return }
+  const W = 760
+  const H = 320
+  const padL = 56
+  const padB = 44
+  const padT = 18
+  const series = [
+    ["0.5", [0.8282, 0.1121, 0.0412, 0.0185], CLAY],
+    ["1.0", [0.5745, 0.2114, 0.1282, 0.0859], INDIGO],
+    ["2.0", [0.4056, 0.2460, 0.1916, 0.1569], SAGE]
+  ]
+  const X = function(i) { return padL + (i + 0.5) * ((W - padL - 30) / 3) }
+  const Y = function(v) { return padT + (1 - v) * (H - padT - padB) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const yticks = [0, 0.25, 0.5, 0.75, 1.0]
+  yticks.forEach(function(v) {
+    const tx = svgEl("text", {x: padL - 10, y: Y(v) + 5, "font-size": 12, fill: MUT, "font-family": MONO, "text-anchor": "end"})
+    tx.textContent = v.toFixed(2)
+    svg.appendChild(tx)
+  })
+  const gw = ((W - padL - 30) / 3) / 4.6
+  series.forEach(function(s, i) {
+    s[1].forEach(function(v, j) {
+      const h = Y(0) - Y(v)
+      const bar = svgEl("rect", {x: X(i) - gw * 2 + j * gw, y: Y(v), width: gw * 0.9, height: h, rx: 4, fill: s[2], opacity: 0.9})
+      const tip = svgEl("title", {})
+      tip.textContent = "tau=" + s[0] + ", token " + (j + 1) + ": " + v.toFixed(4)
+      bar.appendChild(tip)
+      svg.appendChild(bar)
+    })
+    const lab = svgEl("text", {x: X(i), y: H - padB + 22, "font-size": 13, fill: MUT, "font-family": MONO, "text-anchor": "middle"})
+    lab.textContent = "tau=" + s[0]
+    svg.appendChild(lab)
+  })
+  const xl = svgEl("text", {x: W / 2, y: H - 8, "font-size": 13, fill: MUT, "font-family": SANS, "text-anchor": "middle"})
+  xl.textContent = "softmax of [2.0, 1.0, 0.5, 0.1] at three temperatures"
+  svg.appendChild(xl)
+  host.appendChild(svg)
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  attnChart()
+  kvChart()
+  tempChart()
+
+  function mskShow(masked) {
+    const out = document.getElementById("mskout")
+    out.innerHTML = ""
+    const row = masked ? [0.3302, 0.6698, 0.0] : [0.1978, 0.4011, 0.4011]
+    out.appendChild(el("span", "chip", "row 2: [" + row.map(function(v) { return v.toFixed(4) }).join(", ") + "]"))
+    out.appendChild(el("span", masked ? "chip eow" : "chip plain", masked ? "future is exactly 0" : "the future steals 0.40 of the attention"))
+  }
+  document.getElementById("mskon").addEventListener("click", function() { mskShow(true) })
+  document.getElementById("mskoff").addEventListener("click", function() { mskShow(false) })
+
+  document.getElementById("kvbtn").addEventListener("click", function() {
+    const T = parseFloat(document.getElementById("kvT").value)
+    const d = parseFloat(document.getElementById("kvd").value)
+    const ng = parseFloat(document.getElementById("kvng").value)
+    const by = parseFloat(document.getElementById("kvb").value)
+    const out = document.getElementById("kvout")
+    out.innerHTML = ""
+    if (!(T > 0 && d > 0 && ng > 0 && by > 0)) {
+      out.appendChild(el("span", "chip plain", "all inputs positive"))
+      return
+    }
+    const nh = 32
+    const perLayer = 2 * T * d * by * (ng / nh) / 1048576
+    out.appendChild(el("span", "chip", "per layer: " + perLayer.toFixed(1) + " MiB"))
+    out.appendChild(el("span", "chip", "32 layers: " + (perLayer * 32 / 1024).toFixed(1) + " GiB"))
+    if (T === 8192 && d === 4096 && ng === 32 && by === 2) {
+      out.appendChild(el("span", "chip eow", "the lesson's 128 MiB and 4 GiB"))
+    }
+  })
+
+  document.getElementById("tpbtn").addEventListener("click", function() {
+    const tau = parseFloat(document.getElementById("tpt").value)
+    const out = document.getElementById("tpout")
+    out.innerHTML = ""
+    if (!(tau > 0)) {
+      out.appendChild(el("span", "chip plain", "tau > 0"))
+      return
+    }
+    const L = [2.0, 1.0, 0.5, 0.1]
+    const sc = L.map(function(x) { return x / tau })
+    const m = Math.max.apply(null, sc)
+    const ex = sc.map(function(x) { return Math.exp(x - m) })
+    const tot = ex.reduce(function(a, b) { return a + b }, 0)
+    const p = ex.map(function(x) { return x / tot })
+    out.appendChild(el("span", "chip", "softmax: [" + p.map(function(v) { return v.toFixed(4) }).join(", ") + "]"))
+    let cum = 0
+    const kept = []
+    p.forEach(function(v, i) {
+      if (cum < 0.9) { kept.push(i)
+      cum += v }
+    })
+    const ren = kept.map(function(i) { return p[i] / cum })
+    out.appendChild(el("span", "chip plain", "top-p 0.9 keeps " + kept.length + " tokens (cum. " + cum.toFixed(4) + ")"))
+    out.appendChild(el("span", "chip", "renormalized: [" + ren.map(function(v) { return v.toFixed(4) }).join(", ") + "]"))
+    if (tau === 1) { out.appendChild(el("span", "chip eow", "matches the lesson's table")) }
+  })
+})
+
+</script>
+</body>
+</html>
