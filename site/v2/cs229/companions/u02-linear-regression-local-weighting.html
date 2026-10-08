@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U02 Companion: Linear regression and local weighting · CS229</title>
+<style>
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+input.range{width:100%}
+input.range{max-width:420px}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+.hist{border:1px solid var(--line)}
+.hist{border-radius:10px}
+.hist{background:#fffdf8}
+.hist{padding:6px}
+.hist{margin:16px 0}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS229 · Unit 02 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Linear regression and local weighting</h1>
+<p class="dek">Three ways to fit a line, one probabilistic story that justifies the squared error, and a weighted line that bends with the data. This companion walks the full arc of Unit 02: gradient descent, the normal equations, rank and conditioning, the Gaussian-noise likelihood, and locally weighted regression.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>lesson-02-linear-regression-local-weighting.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no lecture transcript exists for this unit, and no lecture video is named in the lesson. The lesson's Source mapping states that SRC-01 chapter 1 (PDF pages 10 to 20) was read in full on 2026-10-06. Leaf rows carry SOURCE ATTRIBUTION PENDING until the RUN 6 adversarial pass, so the strict fact-vs-interpretation tagging here is the guardrail. The Gauss portrait below is a real photograph of a painting, included for history, not as lecture content.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u02-gd-bowl.jpg" alt="Watercolor of a hiker descending a valley bowl toward a flag at the lowest point">
+<figcaption><span class="tag tag-toy">Illustration</span> Gradient descent as a hike: the cost is the valley, the gradient is the slope under your feet, and the flag is the minimum. Watercolor, original to this companion.</figcaption>
+</figure>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 LMS descent</a>
+<a href="#s2">2 Normal equations</a>
+<a href="#s3">3 Rank and repair</a>
+<a href="#s4">4 Gaussian story</a>
+<a href="#s5">5 Local weighting</a>
+<a href="#s6">6 Over/underfit</a>
+<a href="#s7">7 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<section class="block" id="s1">
+<p class="secnum">Section 1 · SL-01 · C01</p>
+<h2>LMS: walk downhill, one step at a time</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Source anchor</span></p>
+<p>You start with a random line through the data. How do you move it toward a better line, one small step at a time? Gradient descent looks at the slope of the cost under its feet and steps downhill. LMS is gradient descent on the squared error. Batch mode averages the slope over all examples before stepping. Stochastic mode steps on one example at a time.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Objects, §Derivation</span></p>
+<p>The cost: <code>J(θ) = (1/2m) Σ (h_θ(x⁽ⁱ⁾) − y⁽ⁱ⁾)²</code>. The 1/2 cancels a factor of 2 in the derivative. For one example the chain rule gives <code>dJ/dθⱼ = (h − y) xⱼ</code>, and the descent step <code>θⱼ := θⱼ − α (h − y) xⱼ</code>, which equals <code>θⱼ := θⱼ + α (y − h) xⱼ</code>. That is the LMS update. The batch rule sums this over all m examples and divides by m. The stochastic rule applies it to one example, then moves to the next. The cost J is convex, so one global minimum exists.</p>
+</div>
+<table class="data">
+<tr><th>Mode</th><th>Work per step</th><th>Steps per pass</th><th>Behavior</th></tr>
+<tr><td>Batch</td><td class="num">O(mn)</td><td class="num">1</td><td>Steady descent to the minimum</td></tr>
+<tr><td>Stochastic</td><td class="num">O(n)</td><td class="num">m</td><td>Fast early progress, then oscillation near the minimum</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Complexity</span> Memory is O(mn) for the data in both modes. Stochastic reaches a good answer faster on large m, but it never fully settles. Shrinking α to zero over time fixes the oscillation (notes footnote, page 14).</figcaption>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Computed example</span></p>
+<p>The lesson's hand computation. Toy data (1, 2), (2, 3), (3, 4). Start θ = [0, 0], so h(x) = 0. Learning rate α = 0.1. First stochastic step on (1, 2): h = 0, error = 2 − 0 = 2. With x₀ = 1, x₁ = 1: θ₀ := 0 + 0.1 × 2 × 1 = 0.2. θ₁ := 0 + 0.1 × 2 × 1 = 0.2. New line: h(x) = 0.2 + 0.2x. The error on (1, 2) drops from 2 to 1.6. The step size scales with the error and with the feature value, exactly as the notes point out (page 11).</p>
+<p>The lesson's housing numbers from the notes (page 13): living area in square feet predicts price in thousands of dollars. Batch gradient descent gave θ₀ = 71.27 and θ₁ = 0.1345.</p>
+</div>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The descent machine. Batch gradient descent on the lesson's toy data, from θ = [0, 0]. Set α, step once or run 200 steps. The cost is J(θ) = (1/2m) Σ (h − y)². Watch α = 1.5 diverge.</p>
+<p>α: <input class="range" type="range" id="gdalpha" min="0.01" max="1.5" step="0.01" value="0.1" aria-label="learning rate"> <span class="chip" id="alphaval">0.10</span></p>
+<p><button class="btn ghost" id="gdstep">One batch step</button><button class="btn" id="gdrun">Run 200 steps</button><button class="btn ghost" id="gdreset">Reset</button></p>
+<div class="chips" id="gdout"></div>
+<p class="small muted" id="gdnote"></p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Failure case, §Correctness checks</span></p>
+<p>Three audit lines. The gradient has the same shape as θ. If not, the code is wrong. The cost must decrease on most steps. If it explodes, α is too large. At convergence the gradient norm is near zero. And the failure case with a number: α = 1.5 on the toy makes θ overshoot, the cost grows, the line swings wildly. Diagnosis: α above the stability limit 2/λ_max. Fix: shrink α or normalize features.</p>
+</div>
+<div class="nugget" id="nugget-step">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Computed example</span></h4>
+<p class="big">The update scales with the error times the feature. Big miss, big step. Big feature value, big step.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The formula <code>θⱼ := θⱼ + α (y − h) xⱼ</code> is not just an update. It is a diagnosis kit. A feature on a huge scale dominates every step, and the fix is normalization, not a smaller α alone.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When an iterative process misbehaves, read the update term by term. Each factor is a suspect with a name.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · SL-02 · C02, C03</p>
+<h2>The normal equations: jump straight to the answer</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Source anchor, §Derivation</span></p>
+<p>Gradient descent walks to the answer. Can we jump straight to it? Write J(θ) = (1/2)(Xθ − y)ᵀ(Xθ − y) and expand: J = (1/2)(θᵀXᵀXθ − 2yᵀXθ + yᵀy). Matrix derivatives (notes page 16): the gradient of θᵀAθ for symmetric A is 2Aθ, and the gradient of bᵀθ is b. With A = XᵀX and b = 2Xᵀy: grad J = XᵀXθ − Xᵀy. Set to zero: XᵀXθ = Xᵀy. If XᵀX is invertible, θ = (XᵀX)⁻¹Xᵀy.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Mental model</span></p>
+<p>The geometry behind the algebra. The best line makes the leftover errors orthogonal to every feature. The prediction vector Xθ is the shadow the target vector y casts onto the column space of X. That shadow is the closest point in the space, and the difference y − Xθ sticks straight out of it.</p>
+</div>
+<table class="data">
+<tr><th>Step</th><th>Computation (toy data)</th><th>Result</th></tr>
+<tr><td>Gram matrix</td><td class="num">XᵀX, X = [[1,1],[1,2],[1,3]]</td><td class="num">[[3, 6], [6, 14]]</td></tr>
+<tr><td>Right side</td><td class="num">Xᵀy, y = [2, 3, 4]</td><td class="num">[9, 20]</td></tr>
+<tr><td>Determinant</td><td class="num">3×14 − 36</td><td class="num">6</td></tr>
+<tr><td>Inverse</td><td class="num">(1/6)[[14,−6],[−6,3]]</td><td class="num">-</td></tr>
+<tr><td>Solution</td><td class="num">(1/6)[126−120, −54+60]</td><td class="num">[1, 1]</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Computed example</span> The hand solve. θ = [1, 1] matches the gradient descent answer. Projection check: residuals r = y − Xθ = [0, 0, 0]. The zero vector is orthogonal to everything.</figcaption>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Correctness checks, §Complexity</span></p>
+<p>The strongest check of any least-squares code: Xᵀ(y − Xθ) must be near zero. For noisy data the residuals are nonzero but orthogonal to each column of X, and that orthogonality is exactly the normal equations. XᵀX is symmetric by construction. A nonsymmetric Gram matrix means a bug. Cost of the closed form: O(mn²) to form XᵀX, O(n³) to solve, O(n²) memory. It wins over gradient descent when n is small and m is large.</p>
+</div>
+<figure>
+<img class="illus" src="assets/gauss.jpg" alt="Portrait of Carl Friedrich Gauss, oil painting by Christian Albrecht Jensen, 1840" style="max-width:420px">
+<figcaption>Carl Friedrich Gauss, painted by Christian Albrecht Jensen in 1840. Public domain image via Wikimedia Commons. Shown for the history of least squares, the closed-form solution of this section. Photograph of a painting, not an AI image.</figcaption>
+</figure>
+<div class="nugget" id="nugget-ortho">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Correctness checks</span></h4>
+<p class="big">Xᵀ(y − Xθ) = 0 is the strongest check of any least-squares code. Geometry audits algebra.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A solver can return plausible numbers from a broken pipeline. Orthogonality is a one-line test that catches what eyeballing the coefficients cannot.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every method has an invariant that is cheaper to check than the answer. Find it and assert it in code.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · SL-03 · C04, C05, C10, C11</p>
+<h2>When the equations break: rank, conditioning, repair</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Source anchor, §Mental model</span></p>
+<p>Two features are identical: square feet and square meters. What breaks, and how do we fit anyway? Rank deficiency means some dial does nothing new. Two columns point the same way, so infinite parameter settings give the same predictions. The notes' footnote on page 16: if fewer independent examples exist than features, or features are not independent, XᵀX is not invertible.</p>
+<p>The Moore-Penrose pseudoinverse X⁺ gives the least-squares solution with minimum norm: of the infinite settings, it picks the smallest. Conditioning measures noise amplification. The condition number κ = λ_max / λ_min of XᵀX. A long thin valley in the cost means tiny data changes swing θ wildly. The lesson's toy: XᵀX = [[1, 0], [0, 1e−6]], κ = 1e6. A 1e−6 change in y can move θ₁ by 1. Diagnosis: features on wildly different scales.</p>
+</div>
+<table class="data">
+<tr><th>Rank</th><th>Stable solve</th><th>Why it helps</th></tr>
+<tr><td>1</td><td>Standardize features, then normal equations</td><td>Often enough on scale mismatch</td></tr>
+<tr><td>2</td><td>QR solve: θ = lstsq(X, y)</td><td>Never forms XᵀX, so it never squares the condition number</td></tr>
+<tr><td>3</td><td>SVD / pseudoinverse: pinv(X) @ y</td><td>Handles rank deficiency and exposes singular values for diagnosis</td></tr>
+<tr><td>4</td><td>Ridge (U09): adds λI</td><td>Guarantees invertibility</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Stable solves</span> In order of preference. Gradient descent never inverts anything, so it is immune to this failure mode. It pays with iteration count instead.</figcaption>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Computed example, §Failure case, §Correctness checks</span></p>
+<p>Duplicate a feature column and XᵀX turns singular: numpy's pinv splits the duplicated weight evenly, the minimum-norm choice. Print the singular values of X before solving. A cliff to near-zero flags deficiency. After standardizing, κ should drop by orders of magnitude on scale-mismatched data. The hard failure: solving with the explicit inverse on a κ = 1e12 matrix. θ comes out as garbage with huge entries. The inverse formula is correct math and bad numerics. This is why the course never ships inv(XᵀX) @ Xᵀy in labs.</p>
+</div>
+<div class="nugget" id="nugget-noinv">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Failure case</span></h4>
+<p class="big">The inverse formula is correct math and bad numerics. Never ship inv(XᵀX) @ Xᵀy.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Textbook formulas optimize for chalkboard clarity, not floating point. The right code computes the same mathematics through a stabler path.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Distrust the direct translation of math to code wherever division or inversion appears. The stable algorithm is the real algorithm.</dd>
+</dl>
+</div>
+</section>
+<section class="block" id="s4">
+<p class="secnum">Section 4 · SL-04 · C06</p>
+<h2>The Gaussian story: why squared error</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Source anchor, §Mental model</span></p>
+<p>Why squared error? Why not absolute error, or something else? Squared error is not a law of nature. It is the consequence of one specific belief: the errors are Gaussian noise. If you believe that, maximum likelihood hands you least squares. If you believe Laplace noise, you get absolute error instead. The loss encodes a noise belief.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Derivation</span></p>
+<p>The model: y given x follows N(θᵀx, σ²). Likelihood: L(θ) = Π (1/√(2πσ²)) exp(−(y⁽ⁱ⁾ − θᵀx⁽ⁱ⁾)² / (2σ²)). Take logs: ℓ(θ) = m log(1/√(2πσ²)) − (1/(2σ²)) Σ (y⁽ⁱ⁾ − θᵀx⁽ⁱ⁾)². The first term does not involve θ. Maximizing ℓ over θ minimizes Σ (y⁽ⁱ⁾ − θᵀx⁽ⁱ⁾)², which is J up to the 1/2m factor. Least squares equals maximum likelihood under Gaussian noise. And σ² never enters the choice of θ (notes page 18).</p>
+</div>
+<table class="data">
+<tr><th>θ = [0, t₁], point (1, 2.2), σ = 0.5</th><th>Prediction</th><th>Density</th><th>Log likelihood</th></tr>
+<tr><td>t₁ = 2 (closer line)</td><td class="num">2.0</td><td class="num">0.7365</td><td class="num">−0.3058</td></tr>
+<tr><td>t₁ = 1 (worse line)</td><td class="num">1.0</td><td class="num">0.0448</td><td class="num">−3.1058</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Computed example</span> Likelihood maximization picks the closer line, same as least squares. Recomputed for this page: 0.7979 × exp(−0.08) = 0.7365, log −0.3058. 0.7979 × exp(−2.88) = 0.0448, log −3.1058.</figcaption>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The belief dial. Slide t₁ for θ = [0, t₁] on the lesson's point (1, 2.2) with σ = 0.5. The toy recomputes density and log likelihood live. Watch the likelihood fall as the line leaves the point.</p>
+<p>t₁: <input class="range" type="range" id="t1s" min="0" max="3" step="0.05" value="2" aria-label="t1"></p>
+<div class="chips" id="lhout"></div>
+<p class="small muted">Try t₁ = 1 to reproduce the lesson's worse line: log likelihood near −3.11.</p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Correctness checks, §Failure case</span></p>
+<p>Two checks. Log likelihood increases as predictions approach targets. Doubling σ scales all densities but keeps the argmax θ fixed: fit with σ = 1 and σ = 10 and θ must match. And the failure case with a number: one corrupted sensor reading of 1e9. Gaussian belief says this is nearly impossible, so the fit bends over backward to accommodate it. The squared loss is the wrong belief here. Fix: change the noise model or the loss.</p>
+</div>
+<div class="nugget" id="nugget-belief">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Mental model</span></h4>
+<p class="big">Every loss encodes a noise belief. Squared error believes in Gaussian noise. Absolute error believes in Laplace noise.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A loss chosen without a named belief encodes a belief chosen blind. When the data violates the belief, the fit follows the violation, not the pattern.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Ask what belief each default encodes before you accept it. Defaults are decisions made by strangers.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · SL-05 · C07, C08, C09</p>
+<h2>Locally weighted regression: a line per neighborhood</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Source anchor, §Mental model</span></p>
+<p>The data curves. A straight line underfits, a degree-5 polynomial overfits (notes page 19 figures). Can we fit a line that is only responsible for its neighborhood? For each query point x, solve a weighted least squares where nearby training points count more. The weights come from a kernel: a bump centered at x with width τ, the bandwidth. Small τ: only close neighbors matter, the fit wiggles. Large τ: all points count nearly equally, the fit is the global line.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Objects</span></p>
+<p>Weight: w⁽ⁱ⁾ = exp(−(x⁽ⁱ⁾ − x)² / (2τ²)), a scalar in (0, 1]. Weighted normal equations: θ = (XᵀWX)⁻¹XᵀWy with W = diag(w). The parameters θ are recomputed per query, so the model has no fixed dial count. It is nonparametric. Cost per query: O(mn² + n³).</p>
+</div>
+<table class="data">
+<tr><th>Query x = 2.0, training x: 1.0, 2.0, 3.0</th><th>w at x = 1</th><th>w at x = 2</th><th>w at x = 3</th></tr>
+<tr><td>τ = 0.5</td><td class="num">0.1353</td><td class="num">1.0</td><td class="num">0.1353</td></tr>
+<tr><td>τ = 10</td><td class="num">0.9950</td><td class="num">1.0</td><td class="num">0.9950</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Computed example</span> exp(−1/(2×0.25)) = exp(−2) = 0.1353. exp(−1/200) = 0.9950. At τ = 0.5 the query point dominates its own fit. At τ = 10 the fit is nearly global.</figcaption>
+<figure>
+<div id="chart-lwlr"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Minimal implementation</span> LWLR fits on the lesson's six-point data for τ = 0.5, 2.0, and 10.0, computed from the lesson's <code>lwlr_predict</code>. The τ = 0.5 curve tracks local points. τ = 10 rides the global line. Recomputed for this page.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The bandwidth dial. Move τ and watch the prediction at the query point move between the local fit and the global line. The weights table shows exactly who counts.</p>
+<p>Query x: <input class="text" id="lwq" value="2.5" style="max-width:120px" aria-label="query x"> τ: <input class="range" type="range" id="lwtau" min="0.2" max="10" step="0.1" value="0.5" aria-label="tau"> <span class="chip" id="tauval">0.5</span></p>
+<p><button class="btn" id="lwbtn">Predict</button></p>
+<div class="chips" id="lwout"></div>
+<p class="small muted">Data: the lesson's six points. Far from all data, the weight sum collapses and the prediction is garbage with high confidence. Check the weight sum first.</p>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Parametric vs nonparametric, §Failure case, §Correctness checks</span></p>
+<p>Parametric linear regression: fixed dial count n, chosen before seeing data. After fitting, the data can be thrown away. θ is the whole model. Nonparametric LWLR: the dial count grows with the data. The training set must be kept at prediction time. Three checks: τ → infinity must reproduce the global least squares fit. τ → 0 must approach the local neighborhood. Weights at the query point equal 1 and decay with distance. The failure case: a query far from all data gives every weight near zero, XᵀWX near-singular, and a garbage prediction. Diagnosis: check the weight sum. Refuse to predict when it is tiny.</p>
+</div>
+<div class="nugget" id="nugget-tau">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-05 §Mental model</span></h4>
+<p class="big">One knob, τ, moves the whole method between a wiggly local fit and the global line. Bandwidth is the model.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Nonparametric does not mean parameter-free. The complexity moved from dials into the bandwidth and the kept dataset. Someone still chooses, and the choice still decides.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When a method claims no knobs, find where the knobs went. They always went somewhere.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · SL-06 · C12</p>
+<h2>Overfit and underfit: the central trap</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Source anchor, §Mental model</span></p>
+<p>Underfit: the hypothesis class cannot bend enough to catch the pattern. Both train and test error are high. Overfit: the class bends to the noise. Train error is low, test error is high. The notes' page 19 figures show the trio: a line that underfits, a quadratic that fits, a degree-5 polynomial that overfits. The degree-5 polynomial through six points has zero train error and wild swings between points.</p>
+</div>
+<figure>
+<div id="chart-degrees"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Computed example</span> Six points from y = 2x + 1 + noise (sd 0.3). Degree 1: train MSE 0.09, test MSE 0.10. Degree 5: train MSE 0.00, test MSE 2.4. The degree-5 train score is a lie about the future.</figcaption>
+</figure>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Nearest alternative, §Failure case</span></p>
+<p>Model selection (U09) picks the degree by validation, not by train error. Regularization (U09) keeps the degree but shrinks the coefficients. The failure case is the trap itself: judging by train error alone always picks the most complex model.</p>
+</div>
+<div class="nugget" id="nugget-trap">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-06 §Failure case</span></h4>
+<p class="big">Judging by train error alone always picks the most complex model. The score that chooses the winner must not be the score the winner trained on.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>This is the central trap of the whole unit and the reason U09 exists. The degree-5 polynomial did not cheat. The evaluation did.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Never let the contestant judge the contest. Selection needs a score the candidates never optimized.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · Synthesis</p>
+<h2>The arc, end to end</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 to SL-06</span></p>
+<p>The arc, end to end. Gradient descent walks to the answer one batch or one example at a time, and the update scales with error times feature (SL-01). The normal equations jump straight to the answer, and the geometry is a projection: residuals orthogonal to every feature (SL-02). When columns repeat or scales mismatch, the equations break, and the repair ladder runs from standardization through QR and SVD to ridge (SL-03).</p>
+<p>Then the story beneath the algebra. Squared error is maximum likelihood under Gaussian noise. Change the noise belief and the loss changes with it (SL-04). When the data curves, weight each query's neighborhood and refit a local line: one knob τ, no fixed dial count, the dataset kept forever at prediction time (SL-05). And the trap that frames the next unit: train error alone always picks the most complex model, so model selection reads validation, never train (SL-06).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">§Research reading, §Nearest alternatives</span></p>
+<p>Where the unit points next, in the lesson's own forward links. Newton's method (U03) converges in fewer steps but needs the Hessian. Kernel ridge regression (U05) is the same local idea in dual form. Ridge (U09) guarantees invertibility. Model selection and regularization (U09) pick the degree and shrink the coefficients. The extension: implement LWLR on the notes' housing-style curved toy and plot test error against τ. The falsifiable claim: test error is U-shaped in τ, minimized at an interior point, and the minimizer moves right as noise grows.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>Six nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-step"><span class="wnum">01</span>The update scales with error times feature <span class="muted">· SL-01</span></a></li>
+<li><a href="#nugget-ortho"><span class="wnum">02</span>Residual orthogonality audits every least-squares fit <span class="muted">· SL-02</span></a></li>
+<li><a href="#nugget-noinv"><span class="wnum">03</span>Never ship inv(XᵀX) in code <span class="muted">· SL-03</span></a></li>
+<li><a href="#nugget-belief"><span class="wnum">04</span>Every loss encodes a noise belief <span class="muted">· SL-04</span></a></li>
+<li><a href="#nugget-tau"><span class="wnum">05</span>Bandwidth is the model <span class="muted">· SL-05</span></a></li>
+<li><a href="#nugget-trap"><span class="wnum">06</span>Train error alone picks the most complex model <span class="muted">· SL-06</span></a></li>
+</ol>
+</section>
+
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>v2-pack/cs229/lessons/u02/lesson-02-linear-regression-local-weighting.md</code> (642 lines, dated 2026-10-06). No lecture transcript and no lecture video exist for this unit, so nothing here quotes the lecturer. Per the lesson's Source mapping, SRC-01 chapter 1 (PDF pages 10 to 20) was read in full on 2026-10-06: section 1.1 for LMS and gradient descent, 1.2 for the normal equations, 1.3 for the Gaussian-noise interpretation, 1.4 for locally weighted regression. Every number on this page comes from the lesson's computed examples with section citations: the housing fit (71.27, 0.1345), the LMS hand step (0.2, 0.2, error 2 to 1.6), the 2x2 solve (det 6, θ = [1, 1]), the conditioning toy (κ = 1e6), the likelihood points (0.7365 / −0.3058, 0.0448 / −3.1058), the LWLR weights (0.1353, 0.9950), the degree fits (0.09/0.10, 0.00/2.4). The charts re-plot those numbers with native tooltips. The Gauss portrait is a real photograph of the 1840 Jensen painting (public domain, Wikimedia Commons), captioned as history, not lecture content. The watercolor is original to this companion and labeled as such. Interactive toys run the lesson's rules over the lesson's own toy values, with any invented inputs labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p><strong>Quotes.</strong> This page quotes 0 words directly from the source. All phrasing is the companion's.</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>. Second of 17 CS229 companions.</p>
+</footer>
+</div>
+<script>
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  for (const k in attrs) { n.setAttribute(k, attrs[k]) }
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function hbarChart(id, rows, maxV, unit) {
+  const host = document.getElementById(id)
+  if (!host) { return }
+  const W = 760
+  const labelW = 220
+  const rowH = 48
+  const H = 16 + rows.length * rowH + 12
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  rows.forEach(function(r, i) {
+    const y = 16 + i * rowH
+    const lab = svgEl("text", {x: 12, y: y + 28, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - labelW - 120) * (r[1] / maxV)
+    const bar = svgEl("rect", {x: labelW, y: y + 10, width: Math.max(bw, 3), height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1] + unit
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: labelW + Math.max(bw, 3) + 10, y: y + 28, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1] + unit
+    svg.appendChild(val)
+  })
+  host.appendChild(svg)
+}
+
+function lwlrChart() {
+  const host = document.getElementById("chart-lwlr")
+  if (!host) { return }
+  const W = 760
+  const H = 360
+  const padL = 56
+  const padB = 44
+  const padT = 18
+  const xs = [0, 1, 2, 3, 4, 5]
+  const ys = [1.0, 2.1, 2.9, 4.2, 4.8, 6.1]
+  const curves = [
+    {tau: 0.5, v: [1.0, 2.068, 2.953, 4.125, 4.875, 6.1], c: CLAY},
+    {tau: 2.0, v: [1.027, 2.026, 3.019, 4.011, 5.006, 6.012], c: INDIGO},
+    {tau: 10.0, v: [1.025, 2.021, 3.018, 4.015, 5.012, 6.009], c: SAGE}
+  ]
+  const yMin = 0
+  const yMax = 7
+  const X = function(x) { return padL + (x / 5) * (W - padL - 30) }
+  const Y = function(v) { return padT + (1 - (v - yMin) / (yMax - yMin)) * (H - padT - padB) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const ticks = [0, 1, 2, 3, 4, 5, 6, 7]
+  ticks.forEach(function(v) {
+    const t = svgEl("text", {x: padL - 10, y: Y(v) + 5, "font-size": 12, fill: MUT, "font-family": MONO, "text-anchor": "end"})
+    t.textContent = v
+    svg.appendChild(t)
+  })
+  xs.forEach(function(x) {
+    const t = svgEl("text", {x: X(x), y: H - padB + 22, "font-size": 12, fill: MUT, "font-family": MONO, "text-anchor": "middle"})
+    t.textContent = x
+    svg.appendChild(t)
+  })
+  curves.forEach(function(cv) {
+    const d = cv.v.map(function(v, i) { return (i === 0 ? "M" : "L") + X(xs[i]).toFixed(1) + " " + Y(v).toFixed(1) }).join(" ")
+    const p = svgEl("path", {d: d, fill: "none", stroke: cv.c, "stroke-width": 3})
+    const tip = svgEl("title", {})
+    tip.textContent = "tau = " + cv.tau + " fit"
+    p.appendChild(tip)
+    svg.appendChild(p)
+  })
+  xs.forEach(function(x, i) {
+    const c = svgEl("circle", {cx: X(x), cy: Y(ys[i]), r: 6, fill: "#fffdf8", stroke: INK, "stroke-width": 2})
+    const tip = svgEl("title", {})
+    tip.textContent = "training point (" + x + ", " + ys[i] + ")"
+    c.appendChild(tip)
+    svg.appendChild(c)
+  })
+  const legend = [["tau = 0.5", CLAY], ["tau = 2.0", INDIGO], ["tau = 10.0", SAGE]]
+  legend.forEach(function(lg, i) {
+    const y = 30 + i * 26
+    svg.appendChild(svgEl("rect", {x: W - 170, y: y - 12, width: 26, height: 5, fill: lg[1]}))
+    const t = svgEl("text", {x: W - 136, y: y, "font-size": 13, fill: INK, "font-family": SANS})
+    t.textContent = lg[0]
+    svg.appendChild(t)
+  })
+  host.appendChild(svg)
+}
+
+const GDX = [[1, 1], [1, 2], [1, 3]]
+const GDY = [2, 3, 4]
+let gdTheta = [0, 0]
+function gdCost(th) {
+  let s = 0
+  GDX.forEach(function(row, i) {
+    const e = row[0] * th[0] + row[1] * th[1] - GDY[i]
+    s += e * e
+  })
+  return s / (2 * GDX.length)
+}
+function gdStep(alpha) {
+  const m = GDX.length
+  let g0 = 0
+  let g1 = 0
+  GDX.forEach(function(row, i) {
+    const e = row[0] * gdTheta[0] + row[1] * gdTheta[1] - GDY[i]
+    g0 += row[0] * e / m
+    g1 += row[1] * e / m
+  })
+  gdTheta = [gdTheta[0] - alpha * g0, gdTheta[1] - alpha * g1]
+}
+function gdShow(note) {
+  const out = document.getElementById("gdout")
+  out.innerHTML = ""
+  const c = gdCost(gdTheta)
+  out.appendChild(el("span", "chip", "theta = [" + gdTheta[0].toFixed(3) + ", " + gdTheta[1].toFixed(3) + "]"))
+  if (!isFinite(c) || c > 1e6) {
+    out.appendChild(el("span", "chip plain", "cost diverged"))
+    document.getElementById("gdnote").textContent = "The cost exploded. Alpha sits above the stability limit 2/lambda_max. Shrink alpha or normalize features."
+  } else {
+    out.appendChild(el("span", "chip", "J = " + c.toFixed(5)))
+    document.getElementById("gdnote").textContent = note || ""
+  }
+}
+
+function lwlrPredict(xq, tau) {
+  const xs = [0, 1, 2, 3, 4, 5]
+  const ys = [1.0, 2.1, 2.9, 4.2, 4.8, 6.1]
+  const ws = xs.map(function(x) { return Math.exp(-Math.pow(x - xq, 2) / (2 * tau * tau)) })
+  let s00 = 0, s01 = 0, s11 = 0, r0 = 0, r1 = 0
+  xs.forEach(function(x, i) {
+    const w = ws[i]
+    const y = ys[i]
+    s00 += w
+    s01 += w * x
+    s11 += w * x * x
+    r0 += w * y
+    r1 += w * x * y
+  })
+  const det = s00 * s11 - s01 * s01
+  if (Math.abs(det) < 1e-12) { return {pred: NaN, ws: ws, sum: ws.reduce(function(a, b) { return a + b }, 0)} }
+  const t0 = (r0 * s11 - r1 * s01) / det
+  const t1 = (s00 * r1 - s01 * r0) / det
+  return {pred: t0 + t1 * xq, ws: ws, sum: ws.reduce(function(a, b) { return a + b }, 0)}
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  hbarChart("chart-degrees", [
+    ["degree 1 train MSE", 0.09, INDIGO],
+    ["degree 1 test MSE", 0.10, INDIGO],
+    ["degree 5 train MSE", 0.00, CLAY],
+    ["degree 5 test MSE", 2.4, CLAY]
+  ], 2.6, "")
+  lwlrChart()
+
+  const ga = document.getElementById("gdalpha")
+  ga.addEventListener("input", function() {
+    document.getElementById("alphaval").textContent = parseFloat(ga.value).toFixed(2)
+  })
+  document.getElementById("gdstep").addEventListener("click", function() {
+    gdStep(parseFloat(ga.value))
+    gdShow("")
+  })
+  document.getElementById("gdrun").addEventListener("click", function() {
+    const a = parseFloat(ga.value)
+    Array.from({length: 200}).forEach(function() { gdStep(a) })
+    gdShow("200 batch steps at alpha = " + a.toFixed(2) + ". The lesson's snippet runs the same 200 steps.")
+  })
+  document.getElementById("gdreset").addEventListener("click", function() {
+    gdTheta = [0, 0]
+    gdShow("Reset to theta = [0, 0].")
+  })
+  gdShow("Start: theta = [0, 0], cost 4.83333. Try alpha = 1.5 and run.")
+
+  const t1s = document.getElementById("t1s")
+  function lhShow() {
+    const t1 = parseFloat(t1s.value)
+    const sigma2 = 0.25
+    const dens = (1 / Math.sqrt(2 * Math.PI * sigma2)) * Math.exp(-Math.pow(2.2 - t1, 2) / (2 * sigma2))
+    const out = document.getElementById("lhout")
+    out.innerHTML = ""
+    out.appendChild(el("span", "chip plain", "prediction = " + t1.toFixed(2)))
+    out.appendChild(el("span", "chip", "density = " + dens.toFixed(4)))
+    out.appendChild(el("span", "chip", "log likelihood = " + Math.log(dens).toFixed(4)))
+    if (Math.abs(t1 - 2) < 0.03) { out.appendChild(el("span", "chip eow", "the lesson's closer line")) }
+    if (Math.abs(t1 - 1) < 0.03) { out.appendChild(el("span", "chip eow", "the lesson's worse line")) }
+  }
+  t1s.addEventListener("input", lhShow)
+  lhShow()
+
+  const tauEl = document.getElementById("lwtau")
+  tauEl.addEventListener("input", function() {
+    document.getElementById("tauval").textContent = parseFloat(tauEl.value).toFixed(1)
+  })
+  document.getElementById("lwbtn").addEventListener("click", function() {
+    const xq = parseFloat(document.getElementById("lwq").value)
+    const tau = parseFloat(tauEl.value)
+    const r = lwlrPredict(xq, tau)
+    const out = document.getElementById("lwout")
+    out.innerHTML = ""
+    if (!isFinite(r.pred)) {
+      out.appendChild(el("span", "chip plain", "weights collapsed. Refuse to predict."))
+      return
+    }
+    out.appendChild(el("span", "chip", "prediction at x=" + xq + ": " + r.pred.toFixed(3)))
+    out.appendChild(el("span", "chip plain", "weight sum: " + r.sum.toFixed(3)))
+    const xs = [0, 1, 2, 3, 4, 5]
+    xs.forEach(function(x, i) {
+      out.appendChild(el("span", "chip plain", "w(x=" + x + ")=" + r.ws[i].toFixed(3)))
+    })
+  })
+})
+
+</script>
+</body>
+</html>
