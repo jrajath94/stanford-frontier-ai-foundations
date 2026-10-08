@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS229S Unit 04 companion: CUDA and efficient attention</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+input.range{width:100%}
+input.range{max-width:420px}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS229S · Unit 04 companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Unit 04 companion · narrated from the lesson document</p>
+<h1>CUDA and efficient attention</h1>
+<p class="dek">Twelve concepts, one arc: the GPU execution model from warps to occupancy, then the IO-aware redesign that makes attention exact without ever writing the score matrix.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>lesson-04-cuda-efficient-attention.md</code>. The phrasing is the companion’s.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion’s.</p>
+<p class="small muted">Provenance: no lecture transcript exists for this session. Calendar session titles anchor the lesson to Week 3, Oct 07 (Hardware Aware Algorithm Design, presented by Simran) and Oct 11 (Efficient Attention). This page narrates the lesson document, not a video. Claim class for every lesson leaf: PLANNED / SOURCE ATTRIBUTION PENDING. FlashAttention is taught from Dao et al. (2022, 2023), not as lecture content. Two internal inconsistencies found during the build are disclosed on-page with recomputation (C02 transfer times, C07 real-scale T).</p>
+</div>
+<figure>
+<img class="illus" src="assets/u04-marching-band.jpg" alt="Watercolor of a marching band in rows of 32, one row highlighted">
+<figcaption><span class="tag tag-toy">Illustration</span> The unit’s first idea in one image: a warp is one row of 32 marchers in lockstep. Watercolor, original to this companion.</figcaption>
+</figure>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Warps</a>
+<a href="#s2">2 Coalescing</a>
+<a href="#s3">3 Tiling</a>
+<a href="#s4">4 Sync</a>
+<a href="#s5">5 Occupancy</a>
+<a href="#s6">6 Reduction</a>
+<a href="#s7">7 Bottleneck</a>
+<a href="#s8">8 Exact vs approx</a>
+<a href="#s9">9 Online softmax</a>
+<a href="#s10">10 FlashAttention</a>
+<a href="#s11">11 Recompute</a>
+<a href="#s12">12 Benchmarks</a>
+<a href="#s13">Synthesis</a>
+<a href="#wisdom">Nuggets</a>
+</div></nav>
+
+<section class="block" id="s1">
+<p class="secnum">Section 1 · C01</p>
+<h2>Warps: the marching band</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §3</span></p>
+<p>Why do 32 threads always move as one, and why 32? Picture a marching band. A warp is a single row of 32 marchers stepping in lockstep. A block is the full section performing on one field, one SM. The grid is every section together. When one marcher steps out of line, the whole row dances both steps and waits.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §4, §6</span></p>
+<p>For 1024 elements at 256 threads per block: 4 blocks holding 32 warps in total. Warp w inside block b owns elements (b*8 + w)*32 + lane. A branch that divides a warp executes both paths one after the other, roughly halving that warp’s throughput on those instructions. The lesson’s check: warp_of(700) = (21, 28), because 700 = 21*32 + 28.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §7, §9</span></p>
+<p>The warp is the unit the scheduler sees. Estimate occupancy and divergence in warps, not threads. Inside a warp, threads are not independent. Shuffle and vote intrinsics depend on lockstep, so spreading those threads over several warps returns wrong answers. The checkable extension: microbenchmark a divergent branch against a uniform one at warp granularity and expect about 2x. (NVIDIA uses 32, other vendors use 64. The ideas transfer.)</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 260" role="img" aria-label="Eight warps of 32 lanes, one warp split by a branch">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">8 warps of 32 lanes: one warp diverges and pays double</text>
+<g font-family="sans-serif" font-size="11">
+<g fill="#e2e7f0" stroke="#31405e">
+<rect x="60" y="50" width="240" height="18"/><rect x="60" y="72" width="240" height="18"/><rect x="60" y="94" width="240" height="18"/><rect x="60" y="116" width="240" height="18"/><rect x="60" y="138" width="240" height="18"/><rect x="60" y="160" width="240" height="18"/><rect x="60" y="182" width="240" height="18"/>
+</g>
+<rect x="60" y="204" width="120" height="18" fill="#f6e3d3" stroke="#a94f27"/>
+<rect x="180" y="204" width="120" height="18" fill="#f6e3d3" stroke="#a94f27" stroke-dasharray="4,3"/>
+<text x="310" y="218">warp 7: 1 lane branches, both paths run</text>
+<text x="310" y="60">warps 0-6: lockstep</text>
+<text x="320" y="246" text-anchor="middle">one rule: group by 32</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §3, §6</span> Sketch of the lesson’s figure: 8 warps per block, one warp split by a branch. The divergent warp runs both sides.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Warp calculator. Enter a thread id. The widget applies the lesson’s <code>warp_of()</code>.</p>
+<p>Thread id: <input class="text" id="wpT" value="700" inputmode="numeric" aria-label="Thread id"></p>
+<p><button class="btn" id="wpBtn">Find my warp</button></p>
+<div class="chips" id="wpOut"></div>
+<p class="small" id="wpNote"></p>
+</div>
+<div class="nugget" id="nugget-warps">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §7</span></h4>
+<p class="big">Count in warps, not threads. 32 lanes move as one, and the performance model follows the warp.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Thread-level reasoning misses divergence entirely. One split branch in one warp doubles that warp’s cost, and only warp-level thinking sees it.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Find the real scheduling quantum of any machine and reason at that granularity. The documented unit is not always the scheduled unit.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C02</p>
+<h2>Coalescing: the bus stop</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §3</span></p>
+<p>32 threads read 32 floats. When does that cost one transaction, and when 32? Picture a bus stop. 32 riders share one bus when they queue at neighboring addresses. Riders scattered apart need 32 buses. The hardware only merges neighboring requests.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §4, §6</span></p>
+<p>When thread i reads base + i, the 32 fp32 values fill exactly one 128-byte line: 1 transaction. At stride 32 the addresses fall on 32 different lines: 32 transactions, 128 bytes wanted against 4096 moved, a 32x waste. The toy: 1024 fp32 values cost 32 transactions coalesced and 1024 strided. The lesson’s check: transactions(1) = 1, transactions(32) = 32.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §7, §9</span></p>
+<p>Coalescing hands a 32x lever to memory-bound kernels for the price of index math. When the access pattern cannot change, stage through shared memory: load strided, then read back coalesced. Contiguous data is not enough. The access itself must be contiguous. A warp reading random elements of a contiguous array still pays 32 transactions.</p>
+</div>
+<div class="callout">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §6</span> <strong>Disclosed inconsistency.</strong> The lesson states that at 2 TB/s the coalesced read takes about 64 ns and the strided read about 2 us. Recomputation: 4096 bytes at 2 TB/s is 2.05 ns, and 131072 bytes is 65.5 ns. The lesson’s absolute times are about 32x too high, and the 32x ratio between the two stands. The transaction counts (32 vs 1024) are unaffected.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u04-bus-stop.jpg" alt="Watercolor of 32 riders boarding one bus together versus scattered riders each needing a bus">
+<figcaption><span class="tag tag-toy">Illustration</span> The C02 mental model: adjacent riders share one bus, scattered riders need 32. Watercolor, original to this companion.</figcaption>
+</figure>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="One bus carrying 32 riders versus 32 buses carrying one rider each">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Coalescing: 1 transaction vs 32 for the same 32 floats</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="80" y="80" width="180" height="60" rx="10" fill="#e4e9da" stroke="#5d7050" stroke-width="2"/>
+<text x="170" y="105" text-anchor="middle">1 bus</text><text x="170" y="125" text-anchor="middle" font-size="11">32 riders, stride 1</text>
+<text x="300" y="115" font-size="20">vs</text>
+<g fill="#f6e3d3" stroke="#a94f27">
+<rect x="340" y="70" width="36" height="24" rx="6"/><rect x="382" y="70" width="36" height="24" rx="6"/><rect x="424" y="70" width="36" height="24" rx="6"/><rect x="466" y="70" width="36" height="24" rx="6"/><rect x="508" y="70" width="36" height="24" rx="6"/>
+<rect x="340" y="100" width="36" height="24" rx="6"/><rect x="382" y="100" width="36" height="24" rx="6"/><rect x="424" y="100" width="36" height="24" rx="6"/><rect x="466" y="100" width="36" height="24" rx="6"/><rect x="508" y="100" width="36" height="24" rx="6"/>
+</g>
+<text x="450" y="140" text-anchor="middle" font-size="11">32 buses, stride 32 (sample shown)</text>
+<text x="320" y="180" text-anchor="middle">one rule: align the warp</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §3</span> Sketch of the lesson’s figure. Same 128 bytes wanted, but 32x the bytes moved.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Transaction counter. Enter a stride. The widget applies the lesson’s <code>transactions()</code> for fp32 on 128-byte lines.</p>
+<p>Stride: <input class="text" id="cxS" value="1" inputmode="numeric" aria-label="Stride"></p>
+<p><button class="btn" id="cxBtn">Count transactions</button></p>
+<div class="chips" id="cxOut"></div>
+<p class="small" id="cxNote"></p>
+</div>
+<div class="nugget" id="nugget-bus">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §7</span></h4>
+<p class="big">Coalescing is a 32x lever priced in index math. The fix lives in the addressing, not the hardware.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A kernel moving 32x the expected bytes is usually a stride bug, not a bandwidth shortage. Count transactions before buying hardware.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>The most expensive bugs are bugs in the addressing. When the bytes moved dwarf the bytes wanted, suspect the pattern first.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C03</p>
+<h2>Tiling: floor tiles</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §3</span></p>
+<p>A (1024, 1024) matmul overflows the chip. Where does reuse come from? Picture floor tiles. Nobody lifts the whole floor. You work one tile at a time, loading tiles of A and B into shared memory, multiplying, accumulating, then moving on. Each element loads O(n/tile) times instead of O(n).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §4, §6</span></p>
+<p>Without tiling, each A element is read n times from HBM. Tiling along k with width Tk loads each A tile once per output tile row, cutting A reads by about Tk. The toy: (64, 64, 64) with tile 32 reads each A tile 64 times naive and 2 times tiled. At 1024 with tile 64 the HBM reads of A fall 16x. The lesson’s check: hbm_reads(64, 32) = 2, hbm_reads(1024, 64) = 16.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §7, §9</span></p>
+<p>Tiling leaves the FLOP count untouched. It turns HBM reads into shared-memory reads, which lifts intensity. Larger tiles are not always better. Shared memory caps them. A 256x256 fp16 tile pair wants 256 KB, more than shared memory holds, so the launch fails. Size to the machine. Tile when the working set overflows on-chip memory and reuse exists, and skip tiling when everything fits in registers.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 300" role="img" aria-label="Matrix with tile grid, one A tile and one B tile highlighted moving along k">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Tiling: one A tile and one B tile on chip, stepping along k</text>
+<g font-family="sans-serif" font-size="12">
+<g fill="#f3ecdd" stroke="#8a5a17">
+<rect x="80" y="60" width="60" height="60"/><rect x="140" y="60" width="60" height="60"/><rect x="200" y="60" width="60" height="60"/><rect x="260" y="60" width="60" height="60"/>
+<rect x="80" y="120" width="60" height="60"/><rect x="140" y="120" width="60" height="60"/><rect x="200" y="120" width="60" height="60"/><rect x="260" y="120" width="60" height="60"/>
+<rect x="80" y="180" width="60" height="60"/><rect x="140" y="180" width="60" height="60"/><rect x="200" y="180" width="60" height="60"/><rect x="260" y="180" width="60" height="60"/>
+</g>
+<rect x="140" y="120" width="60" height="60" fill="#e2e7f0" stroke="#31405e" stroke-width="2.5"/>
+<text x="170" y="155" text-anchor="middle">A tile</text>
+<g fill="#f3ecdd" stroke="#8a5a17">
+<rect x="400" y="60" width="60" height="60"/><rect x="460" y="60" width="60" height="60"/><rect x="400" y="120" width="60" height="60"/><rect x="460" y="120" width="60" height="60"/>
+</g>
+<rect x="400" y="60" width="60" height="60" fill="#e4e9da" stroke="#5d7050" stroke-width="2.5"/>
+<text x="430" y="95" text-anchor="middle">B tile</text>
+<text x="320" y="280" text-anchor="middle">one rule: block the working set</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §3</span> Sketch of the lesson’s figure: the highlighted tiles ride in shared memory while the k loop advances.</figcaption>
+</figure>
+<div class="nugget" id="nugget-tiles">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §7</span></h4>
+<p class="big">Tiling moves reads from HBM to shared memory. The FLOPs stay put, but the reads change address.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A 16x cut in HBM reads with zero change in math is the purest form of the hardware-aware win. Reuse is found, not computed.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When the working set exceeds the fast store, block it. The tile size is a machine parameter, not a math parameter.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C04</p>
+<h2>Synchronization: the roll call</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §3</span></p>
+<p>Thread 0 writes shared memory and thread 1 reads it. What guarantees the order? Picture a roll call. __syncthreads() is the teacher calling “everyone stop until all are here.” Every thread in the block must arrive before any thread passes. Skip the call and reads race writes.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §4, §6</span></p>
+<p>Loading the tile: each thread places one element into shared memory. Barrier. Computing: each thread reads the whole tile. Without the barrier, a quick thread reads a tile element ahead of its loader’s write, giving wrong answers nondeterministically. A converged barrier costs about 10-20 cycles. What it buys is correctness, not speed. Missing barriers are bugs, and extra barriers are small stalls.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §7, §9</span></p>
+<p>Barriers are not seasoning to sprinkle freely. A barrier inside divergent control flow deadlocks, because threads that never arrive wait forever. Arrange for only the first 16 threads to reach a __syncthreads() call and the kernel hangs. Take the block barrier for shared memory across warps and warp-level sync for warp-local exchange.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Timeline of threads arriving at a barrier then proceeding together">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Roll call: threads arrive, the barrier holds, all proceed</text>
+<g font-family="sans-serif" font-size="12" stroke="#31405e">
+<line x1="80" y1="70" x2="220" y2="70" stroke-width="3"/><line x1="80" y1="95" x2="260" y2="95" stroke-width="3"/><line x1="80" y1="120" x2="200" y2="120" stroke-width="3"/><line x1="80" y1="145" x2="280" y2="145" stroke-width="3"/>
+<line x1="300" y1="55" x2="300" y2="160" stroke="#a94f27" stroke-width="3"/>
+<text x="300" y="180" text-anchor="middle" fill="#a94f27" stroke="none">barrier</text>
+<g stroke="#5d7050">
+<line x1="300" y1="70" x2="560" y2="70" stroke-width="3"/><line x1="300" y1="95" x2="560" y2="95" stroke-width="3"/><line x1="300" y1="120" x2="560" y2="120" stroke-width="3"/><line x1="300" y1="145" x2="560" y2="145" stroke-width="3"/>
+</g>
+<text x="320" y="210" text-anchor="middle" stroke="none">one rule: wait for all</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §3</span> Sketch of the lesson’s figure: arrival times differ, departure is unanimous.</figcaption>
+</figure>
+<div class="nugget" id="nugget-rollcall">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §7</span></h4>
+<p class="big">A barrier buys correctness, not speed. A missing barrier is a bug, and an extra one is a small stall.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A missing barrier fails nondeterministically, the worst kind of failure. It passes tests and fails in production.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Order guarantees are load-bearing. Never place one inside a branch that some threads skip.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C05</p>
+<h2>Occupancy: hotel rooms</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §3</span></p>
+<p>The GPU fits 64 warps per SM, yet your kernel runs 8. What ate the slots? Picture hotel rooms. An SM owns a fixed set of rooms: warp slots, registers, shared memory. Each block reserves rooms, and occupancy is the fraction reserved. A block that reserves too much shared memory leaves rooms vacant.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §4, §6</span></p>
+<p>Occupancy = active warps / max warps per SM, and blocks per SM = the minimum over the resources. The toy: 64 warps max per SM, 256 threads = 8 warps per block, 48 KB shared per block against 100 KB per SM. At most 2 blocks fit, so 16 warps run: occupancy 16/64 = 25%. Halving shared use to 24 KB admits 4 blocks, 32 warps: 50%. The lesson’s check: occupancy(256, 48, 32) = 0.25, occupancy(256, 24, 32) = 0.50.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §7, §9</span></p>
+<p>Occupancy serves latency hiding. It is a means, not a goal, and past about 50% extra occupancy rarely helps. A kernel at 25% with strong instruction-level parallelism can beat one at 100% full of stalls. Raise occupancy for latency-bound kernels, and trade it for registers when compute-bound. Measure, do not worship.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 280" role="img" aria-label="Hotel rooms: 64 slots, 16 filled at 48 KB, 32 at 24 KB">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Hotel rooms: halving the booking doubles the occupancy</text>
+<g font-family="sans-serif" font-size="11">
+<text x="80" y="60">48 KB per block: 16 of 64 rooms</text>
+<g fill="#e2e7f0" stroke="#31405e">
+<rect x="80" y="70" width="18" height="18"/><rect x="102" y="70" width="18" height="18"/><rect x="124" y="70" width="18" height="18"/><rect x="146" y="70" width="18" height="18"/><rect x="168" y="70" width="18" height="18"/><rect x="190" y="70" width="18" height="18"/><rect x="212" y="70" width="18" height="18"/><rect x="234" y="70" width="18" height="18"/>
+</g>
+<g fill="#31405e">
+<rect x="80" y="70" width="18" height="18"/><rect x="102" y="70" width="18" height="18"/>
+</g>
+<text x="80" y="112">25%</text>
+<text x="80" y="140">24 KB per block: 32 of 64 rooms</text>
+<g fill="#e2e7f0" stroke="#31405e">
+<rect x="80" y="150" width="18" height="18"/><rect x="102" y="150" width="18" height="18"/><rect x="124" y="150" width="18" height="18"/><rect x="146" y="150" width="18" height="18"/><rect x="168" y="150" width="18" height="18"/><rect x="190" y="150" width="18" height="18"/><rect x="212" y="150" width="18" height="18"/><rect x="234" y="150" width="18" height="18"/>
+</g>
+<g fill="#5d7050">
+<rect x="80" y="150" width="18" height="18"/><rect x="102" y="150" width="18" height="18"/><rect x="124" y="150" width="18" height="18"/><rect x="146" y="150" width="18" height="18"/>
+</g>
+<text x="80" y="192">50%</text>
+<text x="320" y="230" text-anchor="middle">one rule: shrink the booking</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §3, §6</span> Sketch of the lesson’s figure: the same 64 rooms, twice the guests after halving shared use. Each row stands for 8 rooms.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Occupancy planner. Enter block threads, shared KB per block, and registers per thread. The widget applies the lesson’s <code>occupancy()</code>.</p>
+<p>Block threads: <input class="text" id="ocT" value="256" inputmode="numeric" aria-label="Block threads"></p>
+<p>Shared KB per block: <input class="text" id="ocS" value="48" inputmode="numeric" aria-label="Shared KB per block"></p>
+<p>Registers per thread: <input class="text" id="ocR" value="32" inputmode="numeric" aria-label="Registers per thread"></p>
+<p><button class="btn" id="ocBtn">Book the rooms</button></p>
+<div class="chips" id="ocOut"></div>
+<p class="small" id="ocNote"></p>
+</div>
+<div class="nugget" id="nugget-rooms">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §7</span></h4>
+<p class="big">Occupancy is a means, not an end. It rents latency hiding, but the returns flatten past about 50%.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Chasing 100% occupancy can cost the registers that feed real parallelism. The metric serves the kernel, not the reverse.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every utilization metric has a knee. Find it, then stop optimizing the metric and start optimizing the work.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C06</p>
+<h2>Reductions: the tournament bracket</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §3</span></p>
+<p>Add 1024 numbers with 256 threads. How? Picture a tournament bracket. Pairs sum and winners advance, 1024 down to 1 across 10 rounds. Every round halves the field until one number remains.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §4, §6</span></p>
+<p>In round r, thread i adds a[2i] + a[2i+1] into the next level. The work halves each round: 2N total work, log N span. Barriers separate the rounds, with warp shuffles covering the last warp. The toy: sum(0..1023) = 523776 in 10 rounds. Rounds = ceil(log2(N)), padding odd lengths.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §7, §9</span></p>
+<p>Work O(N), span O(log N), and the reduction is bandwidth-bound: the tree moves data more than it computes. Fewer rounds are not always faster, because unrolling past the sweet spot wastes shared memory and hurts occupancy. Two to four elements per thread is the sweet spot. 1 wastes the launch, 16 wastes registers.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 260" role="img" aria-label="Tournament bracket 8 to 4 to 2 to 1">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Tournament bracket: 8 values to 1 sum in 3 rounds</text>
+<g font-family="sans-serif" font-size="12" text-anchor="middle">
+<g fill="#e2e7f0" stroke="#31405e">
+<circle cx="80" cy="80" r="16"/><circle cx="80" cy="120" r="16"/><circle cx="80" cy="160" r="16"/><circle cx="80" cy="200" r="16"/>
+</g>
+<g fill="#e4e9da" stroke="#5d7050">
+<circle cx="220" cy="100" r="16"/><circle cx="220" cy="180" r="16"/>
+</g>
+<circle cx="360" cy="140" r="16" fill="#f7ecd4" stroke="#8a5a17"/>
+<circle cx="500" cy="140" r="20" fill="#f6e3d3" stroke="#a94f27"/>
+<text x="500" y="145">sum</text>
+<g stroke="#6f6355">
+<line x1="96" y1="88" x2="204" y2="96"/><line x1="96" y1="112" x2="204" y2="104"/>
+<line x1="96" y1="168" x2="204" y2="176"/><line x1="96" y1="192" x2="204" y2="184"/>
+<line x1="236" y1="108" x2="344" y2="136"/><line x1="236" y1="172" x2="344" y2="144"/>
+<line x1="376" y1="140" x2="480" y2="140"/>
+</g>
+<text x="320" y="230">one rule: halve each round</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §3</span> Sketch of the lesson’s figure. Pairs sum, winners advance.</figcaption>
+</figure>
+<div class="nugget" id="nugget-bracket">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §7</span></h4>
+<p class="big">A reduction is bandwidth-bound. Its tree moves data, and the math is incidental.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Optimizing the arithmetic of a reduction misses the point. The bytes moved per round decide the time.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Name the true cost before optimizing. A tree that halves the work still moves every byte.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C07</p>
+<h2>The attention bottleneck: a library with no desk</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §3</span></p>
+<p>The attention FLOP count looks fine, yet the kernel crawls. Where does the time go? Picture a library missing its desk. Standard attention writes the entire T x T score matrix out to HBM, the warehouse, reads it back for the softmax, writes it out again, then reads it for the values multiply: four warehouse trips per idea. The desk, SRAM, could stage a tile, yet the naive code never touches it.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §4, §6</span></p>
+<p>Per layer per head, HBM moves about 4T² bytes in fp16: two bytes, doubled for read-plus-write, doubled again for two passes. FLOPs run 4T²n. Intensity is 4T²n / 4T² = n = 64 FLOP/byte, under the ridge of 150, so memory-bound. The toy at T = 4096, n = 64, one head: 134 MB of score traffic, 67 us per head at 2 TB/s. Bytes are the bottleneck, not math.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §7, §9</span></p>
+<p>The wall is O(T²) HBM traffic, and FLOPs are a distraction here. When the profiler shows 90% DRAM bandwidth on the attention kernel, believe it. The fix is fewer trips, not fewer FLOPs.</p>
+</div>
+<div class="callout">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §6</span> <strong>Disclosed inconsistency.</strong> The lesson’s “real” row reads: T = 8192, h = 32, scores 32 x 134 MB = 4.3 GB traffic per layer, 2.1 ms per layer at 2 TB/s. Recomputation: 4.3 GB and 2.1 ms are the T = 4096, h = 32 figures (attn_traffic(4096, 32) = 4294967296 bytes, which is 2.15 ms at 2e12). At T = 8192 the traffic quadruples to 17.2 GB and 8.6 ms. The toy row (134 MB, 67 us) is unaffected.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 280" role="img" aria-label="Four warehouse trips for the score matrix versus one desk">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Four warehouse trips for one idea (naive attention)</text>
+<g font-family="sans-serif" font-size="12" text-anchor="middle">
+<rect x="60" y="70" width="120" height="90" fill="#f3ecdd" stroke="#8a5a17" stroke-width="1.5"/>
+<text x="120" y="105">score</text><text x="120" y="125">matrix</text><text x="120" y="145" font-size="11">T x T</text>
+<g stroke="#a94f27" stroke-width="2.5" fill="none">
+<path d="M 200 90 C 260 60, 320 60, 380 90"/>
+<path d="M 380 110 C 320 140, 260 140, 200 110"/>
+<path d="M 200 130 C 260 100, 320 100, 380 130"/>
+<path d="M 380 150 C 320 180, 260 180, 200 150"/>
+</g>
+<rect x="400" y="70" width="120" height="90" fill="#e2e7f0" stroke="#31405e" stroke-width="1.5"/>
+<text x="460" y="105">HBM</text><text x="460" y="125" font-size="11">warehouse</text>
+<text x="120" y="200">write, read, write, read</text>
+<text x="460" y="200">134 MB per head</text>
+<rect x="540" y="100" width="60" height="30" fill="#e4e9da" stroke="#5d7050"/>
+<text x="570" y="120" font-size="11">desk: unused</text>
+<text x="320" y="240">one rule: never materialize</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §3</span> Sketch of the lesson’s figure: four trips where a desk would do. The chapter plate’s bottom line is the fix.</figcaption>
+</figure>
+<div class="nugget" id="nugget-wall">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §7</span></h4>
+<p class="big">The wall is O(T²) traffic. FLOPs distract here.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Intensity 64 against a ridge of 150 says memory-bound before any profiling. The arithmetic alone names the bottleneck.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When the profiler and the FLOP count disagree, the profiler is right. Bytes move slower than math.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C08</p>
+<h2>Exact versus approximate: the commute</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §3</span></p>
+<p>Two fixes exist: rewrite the math or redraw the memory plan. Which one? Picture two ways to shorten a commute. Move closer, which is approximation: sparse, low-rank, or kernel attention changes what you compute, the way moving changes where you live, the model’s math. Or take the express lane, which is exact IO: FlashAttention computes the same result with fewer trips and keeps your address.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §4, §6</span></p>
+<p>With sparse window w, each query touches w keys: work 2Twd against 2T²d, a ratio of w/T. Low-rank at rank r costs O(Tr), and kernel methods cost O(T) through feature maps. All three approximate. FlashAttention keeps the same O(T²) FLOPs with O(T) HBM traffic, exactly. The FLOPs stand still while the bytes fall. The toy at T = 4096, w = 256 makes sparse work 1/16 of dense, and FlashAttention cuts traffic from 134 MB to about 2 MB per head, Q, K, V, O only.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §7, §9</span></p>
+<p>Error tolerance decides, not speed alone. Stay with exact IO while the model must not change, and allow approximations once quality tests pass and extra speed is needed. Local windows sever the long-range dependencies a task needs. A copying task across 4K distance fails at w = 256 and passes under exact attention. Judge on the task, not just perplexity.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 300" role="img" aria-label="Four cards comparing sparse, low-rank, kernel, FlashAttention">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Four options: work, traffic, exactness</text>
+<g font-family="sans-serif" font-size="11" text-anchor="middle">
+<rect x="40" y="60" width="130" height="150" fill="#fffdf8" stroke="#221a12" stroke-width="1.5"/>
+<text x="105" y="85">sparse</text><text x="105" y="105" font-size="10">work O(Tw)</text><text x="105" y="122" font-size="10">approx</text><text x="105" y="150" font-size="10" fill="#a94f27">breaks long range</text>
+<rect x="185" y="60" width="130" height="150" fill="#fffdf8" stroke="#221a12" stroke-width="1.5"/>
+<text x="250" y="85">low-rank</text><text x="250" y="105" font-size="10">work O(Tr)</text><text x="250" y="122" font-size="10">approx</text>
+<rect x="330" y="60" width="130" height="150" fill="#fffdf8" stroke="#221a12" stroke-width="1.5"/>
+<text x="395" y="85">kernel</text><text x="395" y="105" font-size="10">work O(T)</text><text x="395" y="122" font-size="10">approx</text>
+<rect x="475" y="60" width="130" height="150" fill="#e4e9da" stroke="#5d7050" stroke-width="2.5"/>
+<text x="540" y="85">FlashAttention</text><text x="540" y="105" font-size="10">FLOPs O(T²d)</text><text x="540" y="122" font-size="10">traffic O(T)</text><text x="540" y="150" font-size="10" fill="#5d7050">exact</text>
+<text x="320" y="240">one rule: pick by error budget</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §3, §6</span> The lesson’s four cards. Exactness is a column, not a number.</figcaption>
+</figure>
+<div class="nugget" id="nugget-commute">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §7</span></h4>
+<p class="big">Exact IO trims traffic alone, while approximations trim the function too. Error tolerance decides, not speed alone.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A faster kernel that changes the model is a different product. The error budget decides before the benchmark does.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Separate the what from the how. Optimizations that preserve the what are always the first resort.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C09</p>
+<h2>Online softmax: the running high score</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §3</span></p>
+<p>Softmax wants the row max, but the row streams in blocks. How do you dodge the second pass? Picture a running high score. Track the running max (m) and the running sum (l). When a new block lands, the new max takes max(old max, block max), and the old sum rescales by the max’s travel, add the block’s sum, and continue. One pass, exact answer.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §4, §6</span></p>
+<p>For block x: m_b = max(x), l_b = sum(exp(x − m_b)). The merge is m’ = max(m, m_b) with l’ = l·exp(m − m’) + l_b·exp(m_b − m’), and the output accumulator rescales identically. The toy row [1, 2, 3, 100] in blocks of 2: block 1 gives m = 2, l = e^(−1) + e^0 = 1.368, and block 2 gives m_b = 100, l_b ≈ 1.0. Merged: m’ = 100, l’ = 1.368·e^(2−100) + 1.0 ≈ 1.0, so softmax ≈ [0, 0, 0, 1]. The lesson’s check: online matches the two-pass reference.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §7, §9</span></p>
+<p>The row costs O(T) memory, only the (m, l) scalars, in one pass: the trick that keeps tiling exact. The classic bug drops the rescale. Forgetting exp(m − m’) gives l = 2.368 instead of 1.0 on the toy, and the probabilities no longer sum to 1. Test against the reference. Run the online version whenever rows are tiled or streamed, and two-pass only for tiny rows.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 260" role="img" aria-label="Two blocks merging running max and sum with rescale arrows">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Online softmax: block stats merge with a rescale</text>
+<g font-family="sans-serif" font-size="12" text-anchor="middle">
+<rect x="60" y="80" width="120" height="70" fill="#f7ecd4" stroke="#8a5a17" stroke-width="1.5"/>
+<text x="120" y="105">block 1</text><text x="120" y="125" font-size="11">[1, 2]</text><text x="120" y="142" font-size="11">m=2, l=1.368</text>
+<rect x="260" y="80" width="120" height="70" fill="#f7ecd4" stroke="#8a5a17" stroke-width="1.5"/>
+<text x="320" y="105">block 2</text><text x="320" y="125" font-size="11">[3, 100]</text><text x="320" y="142" font-size="11">m=100, l≈1</text>
+<text x="220" y="120" font-size="20">+</text>
+<text x="420" y="120" font-size="20">→</text>
+<rect x="460" y="80" width="120" height="70" fill="#e4e9da" stroke="#5d7050" stroke-width="2"/>
+<text x="520" y="105">merged</text><text x="520" y="125" font-size="11">m’=100</text><text x="520" y="142" font-size="11">l’≈1.0</text>
+<path d="M 180 160 Q 320 200 460 160" fill="none" stroke="#a94f27" stroke-width="2" stroke-dasharray="6,4"/>
+<text x="320" y="200" font-size="11" fill="#a94f27">rescale old sum by exp(m − m’)</text>
+<text x="320" y="230">one rule: rescale by the max move</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §3, §6</span> The rescale arrow is the whole trick. Drop it and the probabilities break.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Online softmax lab. Enter two blocks as comma-separated numbers. The widget applies the lesson’s <code>online_softmax()</code>.</p>
+<p>Block 1: <input class="text" id="smB1" value="1,2" aria-label="Block 1"></p>
+<p>Block 2: <input class="text" id="smB2" value="3,100" aria-label="Block 2"></p>
+<p><button class="btn" id="smBtn">Merge the blocks</button></p>
+<div class="chips" id="smOut"></div>
+<p class="small" id="smNote"></p>
+</div>
+<div class="nugget" id="nugget-highscore">
+<h4>Nugget 9 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §7</span></h4>
+<p class="big">The rescale is the algorithm. Drop exp(m − m’) and the probabilities stop summing to 1.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>One missing factor turns an exact method into a wrong one. The reference test catches it in one line.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Streaming algorithms live or die on their merge step. Derive the merge, then test it against the batch version.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · C10</p>
+<h2>FlashAttention: the assembly line</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §3</span></p>
+<p>How do tiling plus online softmax yield exact attention at O(T) HBM traffic? Picture an assembly line plus a notebook. The outer loop feeds K/V tiles one at a time, and the inner loop feeds Q tiles for each. A score block is computed on chip, and the running (m, l, o) notebook absorbs it through the online rule. The T x T matrix is never written down. Only the notebook survives.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §4, §6</span></p>
+<p>Take the i-th query block and the j-th key block: S = Q_i K_jᵀ / sqrt(d), computed on chip. The block softmax folds into (m_i, l_i, o_i) through the online update, and after all j, o_i = attention(Q_i, K, V), exactly. HBM accesses drop from Theta(T²) for the score matrix to Theta(T²d²/M) for SRAM size M. At d = 64 with M near 1e5, d²/M ≈ 0.04: roughly a 25x traffic cut, with the O(T²) storage gone entirely. The toy at T = 4, Br = Bc = 2, d = 2 runs 4 block pairs, and the final output matches naive attention to 1e-6.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §7, §9</span></p>
+<p>The FLOP count stands at O(T²d). Memory wins, not math. FlashAttention is not always faster, because at tiny T the tiling overhead outweighs the saving. At T = 16 the naive kernel launches once while the tiled version launches many small blocks. Measure the crossover, roughly T = 128 to 512 by hardware. Run FlashAttention at long T or wherever the score matrix threatens memory, and standard attention for tiny T in tests.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u04-assembly-notebook.jpg" alt="Watercolor of an assembly line processing tiles one at a time while a worker updates a notebook">
+<figcaption><span class="tag tag-toy">Illustration</span> The C10 mental model: tiles on the line, only the notebook survives. Watercolor, original to this companion.</figcaption>
+</figure>
+<figure>
+<svg class="chart" viewBox="0 0 640 280" role="img" aria-label="Outer K V loop, inner Q loop, on-chip score block, running notebook">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">FlashAttention: two loops, one notebook, no score matrix</text>
+<g font-family="sans-serif" font-size="12" text-anchor="middle">
+<rect x="60" y="60" width="180" height="150" fill="#f3ecdd" stroke="#8a5a17" stroke-width="1.5"/>
+<text x="150" y="85">outer: K/V tiles</text>
+<rect x="280" y="60" width="180" height="150" fill="#e2e7f0" stroke="#31405e" stroke-width="1.5"/>
+<text x="370" y="85">inner: Q tiles</text>
+<rect x="320" y="120" width="100" height="50" fill="#fffdf8" stroke="#221a12" stroke-width="2"/>
+<text x="370" y="140">score block</text><text x="370" y="158" font-size="11">on chip</text>
+<rect x="490" y="100" width="110" height="70" fill="#e4e9da" stroke="#5d7050" stroke-width="2"/>
+<text x="545" y="125">(m, l, o)</text><text x="545" y="145" font-size="11">notebook</text>
+<text x="480" y="140" font-size="18">→</text>
+<text x="320" y="240">one rule: tile + online</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §3</span> The score block is born and dies on chip. Only the notebook crosses iterations.</figcaption>
+</figure>
+<div class="nugget" id="nugget-line">
+<h4>Nugget 10 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §7</span></h4>
+<p class="big">Memory wins here, not math. The FLOPs stand still while the bytes fall.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A 25x traffic cut with identical FLOPs is the signature of an IO-aware algorithm. Count the trips, not the multiplies.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When the bottleneck is bytes, the algorithm to change is the memory plan, not the math.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s11">
+<p class="secnum">Section 11 · C11</p>
+<h2>Backward: the chef re-chops</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §3</span></p>
+<p>The backward pass needs the attention scores, which were never stored. Where do they come from? Picture a chef who discards the prep bowls and re-chops. Keeping every score costs O(T²) memory. Recomputing each score tile during backward costs extra FLOPs and holds memory at O(T). Memory is scarce, and FLOPs are cheap.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §4, §6</span></p>
+<p>Forward keeps m, l at O(T) and no scores. Backward rebuilds each S tile from the Q, K blocks, then the dQ, dK, dV updates use the online statistics. The toy at T = 4: forward holds m (4 numbers) plus l (4 numbers), 8 numbers against 16 scores. Backward rebuilds the 4 block pairs. The lesson’s check: recomputed P matches stored P. Backward FLOPs run about 2.5x the forward attention FLOPs, one recompute pass plus the gradients.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §7, §9</span></p>
+<p>FLOPs for memory: the trade is explicit. Recompute is not free. It adds a full extra pass. At small T, where the scores fit easily, recomputing wastes FLOPs for zero memory gain. Gate the choice on T: recompute when T² storage overflows memory, and store for small T where FLOPs matter more.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Forward stores only the notebook, backward rebuilds the tiles">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Backward: the notebook stays, the tiles are rebuilt</text>
+<g font-family="sans-serif" font-size="12" text-anchor="middle">
+<rect x="60" y="70" width="150" height="100" fill="#e4e9da" stroke="#5d7050" stroke-width="1.5"/>
+<text x="135" y="100">forward</text><text x="135" y="120" font-size="11">stores (m, l)</text><text x="135" y="138" font-size="11">8 numbers</text>
+<text x="240" y="125" font-size="20">→</text>
+<rect x="270" y="70" width="150" height="100" fill="#f7ecd4" stroke="#8a5a17" stroke-width="1.5"/>
+<text x="345" y="100">backward</text><text x="345" y="120" font-size="11">rebuilds tiles</text><text x="345" y="138" font-size="11">~2.5x FLOPs</text>
+<rect x="450" y="70" width="130" height="100" fill="#f3ecdd" stroke="#8a5a17" stroke-width="1.5" stroke-dasharray="6,4"/>
+<text x="515" y="100">scores</text><text x="515" y="120" font-size="11">never stored</text>
+<text x="320" y="200">one rule: trade FLOPs for memory</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §3, §6</span> 8 numbers stored against 16 scores. The backward pass re-chops what the forward threw away.</figcaption>
+</figure>
+<div class="nugget" id="nugget-chef">
+<h4>Nugget 11 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §7</span></h4>
+<p class="big">Memory is scarce and FLOPs are cheap. Recompute spends the cheap one to save the scarce one.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The backward pass is where O(T²) storage usually bites. Recompute keeps memory O(T) at a known FLOP price.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every cache-versus-recompute decision is a price ratio. Name both prices before choosing.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s12">
+<p class="secnum">Section 12 · C12</p>
+<h2>Benchmarks: a race with rules</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §3</span></p>
+<p>The new kernel claims “2x faster.” What had the old kernel done wrong? Picture a race with rules. Both runners share the track (shapes, dtype), the shoes (hardware), a warm-up lap, warmup runs included, and a photo finish with synchronized timing. Beating a walking opponent sets no record.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §4, §6</span></p>
+<p>The rules: identical shapes, dtype, and hardware. Warmup. Synchronize the device before and after. Report median-of-N. Use the baseline’s best config. Unsynchronized timing measures the launch, not the work. Median of 100 beats mean of 3. The toy: kernel A at 50 us median-of-100 synced against kernel B at 45 us, a 1.11x claim. Without sync, A reads 5 us of launch alone: a fake 9x.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §7, §9</span></p>
+<p>Benchmarking costs minutes, and false wins cost weeks, so spend the minutes. One run never suffices: clocks vary, throttling bites, and first runs include compile time. The baseline has to be the strongest known, because naive versus FlashAttention as the baseline flips verdicts. Estimate for direction. Benchmark for the claim.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 300" role="img" aria-label="Checklist card with five benchmark rules and the fake 9x crossed out">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">The validity checklist: five rules, one crossed-out fake</text>
+<g font-family="sans-serif" font-size="13">
+<rect x="120" y="50" width="400" height="190" fill="#fffdf8" stroke="#221a12" stroke-width="2"/>
+<g fill="#5d7050">
+<text x="150" y="85">✓ same shapes, dtype, hardware</text>
+<text x="150" y="112">✓ warmup runs</text>
+<text x="150" y="139">✓ device synchronize</text>
+<text x="150" y="166">✓ median-of-N</text>
+<text x="150" y="193">✓ strongest baseline</text>
+</g>
+<text x="150" y="224" fill="#a94f27" text-decoration="line-through">9x without sync</text>
+<text x="320" y="262" text-anchor="middle" font-size="12">one rule: control the race</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §4</span> Five rules from the lesson. The crossed-out claim is the no-sync fake.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Claim checker. Enter two median times in microseconds. The widget reports the speedup and flags the no-sync trap.</p>
+<p>Kernel A (us): <input class="text" id="bmA" value="50" inputmode="decimal" aria-label="Kernel A microseconds"></p>
+<p>Kernel B (us): <input class="text" id="bmB" value="45" inputmode="decimal" aria-label="Kernel B microseconds"></p>
+<p><button class="btn" id="bmBtn">Judge the race</button></p>
+<div class="chips" id="bmOut"></div>
+<p class="small" id="bmNote"></p>
+</div>
+<div class="nugget" id="nugget-race">
+<h4>Nugget 12 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §7</span></h4>
+<p class="big">Minutes buy benchmarks, and weeks pay for false wins. Spend the minutes.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A 9x claim from unsynchronized timing is a launch measurement wearing a speedup costume. The checklist is cheaper than the retraction.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every measurement needs its controls listed beside the number. A number without controls is a rumor.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s13">
+<p class="secnum">Section 13 · Synthesis</p>
+<h2>What this unit buys you</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 to C12</span></p>
+<p>The arc, end to end. The machine: warps of 32 in lockstep (C01), one transaction for adjacent access and 32 for strided (C02), tiles that convert HBM reads into shared-memory reads (C03), barriers that order the chaos (C04), occupancy as a means past its knee (C05), reductions as data movement (C06). The wall: naive attention pays four HBM trips per idea at intensity 64, memory-bound (C07). The two doors: change the math approximately or change the memory plan exactly (C08). The trick: the online softmax merge with its rescale (C09) lets tiled attention stay exact while the score matrix is never written (C10). The backward pass re-chops instead of storing (C11). And the discipline: control the race before claiming the win (C12).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Unit chapter plate</span></p>
+<p>The unit chapter plate states the fix in one line: “Never materialize the T x T matrix.” The role bridge: the research engineer carries the online softmax derivation and the tile trace as debugging tools for any attention kernel. The LLM engineer lets the T* crossover choose the serving kernel per context length. The research scientist frames the error-budget decision on the approximation table. Two disclosures stand on this page: the C02 transfer times and the C07 real-scale T, both recomputed above.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>Twelve nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-warps"><span class="wnum">01</span>Think in warps, not threads <span class="muted">· C01</span></a></li>
+<li><a href="#nugget-bus"><span class="wnum">02</span>Coalescing is a 32x lever <span class="muted">· C02</span></a></li>
+<li><a href="#nugget-tiles"><span class="wnum">03</span>Tiling converts HBM reads <span class="muted">· C03</span></a></li>
+<li><a href="#nugget-rollcall"><span class="wnum">04</span>Barriers buy correctness <span class="muted">· C04</span></a></li>
+<li><a href="#nugget-rooms"><span class="wnum">05</span>Occupancy is a means <span class="muted">· C05</span></a></li>
+<li><a href="#nugget-bracket"><span class="wnum">06</span>Reductions move data <span class="muted">· C06</span></a></li>
+<li><a href="#nugget-wall"><span class="wnum">07</span>O(T²) traffic is the wall <span class="muted">· C07</span></a></li>
+<li><a href="#nugget-commute"><span class="wnum">08</span>Exact IO keeps your address <span class="muted">· C08</span></a></li>
+<li><a href="#nugget-highscore"><span class="wnum">09</span>The rescale is the algorithm <span class="muted">· C09</span></a></li>
+<li><a href="#nugget-line"><span class="wnum">10</span>The win is memory, not math <span class="muted">· C10</span></a></li>
+<li><a href="#nugget-chef"><span class="wnum">11</span>FLOPs are cheap, memory is scarce <span class="muted">· C11</span></a></li>
+<li><a href="#nugget-race"><span class="wnum">12</span>Spend the minutes <span class="muted">· C12</span></a></li>
+</ol>
+</section>
+
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>lessons/u04/lesson-04-cuda-efficient-attention.md</code> (baseline 2026-10-06). No lecture transcript exists for this session, so nothing here quotes a lecturer and no lecture anecdotes appear. Calendar anchor: Week 3, Oct 07 (Hardware Aware Algorithm Design, presented by Simran) and Oct 11 (Efficient Attention). Charts re-plot the lesson’s computed numbers with section citations. All plotted values were recomputed from the lesson’s formulas on 2026-10-08. Two inconsistencies surfaced and are disclosed on-page (C02: transfer times about 32x too high. C07: the real-scale row computes T = 4096, not 8192). Claim class: every lesson leaf PLANNED / SOURCE ATTRIBUTION PENDING. Interactive toys run the lesson’s rules over your inputs and are labeled <span class="tag tag-toy">Illustration</span>. FlashAttention is taught from Dao et al. (2022, 2023), not as lecture content. Direct quotes from the lesson document: 16 words (the unit chapter plate line, the verbatim sync-barrier line, the verbatim speedup line, and the verbatim toy label), recounted by hand.</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>. No video exists for this session, so no embed appears.</p>
+</footer>
+</div>
+<script>
+function chip(text, cls){
+  var s=document.createElement("span")
+  if(cls){s.className="chip "+cls}
+  else{s.className="chip"}
+  s.textContent=text
+  return s
+}
+function out(id){
+  var e=document.getElementById(id)
+  e.innerHTML=""
+  return e
+}
+document.getElementById("wpBtn").addEventListener("click",function(){
+  var tid=parseInt(document.getElementById("wpT").value,10)
+  var w=Math.floor(tid/32)
+  var lane=tid%32
+  var o=out("wpOut")
+  o.appendChild(chip("warp "+w,"plain"))
+  o.appendChild(chip("lane "+lane,"plain"))
+  document.getElementById("wpNote").textContent="256-thread block: warp "+w+" of 8."
+})
+document.getElementById("cxBtn").addEventListener("click",function(){
+  var st=parseInt(document.getElementById("cxS").value,10)
+  var seen={}
+  var i=0
+  while(i<32){
+    var line=Math.floor(i*st*4/128)
+    seen[line]=1
+    i=i+1
+  }
+  var n=Object.keys(seen).length
+  var o=out("cxOut")
+  o.appendChild(chip(n+" transaction"+(n>1?"s":""),"plain"))
+  o.appendChild(chip((n*128)+" bytes moved","plain"))
+  if(n===1){document.getElementById("cxNote").textContent="Coalesced: 128 bytes wanted, 128 moved."}
+  else{document.getElementById("cxNote").textContent="128 bytes wanted, "+(n*128)+" moved: "+n+"x waste."}
+})
+document.getElementById("ocBtn").addEventListener("click",function(){
+  var bt=parseInt(document.getElementById("ocT").value,10)
+  var skb=parseInt(document.getElementById("ocS").value,10)
+  var rpt=parseInt(document.getElementById("ocR").value,10)
+  var warps=Math.floor(bt/32)
+  var byThreads=Math.floor(2048/bt)
+  var byShared=skb>0?Math.floor(100/skb):1000000000
+  var byRegs=Math.floor(65536/(rpt*bt))
+  var blocks=Math.min(byThreads,byShared,byRegs)
+  var occ=blocks*warps/64
+  var o=out("ocOut")
+  o.appendChild(chip("blocks per SM: "+blocks,"plain"))
+  o.appendChild(chip("occupancy: "+(occ*100).toFixed(0)+"%","plain"))
+  var limiter="threads"
+  if(byShared<=byThreads&&byShared<=byRegs){limiter="shared memory"}
+  else if(byRegs<=byThreads&&byRegs<=byShared){limiter="registers"}
+  document.getElementById("ocNote").textContent="Binding limiter: "+limiter+"."
+})
+document.getElementById("smBtn").addEventListener("click",function(){
+  function parseBlock(id){
+    var raw=document.getElementById(id).value
+    var parts=raw.split(",")
+    var vals=[]
+    var k=0
+    while(k<parts.length){
+      vals.push(parseFloat(parts[k]))
+      k=k+1
+    }
+    return vals
+  }
+  var b1=parseBlock("smB1")
+  var b2=parseBlock("smB2")
+  var m=-Infinity
+  var l=0
+  var blocks=[b1,b2]
+  var bi=0
+  while(bi<blocks.length){
+    var x=blocks[bi]
+    var mb=x[0]
+    var j=1
+    while(j<x.length){if(x[j]>mb){mb=x[j]} j=j+1}
+    var lb=0
+    var q=0
+    while(q<x.length){
+      lb=lb+Math.exp(x[q]-mb)
+      q=q+1
+    }
+    var mNew=Math.max(m,mb)
+    l=l*Math.exp(m-mNew)+lb*Math.exp(mb-mNew)
+    m=mNew
+    bi=bi+1
+  }
+  var o=out("smOut")
+  o.appendChild(chip("m = "+m.toFixed(1),"plain"))
+  o.appendChild(chip("l = "+l.toFixed(3),"plain"))
+  document.getElementById("smNote").textContent="Matches the two-pass reference. Drop the rescale and l breaks."
+})
+document.getElementById("bmBtn").addEventListener("click",function(){
+  var a=parseFloat(document.getElementById("bmA").value)
+  var b=parseFloat(document.getElementById("bmB").value)
+  var su=a/b
+  var o=out("bmOut")
+  o.appendChild(chip("speedup: "+su.toFixed(2)+"x","plain"))
+  if(su>1.5){document.getElementById("bmNote").textContent="Large claim. Was device sync on? Was the baseline the strongest known?"}
+  else{document.getElementById("bmNote").textContent="Modest claim. Still needs warmup, sync, and median-of-N."}
+})
+</script>
+</body>
+</html>
