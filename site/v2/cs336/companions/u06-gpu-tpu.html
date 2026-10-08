@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPU/TPU architecture and profiling · CS336</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.pairtable td.rank{font-weight:700}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS336 · Unit 06 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>GPU/TPU architecture and profiling</h1>
+<p class="dek">Peak numbers are ceilings under ideal conditions. This companion walks the hardware unit: the execution hierarchy, the memory pyramid, the roofline on one reference device, occupancy, honest measurement, GEMM shapes, MFU, interconnects, narrow formats, throttling, and the invariants that catch lying profilers.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>u06_gpu_tpu.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no full lecture transcript exists for this session. The page narrates the lesson document <code>content/v2/cs336/lessons/u06_gpu_tpu.md</code>, not a video. Claim class: REQUESTED-BRANCH. The lesson states its reference device (312 TFLOP/s bf16 dense, 2.0 TB/s HBM, 80 GB, 108 SMs) as a standing assumption, not a sourced claim. Every number carries the lesson section that reports it.</p>
+</div>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Latency and bandwidth</a>
+<a href="#s2">2 SMs and warps</a>
+<a href="#s3">3 Memory pyramid</a>
+<a href="#s4">4 Roofline</a>
+<a href="#s5">5 Occupancy and timing</a>
+<a href="#s6">6 GEMM shapes</a>
+<a href="#s7">7 MFU</a>
+<a href="#s8">8 Interconnect</a>
+<a href="#s9">9 Formats and throttling</a>
+<a href="#s10">10 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<figure>
+<img class="illus" src="assets/u06-hero-chip.jpg" alt="Watercolor of a chip imagined as a city grid of many districts">
+<figcaption><span class="tag tag-toy">Illustration</span> The GPU as a city: 108 identical districts (SMs), each running its own blocks of threads. Watercolor, original to this companion.</figcaption>
+</figure>
+<section class="block" id="s1">
+<p class="secnum">Section 1 · Remediation, standing assumptions</p>
+<h2>Latency, bandwidth, throughput</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></p>
+<p>Latency is the time for one operation. Bandwidth is bytes per second. Throughput is operations per second. A kernel is memory-bound when its arithmetic intensity (FLOP per byte) is below peak-FLOP/bandwidth. It is compute-bound above it. The roofline model plots attainable throughput as min(peak, intensity * bandwidth).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Standing assumptions, remediation</span></p>
+<p>All compute in this unit uses one reference device, stated by the lesson as an assumption, not a sourced claim: peak bf16 dense 312 TFLOP/s, HBM bandwidth 2.0 TB/s, HBM 80 GB, 108 SMs. The worked check: intensity 1.0 FLOP/byte on the reference device gives min(312, 1.0 * 2.0) = 2.0 TFLOP/s, which is 1 percent of peak. From <code>visuals/compute_u06.py</code>, executed 2026-10-06.</p>
+</div>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation, C03 §5</span> Roofline toy on the reference device. Give an intensity, get the attainable throughput and the bound.</p>
+<p class="small">Intensity (FLOP/byte) <input class="text" id="rli" value="1.0" style="max-width:110px" aria-label="Intensity"></p>
+<p><button class="btn" id="rlbtn">Place on roofline</button></p>
+<p class="small" id="rlout">Press the button.</p>
+<p class="small muted">Attainable = min(312, intensity * 2.0) TFLOP/s. Knee at 312 / 2.0 = 156 FLOP/byte (C03 §3).</p>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C01</p>
+<h2>What runs where: SMs, blocks, warps</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §3, §5</span></p>
+<p>What runs where? A GPU has SMs. Each SM runs thread blocks. Blocks split into warps of 32 threads that execute in lockstep. Occupancy is the fraction of the SM's thread capacity that is active: latency hiding needs enough warps to cover memory stalls. Active threads = threads/block * blocks/SM * SMs. Occupancy = active / max threads per SM. More warps per SM means more independent work to schedule during a stall.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §6</span></p>
+<p>The lesson's toy on the reference device, executed 2026-10-06: 256 threads/block, 8 blocks/SM, 108 SMs = 221,184 active threads (2.0K per SM).</p>
+</div>
+<div class="nugget" id="nugget-fill">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §11</span></h4>
+<p class="big">One block of 32 threads on a 108-SM device leaves 107 SMs idle.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "the GPU is fast" breaks when the work does not fill it. Small-batch inference is the classic case.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Parallel hardware only helps parallel-shaped work. Measure utilization before blaming the algorithm.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §10</span></p>
+<p>The hierarchy is the GPU's answer to latency: CPU threads are few and heavy, GPU threads many and light.</p>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C02</p>
+<h2>The memory pyramid</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §3, §5</span></p>
+<p>Why not keep everything in registers? Registers are the fastest and hold kilobytes per thread: the working set. Shared memory (tens of KB per block) is programmer-managed scratch. HBM (80 GB, 2 TB/s) holds the model and the cache. On TPU: HBM plus on-chip vector/matrix units with software-managed memory. Every byte the kernel touches must travel HBM to L2 to shared/registers. Arithmetic intensity measures how much math amortizes each byte moved. The hierarchy rewards reuse (tiling, U07).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §6, §9</span></p>
+<p>The lesson's capacity check, executed 2026-10-06: at 65,536 bytes per KV token (GQA-8, d=2048, L=32, bf16), 80 GB of HBM holds 1,220,703 tokens. HBM capacity bounds context length (U04-C01). HBM bandwidth bounds decode speed.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u06-memory-pyramid.jpg" alt="Watercolor of a stepped pyramid: jewel, box, crate, warehouse">
+<figcaption><span class="tag tag-toy">Illustration</span> The pyramid: registers (the jewel), shared memory (the box), HBM (the warehouse). Every byte climbs the whole pyramid to be used. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-spill">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §11</span></h4>
+<p class="big">Register spilling: too many live values push registers to slow local memory, and the kernel slows 2 to 5x with no code change except variable count.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "more unrolling is better" breaks at the register limit. The slowdown is invisible in the source.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every scarce resource has a cliff past its limit. Find the limit before you tune near it.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C03</p>
+<h2>The roofline on the reference device</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §3, §5</span></p>
+<p>Is this kernel slow because of math or memory? Attainable = min(peak FLOP/s, intensity * bandwidth). The knee is at peak/bandwidth = 156 FLOP/byte on the reference device. Below the knee, only bandwidth matters. Above it, only math. Time >= max(FLOP/peak, bytes/bw), so throughput <= min(peak, intensity*bw). The U02 intensities plug straight in.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §6</span></p>
+<p>The lesson's classification, executed 2026-10-06: attention scores at intensity 1.0 reach 2.0 TFLOP/s, memory-bound, 1 percent of peak. GEMM at 170.7 reaches 312 TFLOP/s, compute-bound, 100 percent of peak. The model is free and predicts within about 2x before any profiling.</p>
+</div>
+<figure>
+<div id="chart-roofline6"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §6</span> Roofline on the reference device (312 TFLOP/s, 2.0 TB/s). Knee at 156 FLOP/byte. Attention scores (1.0, 2.0 TFLOP/s) sit on the slope. GEMM (170.7, 312 TFLOP/s) sits on the plateau. Points from <code>visuals/compute_u06.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<div class="nugget" id="nugget-bound">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §11</span></h4>
+<p class="big">A kernel at 50 percent of roofline with intensity 200 reads as compute-bound, but the real limit can be occupancy or instruction overhead.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "only two limits exist" breaks. The roofline is an upper bound, not a diagnosis.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>A bound tells you where the ceiling is. It does not tell you what holds you below it.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §10</span></p>
+<p>Full simulation is accurate and expensive. The roofline is the first-pass tool.</p>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C04, C05</p>
+<h2>Occupancy, and how to time honestly</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §3, §5</span></p>
+<p>The math says 312 TFLOP/s but the kernel gets 150. Why? Memory loads take hundreds of cycles. The SM hides this by switching to other warps. Occupancy is the fraction of maximum warps resident. Low occupancy means stalls with no warp to switch to. Little's-law style: needed warps ≈ latency * throughput. Fewer resident warps than needed leaves bandwidth idle. The lesson's toy: halving active warps halves the latency-hiding ability, and memory stalls go uncovered.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §11</span></p>
+<p>The limit in the other direction: 100 percent occupancy with low intensity is still memory-bound. Occupancy cannot fix a bandwidth limit. The assumption "more occupancy is always better" breaks: past enough warps there is no gain.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §3, §5, §6</span></p>
+<p>The first timing says 10 ms, the second says 3 ms. Which is right? GPUs execute asynchronously: time with device sync, warm up (caches, clocks), then take the median of many runs. Report the setup (shapes, dtype, device state) or the number is meaningless. Async launch returns before the work finishes: unsynced timing measures launch overhead. Warmup fills caches and ramps clocks. Median rejects outliers. The lab model: run times [12, 3.1, 3.0, 3.2, 3.1] ms. The first is warmup, the median of the rest is 3.1 ms.</p>
+</div>
+<div class="nugget" id="nugget-sync">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §11</span></h4>
+<p class="big">Timing without sync: every kernel reports about 5 us, and the "optimization" that launches fewer kernels looks like a win.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "the timer measures work" breaks under asynchrony. Sync is load-bearing.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When the system is asynchronous, the measurement protocol is part of the result. Publish the protocol with the number.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §9, §10</span></p>
+<p>Minutes of benchmarking save days of wrong tuning. Vendor profilers (nsys, ncu) give the inside view. The warmup/sync/median rules are the floor.</p>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C06</p>
+<h2>GEMM: same FLOPs, different speed</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §3, §5</span></p>
+<p>Same FLOPs, different speed. Why? GEMM efficiency depends on the (M, N, K) shape: large K gives reuse, tiny M (decode, batch 1) gives none. Batching (bigger M) moves decode toward the compute-bound regime. Intensity ≈ 2MNK over the byte traffic: for M=1 this collapses, and the weight matrix streams once per token. The lab compares intensity for (M=1, N=4096, K=4096) versus (M=4096, N=4096, K=4096): the roofline classifies them on opposite sides.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §9, §10, §11</span></p>
+<p>Batching costs latency per request (queueing) and buys throughput. The alternative: weight-only quantization raises intensity by shrinking bytes. Batching is the scheduling answer. The trap: batching to M=1024 on a latency-sensitive serving task makes throughput soar while p99 latency violates the SLO. The assumption "bigger is better" breaks against the latency contract.</p>
+</div>
+<div class="nugget" id="nugget-slo">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §11</span></h4>
+<p class="big">Throughput and latency are different contracts. Batching serves one and can violate the other.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Optimize the metric the user feels. A faster system that misses its SLO is a failure.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Name the contract before the optimization. Every speedup trades against something the contract may forbid.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C07</p>
+<h2>MFU: the honest utilization</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §3, §5, §6</span></p>
+<p>The cluster trains at 25 TFLOP/s per GPU. Is that good? MFU = achieved model FLOPs / peak device FLOPs. The numerator counts the math the model needs (2 * params per token). The denominator is the device peak. The lesson's toy, executed 2026-10-06: 25.2 TFLOP/s on a 7B model at 1800 tok/s = 8.1 percent MFU. Achieved = 2 * P * tokens/s. 8 percent is poor. 40 to 60 percent is a well-tuned large run. MFU excludes rematerialization and communication: hardware FLOP utilization (HFU) includes them.</p>
+</div>
+<figure>
+<div id="chart-mfu"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §6</span> 25.2 TFLOP/s against the 312 TFLOP/s peak: 8.1 percent MFU. From <code>visuals/compute_u06.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<div class="nugget" id="nugget-mfu">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §11</span></h4>
+<p class="big">MFU 55 percent with frequent checkpoint restarts looks healthy while the run wastes a third of its wall clock.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "MFU measures the run" breaks. It measures only the compute phase.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every metric has a scope. The number is honest only inside it.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §9, §10</span></p>
+<p>MFU is a diagnostic, not a knob. The knobs are batch, parallelism, kernels. Alternatives: HFU (includes extra FLOPs), tokens/s alone (not normalized). MFU compares across hardware.</p>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C08</p>
+<h2>The interconnect: tiers of bandwidth</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §3, §5</span></p>
+<p>How long does a 7B gradient sync take? GPUs connect in tiers: fast inside the node (hundreds of GB/s), slower across nodes (tens to hundreds of GB/s). Ring all-reduce moves about 2x the data per GPU. Time ≈ 2 * bytes / bandwidth. Each of N GPUs sends and receives 2*(N-1)/N * bytes, ≈ 2*bytes.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §6, §9</span></p>
+<p>The lesson's toy, executed 2026-10-06: about 0.02 s over 600 GB/s links, about 0.07 s over 200 GB/s links, for 7 GB in the ring model with 2x data. Communication time competes with compute. Overlap (U08/U09) hides it. Tree all-reduce gives lower latency with the same bandwidth term. Ring is the bandwidth-optimal baseline.</p>
+</div>
+<figure>
+<div id="chart-allreduce"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §6</span> Ring all-reduce time for 7 GB: about 0.02 s at 600 GB/s, about 0.07 s at 200 GB/s. From <code>visuals/compute_u06.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §5</span> All-reduce toy. Give bytes and link bandwidth. The toy runs the lesson's ring model.</p>
+<p class="small">Bytes (GB) <input class="text" id="argb" value="7" style="max-width:80px" aria-label="Gigabytes"> Bandwidth (GB/s) <input class="text" id="arbw" value="600" style="max-width:90px" aria-label="Bandwidth"></p>
+<p><button class="btn" id="arbtn">Compute time</button></p>
+<p class="small" id="arout">Press the button.</p>
+<p class="small muted">Time ≈ 2 * bytes / bandwidth (ring model, C08 §5).</p>
+</div>
+<figure>
+<img class="illus" src="assets/u06-interconnect.jpg" alt="Watercolor of islands joined by a wide stone bridge and a narrow rope bridge">
+<figcaption><span class="tag tag-toy">Illustration</span> The tiered interconnect: a grand bridge inside the node, a rope bridge across nodes. Time follows the narrowest crossing. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-place">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §11</span></h4>
+<p class="big">A topology-unaware mapping puts heavy pairs across the slow tier, and the 0.07 s becomes the step's critical path.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "bandwidth is uniform" breaks. Placement matters.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When the network has tiers, the mapping is part of the performance design.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C09, C10, C11</p>
+<h2>Vendor claims, narrow formats, throttling</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §3, §5</span></p>
+<p>The vendor says 624 TFLOP/s. Do you get it? Peak numbers are ceilings under ideal conditions: dense math, supported dtype, large shapes, sometimes structured sparsity. Your kernel's roofline (C03) is the honest comparison, not the vendor peak. The verification protocol: (1) quote the claim with its conditions, (2) reproduce the conditions or state the deviation, (3) measure per C05, (4) report achieved versus claimed with the gap explained. The lab: the fp8 624 number needs fp8 dense GEMM at large shapes. A skinny fp8 kernel achieves a fraction. An hour of verification beats a week of tuning to a phantom target.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §3, §5, §6</span></p>
+<p>What does fp8 buy? The lesson's toy, executed 2026-10-06: 624 vs 312 TFLOP/s dense (2x), and half the memory traffic of bf16. Newer devices add narrow formats with 2x the dense throughput of bf16 and half the bytes. Halving bytes doubles intensity at fixed FLOPs: memory-bound kernels speed up even before the 2x math rate matters. The catch: range and precision need scaling (per-tensor or per-block), and the kernels must exist. fp8 without scaling on a model with outlier activations overflows and the loss diverges. The assumption "narrower is a free lunch" breaks. Scaling is part of the format.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §3, §5, §6</span></p>
+<p>The kernel slowed down overnight with no code change. Devices cap power and temperature by lowering clocks. A throttled device reports the same kernel at lower throughput: timings drift and comparisons lie. Throughput scales with clock for compute-bound kernels: 1.0/1.4 = 0.71, a 29 percent hit. The lab models the clock drop from 1.4 GHz to 1.0 GHz and its 29 percent throughput hit, with the detection rule: repeated baseline timing drifting down. Blaming the code for a throttled slowdown means a week of tuning against a moving target. The assumption "the device is constant" breaks. Measure the device first.</p>
+</div>
+<div class="nugget" id="nugget-verify">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §11</span></h4>
+<p class="big">Tuning a memory-bound kernel against the dense peak spends months of work on a ceiling the kernel can never touch.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "the peak is the target" breaks. The roofline is the target.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Verify the claim's conditions before you chase the claim. Vendor numbers are branches to verify, not facts to cite.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §10, C10 §10, C11 §10</span></p>
+<p>Third-party benchmarks get the same protocol. Format selection: bf16 is the safe default, int8 for inference, fp8 for training throughput where supported. Power-capped scheduling is the cluster-level answer. Detection is the user-level answer.</p>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · C12, synthesis</p>
+<h2>Three invariants against lying profilers</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §3, §5, §6</span></p>
+<p>The profiler says the kernel beats the roofline. Now what? Three invariants: (1) throughput <= roofline, (2) the profiled FLOP/byte counts match the analytic model within about 2x, (3) timings reproduce within 10 percent. Violations mean the measurement is wrong, not the model. Each invariant is a consistency check between independent estimates: model versus measurement. The lab: a toy profile violating invariant 1 is traced to unsynced timing. Seconds per profile, catches hours of confusion. "Optimizing" past the roofline means the timer was wrong and the optimization was a measurement artifact.</p>
+<p><span class="tag tag-lesson">From the lesson</span> The arc, end to end. Latency, bandwidth, and throughput are different quantities, and the roofline binds them on one reference device (remediation). SMs run blocks, blocks run warps of 32, and unfilled SMs sit idle (C01). The pyramid runs from registers through shared memory to 80 GB of HBM, and spilling off the top costs 2 to 5x (C02). The knee at 156 FLOP/byte splits memory-bound from compute-bound (C03). Occupancy hides latency until bandwidth says stop (C04). Honest timing needs sync, warmup, and the median (C05). GEMM speed follows shape, and batching trades latency for throughput (C06). MFU normalizes achieved FLOPs against the peak (C07). The interconnect has tiers, and placement decides the critical path (C08). Vendor peaks are ceilings with conditions (C09). fp8 doubles dense throughput at the price of scaling (C10). Clocks move, so measure the device (C11). And three invariants arbitrate every profile (C12).</p>
+<p><span class="tag tag-lesson">From the lesson</span> Where the unit points next, in the lesson's own forward links: U07 rewards reuse with tiling. U08 and U09 parallelize across the tiers and overlap communication with compute. U04-C01 spends the HBM capacity on context. U11 lives in the decode regime where HBM bandwidth rules.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>8 nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-fill"><span class="wnum">01</span>Parallel hardware only helps parallel-shaped work <span class="muted">· C01</span></a></li>
+<li><a href="#nugget-spill"><span class="wnum">02</span>Find the cliff before you tune near it <span class="muted">· C02</span></a></li>
+<li><a href="#nugget-bound"><span class="wnum">03</span>A bound is not a diagnosis <span class="muted">· C03</span></a></li>
+<li><a href="#nugget-sync"><span class="wnum">04</span>Publish the protocol with the number <span class="muted">· C05</span></a></li>
+<li><a href="#nugget-slo"><span class="wnum">05</span>Optimize the metric the user feels <span class="muted">· C06</span></a></li>
+<li><a href="#nugget-mfu"><span class="wnum">06</span>Every metric has a scope <span class="muted">· C07</span></a></li>
+<li><a href="#nugget-place"><span class="wnum">07</span>The mapping is part of the performance design <span class="muted">· C08</span></a></li>
+<li><a href="#nugget-verify"><span class="wnum">08</span>Vendor numbers are branches to verify <span class="muted">· C09</span></a></li>
+</ol>
+</section>
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>content/v2/cs336/lessons/u06_gpu_tpu.md</code>. No full lecture transcript exists for this session. Quoted words from the lesson source: 32. No lecture anecdotes appear. Claim class REQUESTED-BRANCH. The charts re-plot the lesson's computed numbers with section citations. The lab script is <code>visuals/compute_u06.py</code>, executed 2026-10-06. Interactive toys run the lesson's formulas and are labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p class="small">Readings and forward links named by the lesson: U07 (tiling), U08/U09 (parallelism and overlap), U04-C01 (context capacity), U11 (decode regime).</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>.</p>
+</footer>
+</div>
+<script>
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  const keys = Object.keys(attrs)
+  keys.forEach(function(k) { n.setAttribute(k, attrs[k]) })
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function barChart(id, rows, maxV, unit, labelW) {
+  labelW = labelW || 210
+  const host = document.getElementById(id)
+  const W = 760
+  const rowH = 46
+  const padT = 14
+  const padB = 10
+  const H = padT + rows.length * rowH + padB
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  rows.forEach(function(r, i) {
+    const y = padT + i * rowH
+    const lab = svgEl("text", {x: 12, y: y + 27, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - labelW - 110) * (r[1] / maxV)
+    const bar = svgEl("rect", {x: labelW, y: y + 9, width: Math.max(bw, 3), height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1] + unit
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: labelW + Math.max(bw, 3) + 10, y: y + 27, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1] + unit
+    svg.appendChild(val)
+  })
+  host.appendChild(svg)
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id)
+  const data = opts.data
+  const W = 760
+  const H = 400
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const yMin = opts.yMin
+  const yMax = opts.yMax
+  function X(i) { return mL + i * ((W - mL - mR) / (data.length - 1)) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / (yMax - yMin)) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const grids = opts.grid || []
+  grids.forEach(function(g) {
+    svg.appendChild(svgEl("line", {x1: mL, x2: W - mR, y1: Y(g), y2: Y(g), stroke: "#e2d7c2", "stroke-width": 1}))
+    const t = svgEl("text", {x: 10, y: Y(g) + 5, "font-size": 13, fill: MUT, "font-family": SANS})
+    if (opts.yfmt) { t.textContent = opts.yfmt(g) } else { t.textContent = String(g) }
+    svg.appendChild(t)
+  })
+  let d = ""
+  data.forEach(function(v, i) {
+    if (i === 0) { d = d + "M" } else { d = d + "L" }
+    d = d + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "
+  })
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  data.forEach(function(v, i) {
+    const c = svgEl("circle", {cx: X(i), cy: Y(v), r: 8, fill: CLAY})
+    const tip = svgEl("title", {})
+    tip.textContent = opts.tip(i, v)
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const xl = svgEl("text", {x: X(i), y: H - 32, "font-size": 13, fill: MUT, "text-anchor": "middle", "font-family": SANS})
+    xl.textContent = opts.xlabels[i]
+    svg.appendChild(xl)
+  })
+  if (opts.ylabel) {
+    const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+    yl.textContent = opts.ylabel
+    svg.appendChild(yl)
+  }
+  if (opts.xlabel) {
+    const xcap = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+    xcap.textContent = opts.xlabel
+    svg.appendChild(xcap)
+  }
+  host.appendChild(svg)
+}
+
+
+function roofline6() {
+  const host = document.getElementById("chart-roofline6")
+  const W = 760
+  const H = 400
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const peak = 312
+  const bw = 2.0
+  const xMax = 400
+  const yMax = 360
+  function X(x) { return mL + x * ((W - mL - mR) / xMax) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / yMax) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  let d = ""
+  let x = 0.5
+  let first = true
+  while (x <= xMax) {
+    const cap = Math.min(peak, x * bw)
+    if (first) { d = d + "M" } else { d = d + "L" }
+    first = false
+    d = d + X(x).toFixed(1) + " " + Y(cap).toFixed(1) + " "
+    x = x * 1.15
+  }
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  const pts = [["scores", 1.0, 2.0], ["GEMM", 170.7, 312.0]]
+  pts.forEach(function(p) {
+    const c = svgEl("circle", {cx: X(p[1]), cy: Y(p[2]), r: 9, fill: INDIGO})
+    const tip = svgEl("title", {})
+    tip.textContent = p[0] + ": intensity " + p[1] + ", attainable " + p[2] + " TFLOP/s"
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const lab = svgEl("text", {x: X(p[1]) + 14, y: Y(p[2]) - 12, "font-size": 13, fill: INK, "font-family": SANS})
+    lab.textContent = p[0]
+    svg.appendChild(lab)
+  })
+  const knee = peak / bw
+  const kx = X(knee)
+  svg.appendChild(svgEl("line", {x1: kx, x2: kx, y1: mT, y2: H - mB, stroke: "#8a5a17", "stroke-width": 1.5, "stroke-dasharray": "6 4"}))
+  const kl = svgEl("text", {x: kx + 6, y: mT + 16, "font-size": 13, fill: "#8a5a17", "font-family": SANS})
+  kl.textContent = "knee 156"
+  svg.appendChild(kl)
+  const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+  yl.textContent = "attainable TFLOP/s"
+  svg.appendChild(yl)
+  const xl = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+  xl.textContent = "intensity (FLOP/byte, log-ish)"
+  svg.appendChild(xl)
+  host.appendChild(svg)
+}
+roofline6()
+
+barChart("chart-mfu", [
+  ["Achieved (25.2 TFLOP/s)", 25.2, INDIGO],
+  ["Device peak (312 TFLOP/s)", 312, CLAY]
+], 330, " TFLOP/s", 220)
+
+barChart("chart-allreduce", [
+  ["600 GB/s links", 0.02, SAGE],
+  ["200 GB/s links", 0.07, CLAY]
+], 0.08, " s", 170)
+
+function renderRl() {
+  const I = parseFloat(document.getElementById("rli").value) || 1.0
+  const cap = Math.min(312, I * 2.0)
+  let bound = "compute-bound"
+  if (I * 2.0 < 312) { bound = "memory-bound" }
+  const o = document.getElementById("rlout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "Attainable = min(312, " + I + " x 2.0) = " + cap.toFixed(1) + " TFLOP/s (" + (cap / 312 * 100).toFixed(1) + "% of peak). Verdict: " + bound + "."))
+}
+document.getElementById("rlbtn").addEventListener("click", renderRl)
+renderRl()
+
+function renderAr() {
+  const gb = parseFloat(document.getElementById("argb").value) || 7
+  const bw = parseFloat(document.getElementById("arbw").value) || 600
+  const t = 2 * gb / bw
+  const o = document.getElementById("arout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "Time ≈ 2 x " + gb + " / " + bw + " = " + t.toFixed(3) + " s."))
+  let note = "Matches the lesson toy (0.02 s at 600 GB/s) at the default config."
+  if (Math.abs(t - 0.0233) > 0.005) { note = "The lesson toy gives about 0.02 s for 7 GB at 600 GB/s, about 0.07 s at 200 GB/s." }
+  o.appendChild(el("p", "small muted", note))
+}
+document.getElementById("arbtn").addEventListener("click", renderAr)
+renderAr()
+
+
+</script>
+</body>
+</html>
