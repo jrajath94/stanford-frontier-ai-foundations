@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attention alternatives and expert architectures · CS336</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.pairtable td.rank{font-weight:700}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS336 · Unit 04 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Attention alternatives and expert architectures</h1>
+<p class="dek">Standard attention costs O(T^2 d) and holds a KV cache that grows with every token. This companion tours the escapes: local windows, shared KV heads, latent compression, linear recurrences, state-space models, gated memory, and mixture-of-experts, the conditional compute that decouples parameters from FLOPs.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>u04_attention_moe.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no full lecture transcript exists for this session. The page narrates the lesson document <code>content/v2/cs336/lessons/u04_attention_moe.md</code>, not a video. Claim class: REQUESTED-BRANCH. Every number carries the lesson section that reports it. The reference implementation is <code>visuals/compute_u04.py</code>, executed 2026-10-06.</p>
+</div>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 The cost</a>
+<a href="#s2">2 Local windows</a>
+<a href="#s3">3 MQA and GQA</a>
+<a href="#s4">4 MLA</a>
+<a href="#s5">5 Linear attention</a>
+<a href="#s6">6 SSMs and gates</a>
+<a href="#s7">7 MoE</a>
+<a href="#s8">8 Router and top-k</a>
+<a href="#s9">9 Capacity and balance</a>
+<a href="#s10">10 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<figure>
+<img class="illus" src="assets/u04-hero-window.jpg" alt="Watercolor of a long library with a reader holding a small sliding window frame">
+<figcaption><span class="tag tag-toy">Illustration</span> The unit's question in one image: must every query read the whole library, or is a sliding window enough? Watercolor, original to this companion.</figcaption>
+</figure>
+<section class="block" id="s1">
+<p class="secnum">Section 1 · Remediation</p>
+<h2>Two pain points, one formula</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></p>
+<p>Standard attention costs O(T^2 * d) FLOPs and O(T^2) memory for scores, plus a KV cache of 2 * kv_heads * dh bytes per token per layer. Two pain points follow: compute at long T, and cache bytes at long T. Every mechanism in this unit attacks one or both.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></p>
+<p>The baseline the lesson fixes for the whole unit: B=2, T=1024, d=512, h=8, L=12, bf16. The MHA KV cache is 50.3 MB. One layer's full attention is 2.15 GFLOP. From <code>visuals/compute_u04.py</code>, executed 2026-10-06. The worked check: halving kv_heads halves the cache, while the score FLOPs do not move, because queries still number h.</p>
+</div>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span> KV cache toy. The lesson's formula, your config: 2 * kv_heads * dh bytes per token per layer, times B * T * L.</p>
+<div class="cols">
+<div>
+<p class="small">B <input class="text" id="cb" value="2" style="max-width:70px" aria-label="Batch"> T <input class="text" id="ct" value="1024" style="max-width:80px" aria-label="Sequence length"></p>
+<p class="small">d <input class="text" id="cd" value="512" style="max-width:70px" aria-label="Model width"> h <input class="text" id="ch" value="8" style="max-width:70px" aria-label="Query heads"></p>
+<p class="small">KV heads g <input class="text" id="cg" value="8" style="max-width:70px" aria-label="KV heads"> L <input class="text" id="cl" value="12" style="max-width:70px" aria-label="Layers"></p>
+<p><button class="btn" id="cbtn">Compute cache</button></p>
+</div>
+<div>
+<p class="small" id="cout">Press the button.</p>
+<p class="small muted">bf16, 2 bytes per element. Formula from the remediation block.</p>
+</div>
+</div>
+</div>
+<div class="nugget" id="nugget-two-pains">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></h4>
+<p class="big">Compute and cache are separate pain points. A mechanism can fix one and leave the other.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Local attention cuts FLOPs 8x and leaves the cache unchanged. Judge each alternative against both pains, not one.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Name each cost axis before you optimize. A fix for one axis is not a fix for the system.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C01</p>
+<h2>Local attention: a sliding window</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §3, §5</span></p>
+<p>Must every query read all 1024 keys? The toy: window w=128 gives 0.27 GFLOP per layer versus 2.15 full, an 8.0x cut, from <code>compute_u04.py</code>. The ratio equals T/w exactly. The mental model: a sliding window. Query at t sees keys in [t-w, t]. Most linguistic dependencies are local, so the window keeps most of the signal at a fraction of the cost. Each query scores w keys instead of T. The mask is banded plus causal. Dilated or strided patterns extend the reach without dense cost: dilated reads keys at t, t-d, t-2d, and so on, while strided gives a few global tokens full sight.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §9, §10</span></p>
+<p>FLOPs and score memory both scale with T*w. The KV cache is unchanged: keys are still stored for the window. Selection boundary: full attention for short T or when long range matters, linear attention (C04) when the T-squared must go entirely. Local wins when w covers the effective context.</p>
+</div>
+<figure>
+<div id="chart-window"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §6</span> Attention GFLOP per layer at T = 1024: full 2.15, window w = 128 gives 0.27, an 8.0x cut equal to T/w. From <code>visuals/compute_u04.py</code>, executed 2026-10-06.</figcaption>
+</figure>
+<div class="nugget" id="nugget-passkey">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §11</span></h4>
+<p class="big">A passkey-retrieval task with the key 5000 tokens back and w = 128 can never see the answer. The failure is silent: fluent wrong answers.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "dependencies are local" breaks on retrieval-style tasks. The model does not know what it cannot see.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every restriction of sight needs a test where the answer sits outside the restriction.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C02</p>
+<h2>MQA and GQA: share the KV heads</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §3, §5</span></p>
+<p>Do 8 heads need 8 separate KV copies? The toy, same config as the baseline (B=2, T=1024, d=512, L=12, bf16): MHA with 8 KV heads holds 50.3 MB, GQA-2 holds 12.6 MB, MQA with 1 KV head holds 6.3 MB. Queries stay 8 in all three. The mental model: KV heads are shared read-only memory, query heads are the readers. MHA gives every reader a private copy. MQA gives one copy to all readers. GQA lets groups of readers share. Quality degrades gracefully as sharing rises, while cache shrinks proportionally.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §5, §6</span></p>
+<p>The mechanism: K and V projections output (B, T, g*dh) instead of (B, T, d), and each query head reads KV head h mod g (or a group mapping). Scores stay (B, h, T, T): the FLOP count barely moves, the bytes collapse. The lesson's numbers, executed 2026-10-06: 50.3, 12.6, 6.3 MB for g = 8, 2, 1, exactly proportional to g.</p>
+</div>
+<figure>
+<div id="chart-kvcache"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §6, C03 §6</span> KV cache MB on the baseline config, from <code>visuals/compute_u04.py</code> (executed 2026-10-06). MLA with latent dim 128 matches GQA-2's 12.6 MB with a learned compression instead of head sharing.</figcaption>
+</figure>
+<div class="nugget" id="nugget-cache-flops">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation, C02 §11</span></h4>
+<p class="big">Halving kv_heads halves the cache while score FLOPs do not move. But converting an MHA checkpoint to MQA by averaging KV heads drops more quality than a trained MQA.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "heads are interchangeable" breaks. Averaged heads are not what training would learn. Uptraining is the honest path.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Post-hoc surgery on learned structure underperforms learning the structure. Budget the retrain.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §9, §10</span></p>
+<p>Cache divides by h/g. Quality notes: MQA can lose a little on some tasks, GQA-8 is the common sweet spot. GQA is the default for new models. MQA fits when decode memory dominates everything.</p>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C03</p>
+<h2>MLA: can the cache shrink below one KV head?</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §3, §5</span></p>
+<p>MLA compresses K and V into a low-rank latent vector per token (down-projection), then up-projects per head at use time. The cache stores the latent, not the heads. Rank is the knob: smaller latent, smaller cache, more compression loss. The toy: MLA with latent dim 128 gives 12.6 MB on the same config, like GQA-2, but the latent is learned, not a head subset. The mechanism: c = x W_down (d to dc), cached. Per head: k_h = c W_up_k, v_h = c W_up_v. The up-projections run per query during decode: extra FLOPs traded for fewer bytes. The absorption trick can fold the up-projection into the query side.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §9, §10, §11</span></p>
+<p>Cache shrinks by d/dc. Decode adds the up-projection FLOPs per token. Net win when memory-bound, and decode usually is. Selection boundary: GQA when simplicity matters, MLA when the cache must go lower than MQA allows. MLA's complexity pays off at long context. The failure case: dc set too small means the latent cannot carry the key distinctions heads need, and attention blurs. The assumption "low rank suffices" breaks past the task's rank. The symptom is flat attention weights.</p>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C04</p>
+<h2>Linear attention: the recurrence hiding inside</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §3, §5</span></p>
+<p>Can attention be a recurrence? Replace softmax with a feature map: softmax(QK-transpose)V becomes phi(Q)(phi(K)-transpose V) / normalizer. The bracketed term is a fixed-size state updated per token: attention becomes an RNN with a matrix-valued hidden state. The recurrent form: out_t = phi(q_t)-transpose S_t / phi(q_t)-transpose z_t, with S_t = S_{t-1} + phi(k_t) v_t-transpose. This equals the causal no-softmax attention by associativity of matrix multiplication.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §6, §9</span></p>
+<p>The lesson's run, executed 2026-10-06: with phi(x) = relu(x) + eps, the recurrent form matches the quadratic form to 2.22e-16. Exact, not approximate, for the same kernel. Costs: O(T*dh^2) time, O(dh^2) memory, linear in T. The catch is expressivity: the kernel is weaker than softmax.</p>
+</div>
+<div class="nugget" id="nugget-exact">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §6, §11</span></h4>
+<p class="big">The recurrent and quadratic forms match to 2.22e-16. Same kernel, same math, just regrouped by associativity.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Speedups that regroup exact math are free. Speedups that change the math charge expressivity. Know which kind you bought.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Before accepting an approximation, check whether associativity already gives you the scaling.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §10, §11</span></p>
+<p>Selection boundary: softmax attention for quality, linear when T makes T-squared impossible and the task tolerates the kernel. Gated variants (C06) close some of the gap. The failure case: phi = identity with negative inputs makes the "probabilities" go negative and the normalizer can hit zero. The assumption "phi keeps things positive" is load-bearing. elu+1 or relu+eps are the standard guards.</p>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C05, C06</p>
+<h2>State-space models and gated memory</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §3, §5</span></p>
+<p>What if the state were a vector, not a matrix? A linear SSM keeps h_t = A h_{t-1} + B x_t with h in R^N: O(T*N) time, O(N) memory, no T-squared anywhere. State-space models compress history into a fixed vector through a learned linear dynamical system. Selectivity (Mamba) makes A and B input-dependent so the state can forget. Attention remembers everything. SSMs remember a summary. Unrolling gives a convolution with kernel K = (CB, CAB, CA^2B, ...): training parallelizes via FFT or scan, inference is a recurrence. Selectivity breaks the convolution view but keeps the scan.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §6, §9, §11</span></p>
+<p>Hand-verified recurrence on a scalar SSM (A=0.9, B=1, C=1, x=[1,0,1]): h = [1, 0.9, 1.81], y = h. The lab checks the unrolled-versus-recurrent match. Costs: O(T*N) time, O(N) state, the cheapest long-context option. The price is recall precision on long-range lookups. The failure case: a fixed non-selective SSM on a passkey task averages the key away and recall fails. The assumption "a summary suffices" breaks on exact-recall tasks. Selectivity or attention is the fix.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u04-ssm-river.jpg" alt="Watercolor of a wide river narrowing into a single channel">
+<figcaption><span class="tag tag-toy">Illustration</span> The SSM idea: a wide river of history narrowing into one channel of state. Everything downstream must fit through it. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §3, §5, §6</span></p>
+<p>Linear attention forgets nothing and overwrites blindly. How do we get selective memory? Gates are learned valves on the state: S_t = alpha_t * S_{t-1} + beta_t * phi(k_t) v_t-transpose. alpha controls forgetting, beta controls writing. The delta rule goes further: remove the old value of the key before writing the new one, like editing a memory slot. S_t = S_{t-1}(I - beta_t phi(k_t) phi(k_t)-transpose) + beta_t outer(phi(k_t), v_t): the projection removes what the key already stored. The lab check: with alpha=1, beta=1 the gated form reduces to plain linear attention (matches C04 to 1e-12). With alpha=0 the state holds only the current token.</p>
+</div>
+<div class="nugget" id="nugget-summary">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §3, C06 §11</span></h4>
+<p class="big">Attention remembers everything. SSMs remember a summary. Constant gates, not input-dependent, cannot do content-based forgetting and behave like a leaky average.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "gates are selective" is the whole point of the mechanism. Constants waste it.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>A fixed-size summary must choose what to keep. The choosing, not the size, is the intelligence.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §9, §10</span></p>
+<p>Same O(T*dh^2) as linear attention plus the gate projections. The win is quality, not speed. Selection boundary: plain linear attention (simpler, weaker memory), SSMs (vector state). Gated variants are the current quality frontier for subquadratic attention.</p>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C07</p>
+<h2>MoE: parameters without the FLOPs</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §3, §5</span></p>
+<p>How do models reach 100B+ parameters without 100B of compute per token? The toy from <code>compute_u04.py</code>: 8 experts of 3.15M params = 25.17M total, but only k=2 are active per token, 6.29M active, a 4.0x ratio. MoE is conditional compute: the model owns many FFNs (experts) but consults only k per token. Parameters scale with E, compute scales with k. The router decides who sees what. Total params = E * expert_params. Active per token = k * expert_params. Ratio E/k. The router adds d*E params, negligible. Communication appears in distributed settings (U09-C06).</p>
+</div>
+<figure>
+<div id="chart-moe"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §6</span> Parameter ledger for the toy MoE, from <code>visuals/compute_u04.py</code> (executed 2026-10-06). Dense 3.15M, MoE total 25.17M, active 6.29M, ratio 4.0 = E/k = 8/2.</figcaption>
+</figure>
+<figure>
+<img class="illus" src="assets/u04-experts.jpg" alt="Watercolor of eight workshop doors with a switchboard directing tokens to two">
+<figcaption><span class="tag tag-toy">Illustration</span> Conditional compute: eight doors, two open per token. The router is the switchboard. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-conditional">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §11</span></h4>
+<p class="big">E = 64, k = 1, no load balancing: 3 experts get all tokens, 61 starve. The model is effectively a 3-expert model with 64 experts' memory.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "capacity is used" breaks without balancing (C11). Unused experts are pure memory cost.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Conditional resources need a load contract, or the condition collapses to a favorite.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §10</span></p>
+<p>Selection boundary: dense scaling (simpler, more FLOPs per quality point), wider dense FFN. MoE wins when parameters are cheap and FLOPs are dear.</p>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C08, C09</p>
+<h2>The router: a tiny classifier over experts</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §3, §5</span></p>
+<p>Who decides which experts fire? Scores = softmax(xW), W of shape (d, E). Token t picks the top-k scores, and the output is the score-weighted sum of expert outputs. The router is a tiny classifier over experts. Its scores are both the selection signal and the mixing weights. Softmax forces competition (weights sum to 1). Sigmoid lets experts fire independently. Top-k selection is non-differentiable: gradients flow through the selected experts' weights.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §6, C09 §2, §5</span></p>
+<p>The lesson's run, executed 2026-10-06: on 16 random tokens with E=8, top-2 selection gives loads [5, 5, 3, 2, 3, 5, 4, 2], visibly imbalanced without any balancing loss. Why k=2 and not 1 or 8? k=2 of 8 gives the 4.0x param/compute ratio with a weighted blend. k=1 halves active compute but makes routing discontinuities sharper: k=1 is hard selection (one expert owns the token), k=2 blends two opinions. Larger k smooths training and costs compute linearly. With k=E the MoE is a dense weighted ensemble, which defeats the purpose. k=2 is the common default.</p>
+</div>
+<div class="lab">
+<p><span class="tag tag-toy">Illustration</span> MoE toy. Set E experts and top-k. The toy reports total params, active params, and the ratio, on the lesson's 3.15M-expert scale.</p>
+<p class="small">Experts E <input class="text" id="moee" value="8" style="max-width:70px" aria-label="Experts"> top-k <input class="text" id="moek" value="2" style="max-width:70px" aria-label="Top k"></p>
+<p><button class="btn" id="moebtn">Compute ledger</button></p>
+<p class="small" id="moeout">Press the button.</p>
+<p class="small muted">Expert size fixed at 3.15M params (C07 §6). Ratio = E/k.</p>
+</div>
+<div class="nugget" id="nugget-collapse">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §11</span></h4>
+<p class="big">Router collapse: the router sends everything to one expert early, that expert learns fastest, and the rich get richer.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "joint training balances" breaks. C11 exists because of this.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Feedback loops need a counterweight from day one, not as a patch after collapse.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §10, C09 §10, §11</span></p>
+<p>Alternatives: learned routers versus hash routing (fixed assignment, no learning). Learned wins on quality, hash wins on simplicity and perfect balance. Soft routing (all experts, weighted) is smoother but saves no compute. Top-k is the standard because it saves the compute. One convention trap: renormalizing top-k weights versus not gives different effective learning rates per expert and different load statistics. Match the convention to the checkpoint.</p>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C10, C11</p>
+<h2>Capacity, dropped tokens, and the balancing loss</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §3, §5, §6</span></p>
+<p>What happens when 10 tokens pick the same expert? Capacity is a per-expert inbox size. Tokens beyond capacity are dropped: they skip the expert, and their representation passes through unchanged or via residual. Total assignments T*k spread over E experts: mean T*k/E. The factor (often 1.0 to 1.25) gives headroom. The lesson's run, executed 2026-10-06: 16 tokens, k=2, E=8, factor 1.25 gives capacity = 1.25 * 16 * 2 / 8 = 5 per expert, loads [5, 5, 3, 2, 3, 5, 4, 2], 3 tokens dropped. Higher factor means more memory and fewer drops. Factor 1.0 is tight, 1.25 is common during training, inference often uses no cap (all tokens processed, variable time).</p>
+</div>
+<figure>
+<div id="chart-loads"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §6, C10 §6</span> Expert loads on 16 tokens, E = 8, top-2, from <code>visuals/compute_u04.py</code> (executed 2026-10-06). Capacity 5 per expert at factor 1.25. Three tokens were dropped.</figcaption>
+</figure>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §3, §5, §6</span></p>
+<p>How do we stop the rich-get-richer collapse? The aux loss penalizes the correlation between "fraction of tokens sent to e" and "mean router probability for e". L_aux = alpha * E * sum over e of frac_e * pbar_e. Under uniform routing with top-k: frac_e = k/E, pbar_e = 1/E, so L_aux/alpha = k. Minimizing pushes both toward uniform. The lesson's run, executed 2026-10-06: aux = E * sum(frac_e * mean_prob_e) = 2.2893 versus uniform 2.0. The 0.29 gap quantifies the imbalance seen in the loads. One extra scalar loss, negligible compute. Too large an alpha hurts task loss: the router optimizes balance over quality.</p>
+</div>
+<div class="nugget" id="nugget-alpha">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §11, C11 §11</span></h4>
+<p class="big">Factor 1.0 with imbalanced routing drops a large fraction of tokens, and the model undertrains on exactly the tokens the router preferred. And alpha = 1.0 makes the router perfectly uniform, so experts stop specializing.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "drops are rare" needs the balancing loss to hold. The assumption "more balance is better" breaks at alpha = 1.0. Both knobs are tradeoffs.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every regularizer has a weight past which it eats the objective. Tune the knob, do not max it.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §10, C11 §10</span></p>
+<p>Alternatives: no dropping with dynamic batching (complex), expert-choice routing where experts pick tokens (balance by construction). Standard: token-choice with capacity. The aux loss is the standard for token-choice. z-loss handles router logit magnitudes.</p>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · C12, synthesis</p>
+<h2>Three numbers, not one</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §3, §5, §6</span></p>
+<p>Is a 25M-param MoE "bigger" than a 6M dense model? It has the capacity of the former and the per-token cost of the latter. Three numbers, not one: total parameters (memory, capacity), active parameters per token (compute, latency), and active FLOPs (the training and inference bill). Headlines quote the first. Budgets need the second and third. Total = E * expert + router. Active = k * expert + router. Active FLOPs per token = k * expert_flops. Memory must hold the total. The bill charges the active. The lesson's run, executed 2026-10-06: total 25,165,824, active 6,291,456, ratio 4.0.</p>
+</div>
+<div class="nugget" id="nugget-three-numbers">
+<h4>Nugget 9 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §11</span></h4>
+<p class="big">Provisioning inference memory from active params OOMs the server. All experts must be resident.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "active is what matters" breaks for memory. Total rules there.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Report the number your decision actually depends on. For memory, that is the total.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span> The arc, end to end. Attention costs O(T^2 d) with a 2*kv_heads*dh-byte cache per token per layer (remediation). Local windows cut FLOPs by T/w and leave the cache (C01). MQA and GQA share KV heads across query heads: cache divides by h/g, FLOPs barely move (C02). MLA compresses K and V into a learned latent: below one KV head of cache at the price of decode up-projections (C03). Linear attention regroups the math into a recurrence, exact for the same kernel (C04). SSMs compress history into a vector state, cheapest at long context, weakest at exact recall (C05). Gates add selective forgetting and delta edits (C06). MoE owns E experts and consults k: parameters scale with E, compute with k (C07). The router is a tiny classifier whose scores select and weight (C08, C09). Capacity caps each expert's inbox and drops the overflow, the aux loss keeps the loads honest (C10, C11). And the honest ledger reports total, active, and active FLOPs (C12).</p>
+<p><span class="tag tag-lesson">From the lesson</span> Where the unit points next, in the lesson's own forward links: U07 fuses the attention kernels and removes the score materialization. U09-C06 carries the all-to-all communication that expert parallelism adds. U11 inherits the decode regime, where the KV cache rules latency.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>9 nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-two-pains"><span class="wnum">01</span>Compute and cache are separate pain points <span class="muted">· Remediation</span></a></li>
+<li><a href="#nugget-passkey"><span class="wnum">02</span>Every restriction of sight needs an outside test <span class="muted">· C01</span></a></li>
+<li><a href="#nugget-cache-flops"><span class="wnum">03</span>Halving KV heads halves cache, not FLOPs <span class="muted">· C02</span></a></li>
+<li><a href="#nugget-exact"><span class="wnum">04</span>Regrouped exact math is free <span class="muted">· C04</span></a></li>
+<li><a href="#nugget-summary"><span class="wnum">05</span>The choosing, not the size, is the intelligence <span class="muted">· C05, C06</span></a></li>
+<li><a href="#nugget-conditional"><span class="wnum">06</span>Conditional resources need a load contract <span class="muted">· C07</span></a></li>
+<li><a href="#nugget-collapse"><span class="wnum">07</span>Feedback loops need a counterweight from day one <span class="muted">· C08</span></a></li>
+<li><a href="#nugget-alpha"><span class="wnum">08</span>Tune the knob, do not max it <span class="muted">· C10, C11</span></a></li>
+<li><a href="#nugget-three-numbers"><span class="wnum">09</span>Report the number your decision depends on <span class="muted">· C12</span></a></li>
+</ol>
+</section>
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>content/v2/cs336/lessons/u04_attention_moe.md</code>. No full lecture transcript exists for S04. Quoted words from the lesson source: 44. No lecture anecdotes appear. Claim class REQUESTED-BRANCH. The charts re-plot the lesson's computed numbers with section citations. The lab script is <code>visuals/compute_u04.py</code>, executed 2026-10-06. Interactive toys run the lesson's formulas and are labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p class="small">Readings and forward links named by the lesson: U07 (kernel fusion), U09-C06 (expert-parallel all-to-all), U11 (decode regime).</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>.</p>
+</footer>
+</div>
+<script>
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  const keys = Object.keys(attrs)
+  keys.forEach(function(k) { n.setAttribute(k, attrs[k]) })
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function barChart(id, rows, maxV, unit, labelW) {
+  labelW = labelW || 210
+  const host = document.getElementById(id)
+  const W = 760
+  const rowH = 46
+  const padT = 14
+  const padB = 10
+  const H = padT + rows.length * rowH + padB
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  rows.forEach(function(r, i) {
+    const y = padT + i * rowH
+    const lab = svgEl("text", {x: 12, y: y + 27, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - labelW - 110) * (r[1] / maxV)
+    const bar = svgEl("rect", {x: labelW, y: y + 9, width: Math.max(bw, 3), height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1] + unit
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: labelW + Math.max(bw, 3) + 10, y: y + 27, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1] + unit
+    svg.appendChild(val)
+  })
+  host.appendChild(svg)
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id)
+  const data = opts.data
+  const W = 760
+  const H = 400
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const yMin = opts.yMin
+  const yMax = opts.yMax
+  function X(i) { return mL + i * ((W - mL - mR) / (data.length - 1)) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / (yMax - yMin)) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const grids = opts.grid || []
+  grids.forEach(function(g) {
+    svg.appendChild(svgEl("line", {x1: mL, x2: W - mR, y1: Y(g), y2: Y(g), stroke: "#e2d7c2", "stroke-width": 1}))
+    const t = svgEl("text", {x: 10, y: Y(g) + 5, "font-size": 13, fill: MUT, "font-family": SANS})
+    if (opts.yfmt) { t.textContent = opts.yfmt(g) } else { t.textContent = String(g) }
+    svg.appendChild(t)
+  })
+  let d = ""
+  data.forEach(function(v, i) {
+    if (i === 0) { d = d + "M" } else { d = d + "L" }
+    d = d + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "
+  })
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  data.forEach(function(v, i) {
+    const c = svgEl("circle", {cx: X(i), cy: Y(v), r: 8, fill: CLAY})
+    const tip = svgEl("title", {})
+    tip.textContent = opts.tip(i, v)
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const xl = svgEl("text", {x: X(i), y: H - 32, "font-size": 13, fill: MUT, "text-anchor": "middle", "font-family": SANS})
+    xl.textContent = opts.xlabels[i]
+    svg.appendChild(xl)
+  })
+  if (opts.ylabel) {
+    const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+    yl.textContent = opts.ylabel
+    svg.appendChild(yl)
+  }
+  if (opts.xlabel) {
+    const xcap = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+    xcap.textContent = opts.xlabel
+    svg.appendChild(xcap)
+  }
+  host.appendChild(svg)
+}
+
+
+barChart("chart-kvcache", [
+  ["MHA (g=8)", 50.3, INDIGO],
+  ["GQA-2 (g=2)", 12.6, SAGE],
+  ["MQA (g=1)", 6.3, SAGE],
+  ["MLA (dc=128)", 12.6, CLAY]
+], 55, " MB", 170)
+
+barChart("chart-window", [
+  ["Full attention", 2.15, INDIGO],
+  ["Window w=128", 0.27, CLAY]
+], 2.4, " GFLOP", 170)
+
+barChart("chart-moe", [
+  ["Dense FFN", 3.15, INDIGO],
+  ["MoE total (E=8)", 25.17, CLAY],
+  ["MoE active (k=2)", 6.29, SAGE]
+], 27, " M params", 170)
+
+barChart("chart-loads", [
+  ["Expert 0", 5, CLAY],
+  ["Expert 1", 5, CLAY],
+  ["Expert 2", 3, INDIGO],
+  ["Expert 3", 2, INDIGO],
+  ["Expert 4", 3, INDIGO],
+  ["Expert 5", 5, CLAY],
+  ["Expert 6", 4, INDIGO],
+  ["Expert 7", 2, INDIGO]
+], 6, " tokens", 170)
+
+function renderCache() {
+  const B = parseFloat(document.getElementById("cb").value) || 2
+  const T = parseFloat(document.getElementById("ct").value) || 1024
+  const d = parseFloat(document.getElementById("cd").value) || 512
+  const h = parseFloat(document.getElementById("ch").value) || 8
+  const g = parseFloat(document.getElementById("cg").value) || 8
+  const L = parseFloat(document.getElementById("cl").value) || 12
+  const dh = d / h
+  const bytes = 2 * B * T * g * dh * L * 2
+  const mb = bytes / 1.0e6
+  const o = document.getElementById("cout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "dh = " + dh + ". KV cache = 2 x " + B + " x " + T + " x " + g + " x " + dh + " x " + L + " x 2 bytes = " + mb.toFixed(1) + " MB."))
+  let note = "Matches the lesson baseline (50.3 MB) at the default config."
+  if (Math.abs(mb - 50.3) > 0.1) { note = "Compare against the lesson baseline: 50.3 MB at g = 8." }
+  o.appendChild(el("p", "small muted", note))
+}
+document.getElementById("cbtn").addEventListener("click", renderCache)
+renderCache()
+
+function renderMoe() {
+  const E = parseFloat(document.getElementById("moee").value) || 8
+  const k = parseFloat(document.getElementById("moek").value) || 2
+  const expert = 3.15
+  const total = E * expert
+  const active = k * expert
+  const o = document.getElementById("moeout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "Total = " + total.toFixed(2) + "M params. Active per token = " + active.toFixed(2) + "M. Ratio E/k = " + (E / k).toFixed(1) + "."))
+}
+document.getElementById("moebtn").addEventListener("click", renderMoe)
+renderMoe()
+
+
+</script>
+</body>
+</html>
