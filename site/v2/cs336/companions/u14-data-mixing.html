@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filtering, deduplication, mixing, and synthesis · CS336</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.pairtable td.rank{font-weight:700}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS336 · Unit 14 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Filtering, deduplication, mixing, and synthesis</h1>
+<p class="dek">Dedup first, filter second, mix deliberately. This companion walks the data mixing unit: quality classifiers, harmful-content filters, exact and near dedup, Bloom filters, MinHash and LSH, train-test dedup, reweighting, mixture search, synthetic rewriting, selection bias, ablations, and the memorization tradeoff.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>u14_data_mixing.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no full lecture transcript exists for this session. The page narrates the lesson document <code>content/v2/cs336/lessons/u14_data_mixing.md</code>, not a video. Claim class: REQUESTED-BRANCH. Standing note: every number below is computed by <code>visuals/compute_u14.py</code> on synthetic toys, executed 2026-10-06. Every number carries the lesson section that reports it.</p>
+</div>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Dedup first</a>
+<a href="#s2">2 Classifiers and filters</a>
+<a href="#s3">3 Exact dedup</a>
+<a href="#s4">4 Bloom and LSH</a>
+<a href="#s5">5 Train-test dedup</a>
+<a href="#s6">6 Mixtures</a>
+<a href="#s7">7 Synthetic data</a>
+<a href="#s8">8 Ablations</a>
+<a href="#s9">9 Memorization</a>
+<a href="#s10">10 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<figure>
+<img class="illus" src="assets/u14-hero-copies.jpg" alt="Watercolor of a tall stack of identical sheets next to a small stack of unique ones">
+<figcaption><span class="tag tag-toy">Illustration</span> The dedup problem: 10,000 documents, 5,840 unique. Copies waste compute and inflate memorization. Watercolor, original to this companion.</figcaption>
+</figure>
+<section class="block" id="s1">
+<p class="secnum">Section 1 · Remediation</p>
+<h2>Why dedup first</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></p>
+<p>Duplicates waste training compute and inflate memorization. The lesson's toy from <code>compute_u14.py</code>: 10,000 synthetic documents contain only 5,840 unique ones. Exact-dup rate 41.6 percent, and 1,011 documents appear 3 or more times. Filtering after dedup means the quality scores are computed once per unique document. The order matters: dedup first, then filter, then mix. Every section of this unit sits in that pipeline order.</p>
+</div>
+<figure>
+<div id="chart-dedup"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation, C03 §6</span> 10,000 toy documents collapse to 5,840 unique: 41.6 percent exact-dup rate. From <code>visuals/compute_u14.py</code> (executed 2026-10-06).</figcaption>
+</figure>
+<div class="nugget" id="nugget-first">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></h4>
+<p class="big">Dedup first. Quality scores are computed once per unique document, not once per copy.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Filtering before dedup scores the same document many times and lets copies vote. The pipeline order is load-bearing.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Remove duplicates before you rank. Copies distort every downstream measurement.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C01, C02</p>
+<h2>The classifier is a dial</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §5, §6</span></p>
+<p>A classifier scores document quality. Where do you cut? The classifier is a dial, not a verdict. Low threshold keeps volume with noise, high threshold keeps purity with loss of coverage. The operating point is a business decision about the corpus. Keep documents with score at or above t. The tradeoff curve is the ROC of the classifier on the toy labels. The lesson's run on 20,000 synthetic docs, executed 2026-10-06: t=0.3 keeps good 1.00 and bad 0.33. t=0.5 keeps 0.94 and 0.06. t=0.7 keeps 0.67 and 0.00. The classifier's own biases become the corpus's biases: it filters what it was trained to dislike. The failure case: the classifier was trained on Wikipedia-likes. It downranks dialects and forums. The assumption "quality is neutral" breaks. Audit by domain.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §5</span></p>
+<p>Which content must never train the model? The standard blocklist: sexual content involving minors, graphic violence promotion, instructions facilitating wrongdoing, hate targeting protected groups. The posture is high recall: miss nothing in these classes. Safety filtering is asymmetric: a missed harmful document is an incident, a wrongly removed benign one is a statistic. The threshold sits far toward recall. The stack: blocklists for the known-bad, classifiers for the fuzzy middle, human review for appeals. The lesson's posture: safety classes need dedicated classifiers with recall above 0.99 on labeled probes. A t=0.3-style recall posture that keeps bad at 0.33 is unacceptable for safety. Aggressive safety filtering removes legitimate content about the blocked topics (medical, legal, news). The corpus loses coverage where users ask most. The failure case: adversarial phrasing evades the classifier while keeping the meaning. The assumption "the classifier sees through paraphrase" breaks. Red-team the filter.</p>
+</div>
+<figure>
+<div id="chart-thresh"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §6</span> Keep rates by threshold on the toy: good 1.00/0.94/0.67, bad 0.33/0.06/0.00 at t=0.3/0.5/0.7. From <code>visuals/compute_u14.py</code> (executed 2026-10-06).</figcaption>
+</figure>
+<figure>
+<img class="illus" src="assets/u14-dial.jpg" alt="Watercolor of a brass control dial with a needle between two zones">
+<figcaption><span class="tag tag-toy">Illustration</span> The quality classifier as a dial: low threshold keeps volume with noise, high threshold keeps purity with loss of coverage. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §6</span> Threshold toy. Pick t, read the keep rates from the lesson's table.</p>
+<p class="small">t <input class="text" id="tht" value="0.5" style="max-width:70px" aria-label="Threshold"></p>
+<p><button class="btn" id="thbtn">Read tradeoff</button></p>
+<p class="small" id="thout">Press the button.</p>
+<p class="small muted">Table: t=0.3 keeps good 1.00/bad 0.33, t=0.5 keeps 0.94/0.06, t=0.7 keeps 0.67/0.00.</p>
+</div>
+<div class="nugget" id="nugget-dial">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01</span></h4>
+<p class="big">The classifier is a dial, not a verdict. t=0.5 keeps good 0.94 and bad 0.06.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The operating point is a business decision, not a technical one. The ROC curve presents it. The product owns it.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Treat any scoring filter as a dial. Publish the tradeoff curve, then choose.</dd>
+</dl>
+</div>
+<div class="nugget" id="nugget-safety">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02</span></h4>
+<p class="big">Safety filtering is asymmetric: a miss is an incident, a false removal is a statistic. Recall above 0.99 on probes.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The quality dial and the safety dial sit at different points. One threshold cannot serve both.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When errors are asymmetric, set the threshold for the expensive error class alone.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C03</p>
+<h2>Exact dedup is a hash comparison</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §5, §6</span></p>
+<p>How much of the crawl is repeated? Exact dedup is a hash comparison: same bytes, same hash, keep one. Near-dup catches the reworded, templated, and boilerplate-shared copies that hashing misses. Exact: group by hash, keep first. Near: shingle sets, Jaccard similarity, MinHash plus LSH (C05). The lesson's run, executed 2026-10-06: 10,000 docs to 5,840 unique, 41.6 percent exact-dup rate, 1,011 docs appear 3 or more times. Exact dedup is one pass and cheap. Near-dup is the expensive part (C05). The failure case: the same article under 100 URLs with different ad parameters. URL dedup keeps 100 copies. The assumption "URL identity means content identity" breaks. Hash the content.</p>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C04, C05</p>
+<h2>Bloom filters and the S-curve</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §5, §6</span></p>
+<p>1B documents do not fit in a hash set. How do you test membership? A Bloom filter is a bit array with k hashes. "Not seen" is certain. "Seen" is probable. False positives drop a few unique documents: tune k to the bit budget. After kn insertions into m bits, a bit is 0 with probability about (1-1/m)^{kn}, about e^{-kn/m}. All k probe bits set: (1 - e^{-kn/m})^k. The lesson's run, executed 2026-10-06: n=1e6, 8 bits per item, k=6 gives FPR 0.0216, k=3 gives 0.0306, k=10 gives 0.0342. The minimum sits near k=6. 8 bits per item against 64 or more for a hash set entry. The price is the 2.16 percent false-positive drop rate. The failure case: adversarial inputs that collide under the chosen hashes. The FPR formula assumes uniform hashing. The assumption breaks under attack. Use a keyed hash.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §5, §6</span></p>
+<p>Two documents share most 5-grams but differ in ads. Are they dups? Shingles turn text into sets. MinHash compresses each set to a signature where agreements estimate Jaccard. LSH bands the signature so only candidate pairs are compared: the S-curve separates dups from non-dups. P(minhash agrees) = Jaccard s. Banding: a band matches with probability s^r, at least one of b bands matches with 1-(1-s^r)^b. The lesson's run, executed 2026-10-06: true Jaccard 0.113, MinHash(128) estimate 0.125. LSH with b=20 bands, r=5 rows: detection probability 0.470 at s=0.5, 0.975 at s=0.7, 1.000 at s=0.8. 128 hashes per document is the compute price. Shorter signatures are cheaper and noisier. The failure case: boilerplate-heavy pages. Jaccard is high but the content differs. The assumption "high Jaccard means dup" breaks. Shingle with content weighting or strip boilerplate first.</p>
+</div>
+<figure>
+<div id="chart-bloom"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §6</span> Bloom false-positive rate at 8 bits per item: k=3 gives 0.0306, k=6 gives 0.0216, k=10 gives 0.0342. The minimum sits near k=6. From <code>visuals/compute_u14.py</code> (executed 2026-10-06).</figcaption>
+</figure>
+<figure>
+<img class="illus" src="assets/u14-scurve.jpg" alt="Watercolor of a winding S-shaped mountain road">
+<figcaption><span class="tag tag-toy">Illustration</span> The LSH S-curve as a mountain road: detection probability climbs steeply past the similarity threshold, separating dups from non-dups. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §5</span> Bloom toy. FPR = (1 - e^{-kn/m})^k.</p>
+<p class="small">n (M) <input class="text" id="bln" value="1" style="max-width:70px" aria-label="Items in millions"> bits/item <input class="text" id="blm" value="8" style="max-width:70px" aria-label="Bits per item"> k <input class="text" id="blk" value="6" style="max-width:70px" aria-label="Hashes"></p>
+<p><button class="btn" id="blbtn">Compute FPR</button></p>
+<p class="small" id="blout">Press the button.</p>
+<p class="small muted">At the defaults: FPR 0.0216, matching C04 §6.</p>
+</div>
+<div class="nugget" id="nugget-bloom">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04</span></h4>
+<p class="big">"Not seen" is certain. "Seen" is probable. k=6 at 8 bits per item: 2.16 percent false positives.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The asymmetry is the feature: the filter never misses a true dup, it only drops a few unique documents.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When memory is the constraint, trade certainty on one side for 8x less memory.</dd>
+</dl>
+</div>
+<div class="nugget" id="nugget-scurve">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05</span></h4>
+<p class="big">The S-curve separates dups from non-dups: 0.470 at s=0.5, 0.975 at s=0.7, 1.000 at s=0.8.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Banding turns an impossible all-pairs comparison into candidate pairs. The S-curve is the tuning dial.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>For near-duplicate search at scale, band the signature and let the S-curve do the separating.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C06</p>
+<h2>Train-test dedup is n-gram level</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §5, §6</span></p>
+<p>The benchmark question appears verbatim in training. Whose fault? The pipeline's. Train-test dedup must run against every eval set before training, at the n-gram level, not just the document level. Document dedup removes copies. Train-test dedup removes leaks. A benchmark item quoted inside a long web page survives document dedup and must be caught by n-gram matching. Index training n-grams (Bloom or suffix array), probe each eval item, drop training documents above the overlap threshold. The lesson's toy: 300 eval items, 13-gram index. Documents with more than 80 percent of eval 13-grams are dropped. Counts from the U12-C02 toy setup. The n-gram index over the full corpus is the biggest dedup structure in the pipeline. The failure case: paraphrased eval items. N-gram matching misses them (U12-C02). The assumption "leaks are verbatim" breaks. Add embedding-based screening for high-stakes evals.</p>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C07, C08</p>
+<h2>Mixtures: implement, then search</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §5, §6</span></p>
+<p>Code must rise 1.67x in the mix. How? Reweighting is importance sampling over domains. Sampling multiplier = target/source per domain, applied at draw time. Multipliers above 1 repeat documents, below 1 subsample them. The corpus on disk does not change. The draw distribution does. The toy multipliers from U13: 0.67, 1.50, 1.67, 2.00, 1.00. Code: 0.25/0.15 = 1.67. High multipliers repeat data (memorization, C12). The mixture and the dedup interact. The failure case: multiplier 100x on a tiny domain. The model memorizes the domain's quirks. The assumption "repeats are harmless" breaks. Cap multipliers.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §5, §6</span></p>
+<p>Hand-set mixtures are opinions. How do you search? Mixture search is hyperparameter search over the simplex. Each point is a training run (or a proxy run). The interaction term is why the optimum is not always at a corner. Grid or Bayesian search over the simplex, fit a response surface, pick the minimum. Proxy models (small scale) stand in for full runs. The lesson's toy, executed 2026-10-06: L(w) = w*2.5 + (1-w)*3.0 + 0.4*w*(1-w) over w in [0,1]. Optimum at w=1.0 with L=2.500, equal mix gives 2.850. Each evaluation is a training run. Proxy runs cut the cost but add transfer risk (U10-C12). The failure case: the proxy disagrees with full scale. The searched optimum flops at scale. The assumption "proxy transfers" breaks. Validate the top-3 mixes at scale.</p>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C09, C10</p>
+<h2>Synthetic data and its biases</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §5, §6</span></p>
+<p>The web lacks enough math textbooks. Can a model write them? Rewriting modes: paraphrase (same content, new words), distillation (teacher outputs as targets), synthetic problems (new items with known answers). Every mode needs validation against ground truth. Synthetic data is a photocopy of a photocopy: each generation loses fidelity and amplifies the generator's biases. It helps where real data is scarce and hurts where the generator is wrong. The pipeline: generate, filter by verifiable checks, mix at a capped fraction. The lesson's toy: 1M synthetic math problems, 80 percent pass the answer check, 800k enter the mix at 10 percent weight. The 20 percent failure rate is why the check exists. Generation compute is large. Wrong synthetic data teaches wrong facts confidently. The failure case: unverifiable domains (opinions, style). The filter cannot check truth, and the synthetic data teaches the generator's biases as facts. The assumption "verification is possible" breaks. Keep synthetic out of such domains.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §5</span></p>
+<p>The filter keeps "high quality". High quality according to whom? Three channels: the classifier's training data, the heuristic thresholds, and the source mix. Each one tilts the corpus. Every filter is a value judgment with a false-positive distribution. The corpus is the sum of those judgments. Audit the kept-out set, not just the kept set. The lesson's audit: from the C01 toy at t=0.5, keep good 0.94 overall. The audit asks: is it 0.94 for every domain, or 0.99 for one and 0.80 for another? Audits need subgroup labels, which are work to produce. Un-audited filters are the default and the risk. The failure case: the audit itself uses the classifier's labels. Circular validation. The assumption "the audit is independent" breaks. Use human labels for the audit set.</p>
+</div>
+<div class="nugget" id="nugget-judgment">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10</span></h4>
+<p class="big">Every filter is a value judgment with a false-positive distribution. Audit the kept-out set.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The corpus is the sum of the filters' judgments. Un-audited filtering is an unnamed prior (U13-C08).</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Audit what a filter rejects, not just what it keeps. The rejects carry the bias.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C11</p>
+<h2>Ablate the expensive stages first</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §5, §6</span></p>
+<p>Did dedup actually help, or was it the filter? Ablation is controlled subtraction. The full pipeline is the baseline, each variant drops exactly one stage. The stage with the biggest delta earns its keep. Randomize the order, fix seeds, report CIs. The lesson's toy: full pipeline proxy loss 2.50. No-dedup 2.56 (plus 0.06), no-filter 2.53 (plus 0.03), no-reweight 2.51 (plus 0.01). Dedup earns its keep most. Each ablation is a training run. Proxy scale keeps it affordable. Transfer risk applies (U10-C12). The failure case: stages interact. Dedup plus filter together beat the sum of their solo deltas. The assumption "effects add" breaks. Run the factorial for the top candidates (U18-C06).</p>
+</div>
+<figure>
+<div id="chart-ablate"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §6</span> Ablation deltas on proxy loss (baseline 2.50): no-dedup plus 0.06, no-filter plus 0.03, no-reweight plus 0.01. Dedup earns its keep most. Toy numbers, executed 2026-10-06.</figcaption>
+</figure>
+<div class="nugget" id="nugget-ablate">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11</span></h4>
+<p class="big">Dedup earns its keep most: plus 0.06 without it, against 0.03 for the filter and 0.01 for reweighting.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Pipeline stages are expensive. The ablation tells you which ones earn their compute.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Subtract one component at a time and measure. Fund what earns its keep.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C12</p>
+<h2>Repetition is the dial</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §5, §6</span></p>
+<p>A document repeats 10 times. Does the model memorize it? Repetition is the dial between learning and memorizing. A few repeats help rare patterns, many repeats burn compute on text the model could recite. Dedup sets the dial near 1 for the bulk. The lesson's toy logistic, p = sigmoid(1.2 ln(reps) - 1.5), executed 2026-10-06: recall probability 0.18 at 1 repetition, 0.34 at 2, 0.61 at 5, 0.78 at 10. Diminishing returns in log-repetitions. Repeated tokens cost training FLOPs and teach memorization instead of generalization. The failure case: copyrighted or private text repeated. Memorization becomes extraction risk. The assumption "repetition is benign" breaks. Dedup sensitive classes aggressively.</p>
+</div>
+<figure>
+<div id="chart-mem"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §6</span> Recall probability against repetitions: 0.18, 0.34, 0.61, 0.78 at 1, 2, 5, 10. Toy logistic, executed 2026-10-06.</figcaption>
+</figure>
+<div class="nugget" id="nugget-dialrep">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12</span></h4>
+<p class="big">Repetition is the dial between learning and memorizing: 0.18 at 1 rep, 0.78 at 10.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Dedup and reweighting both turn this dial. Set it deliberately. 10x repetition is memorization.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Repetition pays less per repeat and the risk grows. Cap it.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · Synthesis</p>
+<h2>The mixing pipeline, end to end</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span> The arc, end to end. Dedup first: 41.6 percent of the toy is copies (remediation, C03). Quality classifiers are dials. Safety filters sit at recall above 0.99 (C01, C02). Bloom filters give 8x memory savings at 2.16 percent false positives (C04). MinHash plus LSH separates dups on the S-curve (C05). Train-test dedup runs at the n-gram level (C06). Reweighting implements the mixture. Mixture search tests it (C07, C08). Synthetic data needs verifiable checks and capped fractions (C09). Every filter is a value judgment: audit the rejects (C10). Ablations fund what earns its keep (C11). Repetition is the dial between learning and memorizing (C12).</p>
+<p><span class="tag tag-lesson">From the lesson</span> Where the unit points next, in the lesson's own forward links: U12 supplies the eval sets that train-test dedup protects and the contamination audit. U13 supplies the mixture the reweighting implements. U15 takes the mixed corpus into SFT. U16 supplies post-training refusal as the partner of pretraining filtering. U10 supplies the proxy transfer discipline for mixture search.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>8 nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-first"><span class="wnum">01</span>Remove duplicates before you rank <span class="muted">· Remediation</span></a></li>
+<li><a href="#nugget-dial"><span class="wnum">02</span>Publish the tradeoff curve, then choose <span class="muted">· C01</span></a></li>
+<li><a href="#nugget-safety"><span class="wnum">03</span>Set the threshold for the expensive error <span class="muted">· C02</span></a></li>
+<li><a href="#nugget-bloom"><span class="wnum">04</span>Trade certainty for memory <span class="muted">· C04</span></a></li>
+<li><a href="#nugget-scurve"><span class="wnum">05</span>Band the signature, let the S-curve separate <span class="muted">· C05</span></a></li>
+<li><a href="#nugget-judgment"><span class="wnum">06</span>Audit what a filter rejects <span class="muted">· C10</span></a></li>
+<li><a href="#nugget-ablate"><span class="wnum">07</span>Fund what earns its keep <span class="muted">· C11</span></a></li>
+<li><a href="#nugget-dialrep"><span class="wnum">08</span>Cap repetition <span class="muted">· C12</span></a></li>
+</ol>
+</section>
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>content/v2/cs336/lessons/u14_data_mixing.md</code>. No full lecture transcript exists for this session. Quoted words from the lesson source: 43. No lecture anecdotes appear. Claim class REQUESTED-BRANCH. The charts re-plot the lesson's computed numbers with section citations. The lab script is <code>visuals/compute_u14.py</code>, executed 2026-10-06. Interactive toys run the lesson's formulas and are labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p class="small">Readings and forward links named by the lesson: U12 (evals, contamination), U13 (mixture), U15 (SFT), U16 (refusal), U10 (proxy transfer).</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>.</p>
+</footer>
+</div>
+<script>
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  const keys = Object.keys(attrs)
+  keys.forEach(function(k) { n.setAttribute(k, attrs[k]) })
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function barChart(id, rows, maxV, unit, labelW) {
+  labelW = labelW || 210
+  const host = document.getElementById(id)
+  const W = 760
+  const rowH = 46
+  const padT = 14
+  const padB = 10
+  const H = padT + rows.length * rowH + padB
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  rows.forEach(function(r, i) {
+    const y = padT + i * rowH
+    const lab = svgEl("text", {x: 12, y: y + 27, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - labelW - 110) * (r[1] / maxV)
+    const bar = svgEl("rect", {x: labelW, y: y + 9, width: Math.max(bw, 3), height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1] + unit
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: labelW + Math.max(bw, 3) + 10, y: y + 27, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1] + unit
+    svg.appendChild(val)
+  })
+  host.appendChild(svg)
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id)
+  const data = opts.data
+  const W = 760
+  const H = 400
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const yMin = opts.yMin
+  const yMax = opts.yMax
+  function X(i) { return mL + i * ((W - mL - mR) / (data.length - 1)) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / (yMax - yMin)) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const grids = opts.grid || []
+  grids.forEach(function(g) {
+    svg.appendChild(svgEl("line", {x1: mL, x2: W - mR, y1: Y(g), y2: Y(g), stroke: "#e2d7c2", "stroke-width": 1}))
+    const t = svgEl("text", {x: 10, y: Y(g) + 5, "font-size": 13, fill: MUT, "font-family": SANS})
+    if (opts.yfmt) { t.textContent = opts.yfmt(g) } else { t.textContent = String(g) }
+    svg.appendChild(t)
+  })
+  let d = ""
+  data.forEach(function(v, i) {
+    if (i === 0) { d = d + "M" } else { d = d + "L" }
+    d = d + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "
+  })
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  data.forEach(function(v, i) {
+    const c = svgEl("circle", {cx: X(i), cy: Y(v), r: 8, fill: CLAY})
+    const tip = svgEl("title", {})
+    tip.textContent = opts.tip(i, v)
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const xl = svgEl("text", {x: X(i), y: H - 32, "font-size": 13, fill: MUT, "text-anchor": "middle", "font-family": SANS})
+    xl.textContent = opts.xlabels[i]
+    svg.appendChild(xl)
+  })
+  if (opts.ylabel) {
+    const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+    yl.textContent = opts.ylabel
+    svg.appendChild(yl)
+  }
+  if (opts.xlabel) {
+    const xcap = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+    xcap.textContent = opts.xlabel
+    svg.appendChild(xcap)
+  }
+  host.appendChild(svg)
+}
+
+
+barChart("chart-dedup", [
+  ["Total docs", 10000, CLAY],
+  ["Unique docs", 5840, INDIGO]
+], 10500, "", 170)
+
+barChart("chart-thresh", [
+  ["t=0.3 keep good", 1.0, INDIGO],
+  ["t=0.3 keep bad", 0.33, CLAY],
+  ["t=0.5 keep good", 0.94, INDIGO],
+  ["t=0.5 keep bad", 0.06, CLAY],
+  ["t=0.7 keep good", 0.67, INDIGO],
+  ["t=0.7 keep bad", 0.0, CLAY]
+], 1.05, "", 170)
+
+barChart("chart-bloom", [
+  ["k=3", 0.0306, INDIGO],
+  ["k=6", 0.0216, SAGE],
+  ["k=10", 0.0342, INDIGO]
+], 0.037, "", 170)
+
+barChart("chart-ablate", [
+  ["no-dedup", 0.06, CLAY],
+  ["no-filter", 0.03, INDIGO],
+  ["no-reweight", 0.01, SAGE]
+], 0.07, "", 170)
+
+barChart("chart-mem", [
+  ["1 rep", 0.18, INDIGO],
+  ["2 reps", 0.34, INDIGO],
+  ["5 reps", 0.61, CLAY],
+  ["10 reps", 0.78, CLAY]
+], 0.85, "", 170)
+
+const THRESH = {
+  "0.3": ["1.00", "0.33"],
+  "0.5": ["0.94", "0.06"],
+  "0.7": ["0.67", "0.00"]
+}
+function renderTh() {
+  const t = (document.getElementById("tht").value || "0.5").trim()
+  const o = document.getElementById("thout")
+  o.textContent = ""
+  if (THRESH[t]) {
+    o.appendChild(el("p", "small", "t=" + t + ": keeps good " + THRESH[t][0] + ", bad " + THRESH[t][1] + "."))
+  } else {
+    o.appendChild(el("p", "small", "The lesson's table covers t = 0.3, 0.5, 0.7."))
+  }
+  o.appendChild(el("p", "small muted", "From the C01 toy on 20,000 synthetic docs (C01 §6)."))
+}
+document.getElementById("thbtn").addEventListener("click", renderTh)
+renderTh()
+
+function renderBl() {
+  const n = (parseFloat(document.getElementById("bln").value) || 1) * 1e6
+  const m = (parseFloat(document.getElementById("blm").value) || 8) * n
+  const k = parseFloat(document.getElementById("blk").value) || 6
+  const fpr = Math.pow(1 - Math.exp(-k * n / m), k)
+  const o = document.getElementById("blout")
+  o.textContent = ""
+  o.appendChild(el("p", "small", "FPR = (1 - e^{-" + k + "×" + (n / 1e6) + "M/" + (m / 1e6) + "M})^" + k + " = " + fpr.toFixed(4) + "."))
+  let note = "At the defaults: 0.0216, matching C04 §6."
+  if (Math.abs(fpr - 0.0216) / 0.0216 > 0.05) { note = "The lesson's table: 0.0306 at k=3, 0.0216 at k=6, 0.0342 at k=10 (C04 §6)." }
+  o.appendChild(el("p", "small muted", note))
+}
+document.getElementById("blbtn").addEventListener("click", renderBl)
+renderBl()
+
+
+</script>
+</body>
+</html>
