@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U11 Companion: Variational inference, PCA, ICA · CS229</title>
+<style>
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+input.range{width:100%}
+input.range{max-width:420px}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+.hist{border:1px solid var(--line)}
+.hist{border-radius:10px}
+.hist{background:#fffdf8}
+.hist{padding:6px}
+.hist{margin:16px 0}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS229 · Unit 11 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Variational inference, PCA, ICA</h1>
+<p class="dek">EM needs the exact posterior p(z|x). In a deep generative model the posterior has no closed form. What now? This companion walks the full arc of Unit 11: variational inference as ELBO optimization over a Q family, the VAE and the reparameterization trick, PCA as variance maximization, and ICA as unmixing independent sources.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>lesson-11-vi-pca-ica.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no lecture transcript exists for this unit, and no lecture video is named in the lesson. The lesson's Source mapping states that SRC-01 section 11.5 and chapters 12 and 13 were read in substantial part on 2026-10-06. Whitening and eigenfaces are standard background beyond the notes' inspected text and are labeled as such. k-means++ appears nowhere in this unit. Leaf rows carry SOURCE ATTRIBUTION PENDING until the RUN 6 pass. One arithmetic note: the lesson reports 98.9 percent variance kept. Recomputation from its eigenvalues gives 98.98. The lesson's value is shown with the recomputation beside it.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u11-unmixing-ribbons.jpg" alt="Watercolor of two tangled translucent ribbons gradually separating into two strands">
+<figcaption><span class="tag tag-toy">Illustration</span> Unmixing: two tangled strands pulled apart into independent ones. Watercolor, original to this companion.</figcaption>
+</figure>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 VI</a>
+<a href="#s2">2 VAE</a>
+<a href="#s3">3 PCA</a>
+<a href="#s4">4 ICA</a>
+<a href="#s5">5 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<section class="block" id="s1">
+<p class="secnum">Section 1 · SL-01 · C01, C02</p>
+<h2>Variational inference: the best posterior-shaped object</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Source anchor, §Mental model</span></p>
+<p>EM's E-step is "set Q to the true posterior." VI relaxes it: "set Q to the best posterior-shaped object inside a tractable family." The VAE extends EM to models parameterized by neural networks. When the posterior p(z|x) under parameters θ is intractable (as in the neural model 11.18-11.19), restrict Q to a family Q and optimize max_{Q in Q} max_θ ELBO(Q, θ) (equation 11.20).</p>
+<p>The ELBO is still a lower bound for any Q (U10 SL-04), so maximizing it over Q and θ jointly is still principled. The gap between the ELBO and the true likelihood is exactly KL(Q || p(z|x)): VI is posterior approximation by KL minimization (notes equation 11.17).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Mean field, §Correctness checks, §Failure case</span></p>
+<p>For discrete latents the notes name the mean-field assumption: Q(z) = Q₁(z₁) ... Q_k(z_k), independent coordinates (page 163). For continuous latents: Gaussian Q with diagonal covariance. ELBO ≤ log likelihood always: if your ELBO exceeds a known likelihood, there is a bug. Enlarging the Q family can only tighten the bound. The failure case: a Q family too rigid, diagonal Gaussian on a strongly correlated posterior. The bound stays loose and the learned model underfits. The notes warn the Gaussian Q can be "very far from a good approximation" (page 165).</p>
+</div>
+<div class="nugget" id="nugget-gap">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 §Mental model</span></h4>
+<p class="big">The gap between the ELBO and the true likelihood is exactly KL(Q || p(z|x)). VI is posterior approximation by KL minimization.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The approximation error is not a mystery: it has a name and a formula. Everything VI does is shrink that KL.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When you replace an exact object with an approximation, write down the gap. The gap is the whole problem.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · SL-02 · C03</p>
+<h2>The VAE and the reparameterization trick</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Source anchor</span></p>
+<p>Model: z ∼ N(0, I), x|z ∼ N(g(z, θ), σ²I), with g a neural net (11.18-11.19). Encoder: Qᵢ = N(q(xⁱ, φ), diag(v(xⁱ, ψ))²) (11.21). q, v are neural nets ("encoder"), g is the "decoder." Gradients over θ are easy. Gradients over φ, ψ are hard because the sampling distribution depends on them. Trick (11.24): z = q(x, φ) + v(x, ψ)·ξ, ξ ∼ N(0, I).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Mental model, §The VAE objective</span></p>
+<p>Separate the randomness from the parameters. A Gaussian sample z ∼ N(μ, σ²) is the same object as μ + σ·ξ with ξ ∼ N(0, 1). After the rewrite, the expectation is over ξ, which does not depend on φ or ψ, and the gradient flows through the deterministic path μ + σ·ξ. Sampling becomes a differentiable operation. ELBO(φ, ψ, θ) = Σᵢ E_{z∼Qᵢ}[log p(xⁱ, z) under parameters θ − log Qᵢ(z)]. Optimize by gradient ascent over all three parameter sets jointly (no alternating needed, page 165). The ELBO splits (11.15) into reconstruction E[log p(x|z)] minus KL(Q || prior): decode well, stay near the prior.</p>
+</div>
+<table class="data">
+<tr><th>1-D latent, 2-D data on a noisy circle <span class="tag tag-toy">Illustration</span></th><th>Value</th></tr>
+<tr><td>VAE with k = 1: ELBO converges to</td><td class="num">−1.42 nats/point</td></tr>
+<tr><td>The learned g</td><td class="num">traces the circle</td></tr>
+<tr><td>Latent codes</td><td class="num">order by angle</td></tr>
+</table>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Computed example</span> Illustrative. The ELBO-reconstruction tradeoff is the claim.</figcaption>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The reparameterization demo. Type μ and σ. The toy draws ξ ∼ N(0, 1) samples (invented draws) and shows z = μ + σ·ξ: the same Gaussian, with the randomness separated from the parameters.</p>
+<p>μ: <input class="text" id="vamu" value="2" style="max-width:90px" aria-label="mu"> σ: <input class="text" id="vasig" value="0.5" style="max-width:90px" aria-label="sigma"></p>
+<p><button class="btn" id="vabtn">Draw 5 samples</button></p>
+<div class="chips" id="vaout"></div>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Correctness checks, §Failure case</span></p>
+<p>KL ≥ 0, so monitor it. KL collapse (KL → 0, decoder ignores z) is the classic VAE failure. The reparameterized gradient must have lower variance than the score-function alternative: that is the point of the trick. A powerful decoder models p(x) directly and the latent carries nothing. Diagnose via KL → 0. Mitigate by KL annealing or a weaker decoder.</p>
+</div>
+<div class="nugget" id="nugget-separate">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-02 §Mental model</span></h4>
+<p class="big">Separate the randomness from the parameters. Then the gradient flows through the deterministic path.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The gradient could not reach through a moving distribution. Moving the randomness outside makes sampling differentiable, and the VAE trainable.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When noise blocks optimization, reparameterize: isolate the randomness so the parameters sit on a clean path.</dd>
+</dl>
+</div>
+</section>
+<section class="block" id="s3">
+<p class="secnum">Section 3 · SL-03 · C04, C05, C06, C07, C08</p>
+<h2>PCA: the best k-dimensional linear summary</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Source anchor, §Mental model</span></p>
+<p>Two features measure the same thing in different units (mph vs kph). How do you detect and remove the redundancy automatically? Data has variance (information) spread across d directions. PCA finds the direction with the most variance, then the next orthogonal one, and so on. Keep the top k: the best k-dimensional linear summary of the data in the variance sense. The directions are the eigenvectors of the sample covariance, sorted by eigenvalue.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Procedure, §Whitening</span></p>
+<p>The procedure: (1) standardize, zero mean and unit variance unless scales are comparable. (2) compute the covariance Σ = (1/n) XᵀX. (3) eigendecompose, keep the top k eigenvectors. (4) project: z = U_kᵀx. Whitening rescales: z = Λ^(−1/2) Uᵀx gives identity covariance. It is standard preprocessing for ICA (SL-04): it removes second-order structure so the unmixing step sees only higher-order structure. Eigenfaces are the canonical application: PCA on face images, the classic demonstration that real high-dimensional data lives near a low-dimensional subspace. The notes' inspected text does not show eigenfaces. Taught as standard background.</p>
+</div>
+<figure>
+<div id="chart-pca"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Computed example</span> Eigenvalues 2.26, 1.62, 0.04. Top-2 keeps 98.9 percent of the variance per the lesson (recomputation: 98.98). Reconstruction error equals the dropped eigenvalue 0.04.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The variance keeper. The lesson's eigenvalues: 2.26, 1.62, 0.04. Choose k. The toy reports the variance kept and the reconstruction error, which equals the sum of the dropped eigenvalues.</p>
+<p>k: <input class="text" id="pcak" value="2" style="max-width:90px" aria-label="k"></p>
+<p><button class="btn" id="pcabtn">Keep k</button></p>
+<div class="chips" id="pcaout"></div>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Correctness checks, §Failure case</span></p>
+<p>Eigenvalues ≥ 0 (covariance is PSD): assert this. Reconstruction error with k components equals the sum of dropped eigenvalues: verify it. The failure case: PCA on unstandardized features with mismatched scales. The largest-scale feature dominates the first component regardless of information content. Standardize first.</p>
+</div>
+<div class="nugget" id="nugget-variance">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Mental model</span></h4>
+<p class="big">Keep the top k eigenvectors: the best k-dimensional linear summary of the data in the variance sense.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Redundancy is measurable. The eigenvalues rank the directions by information, and the tail tells you exactly what you lose.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Rank every direction by what it carries. Keep the head, and price the tail.</dd>
+</dl>
+</div>
+<div class="nugget" id="nugget-dropped">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-03 §Correctness checks</span></h4>
+<p class="big">Reconstruction error equals the sum of the dropped eigenvalues. The loss of compression is exactly priced.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>No mystery, no bound, no approximation: the error of keeping k components is the tail you cut. The eigenvalue spectrum is the receipt.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Prefer summaries whose cost is exactly computable. A priced loss is a controlled loss.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · SL-04 · C09, C10, C11, C12</p>
+<h2>ICA: unmixing the cocktail party</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Source anchor, §Mental model</span></p>
+<p>Two microphones record two speakers at once. Each recording is a different mixture. Can you recover the separate voices? x = As with s independent sources, A unknown square mixing matrix. Goal: find W = A⁻¹ to recover s = Wx. PCA would give uncorrelated mixtures. The voices would still be mixed. ICA goes further: find the linear unmixing that makes the outputs as independent as possible. Non-Gaussianity is the signal: mixtures look Gaussian by the central limit theorem, so maximize non-Gaussianity to unmix. Cocktail party solved.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Ambiguities, §Correctness checks</span></p>
+<p>You can never recover the order of the sources (permutation) or their volumes (scaling): both leave the observations identical. Every ICA result carries these two caveats. They rarely matter in practice. Density transform (13.2): p_x(x) = p_s(Wx)|W|. W must be invertible: monitor the condition number.</p>
+</div>
+<figure>
+<svg viewBox="0 0 760 240" class="chart" role="img" aria-label="ICA mixing and unmixing diagram">
+<text x="20" y="40" font-size="15" fill="#221a12" font-family="Georgia, serif">sources s</text>
+<text x="20" y="62" font-size="12" fill="#6f6355" font-family="system-ui, sans-serif">independent voices</text>
+<line x1="170" y1="50" x2="260" y2="50" stroke="#221a12" stroke-width="2"/>
+<text x="185" y="40" font-size="13" fill="#6f6355" font-family="system-ui, sans-serif">x = As</text>
+<text x="290" y="40" font-size="15" fill="#221a12" font-family="Georgia, serif">mixtures x</text>
+<text x="290" y="62" font-size="12" fill="#6f6355" font-family="system-ui, sans-serif">microphone recordings</text>
+<line x1="440" y1="50" x2="530" y2="50" stroke="#221a12" stroke-width="2"/>
+<text x="445" y="40" font-size="13" fill="#6f6355" font-family="system-ui, sans-serif">s = Wx</text>
+<text x="560" y="40" font-size="15" fill="#221a12" font-family="Georgia, serif">recovered ŝ</text>
+<text x="560" y="62" font-size="12" fill="#6f6355" font-family="system-ui, sans-serif">up to order and volume</text>
+<text x="20" y="120" font-size="15" fill="#221a12" font-family="Georgia, serif">A</text>
+<text x="40" y="120" font-size="13" fill="#6f6355" font-family="system-ui, sans-serif">unknown mixing matrix</text>
+<text x="20" y="150" font-size="15" fill="#221a12" font-family="Georgia, serif">W = A⁻¹</text>
+<text x="90" y="150" font-size="13" fill="#6f6355" font-family="system-ui, sans-serif">learned unmixing matrix</text>
+<text x="20" y="200" font-size="13" fill="#a94f27" font-family="Georgia, serif">Caveats: permutation and scaling are unrecoverable. The observations never change under either.</text>
+</svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Source anchor, §Ambiguities</span> The ICA pipeline as a diagram: mix, unmix, and the two ambiguities that survive.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> The scale-ambiguity prover. A fixed 2×2 mixing matrix A and sources s are invented for the toy. Type a scale factor c. The toy scales one column of A by c and the matching source by 1/c, and shows the mixture x unchanged.</p>
+<p>c: <input class="text" id="icac" value="2" style="max-width:90px" aria-label="scale factor"></p>
+<p><button class="btn" id="icabtn">Scale and compare</button></p>
+<div class="chips" id="icaout"></div>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Failure case</span></p>
+<p>Gaussian sources: ICA cannot separate them. A rotation of independent Gaussians is still independent Gaussians. The non-Gaussianity assumption is load-bearing.</p>
+</div>
+<div class="nugget" id="nugget-nongauss">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Mental model</span></h4>
+<p class="big">Mixtures look Gaussian. Maximize non-Gaussianity to unmix.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Uncorrelated is not independent. PCA stops at the second moment. ICA reads the higher moments, where the mixing left its fingerprints.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When the obvious statistics cannot separate two things, look at the statistics the mixing process itself distorted.</dd>
+</dl>
+</div>
+<div class="nugget" id="nugget-ambig">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-04 §Ambiguities</span></h4>
+<p class="big">The order and the volumes are unrecoverable. Both leave the observations identical.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Some unknowns are not missing data: they are absent from the observations entirely. No algorithm recovers what the data never contained.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Name the unidentifiable quantities before you optimize. Chasing them wastes the whole run.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · Synthesis</p>
+<h2>The arc, end to end</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">SL-01 to SL-04</span></p>
+<p>The arc, end to end. When the posterior is intractable, VI relaxes EM's E-step: optimize the ELBO over a tractable Q family, and the gap to the likelihood is exactly KL(Q || p(z|x)) (SL-01). The VAE parameterizes both model and posterior with neural nets, splits the ELBO into reconstruction minus KL, and makes sampling differentiable by separating randomness from parameters (SL-02). PCA finds the max-variance subspace: eigendecompose the covariance, keep the top k, and the reconstruction error equals the dropped eigenvalues exactly (SL-03). ICA unmixes independent sources by maximizing non-Gaussianity, up to permutation and scaling that no method recovers (SL-04).</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">§Research reading, §Role bridges</span></p>
+<p>Where the unit points next, in the lesson's own forward links. The extension: ICA on synthetic mixed audio. The falsifiable claim: the correlation of each recovered source with some true source exceeds 0.95 after best permutation. Diffusion (U12) is the modern successor to GANs for images. For the ML engineer: PCA is the default dimensionality reduction and denoising step, and whitening is standard preprocessing for ICA pipelines. For the research engineer: the reparameterization trick is the pattern behind all differentiable sampling in modern generative models. For the research scientist: VI is the approximate-inference framework. Know its failure modes (rigid Q, KL collapse) before trusting an ELBO.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>Six nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-gap"><span class="wnum">01</span>The gap is exactly KL <span class="muted">· SL-01</span></a></li>
+<li><a href="#nugget-separate"><span class="wnum">02</span>Separate randomness from parameters <span class="muted">· SL-02</span></a></li>
+<li><a href="#nugget-variance"><span class="wnum">03</span>The best k-dimensional linear summary <span class="muted">· SL-03</span></a></li>
+<li><a href="#nugget-dropped"><span class="wnum">04</span>Dropped eigenvalues price the error <span class="muted">· SL-03</span></a></li>
+<li><a href="#nugget-nongauss"><span class="wnum">05</span>Maximize non-Gaussianity to unmix <span class="muted">· SL-04</span></a></li>
+<li><a href="#nugget-ambig"><span class="wnum">06</span>Order and volume are unrecoverable <span class="muted">· SL-04</span></a></li>
+</ol>
+</section>
+
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>v2-pack/cs229/lessons/u11/lesson-11-vi-pca-ica.md</code> (443 lines, dated 2026-10-06). No lecture transcript and no lecture video exist for this unit, so nothing here quotes the lecturer. Per the lesson's Source mapping, SRC-01 section 11.5 and chapters 12 and 13 were read in substantial part on 2026-10-06. Every number on this page comes from the lesson's computed examples with section citations: the VAE example (−1.42 nats/point), the PCA eigenvalues (2.26, 1.62, 0.04). The VAE numbers are marked illustrative by the lesson. Whitening and eigenfaces are standard background beyond the notes' inspected text, labeled as such. The 98.9 versus 98.98 rounding note is disclosed in the legend and the chart caption. The charts re-plot those numbers with native tooltips. The watercolor is original to this companion and labeled as such. Historical photos: none used. The lesson names no historical figure. Interactive toys run the lesson's rules over the lesson's own toy values, with any invented inputs labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p><strong>Quotes.</strong> This page quotes 16 words directly from the lesson: "set Q to the true posterior." and "set Q to the best posterior-shaped object inside a tractable family." All other phrasing is the companion's.</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>. Eleventh of 17 CS229 companions.</p>
+</footer>
+</div>
+<script>
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  for (const k in attrs) { n.setAttribute(k, attrs[k]) }
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function pcaChart() {
+  const host = document.getElementById("chart-pca")
+  if (!host) { return }
+  const W = 760
+  const H = 340
+  const padL = 70
+  const padB = 44
+  const padT = 18
+  const eig = [2.26, 1.62, 0.04]
+  const tot = 3.92
+  const X = function(i) { return padL + (i + 0.5) * ((W - padL - 30) / 3) }
+  const Y = function(v) { return padT + (1 - v / 2.6) * (H - padT - padB) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const bw = (W - padL - 30) / 3 * 0.5
+  eig.forEach(function(v, i) {
+    const h = Y(0) - Y(v)
+    const bar = svgEl("rect", {x: X(i) - bw / 2, y: Y(v), width: bw, height: h, rx: 5, fill: i === 2 ? MUT : INDIGO})
+    const tip = svgEl("title", {})
+    tip.textContent = "component " + (i + 1) + ": eigenvalue " + v + ", " + (100 * v / tot).toFixed(1) + "% of variance"
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const lab = svgEl("text", {x: X(i), y: H - padB + 22, "font-size": 13, fill: INK, "font-family": SANS, "text-anchor": "middle"})
+    lab.textContent = "PC" + (i + 1)
+    svg.appendChild(lab)
+    const val = svgEl("text", {x: X(i), y: Y(v) - 8, "font-size": 12, fill: INK, "font-family": MONO, "text-anchor": "middle"})
+    val.textContent = v
+    svg.appendChild(val)
+  })
+  const cum = [57.65, 98.98, 100.0]
+  const cy = H - padB + 38
+  const note = svgEl("text", {x: padL, y: cy, "font-size": 13, fill: CLAY, "font-family": SANS})
+  note.textContent = "cumulative: 57.7%, 99.0% (lesson: 98.9), 100%, and reconstruction error at k=2 is the dropped 0.04"
+  svg.appendChild(note)
+  host.appendChild(svg)
+}
+
+let vaSeed = 11
+function vaRand() {
+  vaSeed = (vaSeed * 1103515245 + 12345) % 2147483648
+  return vaSeed / 2147483648
+}
+function vaGauss() {
+  const u1 = Math.max(vaRand(), 1e-9)
+  const u2 = vaRand()
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  pcaChart()
+
+  document.getElementById("vabtn").addEventListener("click", function() {
+    const mu = parseFloat(document.getElementById("vamu").value)
+    const sig = parseFloat(document.getElementById("vasig").value)
+    const out = document.getElementById("vaout")
+    out.innerHTML = ""
+    if (!isFinite(mu) || !(sig > 0)) {
+      out.appendChild(el("span", "chip plain", "mu real, sigma > 0"))
+      return
+    }
+    const zs = []
+    Array.from({length: 5}).forEach(function() {
+      const xi = vaGauss()
+      zs.push((mu + sig * xi).toFixed(3))
+    })
+    out.appendChild(el("span", "chip", "z = " + mu + " + " + sig + " * xi: [" + zs.join(", ") + "]"))
+    out.appendChild(el("span", "chip plain", "xi carried the randomness. Mu and sigma stayed on the gradient path"))
+  })
+
+  document.getElementById("pcabtn").addEventListener("click", function() {
+    const k = parseInt(document.getElementById("pcak").value, 10)
+    const out = document.getElementById("pcaout")
+    out.innerHTML = ""
+    const eig = [2.26, 1.62, 0.04]
+    const tot = 3.92
+    if (!(k >= 0 && k <= 3)) {
+      out.appendChild(el("span", "chip plain", "k in 0..3"))
+      return
+    }
+    const kept = eig.slice(0, k).reduce(function(s, v) { return s + v }, 0)
+    const dropped = eig.slice(k).reduce(function(s, v) { return s + v }, 0)
+    out.appendChild(el("span", "chip", "variance kept: " + (100 * kept / tot).toFixed(1) + "%"))
+    out.appendChild(el("span", "chip", "reconstruction error: " + dropped.toFixed(2)))
+    if (k === 2) { out.appendChild(el("span", "chip eow", "the lesson's 98.9% (recomputed 98.98)")) }
+  })
+
+  document.getElementById("icabtn").addEventListener("click", function() {
+    const c = parseFloat(document.getElementById("icac").value)
+    const out = document.getElementById("icaout")
+    out.innerHTML = ""
+    if (!(isFinite(c) && c !== 0)) {
+      out.appendChild(el("span", "chip plain", "c nonzero"))
+      return
+    }
+    const A = [[1, 0.5], [0.5, 1]]
+    const s = [2, 1]
+    const x = [A[0][0] * s[0] + A[0][1] * s[1], A[1][0] * s[0] + A[1][1] * s[1]]
+    const sp = [s[0] / c, s[1]]
+    const Ap = [[c * A[0][0], A[0][1]], [c * A[1][0], A[1][1]]]
+    const xp = [Ap[0][0] * sp[0] + Ap[0][1] * sp[1], Ap[1][0] * sp[0] + Ap[1][1] * sp[1]]
+    const fmt = function(v) { return v.toFixed(3) }
+    out.appendChild(el("span", "chip plain", "x = [" + x.map(fmt).join(", ") + "]"))
+    out.appendChild(el("span", "chip plain", "after scaling column 1 by " + c + ": x' = [" + xp.map(fmt).join(", ") + "]"))
+    const same = Math.abs(x[0] - xp[0]) < 1e-9 && Math.abs(x[1] - xp[1]) < 1e-9
+    out.appendChild(el("span", same ? "chip eow" : "chip plain", same ? "identical: the scale is unrecoverable" : "differ"))
+  })
+})
+
+</script>
+</body>
+</html>
