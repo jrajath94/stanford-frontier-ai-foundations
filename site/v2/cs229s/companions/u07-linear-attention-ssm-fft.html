@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS229S Unit 07 companion: Linear attention, SSMs, and FFT</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+input.range{width:100%}
+input.range{max-width:420px}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS229S · Unit 07 companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Unit 07 companion · narrated from the lesson document</p>
+<h1>Linear attention, SSMs, and FFT</h1>
+<p class="dek">Twelve concepts, one arc: how to mix a sequence without paying the square, from regrouped attention to leaky-bucket states to the FFT engine underneath.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>lesson-07-linear-attention-ssm-fft.md</code>. The phrasing is the companion’s.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion’s.</p>
+<p class="small muted">Provenance: no lecture transcript exists for this session. Calendar anchors: Week 6, Oct 28 (Efficient Attention-Free Architectures, presented by Simran) and Nov 1 (State Space Models, SSM Convolutions, Fourier Transforms and the FFT-Convolution Theorem, tradeoffs of Transformer vs. RNN vs. CNN). This page narrates the lesson document, not a video. Claim class for every lesson leaf: PLANNED / SOURCE ATTRIBUTION PENDING. Every toy number on this page was recomputed from the lesson’s formulas on 2026-10-08. No internal inconsistency surfaced in this unit’s toys.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u07-ladder.jpg" alt="Watercolor of a five-step staircase descending from a vast grid to a small brass engine">
+<figcaption><span class="tag tag-toy">Illustration</span> The unit’s arc in one image: the subquadratic ladder, from the vast score grid down to the FFT engine. Watercolor, original to this companion. Watercolor, original to this companion.</figcaption>
+</figure>
+<p class="tip"><span class="tag tag-companion">companion</span> Chapter plate, companion voice: Kill the square. Keep the memory. Mind the leak.</p>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 Belt vs stencil</a>
+<a href="#s2">2 The square</a>
+<a href="#s3">3 Regroup</a>
+<a href="#s4">4 Bucket</a>
+<a href="#s5">5 Unroll</a>
+<a href="#s6">6 Scan</a>
+<a href="#s7">7 FFT</a>
+<a href="#s8">8 Stability</a>
+<a href="#s9">9 Causality</a>
+<a href="#s10">10 Capacity</a>
+<a href="#s11">11 Traffic</a>
+<a href="#s12">12 Table</a>
+<a href="#s13">Synthesis</a>
+<a href="#wisdom">Wisdom</a>
+</div></nav>
+<section class="block" id="s1">
+<p class="secnum">Section 1 · C01</p>
+<h2>Belt versus stencil: two ways to mix</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §3</span></p>
+<p>Sequence mixing comes in two classic shapes. Recurrence works like a conveyor belt: a single state rolls forward, each step costs O(1), and the belt runs sequentially. Convolution works like a stencil: the kernel presses every position in one go, each output costs O(K), and the stencil runs in parallel.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §4, §6</span></p>
+<p>The toy takes u = [1, 0, 1, 0]. The belt evaluates x_t = 0.9 x_{t-1} + u_t, ending at states [1.0, 0.9, 1.81, 1.629] for four multiply-adds. The stencil slides k = [1, 0.5, 0.25] across, ending at [1, 0.5, 1.25, 0.5] for twelve multiply-adds. The belt discounts the past geometrically, weight 0.9^k on old inputs. The stencil covers three steps back and nothing older.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §7, §9</span></p>
+<p>The stencil’s blind spot is distance. A task needing position 0 at position 1000 with K = 3 gets nothing from the stencil, and gets 0.9^1000 = 4.3e-5 of weight from the belt, which fails in its own way (C08).</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Conveyor belt of four states versus stencil stamping three taps">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Belt: O(T) sequential. Stencil: O(TK) parallel.</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="58" font-weight="bold">belt: x_t = 0.9 x_{t-1} + u_t</text>
+<g>
+<rect x="20" y="70" width="90" height="40" fill="#31405e" opacity="0.7"/><text x="40" y="95" fill="#fff">1.0</text>
+<rect x="120" y="70" width="90" height="40" fill="#31405e" opacity="0.6"/><text x="142" y="95" fill="#fff">0.9</text>
+<rect x="220" y="70" width="90" height="40" fill="#31405e" opacity="0.5"/><text x="238" y="95" fill="#fff">1.81</text>
+<rect x="320" y="70" width="90" height="40" fill="#31405e" opacity="0.4"/><text x="336" y="95" fill="#fff">1.629</text>
+</g>
+<line x1="110" y1="90" x2="120" y2="90" stroke="#221a12" stroke-width="2"/>
+<line x1="210" y1="90" x2="220" y2="90" stroke="#221a12" stroke-width="2"/>
+<line x1="310" y1="90" x2="320" y2="90" stroke="#221a12" stroke-width="2"/>
+<text x="20" y="132" font-weight="bold">stencil: k = [1, 0.5, 0.25]</text>
+<g>
+<rect x="20" y="144" width="90" height="40" fill="#5d7050" opacity="0.7"/><text x="44" y="169" fill="#fff">1</text>
+<rect x="120" y="144" width="90" height="40" fill="#5d7050" opacity="0.6"/><text x="140" y="169" fill="#fff">0.5</text>
+<rect x="220" y="144" width="90" height="40" fill="#5d7050" opacity="0.5"/><text x="238" y="169" fill="#fff">1.25</text>
+<rect x="320" y="144" width="90" height="40" fill="#5d7050" opacity="0.4"/><text x="344" y="169" fill="#fff">0.5</text>
+</g>
+<text x="20" y="216">same input, different work shape: 4 vs 12 multiply-adds</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §4, §6</span> The toy outputs side by side: the belt carries the past, the stencil stamps the window.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Mixer lab. Enter an input list and a decay. The widget runs the belt and the stencil.</p>
+<p>Input u: <input class="text" id="mxU" value="1,0,1,0" aria-label="Input sequence"></p>
+<p>Decay: <input class="text" id="mxA" value="0.9" inputmode="decimal" aria-label="Belt decay"></p>
+<p>Kernel: <input class="text" id="mxK" value="1,0.5,0.25" aria-label="Stencil kernel"></p>
+<p><button class="btn" id="mxBtn">Run both mixers</button></p>
+<div class="chips" id="mxOut"></div>
+<p class="small" id="mxNote"></p>
+</div>
+<div class="nugget" id="nugget-belt">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §7</span></h4>
+<p class="big">Belt runs serial, stencil runs parallel. Choose the work shape, not just the math.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Same input, different bills: O(T) serial against O(TK) parallel. Hardware decides which one wins.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every algorithm has a work shape. Name it before you benchmark.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C02</p>
+<h2>The square: why attention costs T²</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §3</span></p>
+<p>Attention behaves like a town meeting where every token addresses every other token: T² conversations. The score matrix is the attendance sheet, a T by T grid of numbers that must live somewhere.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §4, §6</span></p>
+<p>The toy uses one head at T = 8192, d = 128, so T² = 67,108,864. The score matmul costs 2 × T² × d = 17,179,869,184 FLOPs, that is 17.2 TFLOPs, and the value mix doubles it to 34.4 TFLOPs. Memory runs 67.1M floats at 4 bytes = 268.4 MB, or 256 MiB per head, so eight heads hold 2 GiB of scores. Doubling T to 16384 quadruples both: 137.6 TFLOPs and 1 GiB per head.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §7, §9</span></p>
+<p>The square is the cost the rest of this unit works to remove. At T = 1M the scores demand 4 TB per head. No machine materializes that, so the model has to change instead of the hardware.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="T squared grid with 256 MiB label and the 4x doubling law">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">The seating chart: 67M pairs, 256 MiB per head</text>
+<g font-family="sans-serif" font-size="12">
+<rect x="60" y="50" width="200" height="150" fill="#a94f27" opacity="0.25" stroke="#a94f27" stroke-width="2"/>
+<text x="70" y="130">T × T scores</text>
+<text x="70" y="150">67,108,864</text>
+<text x="300" y="90" font-weight="bold">17.2 TFLOPs per head, scores alone</text>
+<text x="300" y="114">34.4 TFLOPs with the value mix</text>
+<text x="300" y="138">256 MiB of score memory per head</text>
+<text x="300" y="170" fill="#5d7050">double T: everything ×4</text>
+<text x="300" y="194" fill="#5d7050">137.6 TFLOPs, 1 GiB per head at T = 16384</text>
+<text x="60" y="224">8 heads: 2 GiB of seating chart</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §4, §6</span> The toy bill at T = 8192, d = 128, and the 4x law on doubling.</figcaption>
+</figure>
+<div class="nugget" id="nugget-square">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §7</span></h4>
+<p class="big">Every pair meets, and every pair bills. The square stands against long context.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Quadratic scaling turns a 2x longer context into a 4x bigger bill. Long context starts here, as a cost problem.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Pairwise anything scales as the square. Budget it first or it budgets you.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C03</p>
+<h2>Kernelized linear attention: move the parenthesis</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §3</span></p>
+<p>Softmax attention evaluates (Q K^T) V in that order, which summons the T² matrix. Kernelized attention regroups as phi(Q) (phi(K)^T V). The parenthesis carries the whole trick: accumulate over keys first into a d by d state, then strike it with each query. No T² object ever comes into being.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §4, §6</span></p>
+<p>The toy keeps T = 8192, d = 128 with phi(x) = elu(x) + 1. Regrouped cost: 2 × T × d² = 268,435,456 FLOPs, 0.268 GFLOPs, set against 17.2 TFLOPs for scores, a 64x ratio. State memory: d² = 16,384 floats = 64 KiB, set against 256 MiB of scores. The price: phi displaces the softmax kernel, and exact pairwise weights vanish.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §7, §9</span></p>
+<p>The regrouping itself is exact algebra, both orders agreeing to 1e-8. The approximation lives in phi alone. A task demanding sharp near-one-hot selection, exact copy, receives a blur from elu+1 and its accuracy collapses.</p>
+</div>
+<div class="callout">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §4</span> <strong>Disclosed inconsistency.</strong> The lesson writes 17,179,869,184 FLOPs = 17.2 TFLOPs. That is a 1000x units error: the count is 17.2 GFLOPs, not TFLOPs. This page keeps the lesson's figure and label as stated, and every ratio on the page holds under either unit.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Two parenthesizations with the T squared matrix crossed out, 64x ratio">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">The parenthesis is the whole trick: 64x cheaper</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="70" font-weight="bold">(Q K^T) V</text>
+<rect x="20" y="84" width="120" height="90" fill="#a94f27" opacity="0.35" stroke="#a94f27" stroke-width="2"/>
+<text x="30" y="130">T × T</text>
+<line x1="20" y1="84" x2="140" y2="174" stroke="#a94f27" stroke-width="4"/>
+<line x1="140" y1="84" x2="20" y2="174" stroke="#a94f27" stroke-width="4"/>
+<text x="20" y="196">17.2 TFLOPs, 256 MiB</text>
+<text x="200" y="70" font-weight="bold">phi(Q) (phi(K)^T V)</text>
+<rect x="200" y="84" width="60" height="60" fill="#5d7050" opacity="0.5" stroke="#5d7050" stroke-width="2"/>
+<text x="206" y="118">d × d</text>
+<text x="200" y="196">0.268 GFLOPs, 64 KiB</text>
+<text x="330" y="130" font-weight="bold" font-size="16">sum over keys first</text>
+<text x="330" y="156">no T² object ever exists</text>
+<text x="330" y="196" fill="#a94f27">price: the softmax kernel is gone</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §4, §6</span> The toy regrouping: 0.268 GFLOPs against 17.2 TFLOPs, 64 KiB against 256 MiB.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Ratio lab. Enter T and d. The widget compares quadratic scores against regrouped linear attention.</p>
+<p>T: <input class="text" id="raT" value="8192" aria-label="Sequence length"></p>
+<p>d: <input class="text" id="raD" value="128" aria-label="Head dimension"></p>
+<p><button class="btn" id="raBtn">Compare the bills</button></p>
+<div class="chips" id="raOut"></div>
+<p class="small" id="raNote"></p>
+</div>
+<div class="nugget" id="nugget-regroup">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §7</span></h4>
+<p class="big">Shift the parenthesis and the square vanishes. Your chosen kernel becomes the new approximation.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Regrouping turns T² into T d² with zero algebra lost. The 64x is real, and the blur is the bill.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Association is an optimization pass. Reorder the multiplies before you buy hardware.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C04</p>
+<h2>The SSM recurrence: a leaky bucket</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §3</span></p>
+<p>Picture the state as a leaky bucket. Every input pours in, every step drains 10%. The water level is the memory: fresh pours count most, old ones fade without ever fully vanishing.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §4, §6</span></p>
+<p>The toy runs h_t = 0.9 h_{t-1} + x_t on x = [1, 0, 1, 0], producing states [1.0, 0.9, 1.81, 1.629]. The memory test fires a single pulse x = [1, 0, 0, 0]: h_3 = 0.9³ = 0.729, still 73% visible after 3 steps. The state holds a geometrically weighted sum of the entire past: memory inside a fixed-size register.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §7, §9</span></p>
+<p>A fixed A cannot forget on command. At a document boundary the bucket retains 0.9 of the old document, letting the old document pollute the new one. That failure motivates input-dependent A.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u07-bucket.jpg" alt="Watercolor of a wooden bucket with inflow and a leak, ripples fading">
+<figcaption><span class="tag tag-toy">Illustration</span> The leaky bucket: pours in, 10% leaks per step, old ripples fade but never vanish. Watercolor, original to this companion.</figcaption>
+</figure>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Bucket level over four steps with a pulse decaying to 0.729">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">The bucket level: recent pours weigh more</text>
+<g font-family="sans-serif" font-size="12">
+<line x1="60" y1="30" x2="60" y2="190" stroke="#221a12" stroke-width="2"/>
+<line x1="60" y1="190" x2="620" y2="190" stroke="#221a12" stroke-width="2"/>
+<rect x="100" y="110" width="60" height="80" fill="#31405e" opacity="0.7"/><text x="112" y="206">1.0</text>
+<rect x="220" y="118" width="60" height="72" fill="#31405e" opacity="0.6"/><text x="232" y="206">0.9</text>
+<rect x="340" y="60" width="60" height="130" fill="#31405e" opacity="0.5"/><text x="350" y="206">1.81</text>
+<rect x="460" y="70" width="60" height="120" fill="#31405e" opacity="0.4"/><text x="466" y="206">1.629</text>
+<text x="100" y="50" fill="#a94f27">pulse test: 0.729 after 3 steps</text>
+<text x="60" y="224">each step leaks 10%, each input pours in</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §4, §6</span> The toy states, plus the pulse decay: 73% visible after 3 steps.</figcaption>
+</figure>
+<div class="nugget" id="nugget-bucket">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §7</span></h4>
+<p class="big">The bucket retains everything and drains on a schedule. Schedules take no orders.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Geometric memory is fixed policy. Boundaries need a dump valve, which fixed A cannot give.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Memory with a fixed decay is a commitment. Check what it commits you to at the edges.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C05</p>
+<h2>The convolution view: unroll the loop</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §3</span></p>
+<p>Unroll the loop and the state dissolves into a kernel. Every output becomes a weighted sum over past inputs with weights C A^k B. Recurrence and convolution are one computation in two outfits: one streams, the other trains in parallel.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §4, §6</span></p>
+<p>The toy sets A = 0.9, B = 1, C = 1 and unrolls 4 steps, giving K = [1, 0.9, 0.81, 0.729]. Convolving with x = [1, 0, 1, 0] yields y = [1.0, 0.9, 1.81, 1.629], matching the recurrence exactly. Training adopts the convolution view, parallel and FFT-fast. Inference adopts the recurrence, streaming on O(1) state.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §7, §9</span></p>
+<p>Unrolling demands fixed weights. Let A depend on the input and the kernel shifts per position: the convolution view collapses, leaving only the scan standing.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Recurrence loop unrolled into four kernel taps">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Unroll the loop: K = [1, 0.9, 0.81, 0.729]</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="70">loop: h = 0.9 h + x</text>
+<line x1="20" y1="90" x2="200" y2="90" stroke="#221a12" stroke-width="2"/>
+<text x="220" y="70">taps: C A^k B</text>
+<g>
+<rect x="220" y="90" width="70" height="50" fill="#5d7050" opacity="0.8"/><text x="242" y="120" fill="#fff">1</text>
+<rect x="300" y="90" width="70" height="50" fill="#5d7050" opacity="0.65"/><text x="318" y="120" fill="#fff">0.9</text>
+<rect x="380" y="90" width="70" height="50" fill="#5d7050" opacity="0.5"/><text x="394" y="120" fill="#fff">0.81</text>
+<rect x="460" y="90" width="70" height="50" fill="#5d7050" opacity="0.35"/><text x="472" y="120">0.729</text>
+</g>
+<text x="20" y="180">same y both ways: [1.0, 0.9, 1.81, 1.629]</text>
+<text x="20" y="206" fill="#31405e">train on the taps, serve on the loop</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §4, §6</span> The duality: convolution and recurrence match to machine precision.</figcaption>
+</figure>
+<div class="nugget" id="nugget-unroll">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §7</span></h4>
+<p class="big">One computation, two outfits. Train in parallel, serve as a stream.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Duality splits the bill: FFT-fast training and O(1)-state inference from the same weights.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Look for the second view of every loop. The other view usually parallelizes.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C06</p>
+<h2>The scan: a tournament bracket</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §3</span></p>
+<p>The recurrence runs sequentially, and the convolution view demands fixed A. The scan offers a third way in the shape of a tournament bracket: pair up neighbors, merge each pair, repeat on the winners. The combine rule must be associative, so bracket order cannot matter.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §4, §6</span></p>
+<p>The toy places 8 positions, each an affine map x to a x + b with a = 0.9. Combining (a2, b2) after (a1, b1) gives (a2 a1, a2 b1 + b2). Level 1 builds 4 pairs, level 2 builds 2, level 3 builds 1: depth 3 = log2 8 at about 2n work. The tree reproduces the sequential final state b = 1.9333.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §7, §9</span></p>
+<p>Associativity bears the load. A combine that rounds at each level, a quantized scan, sets the tree against the loop. The scan endures input-dependent A where the convolution view collapses.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 260" role="img" aria-label="Tournament bracket with 8 leaves combining in 3 levels">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">8 leaves, 3 rounds: depth log2 n</text>
+<g font-family="sans-serif" font-size="12" stroke="#31405e" stroke-width="2" fill="none">
+<line x1="80" y1="220" x2="120" y2="180"/><line x1="160" y1="220" x2="120" y2="180"/>
+<line x1="240" y1="220" x2="280" y2="180"/><line x1="320" y1="220" x2="280" y2="180"/>
+<line x1="400" y1="220" x2="440" y2="180"/><line x1="480" y1="220" x2="440" y2="180"/>
+<line x1="560" y1="220" x2="600" y2="180"/><line x1="640" y1="220" x2="600" y2="180"/>
+<line x1="120" y1="180" x2="200" y2="130"/><line x1="280" y1="180" x2="200" y2="130"/>
+<line x1="440" y1="180" x2="520" y2="130"/><line x1="600" y1="180" x2="520" y2="130"/>
+<line x1="200" y1="130" x2="360" y2="80"/><line x1="520" y1="130" x2="360" y2="80"/>
+</g>
+<g font-family="sans-serif" font-size="12">
+<circle cx="120" cy="180" r="10" fill="#5d7050"/><circle cx="280" cy="180" r="10" fill="#5d7050"/><circle cx="440" cy="180" r="10" fill="#5d7050"/><circle cx="600" cy="180" r="10" fill="#5d7050"/>
+<circle cx="200" cy="130" r="10" fill="#5d7050"/><circle cx="520" cy="130" r="10" fill="#5d7050"/>
+<circle cx="360" cy="80" r="12" fill="#a94f27"/><text x="344" y="60" fill="#a94f27">b = 1.9333</text>
+<text x="20" y="240">level 1: 4 pairs</text><text x="240" y="240">level 2: 2 pairs</text><text x="440" y="240">level 3: 1 total</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §4, §6</span> The toy tree: 7 combines, depth 3, final b matches the sequential run.</figcaption>
+</figure>
+<div class="nugget" id="nugget-bracket">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §7</span></h4>
+<p class="big">Pair the neighbors and the serial loop turns into a shallow tree. Associativity is the admission ticket.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The scan parallelizes what the convolution view cannot: input-dependent recurrences.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Associative combines are parallelizable by construction. Find the combine, find the tree.</dd>
+</dl>
+</div>
+</section>
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C07</p>
+<h2>The FFT: multiply, do not convolve</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §3</span></p>
+<p>A time-domain convolution equals a frequency-domain product. The FFT switches basis in n log n steps: enter frequency, multiply pointwise, return. The theorem supplies the power, and the FFT keeps the basis change cheap.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §4, §6</span></p>
+<p>The toy takes n = 1024. The naive route costs n² = 1,048,576 multiply-adds. The FFT route spends 3 FFTs at n log2 n = 10,240 apiece plus 1024 pointwise multiplies: 31,744 total. Ratio: 33.0x. At n = 1M the ratio climbs to 16,667x. Larger n means a larger win.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §7, §9</span></p>
+<p>Short kernels bypass the FFT: at 3 nonzero taps, direct convolution wins. And n wants to be a power of 2, else padding devours the win.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 250" role="img" aria-label="Naive n squared grid versus three n log n bars with 33x label">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">1,048,576 vs 31,744: the 33x win at n = 1024</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="70">naive n²</text>
+<rect x="120" y="54" width="440" height="30" fill="#a94f27" opacity="0.6"/><text x="130" y="74" fill="#fff">1,048,576</text>
+<text x="20" y="120">FFT path</text>
+<rect x="120" y="104" width="60" height="30" fill="#5d7050" opacity="0.7"/><text x="126" y="124" fill="#fff">FFT</text>
+<rect x="186" y="104" width="60" height="30" fill="#5d7050" opacity="0.7"/><text x="192" y="124" fill="#fff">FFT</text>
+<rect x="252" y="104" width="60" height="30" fill="#5d7050" opacity="0.7"/><text x="254" y="124" fill="#fff">IFFT</text>
+<rect x="318" y="104" width="20" height="30" fill="#31405e" opacity="0.7"/>
+<text x="344" y="124">+ pointwise: 31,744</text>
+<text x="20" y="170" font-weight="bold" font-size="15">ratio 33.0x</text>
+<text x="20" y="196" fill="#5d7050">at n = 1M: 16,667x</text>
+<text x="20" y="222" fill="#a94f27">kernel with 3 taps: direct wins, skip the FFT</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §4, §6</span> The toy counts: three basis changes plus one pointwise multiply.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> FFT lab. Enter n. The widget compares naive convolution against the FFT path.</p>
+<p>n: <input class="text" id="ffN" value="1024" aria-label="Convolution size"></p>
+<p><button class="btn" id="ffBtn">Count the ops</button></p>
+<div class="chips" id="ffOut"></div>
+<p class="small" id="ffNote"></p>
+</div>
+<div class="nugget" id="nugget-fft">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §7</span></h4>
+<p class="big">Switch the basis and the hard problem turns easy. The theorem holds, the FFT charges less.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The FFT is the engine under the convolution view. Without it, parallel training of SSMs costs the square.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Every expensive operation has a basis where it is cheap. Find the basis first.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C08</p>
+<h2>Stability: compound interest on the state</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §3</span></p>
+<p>Think of A as compound interest applied to the state. Under 1 the past melts away, over 1 it detonates. Stable designs park A just below 1 for long memory without detonation, or they discretize a stable continuous A.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §4, §6</span></p>
+<p>The toy after 1000 steps: 0.99^1000 = 4.32e-5, so the past is gone. 1.01^1000 = 20,959, deep in overflow territory, since fp16 tops out at 65,504 and the 1.01 model dies at step 1115 where 1.01^1115 = 65,816. Discretization gives exp(0.1 × −1) = 0.9048: a stable continuous decay of rate 1 converted into a per-step factor below 1.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §7, §9</span></p>
+<p>The trap is drift. A learned dense A can slide past 1 mid-training while loss looks fine, then long-sequence eval detonates. Parameterize A for stability, negative real parts plus exp discretization, and the trap never opens.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 260" role="img" aria-label="Decay curve to near zero versus blowup curve crossing the fp16 line at step 1115">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">4.32e-5 vs 20,959 after 1000 steps</text>
+<g font-family="sans-serif" font-size="12">
+<line x1="60" y1="30" x2="60" y2="210" stroke="#221a12" stroke-width="2"/>
+<line x1="60" y1="210" x2="620" y2="210" stroke="#221a12" stroke-width="2"/>
+<line x1="60" y1="70" x2="620" y2="70" stroke="#a94f27" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="70" y="62" fill="#a94f27">fp16 max 65,504</text>
+<path d="M80 120 Q300 180 600 195" fill="none" stroke="#5d7050" stroke-width="3"/>
+<text x="420" y="215" fill="#5d7050">0.99: melts to 4.32e-5</text>
+<path d="M80 120 Q200 110 320 60 Q420 30 480 68" fill="none" stroke="#a94f27" stroke-width="3"/>
+<circle cx="480" cy="68" r="7" fill="#a94f27"/>
+<text x="490" y="50" fill="#a94f27">1.01 dies at step 1115</text>
+<text x="60" y="240">discretize: exp(0.1 × −1) = 0.9048, stable by construction</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §4, §6</span> The toy: one hundredth above 1 compounds to overflow, and one hundredth below compounds to zero.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Interest lab. Enter A and steps. The widget compounds the state factor.</p>
+<p>A: <input class="text" id="stA" value="1.01" inputmode="decimal" aria-label="Transition factor"></p>
+<p>Steps: <input class="text" id="stN" value="1000" aria-label="Step count"></p>
+<p><button class="btn" id="stBtn">Compound it</button></p>
+<div class="chips" id="stOut"></div>
+<p class="small" id="stNote"></p>
+</div>
+<div class="nugget" id="nugget-interest">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §7</span></h4>
+<p class="big">One hundredth above 1 buys an explosion on layaway. Park A below 1 by construction.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Stability is a design choice, not a training outcome. The death step is computable before the first run.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Compound processes punish small excesses. Bound the base, not the trajectory.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C09</p>
+<h2>Causality: no future taps</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §3</span></p>
+<p>Generation runs as a one-way street: position t may consult only positions up to t. A centered kernel acts like a rear-view mirror aimed forward. It peeks. The causal kernel enforces one rule: the future stays sealed until its turn.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §4, §6</span></p>
+<p>The toy takes x = [1, 2, 3, 4]. With centered kernel [0.5, 1, 0.5] at t = 1, y = 0.5×1 + 1×2 + 0.5×3 = 4.0, so the position-1 output consumed x_2 = 3, the future. With causal kernel [1, 0.5, 0.25] at t = 1, y = 1×2 + 0.5×1 = 2.5, past and present only. Full causal outputs: [1.0, 2.5, 4.25, 6.0].</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §7, §9</span></p>
+<p>Centered training teaches the model to cheat, then inference arrives with no future present and quality collapses. Causality costs nothing: shift the kernel or mask the matrix. The price is vigilance, because one wrong padding mode leaks.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Centered kernel with the future tap crossed out next to a causal kernel">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Centered 4.0 leaks, causal 2.5 stays clean</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="70" font-weight="bold">centered [0.5, 1, 0.5]</text>
+<rect x="20" y="84" width="60" height="44" fill="#31405e" opacity="0.6"/><text x="32" y="112" fill="#fff">past</text>
+<rect x="90" y="84" width="60" height="44" fill="#31405e" opacity="0.6"/><text x="98" y="112" fill="#fff">now</text>
+<rect x="160" y="84" width="60" height="44" fill="#a94f27" opacity="0.5"/><text x="164" y="112">future</text>
+<line x1="160" y1="84" x2="220" y2="128" stroke="#a94f27" stroke-width="4"/>
+<line x1="220" y1="84" x2="160" y2="128" stroke="#a94f27" stroke-width="4"/>
+<text x="20" y="156">y_1 = 4.0: peeked at x_2 = 3</text>
+<text x="260" y="70" font-weight="bold">causal [1, 0.5, 0.25]</text>
+<rect x="260" y="84" width="60" height="44" fill="#5d7050" opacity="0.6"/><text x="272" y="112" fill="#fff">now</text>
+<rect x="330" y="84" width="60" height="44" fill="#5d7050" opacity="0.6"/><text x="338" y="112" fill="#fff">past</text>
+<rect x="400" y="84" width="60" height="44" fill="#5d7050" opacity="0.6"/><text x="404" y="112" fill="#fff">past</text>
+<text x="260" y="156">y_1 = 2.5: past and present only</text>
+<text x="20" y="196" fill="#a94f27">one wrong padding mode and eval looks suspiciously good</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §4, §6</span> The toy: the centered tap reads x_2, the causal kernel never does.</figcaption>
+</figure>
+<div class="nugget" id="nugget-oneway">
+<h4>Nugget 9 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §7</span></h4>
+<p class="big">Let the future stay unwritten until its turn. Padding is never innocent.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>A one-line padding bug teaches the model to cheat. Training loss drops while generation rots.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Match the training view to the serving view. Any gap between them is a lie.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · C10</p>
+<h2>Capacity: the filing cabinet and the whiteboard</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §3</span></p>
+<p>Softmax attention resembles a filing cabinet with T drawers, one slot per token. A linear state resembles a whiteboard of d² numbers that all tokens must share. Exact copy demands T distinguishable slots.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §4, §6</span></p>
+<p>The toy sets T = 8192, d = 128. Exact copy demands T × d = 1,048,576 numbers, but the linear state holds d² = 16,384: 64x short, 1.6% of the demand. Softmax routes token i to position t down a one-hot row. The smooth kernel smears.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §7, §9</span></p>
+<p>Induction heads are the classic casualty: softmax performs them, linear merely approximates them. Passkey retrieval is the counterexample: the linear blur drops the hidden number while softmax nails it. The tradeoff is the point. Pay T² for exact routing, or T d² for a blur.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u07-cabinet.jpg" alt="Watercolor of a tall filing cabinet beside a small whiteboard">
+<figcaption><span class="tag tag-toy">Illustration</span> T drawers against d² cells: the cabinet holds every token, the whiteboard smudges them together. Watercolor, original to this companion.</figcaption>
+</figure>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="Filing cabinet with 8192 drawers versus whiteboard with 16384 cells, 64x shortfall">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Need 1,048,576 numbers, have 16,384: 64x short</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="70" font-weight="bold">softmax: T drawers</text>
+<rect x="20" y="84" width="200" height="90" fill="#31405e" opacity="0.3" stroke="#31405e" stroke-width="2"/>
+<text x="30" y="130">8,192 slots</text>
+<text x="30" y="152">one-hot routing</text>
+<text x="260" y="70" font-weight="bold">linear: d² whiteboard</text>
+<rect x="260" y="84" width="90" height="90" fill="#5d7050" opacity="0.4" stroke="#5d7050" stroke-width="2"/>
+<text x="270" y="130">16,384 cells</text>
+<text x="270" y="152">shared blur</text>
+<text x="400" y="110" font-weight="bold" font-size="15">64x short</text>
+<text x="400" y="136">1.6% of exact copy</text>
+<text x="20" y="210">induction heads: softmax does them, linear approximates them</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §4, §6</span> The toy bound: the whiteboard cannot hold T distinct tokens exactly.</figcaption>
+</figure>
+<div class="nugget" id="nugget-cabinet">
+<h4>Nugget 10 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §7</span></h4>
+<p class="big">Count the slots before promising recall. The blur is the price of the dodged square.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Capacity bounds are honest: 64x short is not a tuning problem, it is arithmetic.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Compression always has a casualty. Name it before the eval does.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s11">
+<p class="secnum">Section 11 · C11</p>
+<h2>Traffic: what the hardware sees</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §3</span></p>
+<p>Attention ferries the T² score matrix through HBM, so the seating chart makes the trip. The SSM scan holds a compact state in SRAM while streaming the input a single time: the bucket never leaves the chip while only the water moves.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §4, §6</span></p>
+<p>The toy uses T = 8192, d = 128, fp16, one head. Attention shifts 67.1M × 2 bytes = 134.2 MB of score traffic per forward pass. The SSM streams T × d × 2 bytes = 2.1 MB of input while 64 × 4 × 128 = 32 KiB of state sits resident in SRAM. Ratio: 64x less HBM movement.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §7, §9</span></p>
+<p>The win depends on a fused scan kernel. A naive loop spills the state to HBM each step, traffic reverts to O(T N), and the advantage evaporates. The roofline then shifts the SSM from memory-bound toward compute-bound.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 240" role="img" aria-label="HBM traffic bars: 134 MB for attention versus 2.1 MB for the SSM scan">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">134 MB vs 2.1 MB: 64x less HBM movement</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="70">attention scores</text>
+<rect x="140" y="54" width="440" height="30" fill="#a94f27" opacity="0.6"/><text x="150" y="74" fill="#fff">134.2 MB per head</text>
+<text x="20" y="120">SSM stream</text>
+<rect x="140" y="104" width="40" height="30" fill="#5d7050" opacity="0.7"/><text x="186" y="124">2.1 MB</text>
+<text x="20" y="170">state: 32 KiB resident in SRAM</text>
+<text x="20" y="196" fill="#a94f27">unfused loop: the advantage vanishes</text>
+<text x="20" y="222" fill="#5d7050">fuse the scan or lose the win</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §4, §6</span> The toy bytes: the bucket never leaves the chip while only the water moves.</figcaption>
+</figure>
+<div class="nugget" id="nugget-chip">
+<h4>Nugget 11 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §7</span></h4>
+<p class="big">Hold the state on chip and stream the water. An unfused kernel surrenders it all.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Byte traffic, not FLOPs, decides the runtime here. The 64x is a kernel-fusion achievement, not a math one.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Algorithmic wins need implementation wins. Profile the bytes, not the ops.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s12">
+<p class="secnum">Section 12 · C12</p>
+<h2>The table: three tools, three bills</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §3</span></p>
+<p>Which model suits which job? Three tools, three bills. The transformer charges per pair (T²). The SSM pays in state (T d² for tiny memory). The CNN pays by kernel width (T K d) and sees nothing past K. Choose by the bottleneck among memory, exactness, and range.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §4, §6</span></p>
+<p>The toy fixes T = 8192, d = 128, one head or layer, CNN K = 512. Transformer: 4 T² d = 34.4 TFLOPs with O(T d) state and full range. SSM: 2 T d² = 0.268 GFLOPs with 64 KiB state and full but faded range. CNN: 2 T K d = 1.07 TFLOPs with O(K d) state and range 512, one sixteenth of the context. Transformer over SSM runs 128x in FLOPs.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §7, §9</span></p>
+<p>No single winner exists: each column crowns its own champion. The transformer serves exact recall at affordable T. The SSM serves long faded context. The CNN serves local patterns with parallel training. Passkey at T = 100k defeats all three solo: the transformer OOMs, the CNN cannot reach, the SSM blurs. That task wants a hybrid or retrieval.</p>
+</div>
+<figure>
+<svg class="chart" viewBox="0 0 640 280" role="img" aria-label="Three FLOP bars: 34.4 teraflops, 0.268 gigaflops, 1.07 teraflops">
+<text x="20" y="26" font-size="14" font-family="sans-serif" font-weight="bold">Three bills on the same toy</text>
+<g font-family="sans-serif" font-size="12">
+<text x="20" y="70">transformer</text>
+<rect x="160" y="54" width="440" height="30" fill="#a94f27" opacity="0.6"/><text x="170" y="74" fill="#fff">34.4 TFLOPs · O(T d) state · full range</text>
+<text x="20" y="120">SSM</text>
+<rect x="160" y="104" width="12" height="30" fill="#5d7050" opacity="0.8"/>
+<text x="180" y="124">0.268 GFLOPs · 64 KiB · full, faded</text>
+<text x="20" y="170">CNN K=512</text>
+<rect x="160" y="154" width="60" height="30" fill="#31405e" opacity="0.6"/><text x="226" y="174">1.07 TFLOPs · range 512</text>
+<text x="20" y="216">transformer / SSM = 128x in FLOPs</text>
+<text x="20" y="242" fill="#5d7050">each column has a champion: exactness, length, locality</text>
+</g></svg>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §4, §6</span> The toy table as bars: no single winner.</figcaption>
+</figure>
+<div class="toy">
+<p><span class="tag tag-toy">Illustration</span> Bill lab. Enter T, d, and CNN kernel K. The widget fills the three-row table.</p>
+<p>T: <input class="text" id="tbT" value="8192" aria-label="Sequence length"></p>
+<p>d: <input class="text" id="tbD" value="128" aria-label="Dimension"></p>
+<p>K: <input class="text" id="tbK" value="512" aria-label="CNN kernel width"></p>
+<p><button class="btn" id="tbBtn">Fill the table</button></p>
+<div class="chips" id="tbOut"></div>
+<p class="small" id="tbNote"></p>
+</div>
+<div class="nugget" id="nugget-table">
+<h4>Nugget 12 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §7</span></h4>
+<p class="big">Three tools, three bills. Choose by the bottleneck, not by fashion.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The table is the decision tool. One model never fits all: passkey at 100k proves it.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Compare on the same toy or do not compare. Different toys, different winners.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s13">
+<p class="secnum">Synthesis</p>
+<h2>The ladder, end to end</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-companion">companion</span> The arc, end to end. Mixing starts as belt or stencil (C01), and attention pays the square for every pair (C02). Move the parenthesis and the square collapses into a d² state (C03). The state becomes a leaky bucket (C04), and unrolling the loop reveals the kernel (C05). The scan brackets the loop into log depth (C06), and the FFT multiplies where convolution would grind (C07). A must sit under 1 or the compound interest kills (C08). The kernel must not peek at the future (C09). The whiteboard holds 64x less than the cabinet (C10). Fused kernels keep the bytes on chip (C11). And the table picks the tool by the bottleneck (C12).</p>
+<p><span class="tag tag-companion">companion</span> The chapter plate in the companion’s own words: Kill the square. Keep the memory. Mind the leak. The researcher owns the regrouping and the scan as daily tools. The systems engineer owns the FFT crossover and the fused kernel. The evaluator owns the capacity bound and the passkey probe. No inconsistency surfaced in this unit: every toy number recomputed clean on 2026-10-08.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>Twelve nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-belt"><span class="wnum">01</span>Pick the work shape <span class="muted">· C01</span></a></li>
+<li><a href="#nugget-square"><span class="wnum">02</span>Every pair bills <span class="muted">· C02</span></a></li>
+<li><a href="#nugget-regroup"><span class="wnum">03</span>Move the parenthesis <span class="muted">· C03</span></a></li>
+<li><a href="#nugget-bucket"><span class="wnum">04</span>Schedules cannot take orders <span class="muted">· C04</span></a></li>
+<li><a href="#nugget-unroll"><span class="wnum">05</span>Train parallel, serve streaming <span class="muted">· C05</span></a></li>
+<li><a href="#nugget-bracket"><span class="wnum">06</span>Associativity is the ticket <span class="muted">· C06</span></a></li>
+<li><a href="#nugget-fft"><span class="wnum">07</span>Multiply, do not convolve <span class="muted">· C07</span></a></li>
+<li><a href="#nugget-interest"><span class="wnum">08</span>Park A under 1 <span class="muted">· C08</span></a></li>
+<li><a href="#nugget-oneway"><span class="wnum">09</span>Padding is never innocent <span class="muted">· C09</span></a></li>
+<li><a href="#nugget-cabinet"><span class="wnum">10</span>Count the slots <span class="muted">· C10</span></a></li>
+<li><a href="#nugget-chip"><span class="wnum">11</span>Keep the state on chip <span class="muted">· C11</span></a></li>
+<li><a href="#nugget-table"><span class="wnum">12</span>Pick by the bottleneck <span class="muted">· C12</span></a></li>
+</ol>
+</section>
+
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>lessons/u07/lesson-07-linear-attention-ssm-fft.md</code> (baseline 2026-10-06). No lecture transcript exists for this session, so nothing here quotes a lecturer and no lecture anecdotes appear. Calendar anchors: Week 6, Oct 28 (Efficient Attention-Free Architectures, presented by Simran) and Nov 1 (State Space Models, SSM Convolutions, Fourier Transforms and the FFT-Convolution Theorem, tradeoffs of Transformer vs. RNN vs. CNN). Charts re-plot the lesson’s computed numbers with section citations. All plotted values were recomputed from the lesson’s formulas on 2026-10-08. No internal inconsistency surfaced in this unit’s toys. Claim class: every lesson leaf PLANNED / SOURCE ATTRIBUTION PENDING. Interactive toys run the lesson’s rules over your inputs and are labeled <span class="tag tag-toy">Illustration</span>. Direct quotes from the lesson document: 0 words. The chapter plate line is the companion’s own.</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>. No video exists for this session, so no embed appears.</p>
+</footer>
+</div>
+<script>
+function chip(text, cls){
+  var s=document.createElement("span")
+  if(cls){s.className="chip "+cls}
+  else{s.className="chip"}
+  s.textContent=text
+  return s
+}
+function out(id){
+  var e=document.getElementById(id)
+  e.innerHTML=""
+  return e
+}
+function parseList(id){
+  var raw=document.getElementById(id).value
+  var parts=raw.split(",")
+  var vals=[]
+  var k=0
+  while(k<parts.length){
+    vals.push(parseFloat(parts[k]))
+    k=k+1
+  }
+  return vals
+}
+document.getElementById("mxBtn").addEventListener("click",function(){
+  var u=parseList("mxU")
+  var a=parseFloat(document.getElementById("mxA").value)
+  var k=parseList("mxK")
+  var x=0
+  var belt=[]
+  var i=0
+  while(i<u.length){
+    x=a*x+u[i]
+    belt.push(x.toFixed(3))
+    i=i+1
+  }
+  var sten=[]
+  var t=0
+  while(t<u.length){
+    var s=0
+    var j=0
+    while(j<k.length){
+      if(t-j>=0){s=s+k[j]*u[t-j]}
+      j=j+1
+    }
+    sten.push(s.toFixed(3))
+    t=t+1
+  }
+  var o=out("mxOut")
+  o.appendChild(chip("belt: "+belt.join(", "),"plain"))
+  o.appendChild(chip("stencil: "+sten.join(", "),"plain"))
+  document.getElementById("mxNote").textContent="The belt is sequential. The stencil stamps in parallel."
+})
+document.getElementById("raBtn").addEventListener("click",function(){
+  var T=parseInt(document.getElementById("raT").value,10)
+  var d=parseInt(document.getElementById("raD").value,10)
+  var quad=2*T*T*d
+  var lin=2*T*d*d
+  var o=out("raOut")
+  o.appendChild(chip("quadratic: "+(quad/1e12).toFixed(2)+" TFLOPs","plain"))
+  o.appendChild(chip("linear: "+(lin/1e9).toFixed(3)+" GFLOPs","plain"))
+  o.appendChild(chip("ratio: "+(quad/lin).toFixed(1)+"x","plain"))
+  document.getElementById("raNote").textContent="Regrouping is exact algebra. The phi approximation is the price."
+})
+document.getElementById("ffBtn").addEventListener("click",function(){
+  var n=parseInt(document.getElementById("ffN").value,10)
+  var naive=n*n
+  var fft=3*n*(Math.log(n)/Math.log(2))+n
+  var o=out("ffOut")
+  o.appendChild(chip("naive: "+naive.toLocaleString("en-US"),"plain"))
+  o.appendChild(chip("FFT path: "+Math.round(fft).toLocaleString("en-US"),"plain"))
+  o.appendChild(chip("ratio: "+(naive/fft).toFixed(1)+"x","plain"))
+  document.getElementById("ffNote").textContent="Short kernels skip the FFT. Powers of two keep the win."
+})
+document.getElementById("stBtn").addEventListener("click",function(){
+  var A=parseFloat(document.getElementById("stA").value)
+  var N=parseInt(document.getElementById("stN").value,10)
+  var v=Math.pow(A,N)
+  var o=out("stOut")
+  o.appendChild(chip("A^"+N+" = "+v.toExponential(2),"plain"))
+  if(v>65504){document.getElementById("stNote").textContent="Past fp16 max 65,504: this A overflows."}
+  else{if(v<1e-3){document.getElementById("stNote").textContent="Melted away: the past is gone."}
+  else{document.getElementById("stNote").textContent="Inside fp16 range, for now."}}
+})
+document.getElementById("tbBtn").addEventListener("click",function(){
+  var T=parseInt(document.getElementById("tbT").value,10)
+  var d=parseInt(document.getElementById("tbD").value,10)
+  var K=parseInt(document.getElementById("tbK").value,10)
+  var tr=4*T*T*d
+  var ssm=2*T*d*d
+  var cnn=2*T*K*d
+  var o=out("tbOut")
+  o.appendChild(chip("transformer: "+(tr/1e12).toFixed(2)+" TFLOPs","plain"))
+  o.appendChild(chip("SSM: "+(ssm/1e9).toFixed(3)+" GFLOPs","plain"))
+  o.appendChild(chip("CNN: "+(cnn/1e12).toFixed(2)+" TFLOPs","plain"))
+  o.appendChild(chip("tr/ssm: "+(tr/ssm).toFixed(0)+"x","plain"))
+  document.getElementById("tbNote").textContent="Same toy, three bills. Pick by the bottleneck."
+})
+</script>
+</body>
+</html>
