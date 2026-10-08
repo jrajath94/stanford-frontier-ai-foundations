@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transformer block mechanics · CS336</title>
+<style>
+
+:root{--paper:#faf6ee}
+:root{--paper2:#f3ecdd}
+:root{--ink:#221a12}
+:root{--muted:#6f6355}
+:root{--line:#e2d7c2}
+:root{--clay:#a94f27}
+:root{--claysoft:#f6e3d3}
+:root{--indigo:#31405e}
+:root{--indigosoft:#e2e7f0}
+:root{--sage:#5d7050}
+:root{--sagesoft:#e4e9da}
+:root{--amber:#8a5a17}
+:root{--ambersoft:#f7ecd4}
+:root{--serif:Georgia,"Times New Roman",serif}
+:root{--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html{scroll-behavior:smooth}
+body{background:var(--paper)}
+body{color:var(--ink)}
+body{font-family:var(--serif)}
+body{font-size:18px}
+body{line-height:1.65}
+body{margin:0}
+.wrap{max-width:880px}
+.wrap{margin:0 auto}
+.wrap{padding:0 24px}
+.topband{background:var(--ink)}
+.topband{color:var(--paper)}
+.topband{padding:10px 0}
+.topband{font-family:var(--sans)}
+.topband{font-size:13px}
+.topband{letter-spacing:.12em}
+.topband{text-transform:uppercase}
+header.hero{padding:56px 0 8px}
+.kicker{font-family:var(--sans)}
+.kicker{font-size:13px}
+.kicker{letter-spacing:.14em}
+.kicker{text-transform:uppercase}
+.kicker{color:var(--clay)}
+h1{font-size:46px}
+h1{line-height:1.12}
+h1{margin:.35em 0 .3em}
+h1{font-weight:700}
+.dek{font-size:21px}
+.dek{color:var(--muted)}
+.dek{max-width:640px}
+.legend{border:1px solid var(--line)}
+.legend{background:var(--paper2)}
+.legend{border-radius:10px}
+.legend{padding:18px 22px}
+.legend{margin:28px 0}
+.legend{font-size:16px}
+.legend p{margin:.4em 0}
+.tag{display:inline-block}
+.tag{font-family:var(--sans)}
+.tag{font-size:11px}
+.tag{font-weight:700}
+.tag{letter-spacing:.1em}
+.tag{text-transform:uppercase}
+.tag{padding:3px 10px}
+.tag{border-radius:20px}
+.tag{margin-right:8px}
+.tag{vertical-align:2px}
+.tag-lesson{background:var(--ink)}
+.tag-lesson{color:var(--paper)}
+.tag-toy{background:transparent}
+.tag-toy{color:var(--amber)}
+.tag-toy{border:1.5px solid var(--amber)}
+.tag-ref{font-family:var(--mono)}
+.tag-ref{font-size:12px}
+.tag-ref{color:var(--muted)}
+.tag-ref{margin-left:6px}
+.tag-companion{background:transparent}
+.tag-companion{color:var(--muted)}
+.tag-companion{border:1.5px solid var(--muted)}
+nav.sticky{position:sticky}
+nav.sticky{top:0}
+nav.sticky{z-index:50}
+nav.sticky{background:var(--paper)}
+nav.sticky{border-top:1px solid var(--line)}
+nav.sticky{border-bottom:1px solid var(--line)}
+nav.sticky{font-family:var(--sans)}
+.navscroll{display:flex}
+.navscroll{gap:4px}
+.navscroll{overflow-x:auto}
+.navscroll{padding:8px 0}
+.navscroll{white-space:nowrap}
+.navscroll a{color:var(--muted)}
+.navscroll a{text-decoration:none}
+.navscroll a{font-size:13px}
+.navscroll a{padding:6px 10px}
+.navscroll a{border-radius:16px}
+.navscroll a:hover{background:var(--paper2)}
+.navscroll a:hover{color:var(--ink)}
+section.block{padding:44px 0 8px}
+section.block{border-top:1px solid var(--line)}
+section.block{margin-top:36px}
+.secnum{font-family:var(--sans)}
+.secnum{font-size:13px}
+.secnum{letter-spacing:.14em}
+.secnum{color:var(--clay)}
+.secnum{text-transform:uppercase}
+h2{font-size:32px}
+h2{margin:.25em 0 .5em}
+h2{line-height:1.2}
+h3{font-size:22px}
+h3{margin:1.6em 0 .5em}
+p{margin:.7em 0}
+.prose-narrow{max-width:680px}
+figure{margin:28px 0}
+figure{padding:0}
+figcaption{font-family:var(--sans)}
+figcaption{font-size:13px}
+figcaption{color:var(--muted)}
+figcaption{margin-top:10px}
+figcaption{line-height:1.5}
+img.illus{width:100%}
+img.illus{border-radius:10px}
+img.illus{border:1px solid var(--line)}
+img.illus{display:block}
+.nugget{border:1px solid var(--line)}
+.nugget{border-left:6px solid var(--clay)}
+.nugget{background:#fffdf8}
+.nugget{border-radius:8px}
+.nugget{padding:20px 24px}
+.nugget{margin:26px 0}
+.nugget h4{font-family:var(--sans)}
+.nugget h4{font-size:15px}
+.nugget h4{letter-spacing:.06em}
+.nugget h4{text-transform:uppercase}
+.nugget h4{color:var(--clay)}
+.nugget h4{margin:0 0 8px}
+.nugget .big{font-size:22px}
+.nugget .big{line-height:1.35}
+.nugget .big{margin:.3em 0}
+.nugget dl{margin:.6em 0 0}
+.nugget dt{font-family:var(--sans)}
+.nugget dt{font-size:13px}
+.nugget dt{font-weight:700}
+.nugget dt{letter-spacing:.08em}
+.nugget dt{text-transform:uppercase}
+.nugget dt{color:var(--muted)}
+.nugget dt{margin-top:10px}
+.nugget dd{margin:2px 0 0 0}
+table.data{border-collapse:collapse}
+table.data{width:100%}
+table.data{margin:20px 0}
+table.data{font-size:16px}
+table.data{background:#fffdf8}
+table.data th{font-family:var(--sans)}
+table.data th{font-size:13px}
+table.data th{text-transform:uppercase}
+table.data th{letter-spacing:.08em}
+table.data th{text-align:left}
+table.data th{padding:10px 12px}
+table.data th{border-bottom:2px solid var(--ink)}
+table.data td{padding:9px 12px}
+table.data td{border-bottom:1px solid var(--line)}
+table.data td.num{font-family:var(--mono)}
+table.data td.num{font-size:15px}
+code{font-family:var(--mono)}
+code{font-size:.86em}
+code{background:var(--paper2)}
+code{padding:2px 6px}
+code{border-radius:4px}
+pre{background:var(--ink)}
+pre{color:var(--paper)}
+pre{padding:18px 20px}
+pre{border-radius:8px}
+pre{overflow-x:auto}
+pre{font-size:14.5px}
+pre{line-height:1.55}
+pre code{background:transparent}
+pre code{color:var(--paper)}
+pre code{padding:0}
+.toy{border:1.5px dashed var(--amber)}
+.toy{border-radius:10px}
+.toy{padding:20px 22px}
+.toy{margin:24px 0}
+.toy{background:#fffdf6}
+.lab{border:1px solid var(--line)}
+.lab{border-radius:10px}
+.lab{padding:20px 22px}
+.lab{margin:24px 0}
+.lab{background:#fffdf8}
+.chips{display:flex}
+.chips{flex-wrap:wrap}
+.chips{gap:8px}
+.chips{margin:14px 0}
+.chip{font-family:var(--mono)}
+.chip{font-size:15px}
+.chip{background:var(--indigosoft)}
+.chip{border:1px solid var(--indigo)}
+.chip{color:var(--indigo)}
+.chip{padding:6px 12px}
+.chip{border-radius:6px}
+.chip.eow{background:var(--sagesoft)}
+.chip.eow{border-color:var(--sage)}
+.chip.eow{color:var(--sage)}
+.chip.plain{background:var(--paper2)}
+.chip.plain{border-color:var(--line)}
+.chip.plain{color:var(--ink)}
+button.btn{font-family:var(--sans)}
+button.btn{font-size:15px}
+button.btn{font-weight:600}
+button.btn{background:var(--ink)}
+button.btn{color:var(--paper)}
+button.btn{border:none}
+button.btn{border-radius:8px}
+button.btn{padding:10px 18px}
+button.btn{cursor:pointer}
+button.btn{margin:6px 8px 6px 0}
+button.btn:hover{background:var(--clay)}
+button.btn:disabled{background:var(--line)}
+button.btn:disabled{color:var(--muted)}
+button.btn:disabled{cursor:default}
+button.btn.ghost{background:transparent}
+button.btn.ghost{color:var(--ink)}
+button.btn.ghost{border:1.5px solid var(--ink)}
+input.text{font-family:var(--mono)}
+input.text{font-size:16px}
+input.text{padding:10px 14px}
+input.text{border:1.5px solid var(--line)}
+input.text{border-radius:8px}
+input.text{width:100%}
+input.text{max-width:420px}
+input.text{background:#fffdf8}
+.stepdots{display:flex}
+.stepdots{gap:8px}
+.stepdots{margin:14px 0}
+.dot{width:12px}
+.dot{height:12px}
+.dot{border-radius:50%}
+.dot{background:var(--line)}
+.dot.on{background:var(--clay)}
+.pairtable td.rank{font-weight:700}
+.callout{border-left:4px solid var(--indigo)}
+.callout{padding:6px 0 6px 18px}
+.callout{margin:20px 0}
+.callout{color:var(--ink)}
+.wisdom{list-style:none}
+.wisdom{padding:0}
+.wisdom li{border-bottom:1px solid var(--line)}
+.wisdom li{padding:12px 0}
+.wisdom a{color:var(--ink)}
+.wisdom a{text-decoration:none}
+.wisdom a:hover{color:var(--clay)}
+.wisdom .wnum{font-family:var(--sans)}
+.wisdom .wnum{font-size:12px}
+.wisdom .wnum{color:var(--clay)}
+.wisdom .wnum{font-weight:700}
+.wisdom .wnum{margin-right:10px}
+footer.prov{border-top:2px solid var(--ink)}
+footer.prov{margin-top:56px}
+footer.prov{padding:28px 0 64px}
+footer.prov{font-size:15px}
+footer.prov{color:var(--muted)}
+svg.chart{width:100%}
+svg.chart{height:auto}
+svg.chart{display:block}
+svg.chart{background:#fffdf8}
+svg.chart{border:1px solid var(--line)}
+svg.chart{border-radius:10px}
+.tip{font-family:var(--sans)}
+.tip{font-size:13px}
+.small{font-size:15px}
+.muted{color:var(--muted)}
+.cols{display:grid}
+.cols{grid-template-columns:1fr 1fr}
+.cols{gap:18px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+@media(max-width:700px){h1{font-size:34px}}
+@media(max-width:700px){h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<div class="topband"><div class="wrap">Stanford CS336 · Unit 03 · Interactive companion</div></div>
+<div class="wrap">
+<header class="hero" id="top">
+<p class="kicker">Companion · narrated from the lesson document</p>
+<h1>Transformer block mechanics</h1>
+<p class="dek">One block maps (B, T, d) to (B, T, d). Stack L of them and you have the model. This companion opens the block: embeddings, the three QKV lenses, scaled causal attention, heads, residuals, norms, the SwiGLU feedforward, RoPE positions, the output head, and the init that lets it all train.</p>
+<div class="legend">
+<p><span class="tag tag-lesson">From the lesson</span> The idea, and every number beside it, comes from the cited section of <code>u03_transformer_block.md</code>. The phrasing is the companion's.</p>
+<p><span class="tag tag-toy">Illustration</span> Invented by the companion: an analogy, a toy with made-up values, or a what-if. Never lecture content.</p>
+<p><span class="tag tag-companion">companion</span> Companion voice: the idea above the tag is from the lesson. The generalization below it is the companion's.</p>
+<p class="small muted">Provenance: no full lecture transcript exists for this session. The page narrates the lesson document <code>content/v2/cs336/lessons/u03_transformer_block.md</code>, not a video. Claim class: REQUESTED-BRANCH. Every number carries the lesson section that reports it. The reference implementation is <code>visuals/compute_u03.py</code>, executed 2026-10-06.</p>
+</div>
+</header>
+<nav class="sticky" aria-label="Sections"><div class="navscroll">
+<a href="#s1">1 The block</a>
+<a href="#s2">2 Embeddings</a>
+<a href="#s3">3 QKV lenses</a>
+<a href="#s4">4 Attention and mask</a>
+<a href="#s5">5 Heads</a>
+<a href="#s6">6 Residuals and norms</a>
+<a href="#s7">7 RMSNorm</a>
+<a href="#s8">8 SwiGLU FFN</a>
+<a href="#s9">9 RoPE and head</a>
+<a href="#s10">10 Synthesis</a>
+<a href="#wisdom">Wisdom index</a>
+</div></nav>
+
+<figure>
+<img class="illus" src="assets/u03-hero-block.jpg" alt="Watercolor of a stone pillar with two glowing chambers and a golden highway alongside">
+<figcaption><span class="tag tag-toy">Illustration</span> The block as a pillar: two chambers (attention, feedforward), one golden highway (the residual stream) running past both. Watercolor, original to this companion.</figcaption>
+</figure>
+<section class="block" id="s1">
+<p class="secnum">Section 1 · Remediation</p>
+<h2>The block in one paragraph</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></p>
+<p>A transformer block maps (B, T, d) to (B, T, d). It has two sub-blocks, each wrapped as <code>x + subblock(norm(x))</code>. First multi-head causal self-attention, then a position-wise feedforward network. Attention lets each position mix information from earlier positions. The FFN transforms each position independently. Residuals and norms keep gradients flowing through L stacked blocks.</p>
+<p>The lesson's worked check fixes the scale for everything below: B=2, T=8, d=16, h=4, dff=32, V=64. On that toy the block maps (2, 8, 16) to (2, 8, 16). Attention weights sum to 1 per row with max deviation 2.22e-16. Future weights are exactly 0. RMSNorm outputs have row rms between 0.9999 and 1.0000. Every number on this page comes from the lesson's reference run unless it is tagged as a toy.</p>
+</div>
+<div class="nugget" id="nugget-one-shape">
+<h4>Nugget 1 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">Remediation</span></h4>
+<p class="big">The block preserves shape. (B, T, d) in, (B, T, d) out. That single contract is what makes stacking trivial.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>Every interior boundary of the model speaks the same shape language. Debugging starts with one question: did this stage keep (B, T, d)?</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>A uniform interface across stages turns a deep system into a repeatable unit. Design the seam first, the stages second.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s2">
+<p class="secnum">Section 2 · C01</p>
+<h2>Embeddings: lookup, not computation</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §2, §3, §5</span></p>
+<p>Where do token meanings come from? A table E of shape (V, d). Each row is a learned vector. Lookup is an index operation, not computation: y[b, t, :] = E[ids[b, t], :]. The toy: E has shape (64, 16), ids [[3, 17]] give E[[3, 17]] with shape (1, 2, 16). The model learns the vectors by gradient descent.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §5, §6, §9</span></p>
+<p>Parameter count is V*d, here 64*16 = 1024. Lookup costs no FLOPs. It costs memory traffic: one row per token, B*T*d*bytes per forward. The gradient wrt E is sparse: only rows that appeared in the batch get updates. The table is often the largest single matrix for large V. The lesson computed in <code>visuals/compute_u03.py</code> (executed 2026-10-06) that lookup on (2, 8) ids gives (2, 8, 16), and the full block output keeps that shape through to logits (2, 8, 64).</p>
+</div>
+<div class="nugget" id="nugget-lookup">
+<h4>Nugget 2 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §11</span></h4>
+<p class="big">An id of V, off by one from a bad shift, indexes out of bounds or wraps silently depending on the framework.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "ids are valid" breaks at data pipeline bugs. The range assert is the backstop.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Validate indices at the boundary where they enter. The table cannot know your ids are wrong.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C01 §10</span></p>
+<p>The alternative for huge V: hashed or factorized embeddings. One-hot times E is the same math, never the implementation. Keep the table for standard models.</p>
+</div>
+</section>
+
+<section class="block" id="s3">
+<p class="secnum">Section 3 · C02</p>
+<h2>Three lenses on one input</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §2, §3, §5</span></p>
+<p>Why three matrices for one input? The toy: x (2, 8, 16) times Wq, Wk, Wv (each 16x16) gives q, k, v each (2, 8, 16). Queries ask, keys advertise, values carry content. One shared map could not learn the three roles. The mental model: three learned lenses on the same input. The attention score compares a query lens against key lenses. The values are what actually get mixed. The maps are linear, no nonlinearity. Gradients flow to each W independently.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §6, §9</span></p>
+<p>The lesson's numbers, executed 2026-10-06: the toy block's QKV cost is 3*2*2*8*16*16 = 24576 FLOP, matching the U02 formula. Wq sampled std 0.2549 against the Xavier target 0.2500. The QKV maps hold 3 of the 4 attention matmuls' FLOPs and 3d^2 parameters. Fusing the three into one (d, 3d) matmul saves launch overhead (U07).</p>
+</div>
+<div class="nugget" id="nugget-three">
+<h4>Nugget 3 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §11</span></h4>
+<p class="big">Tie Wq = Wk and the scores become symmetric similarities. The model loses the ask/advertise asymmetry, and some heads need it.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "three roles need three maps" is load-bearing for expressivity. Sharing looks economical and costs behavior.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When two roles look similar, check whether the asymmetry between them does work before you merge them.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s4">
+<p class="secnum">Section 4 · C03, C04</p>
+<h2>Attention: score, scale, mask, mix</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §2, §3, §5</span></p>
+<p>How does a position choose what to read? Scores S = QK-transpose / sqrt(dh). Weights P = softmax(S). Output = P times V. The mental model: each query scores every key by dot product, softmax turns scores into a probability distribution, and the output is the expected value under that distribution. Attention is differentiable dictionary lookup with learned keys. The lesson's run: weights form a (2, 4, 8, 8) tensor, rows sum to 1 with max deviation 2.22e-16, all entries nonnegative.</p>
+<p>Why the scale? Without it, QK-transpose has variance dh, so softmax saturates and gradients vanish. Dividing by sqrt(dh) keeps the input variance near 1. Softmax: P[i, j] = exp(S[i, j]) / sum over k of exp(S[i, k]). Rows sum to 1 by construction.</p>
+</div>
+<div class="lab">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §11</span> The scale toy. Score std without the scale grows as sqrt(dh). At dh = 128 the std is about 11, softmax collapses to one-hot, and the model trains as a hard retrieval system. Move the slider.</p>
+<p><input type="range" id="dhslider" min="4" max="256" value="128" step="4" aria-label="Head dimension" style="width:100%"></p>
+<p class="small">Head dim dh = <strong id="dhv">128</strong> · unscaled score std ≈ <strong id="dhstd">11.3</strong> · scaled score std ≈ <strong>1.0</strong></p>
+<p class="small muted">Unscaled std = sqrt(dh), from C03 §5. Scaled std ≈ 1 by construction of the 1/sqrt(dh) rule.</p>
+</div>
+<div class="nugget" id="nugget-scale">
+<h4>Nugget 4 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §11</span></h4>
+<p class="big">The scale is not optional. At dh = 128 the unscaled scores have std about 11, softmax collapses to one-hot, and gradients die.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "dot products stay small" breaks with dh. The scale restores it.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>When a quantity grows with a dimension, normalize by that dimension's scale before it meets a saturating function.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §2, §5, §6</span></p>
+<p>What stops position 3 from reading position 5 during training? The causal mask: add -inf (the lesson uses -1e9) to scores where j > i, before softmax. softmax(S + M): entries with -inf become exp(-inf) = 0 after normalization. The gradient through them is also zero, so no learning signal crosses the boundary. The lesson's run on T = 8: the upper triangle of P is exactly 0 (max 0.00e+00), the lower triangle holds the full distribution. The mask is a one-way mirror: each position sees itself and the past, never the future. Training then matches inference, where the future does not exist yet.</p>
+</div>
+<figure>
+<div id="chart-mask"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §6</span> The causal mask on T = 8, from <code>visuals/compute_u03.py</code> (executed 2026-10-06). Upper triangle exactly 0 (lesson fact). Lower-triangle shading is illustrative: it marks where the distribution lives, not its values.</figcaption>
+</figure>
+<div class="nugget" id="nugget-mask">
+<h4>Nugget 5 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C04 §11</span></h4>
+<p class="big">Apply the mask after softmax and the future weights zero out, but the row no longer sums to 1. Every output gets silently rescaled.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "zeroing is enough" breaks. The mask must enter before normalization.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Order of operations is semantics. Constrain before you normalize, not after.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C03 §9, C04 §9, §10</span></p>
+<p>Costs: scores and mix each cost 2*B*h*T*T*dh, the T-squared terms. The naive form materializes (B, h, T, T) in memory. U07 removes it. The T-squared-over-2 masked entries still cost FLOPs in the naive form, and kernels skip them. Alternatives: prefix masks let some positions see the future (bidirectional encoders), sliding window masks bound the past (U04). Causal is mandatory for autoregressive LMs.</p>
+</div>
+</section>
+
+<section class="block" id="s5">
+<p class="secnum">Section 5 · C05</p>
+<h2>Heads: bookkeeping, then capacity</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §2, §3, §5</span></p>
+<p>Why not one big attention head? The toy: (2, 8, 16) reshapes to (2, 4, 8, 4), four heads of dim 4. Each head learns its own score pattern, then the outputs concatenate back to 16. Heads are parallel attention units sharing the input. Splitting lets each head specialize (one tracks syntax, one tracks position) while total width stays fixed. The reshape only renames axes. The learning sits in the per-head scores.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §5, §6, §9</span></p>
+<p>The mechanism: reshape (B, T, h, dh), transpose to (B, h, T, dh) for the batched score computation, then after mixing transpose back and reshape to (B, T, d). The output projection Wo mixes heads. The lesson's run: the attention tensor is (2, 4, 8, 8) and the output reshapes back to (2, 8, 16) exactly. The reshapes are free metadata ops (views). Heads do not change total FLOPs at fixed d. They change the score pattern capacity. Keep h dividing d. Typical dh sits in {64, 128}.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u03-attention-loom.jpg" alt="Watercolor of a loom with paper tags joined by colored threads">
+<figcaption><span class="tag tag-toy">Illustration</span> Heads as parallel looms: one shared row of positions, several independent thread patterns woven at once. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-heads">
+<h4>Nugget 6 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §11</span></h4>
+<p class="big">If d is not divisible by h, the reshape fails loudly, which is good. A manual split with wrong arithmetic silently scrambles head boundaries, which is bad.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "d = h * dh" needs an assert, not trust.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Prefer failures that shout over corruptions that whisper. Assert the invariant the math needs.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C05 §10</span></p>
+<p>Alternatives: one head with dh = d (less pattern diversity), MQA and GQA share KV heads (U04).</p>
+</div>
+</section>
+
+<section class="block" id="s6">
+<p class="secnum">Section 6 · C06, C07</p>
+<h2>Residuals: the gradient highway</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §2, §3, §5</span></p>
+<p>How do gradients survive 100 layers? y = x + f(x) gives dy/dx = I + J_f. The identity term carries gradient even when J_f vanishes. The block applies this twice per layer. The mental model: the residual is a highway. The input always reaches the output, and the sub-block only proposes a correction. Deep stacks learn corrections, not full transformations. Without residuals, L layers multiply L Jacobians and gradients vanish or explode exponentially.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C06 §6, §9</span></p>
+<p>The lesson's run: y - x has shape (2, 8, 16), the correction tensor. At init its norm is small relative to x (verifiable in the lab by comparing norms). Costs: one addition per sub-block, negligible FLOPs, one extra read of x. The cheapest important operation in the network.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §2, §3, §5</span></p>
+<p>Then the placement question: norm inside or outside the residual? Pre-norm: x + subblock(norm(x)). Post-norm: norm(x + subblock(x)). Pre-norm keeps the highway clean: the residual stream never passes through a norm, and dy/dx keeps the identity term exactly. Post-norm normalizes the sum, which stabilizes activations but puts the norm on the gradient highway: the gradient passes through the norm's Jacobian at every layer, which rescales it.</p>
+</div>
+<div class="nugget" id="nugget-prenorm">
+<h4>Nugget 7 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §11</span></h4>
+<p class="big">Post-norm at depth 48 without warmup pushes gradients through 48 norm Jacobians. They shrink or explode, and training diverges in the first steps.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "placement is cosmetic" breaks. It changes the effective learning dynamics.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Keep the fast path clean. Put the conditioning where the signal reads it, not where the signal travels.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C07 §5, §9, §10</span></p>
+<p>Same FLOPs either way. Pre-norm trains more easily but lets the residual stream magnitude grow with depth, so it may need a final norm before the output head. Post-norm needs careful init and warmup. Modern decoder LMs use pre-norm almost universally. Post-norm survives in some encoders. The lesson's toy block uses pre-norm, and the lab compares gradient norms through a 4-layer stack in both forms on fixed data.</p>
+</div>
+</section>
+
+<section class="block" id="s7">
+<p class="secnum">Section 7 · C08</p>
+<h2>RMSNorm: cheaper, and the mean carries little</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §2, §3, §5</span></p>
+<p>What does "normalize" compute, exactly? LayerNorm: (x - mean)/std * g + b. RMSNorm: x / rms(x) * g, where rms = sqrt(mean(x^2) + eps). Normalization rescales each row to a standard magnitude so the next sub-block sees stable inputs. RMSNorm skips the mean subtraction of LayerNorm: cheaper, and the mean carries little signal in residual streams. It drops two reductions and the bias. The forward saves one pass over d, the backward is simpler.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §6, §9</span></p>
+<p>The lesson's run, executed 2026-10-06: RMSNorm with unit gain gives row rms between 0.9999 and 1.0000 (eps accounts for the shortfall). Costs: O(B*T*d) FLOPs, memory-bound (few ops per element). Both norms are small next to attention. RMSNorm is the modern default for decoder LMs.</p>
+</div>
+<div class="nugget" id="nugget-eps">
+<h4>Nugget 8 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C08 §11</span></h4>
+<p class="big">eps = 0 with a zero row, possible after masking, means division by zero. One NaN poisons the whole run.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "rows are nonzero" breaks. eps is load-bearing.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Guard every division by the degenerate input, not by the typical one.</dd>
+</dl>
+</div>
+</section>
+
+<section class="block" id="s8">
+<p class="secnum">Section 8 · C09</p>
+<h2>The FFN: depth-wise capacity with a gate</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §2, §3, §5</span></p>
+<p>What does the FFN add that attention lacks? Attention mixes across positions. The FFN transforms each position alone, adding depth-wise capacity and the nonlinearity the network needs. Standard FFN: relu(xW1)W2, two maps. SwiGLU: (swish(xWg) * xWu)Wd, three maps, with Swish(z) = z * sigmoid(z). The elementwise product is the gating: the Swish branch modulates the up-projected features multiplicatively.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §5, §6, §9</span></p>
+<p>To hold parameters fixed, SwiGLU uses dff = (2/3) * 4d. The lesson's toy (d=16, dff=32): SwiGLU maps (2, 8, 16) to (2, 8, 32) and back to (2, 8, 16), and the block totals 2592 parameters = 10d^2 + 2d with dff = 2d. Costs: 3*2*B*T*d*dff FLOPs, the largest single term in the layer (72.7 percent in the U02 toy). Parameters 3*d*dff.</p>
+</div>
+<figure>
+<div id="chart-blockflops"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C02 §6, C09 §6, C11 §6</span> Toy block FLOP ledger, forward, from <code>visuals/compute_u03.py</code> (executed 2026-10-06). QKV 24576 and head 32768 are lesson-computed. Scores, mix, and FFN follow the lesson's stated formulas (C03 §9, C09 §9) on the toy config and are tagged <span class="tag tag-toy">Illustration</span>: 16384, 16384, 49152.</figcaption>
+</figure>
+<div class="nugget" id="nugget-dff">
+<h4>Nugget 9 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §11</span></h4>
+<p class="big">Copy dff from a ReLU config (4d) into SwiGLU and parameters jump 50 percent. The FLOP budget breaks.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "dff is portable across activations" breaks. Scale it by 2/3 when switching.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Hyperparameters are coupled to the architecture they were tuned for. Port the coupling, not the number.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C09 §10</span></p>
+<p>Selection boundary: ReLU/GELU FFN (two maps, dff = 4d), SwiGLU (three maps, dff ≈ 2.67d). SwiGLU is the modern default. Keep ReLU for the teaching baseline.</p>
+</div>
+</section>
+
+<section class="block" id="s9">
+<p class="secnum">Section 9 · C10, C11</p>
+<h2>Order from rotation, words from vectors</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §2, §3, §5</span></p>
+<p>Attention is permutation-invariant, so where does order come from? RoPE rotates each Q/K pair by an angle proportional to its position. For pair (x0, x1) at position t with frequency w: [x0 cos(tw) - x1 sin(tw), x0 sin(tw) + x1 cos(tw)]. The dot product of a rotated query and rotated key then depends on the angle difference, which is the relative distance. RoPE turns absolute positions into relative ones. No position vectors are added. The rotation carries the information.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §6, §9</span></p>
+<p>The lesson's run, executed 2026-10-06: applying RoPE to random (2, 8, 4, 4) changes no vector norm (max deviation 4.44e-16), because rotation is orthogonal. The block's attention runs with RoPE on Q and K. Costs: O(B*T*d) FLOPs, tiny, no parameters, angles precomputable.</p>
+</div>
+<figure>
+<img class="illus" src="assets/u03-rope-dials.jpg" alt="Watercolor of rotating compass dials and spirals">
+<figcaption><span class="tag tag-toy">Illustration</span> RoPE as dials: each position turns the query and key by its own angle, and only the difference between angles survives the dot product. Watercolor, original to this companion.</figcaption>
+</figure>
+<div class="nugget" id="nugget-rope">
+<h4>Nugget 10 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §11</span></h4>
+<p class="big">Apply RoPE to V as well as Q/K and the values get a position-dependent rotation the output projection never asked for. Content scrambles by position.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "rotate everything" breaks. RoPE touches Q and K only.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Apply a transform only where its meaning holds. Uniform application is not uniformity of effect.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C11 §2, §3, §5, §6</span></p>
+<p>How do vectors become word probabilities? The head is a linear map to vocabulary size, usually tied to the embedding table: logits = y @ E-transpose. The toy: y (2, 8, 16) against E (64, 16) gives (2, 8, 64), cost 2*2*8*16*64 = 32768 FLOP, small at this V, dominant at large V. Softmax over the last axis gives next-token probabilities. Tying says the way in and the way out share geometry: similar words have similar rows. Untied, the head adds V*d parameters. Tied, it adds zero, and gradients from the loss flow into E from both ends. At V=32000, d=512, the head costs 2*B*T*d*V per step.</p>
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C10 §10, C11 §10, §11</span></p>
+<p>Alternatives: learned absolute embeddings (fail past training length), ALiBi (bias instead of rotation) for position. For the output, the untied head or sampled softmax at extreme V. Tie by default. Untie when the head needs different geometry, for example with frozen input embeddings: the shared matrix then serves two masters and both degrade.</p>
+</div>
+</section>
+
+<section class="block" id="s10">
+<p class="secnum">Section 10 · C12, synthesis</p>
+<h2>Start near the identity</h2>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §2, §3, §5</span></p>
+<p>Why not init all weights to 1? Ones would amplify every signal 16x per layer. Initialization sets the signal scale at step zero. For y = Wx with W of shape (m, n): Var(y_i) = n * Var(W) * Var(x). Setting Var(W) = 2/(m+n), Xavier, balances forward and backward and keeps Var(out) = Var(in). The lesson's toy: Xavier target std 0.2500 at d=16, sampled Wq std 0.2549, within sampling noise. Output projections (Wo, Wd) often use a smaller gain scaled by 1/sqrt(2L), so L residuals do not inflate the stream. Residual branches start small so the network begins near the identity function.</p>
+</div>
+<figure>
+<div id="chart-init"></div>
+<figcaption><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §6</span> Xavier check on the toy: target std 0.2500, sampled Wq std 0.2549, from <code>visuals/compute_u03.py</code> (executed 2026-10-06).</figcaption>
+</figure>
+<div class="nugget" id="nugget-zero">
+<h4>Nugget 11 · <span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §11</span></h4>
+<p class="big">Zero-init all weights and every head computes the same thing. Gradients are identical, and symmetry never breaks.</p>
+<dl>
+<dt>Why it matters <span class="tag tag-companion">companion</span></dt><dd>The assumption "any small init works" breaks at exactly zero. Randomness is load-bearing.</dd>
+<dt>Transfer <span class="tag tag-companion">companion</span></dt><dd>Symmetry must be broken at the start, or no learning step can break it later.</dd>
+</dl>
+</div>
+<div class="prose-narrow">
+<p><span class="tag tag-lesson">From the lesson</span><span class="tag-ref">C12 §9, §10</span></p>
+<p>One-time cost, wrong init costs the whole run. Alternatives: Kaiming for ReLU (gain sqrt(2)), small fixed std like 0.02 (the GPT-2 recipe). Xavier or Kaiming for the analysis, 0.02-style for the recipe.</p>
+<p><span class="tag tag-lesson">From the lesson</span> The arc, end to end. Ids become vectors by lookup, with no FLOPs and sparse gradients (C01). Three linear lenses split the input into queries, keys, values (C02). Scaled dot products become a distribution, the causal mask deletes the future before normalization, and the mix is the expected value (C03, C04). Heads split d into parallel score patterns and Wo mixes them back (C05). Two residual highways per layer carry the gradient, and pre-norm keeps the highway clean (C06, C07). RMSNorm rescales rows at low cost (C08). SwiGLU gates up-projected features with three maps at dff ≈ 2.67d (C09). RoPE writes order into rotation on Q and K (C10). The tied head maps vectors back to vocabulary (C11). Xavier-scale init starts the network near the identity (C12).</p>
+<p><span class="tag tag-lesson">From the lesson</span> Where the unit points next, in the lesson's own forward links: U07 fuses the QKV maps and removes the (B, h, T, T) materialization, skipping the masked entries. U04 shrinks the KV heads (MQA, GQA), bounds the past (sliding window), and offers linear attention. U05 consumes the logits with the cross-entropy loss.</p>
+</div>
+</section>
+
+<section class="block" id="wisdom">
+<p class="secnum">Wisdom index</p>
+<h2>11 nuggets, one page</h2>
+<p class="small muted">Each nugget states the idea in plain words, why it matters, and the transferable principle. Every one is anchored to its lesson section.</p>
+<ol class="wisdom">
+<li><a href="#nugget-one-shape"><span class="wnum">01</span>The block preserves shape: (B, T, d) in and out <span class="muted">· Remediation</span></a></li>
+<li><a href="#nugget-lookup"><span class="wnum">02</span>Validate indices where they enter <span class="muted">· C01</span></a></li>
+<li><a href="#nugget-three"><span class="wnum">03</span>Three roles need three maps <span class="muted">· C02</span></a></li>
+<li><a href="#nugget-scale"><span class="wnum">04</span>The scale is not optional <span class="muted">· C03</span></a></li>
+<li><a href="#nugget-mask"><span class="wnum">05</span>Constrain before you normalize <span class="muted">· C04</span></a></li>
+<li><a href="#nugget-heads"><span class="wnum">06</span>Assert the invariant the math needs <span class="muted">· C05</span></a></li>
+<li><a href="#nugget-prenorm"><span class="wnum">07</span>Keep the fast path clean <span class="muted">· C06, C07</span></a></li>
+<li><a href="#nugget-eps"><span class="wnum">08</span>Guard every division by the degenerate input <span class="muted">· C08</span></a></li>
+<li><a href="#nugget-dff"><span class="wnum">09</span>Port the coupling, not the number <span class="muted">· C09</span></a></li>
+<li><a href="#nugget-rope"><span class="wnum">10</span>RoPE touches Q and K only <span class="muted">· C10</span></a></li>
+<li><a href="#nugget-zero"><span class="wnum">11</span>Symmetry must be broken at the start <span class="muted">· C12</span></a></li>
+</ol>
+</section>
+<footer class="prov">
+<p><strong>Provenance.</strong> This companion narrates <code>content/v2/cs336/lessons/u03_transformer_block.md</code>. No full lecture transcript exists for S03. Quoted words from the lesson source: 21. No lecture anecdotes appear. Claim class REQUESTED-BRANCH. The charts re-plot the lesson's computed numbers with section citations. The lab script is <code>visuals/compute_u03.py</code>, executed 2026-10-06. Interactive toys run the lesson's formulas and are labeled <span class="tag tag-toy">Illustration</span>.</p>
+<p class="small">Readings and forward links named by the lesson: U07 (kernel fusion), U04 (attention alternatives), U05 (loss over logits).</p>
+<p class="small">Self-contained: no external libraries, no network calls. Works from <code>file://</code>.</p>
+</footer>
+</div>
+<script>
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag)
+  if (cls) { e.className = cls }
+  if (text !== undefined && text !== null) { e.textContent = text }
+  return e
+}
+function svgEl(tag, attrs) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag)
+  const keys = Object.keys(attrs)
+  keys.forEach(function(k) { n.setAttribute(k, attrs[k]) })
+  return n
+}
+const INK = "#221a12"
+const MUT = "#6f6355"
+const CLAY = "#a94f27"
+const INDIGO = "#31405e"
+const SAGE = "#5d7050"
+const AMBER = "#8a5a17"
+const SERIF = "Georgia, serif"
+const SANS = "system-ui, sans-serif"
+const MONO = "ui-monospace, monospace"
+
+function barChart(id, rows, maxV, unit, labelW) {
+  labelW = labelW || 210
+  const host = document.getElementById(id)
+  const W = 760
+  const rowH = 46
+  const padT = 14
+  const padB = 10
+  const H = padT + rows.length * rowH + padB
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  rows.forEach(function(r, i) {
+    const y = padT + i * rowH
+    const lab = svgEl("text", {x: 12, y: y + 27, "font-size": 14, fill: INK, "font-family": SANS})
+    lab.textContent = r[0]
+    svg.appendChild(lab)
+    const bw = (W - labelW - 110) * (r[1] / maxV)
+    const bar = svgEl("rect", {x: labelW, y: y + 9, width: Math.max(bw, 3), height: 24, rx: 4, fill: r[2]})
+    const tip = svgEl("title", {})
+    tip.textContent = r[0] + ": " + r[1] + unit
+    bar.appendChild(tip)
+    svg.appendChild(bar)
+    const val = svgEl("text", {x: labelW + Math.max(bw, 3) + 10, y: y + 27, "font-size": 14, fill: INK, "font-family": MONO})
+    val.textContent = r[1] + unit
+    svg.appendChild(val)
+  })
+  host.appendChild(svg)
+}
+
+function lineChart(id, opts) {
+  const host = document.getElementById(id)
+  const data = opts.data
+  const W = 760
+  const H = 400
+  const mL = 58
+  const mR = 26
+  const mT = 26
+  const mB = 54
+  const yMin = opts.yMin
+  const yMax = opts.yMax
+  function X(i) { return mL + i * ((W - mL - mR) / (data.length - 1)) }
+  function Y(v) { return mT + (yMax - v) * ((H - mT - mB) / (yMax - yMin)) }
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  const grids = opts.grid || []
+  grids.forEach(function(g) {
+    svg.appendChild(svgEl("line", {x1: mL, x2: W - mR, y1: Y(g), y2: Y(g), stroke: "#e2d7c2", "stroke-width": 1}))
+    const t = svgEl("text", {x: 10, y: Y(g) + 5, "font-size": 13, fill: MUT, "font-family": SANS})
+    if (opts.yfmt) { t.textContent = opts.yfmt(g) } else { t.textContent = String(g) }
+    svg.appendChild(t)
+  })
+  let d = ""
+  data.forEach(function(v, i) {
+    if (i === 0) { d = d + "M" } else { d = d + "L" }
+    d = d + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "
+  })
+  svg.appendChild(svgEl("path", {d: d, fill: "none", stroke: CLAY, "stroke-width": 3}))
+  data.forEach(function(v, i) {
+    const c = svgEl("circle", {cx: X(i), cy: Y(v), r: 8, fill: CLAY})
+    const tip = svgEl("title", {})
+    tip.textContent = opts.tip(i, v)
+    c.appendChild(tip)
+    svg.appendChild(c)
+    const xl = svgEl("text", {x: X(i), y: H - 32, "font-size": 13, fill: MUT, "text-anchor": "middle", "font-family": SANS})
+    xl.textContent = opts.xlabels[i]
+    svg.appendChild(xl)
+  })
+  if (opts.ylabel) {
+    const yl = svgEl("text", {x: 12, y: 22, "font-size": 13, fill: MUT, "font-family": SANS})
+    yl.textContent = opts.ylabel
+    svg.appendChild(yl)
+  }
+  if (opts.xlabel) {
+    const xcap = svgEl("text", {x: W - mR, y: H - 10, "font-size": 13, fill: MUT, "text-anchor": "end", "font-family": SANS})
+    xcap.textContent = opts.xlabel
+    svg.appendChild(xcap)
+  }
+  host.appendChild(svg)
+}
+
+
+barChart("chart-blockflops", [
+  ["QKV projections", 24576, INDIGO],
+  ["Attention scores", 16384, SAGE],
+  ["Score x values", 16384, SAGE],
+  ["SwiGLU FFN", 49152, CLAY],
+  ["Output head", 32768, INDIGO]
+], 50000, " FLOP", 170)
+
+barChart("chart-init", [
+  ["Xavier target std", 0.25, CLAY],
+  ["Sampled Wq std", 0.2549, INDIGO]
+], 0.3, "", 170)
+
+function maskHeatmap() {
+  const host = document.getElementById("chart-mask")
+  const T = 8
+  const cell = 64
+  const W = 760
+  const H = 560
+  const ox = 120
+  const oy = 20
+  const svg = svgEl("svg", {viewBox: "0 0 " + W + " " + H, "class": "chart", role: "img"})
+  let i = 0
+  while (i < T) {
+    let j = 0
+    while (j < T) {
+      const future = j > i
+      const rect = svgEl("rect", {x: ox + j * cell, y: oy + i * cell, width: cell - 4, height: cell - 4, rx: 6, fill: future ? "#e2d7c2" : CLAY, opacity: future ? 1 : 0.85})
+      const tip = svgEl("title", {})
+      if (future) { tip.textContent = "position " + i + " reading " + j + ": masked, weight exactly 0" }
+      else { tip.textContent = "position " + i + " reading " + j + ": allowed" }
+      rect.appendChild(tip)
+      svg.appendChild(rect)
+      j = j + 1
+    }
+    const rl = svgEl("text", {x: ox - 14, y: oy + i * cell + 36, "font-size": 14, fill: MUT, "text-anchor": "end", "font-family": SANS})
+    rl.textContent = "pos " + i
+    svg.appendChild(rl)
+    i = i + 1
+  }
+  let j2 = 0
+  while (j2 < T) {
+    const cl = svgEl("text", {x: ox + j2 * cell + 30, y: oy + T * cell + 26, "font-size": 14, fill: MUT, "text-anchor": "middle", "font-family": SANS})
+    cl.textContent = "pos " + j2
+    svg.appendChild(cl)
+    j2 = j2 + 1
+  }
+  const cap = svgEl("text", {x: 12, y: 24, "font-size": 13, fill: MUT, "font-family": SANS})
+  cap.textContent = "rows: query positions, columns: key positions"
+  svg.appendChild(cap)
+  host.appendChild(svg)
+}
+maskHeatmap()
+
+function renderDh() {
+  const dh = parseFloat(document.getElementById("dhslider").value) || 128
+  document.getElementById("dhv").textContent = String(dh)
+  document.getElementById("dhstd").textContent = Math.sqrt(dh).toFixed(1)
+}
+document.getElementById("dhslider").addEventListener("input", renderDh)
+renderDh()
+
+
+</script>
+</body>
+</html>
