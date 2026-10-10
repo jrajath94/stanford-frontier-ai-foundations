@@ -1,0 +1,890 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229s-lessons-u02-lesson-02-hardware-compilers",
+ "itemKind": "lesson",
+ "revision": "835be1ebad1e4719a297934c97c12bc5ff14e326e63c54934f1561989c5e1b13",
+ "sections": [
+  {
+   "anchor": "lesson-02-hardware-compilers-intro",
+   "title": "Lesson 02: Hardware-aware design and compilers",
+   "endAnchor": "lesson-02-hardware-compilers-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229s-U02",
+     "definition": "Unit 02 of CS229S, covering hardware-aware design and compilers.",
+     "anchor": "lesson-02-hardware-compilers-intro-p02"
+    },
+    {
+     "term": "claim class",
+     "definition": "The evidence label on every lesson claim, here PLANNED with source attribution pending.",
+     "anchor": "lesson-02-hardware-compilers-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-02-hardware-compilers-intro-r1",
+     "question": "What unit and concepts does this lesson cover?",
+     "answer": "Unit cs229s-U02, concepts C01 to C12, calendar-anchored to Week 2, Sep 30, Hardware Aware Algorithm Design.",
+     "anchor": "lesson-02-hardware-compilers-intro-p02"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "how-to-read-this-lesson",
+   "title": "How to read this lesson",
+   "endAnchor": "how-to-read-this-lesson-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "15-item contract",
+     "definition": "The fixed structure every concept carries, from source and scope to visual units.",
+     "anchor": "how-to-read-this-lesson-p01"
+    },
+    {
+     "term": "toy specs",
+     "definition": "Labeled round numbers for arithmetic, not vendor claims.",
+     "anchor": "how-to-read-this-lesson-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "how-to-read-this-lesson-r1",
+     "question": "What is special about hardware numbers in this unit?",
+     "answer": "They are labeled toy specs, round numbers for arithmetic and not vendor claims, unless marked as publicly documented.",
+     "anchor": "how-to-read-this-lesson-p01"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c01-gpu-hierarchy",
+   "title": "C01: GPU hierarchy",
+   "endAnchor": "c01-gpu-hierarchy-end",
+   "blocks": [
+    {
+     "anchor": "c01-gpu-hierarchy-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c01-gpu-hierarchy-p08",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c01-gpu-hierarchy-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "memory hierarchy",
+     "definition": "The GPU memory levels and their speeds.",
+     "anchor": "c01-gpu-hierarchy-p01"
+    },
+    {
+     "term": "registers",
+     "definition": "Per thread, about 256 KB per SM, about 1 cycle: the fastest level.",
+     "anchor": "c01-gpu-hierarchy-p03"
+    },
+    {
+     "term": "HBM",
+     "definition": "Device-wide, tens of GB, 400-800 cycles, about 2 TB/s.",
+     "anchor": "c01-gpu-hierarchy-list01"
+    },
+    {
+     "term": "latency",
+     "definition": "Fixed trip cost; it dominates small reads, bandwidth dominates large reads.",
+     "anchor": "c01-gpu-hierarchy-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c01-gpu-hierarchy-r1",
+     "question": "Name the four GPU memory levels from fastest to slowest with one size each.",
+     "answer": "Registers (~256 KB/SM), shared memory/L1 (~100-200 KB/SM), L2 (tens of MB), HBM (tens of GB).",
+     "anchor": "c01-gpu-hierarchy-list01"
+    },
+    {
+     "id": "c01-gpu-hierarchy-r2",
+     "question": "When does latency dominate, and when does bandwidth?",
+     "answer": "Latency dominates small reads, bandwidth dominates large reads; the crossover sits near 1 MB.",
+     "anchor": "c01-gpu-hierarchy-p07"
+    },
+    {
+     "id": "c01-gpu-hierarchy-r3",
+     "question": "Why does more threads not hide all latency?",
+     "answer": "Latency hiding needs enough parallel work. A 1-block 32-thread kernel with heavy HBM reads stalls at near-zero occupancy.",
+     "anchor": "c01-gpu-hierarchy-p10"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c02-kernels",
+   "title": "C02: kernels",
+   "endAnchor": "c02-kernels-end",
+   "blocks": [
+    {
+     "anchor": "c02-kernels-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c02-kernels-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c02-kernels-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "kernel",
+     "definition": "A work order posted on a board: the GPU function a grid launches.",
+     "anchor": "c02-kernels-p01"
+    },
+    {
+     "term": "grid",
+     "definition": "All blocks of one launch.",
+     "anchor": "c02-kernels-p01"
+    },
+    {
+     "term": "global index",
+     "definition": "blockIdx.x * blockDim.x + threadIdx.x.",
+     "anchor": "c02-kernels-p04"
+    },
+    {
+     "term": "bounds guard",
+     "definition": "if (i < N): disables tail threads when N is not a multiple of block size.",
+     "anchor": "c02-kernels-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c02-kernels-r1",
+     "question": "Write the global index formula.",
+     "answer": "blockIdx.x * blockDim.x + threadIdx.x.",
+     "anchor": "c02-kernels-p04"
+    },
+    {
+     "id": "c02-kernels-r2",
+     "question": "For N = 1000 with 256 threads per block, how many blocks and idle threads?",
+     "answer": "ceil(1000/256) = 4 blocks, 1024 threads launched, 24 idle; the guard disables them.",
+     "anchor": "c02-kernels-p05"
+    },
+    {
+     "id": "c02-kernels-r3",
+     "question": "Why are more blocks not always better?",
+     "answer": "Blocks beyond the SM count queue up. 1M blocks of 1 thread each drown in launch overhead and scheduling.",
+     "anchor": "c02-kernels-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c03-compilationfusion",
+   "title": "C03: compilation/fusion",
+   "endAnchor": "c03-compilationfusion-end",
+   "blocks": [
+    {
+     "anchor": "c03-compilationfusion-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c03-compilationfusion-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c03-compilationfusion-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "fusion",
+     "definition": "Merging several kernels into one so intermediates stay on chip.",
+     "anchor": "c03-compilationfusion-p01"
+    },
+    {
+     "term": "torch.compile",
+     "definition": "The compiler for standard fusion patterns.",
+     "anchor": "c03-compilationfusion-p08"
+    },
+    {
+     "term": "graph breaks",
+     "definition": "Data-dependent control flow that splits the compiled graph and can slow things down.",
+     "anchor": "c03-compilationfusion-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c03-compilationfusion-r1",
+     "question": "Define fusion in one sentence.",
+     "answer": "Fusion merges several kernels into one so intermediate tensors stay on chip instead of round-tripping to HBM.",
+     "anchor": "c03-compilationfusion-p03"
+    },
+    {
+     "id": "c03-compilationfusion-r2",
+     "question": "How much traffic does fusion save on a transformer MLP layer?",
+     "answer": "A (8, 2048, 16384) intermediate is 536 MB per layer unfused. Fusion removes that write and the reread: about 1 GB per layer per pass.",
+     "anchor": "c03-compilationfusion-p05"
+    },
+    {
+     "id": "c03-compilationfusion-r3",
+     "question": "When does compiling hurt?",
+     "answer": "Graph breaks from data-dependent control flow split the graph. A Python if on tensor values each iteration makes compiled time exceed eager.",
+     "anchor": "c03-compilationfusion-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c04-arithmetic-intensity",
+   "title": "C04: arithmetic intensity",
+   "endAnchor": "c04-arithmetic-intensity-end",
+   "blocks": [
+    {
+     "anchor": "c04-arithmetic-intensity-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c04-arithmetic-intensity-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c04-arithmetic-intensity-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "arithmetic intensity",
+     "definition": "FLOPs divided by bytes moved, in FLOP/byte.",
+     "anchor": "c04-arithmetic-intensity-p01"
+    },
+    {
+     "term": "matvec",
+     "definition": "Matrix-vector multiply: reuses each weight once, I about 0.97.",
+     "anchor": "c04-arithmetic-intensity-p02"
+    },
+    {
+     "term": "FLOP/byte",
+     "definition": "The unit of arithmetic intensity.",
+     "anchor": "c04-arithmetic-intensity-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c04-arithmetic-intensity-r1",
+     "question": "Write the intensity formula with units.",
+     "answer": "I = FLOPs / bytes moved, in FLOP/byte.",
+     "anchor": "c04-arithmetic-intensity-list01"
+    },
+    {
+     "id": "c04-arithmetic-intensity-r2",
+     "question": "Why do a 64x64 matmul and matvec differ 22x in intensity?",
+     "answer": "The matmul reuses each weight 64 times (I = 21.3). The matvec reuses each weight once (I = 0.97).",
+     "anchor": "c04-arithmetic-intensity-p04"
+    },
+    {
+     "id": "c04-arithmetic-intensity-r3",
+     "question": "How does batching raise decode-step intensity?",
+     "answer": "Batching reuses weights across requests: decode intensity is about B FLOP/byte.",
+     "anchor": "c04-arithmetic-intensity-p07"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c05-roofline",
+   "title": "C05: roofline",
+   "endAnchor": "c05-roofline-end",
+   "blocks": [
+    {
+     "anchor": "c05-roofline-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c05-roofline-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c05-roofline-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "roofline",
+     "definition": "The speed-limit model: attainable = min(pi, beta * I).",
+     "anchor": "c05-roofline-p01"
+    },
+    {
+     "term": "ridge point",
+     "definition": "I* = pi / beta, where the bandwidth line meets the compute ceiling.",
+     "anchor": "c05-roofline-p02"
+    },
+    {
+     "term": "attainable",
+     "definition": "min(pi, beta * I): the roofline ceiling.",
+     "anchor": "c05-roofline-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c05-roofline-r1",
+     "question": "Write the roofline formula and define the ridge.",
+     "answer": "Attainable = min(pi, beta * I). The ridge I* = pi/beta (150 here) is where the bandwidth line meets the compute ceiling.",
+     "anchor": "c05-roofline-list01"
+    },
+    {
+     "id": "c05-roofline-r2",
+     "question": "A kernel does 21 FLOP/byte on the toy machine (pi = 3e14, beta = 2e12). What is its ceiling?",
+     "answer": "beta*I = 4.2e13 FLOP/s, 14 percent of pi: memory-bound.",
+     "anchor": "c05-roofline-p04"
+    },
+    {
+     "id": "c05-roofline-r3",
+     "question": "What does a measured point above the roof mean?",
+     "answer": "The measurement is wrong (FLOP count, byte count, or timer), not the model.",
+     "anchor": "c05-roofline-p10"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c06-layouts",
+   "title": "C06: layouts",
+   "endAnchor": "c06-layouts-end",
+   "blocks": [
+    {
+     "anchor": "c06-layouts-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c06-layouts-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c06-layouts-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "strides",
+     "definition": "Byte steps along each tensor axis.",
+     "anchor": "c06-layouts-p01"
+    },
+    {
+     "term": "C order",
+     "definition": "Row-major: stride of axis 1 is 1 element.",
+     "anchor": "c06-layouts-p02"
+    },
+    {
+     "term": "coalescing",
+     "definition": "Adjacent threads touching adjacent addresses, merging into minimal transactions.",
+     "anchor": "c06-layouts-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c06-layouts-r1",
+     "question": "Write C-order strides for (4, 8) fp16 in bytes.",
+     "answer": "(16, 2): row stride 16 bytes, element stride 2 bytes.",
+     "anchor": "c06-layouts-list01"
+    },
+    {
+     "id": "c06-layouts-r2",
+     "question": "Why is a column read of (4, 8) fp16 so wasteful?",
+     "answer": "4 addresses 16 bytes apart each pull a 128-byte line, using 2 bytes of each: 512 bytes moved for 8 wanted, 64x waste.",
+     "anchor": "c06-layouts-p04"
+    },
+    {
+     "id": "c06-layouts-r3",
+     "question": "When does Fortran order win?",
+     "answer": "For column-heavy access. Match layout to access.",
+     "anchor": "c06-layouts-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c07-vectorization",
+   "title": "C07: vectorization",
+   "endAnchor": "c07-vectorization-end",
+   "blocks": [
+    {
+     "anchor": "c07-vectorization-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c07-vectorization-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c07-vectorization-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "vectorized load",
+     "definition": "One instruction moving several elements at once.",
+     "anchor": "c07-vectorization-p01"
+    },
+    {
+     "term": "float4",
+     "definition": "A 16-byte vector load: 16 bytes per thread per load.",
+     "anchor": "c07-vectorization-p01"
+    },
+    {
+     "term": "alignment",
+     "definition": "Addresses must be 16-byte aligned; odd alignment breaks vectorization.",
+     "anchor": "c07-vectorization-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c07-vectorization-r1",
+     "question": "Define vectorized load in one line.",
+     "answer": "One instruction moving several elements, e.g. 4 floats (16 bytes), instead of one element per instruction.",
+     "anchor": "c07-vectorization-list01"
+    },
+    {
+     "id": "c07-vectorization-r2",
+     "question": "For 1M fp32 numbers, scalar vs float4 load counts?",
+     "answer": "1000000 scalar loads vs 250000 float4 loads.",
+     "anchor": "c07-vectorization-list01"
+    },
+    {
+     "id": "c07-vectorization-r3",
+     "question": "When does wider stop helping?",
+     "answer": "Past the alignment limit or with divergent access, wide loads waste bytes: float4 on a strided pattern loads 4x the bytes for the same data.",
+     "anchor": "c07-vectorization-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c08-launch-costs",
+   "title": "C08: launch costs",
+   "endAnchor": "c08-launch-costs-end",
+   "blocks": [
+    {
+     "anchor": "c08-launch-costs-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c08-launch-costs-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c08-launch-costs-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "launch overhead",
+     "definition": "Fixed cost per kernel launch, about 3-10 us.",
+     "anchor": "c08-launch-costs-p01"
+    },
+    {
+     "term": "fusion",
+     "definition": "Fewer kernels: the fix for launch overhead.",
+     "anchor": "c08-launch-costs-p07"
+    },
+    {
+     "term": "CUDA graphs",
+     "definition": "Record the launch sequence once, replay it cheaply.",
+     "anchor": "c08-launch-costs-p08"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c08-launch-costs-r1",
+     "question": "Write the total-time formula.",
+     "answer": "Total = launches * overhead + work.",
+     "anchor": "c08-launch-costs-list01"
+    },
+    {
+     "id": "c08-launch-costs-r2",
+     "question": "How do you compute the overhead share?",
+     "answer": "nk*overhead / total.",
+     "anchor": "c08-launch-costs-p06"
+    },
+    {
+     "id": "c08-launch-costs-r3",
+     "question": "When is launch overhead negligible?",
+     "answer": "At large batch: the same 50-kernel layer at batch 512 spends 100 ms on work, so 250 us overhead is 0.25 percent.",
+     "anchor": "c08-launch-costs-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c09-concurrency",
+   "title": "C09: concurrency",
+   "endAnchor": "c09-concurrency-end",
+   "blocks": [
+    {
+     "anchor": "c09-concurrency-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c09-concurrency-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c09-concurrency-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "stream",
+     "definition": "An ordered queue of GPU work.",
+     "anchor": "c09-concurrency-p01"
+    },
+    {
+     "term": "copy engine",
+     "definition": "Hardware separate from the SMs: the truly separate lane.",
+     "anchor": "c09-concurrency-p03"
+    },
+    {
+     "term": "overlap",
+     "definition": "Running copy and compute at once; step time becomes max, not sum.",
+     "anchor": "c09-concurrency-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c09-concurrency-r1",
+     "question": "Define stream in one line.",
+     "answer": "An ordered queue of GPU work; work in one stream runs in order, streams run independently.",
+     "anchor": "c09-concurrency-list01"
+    },
+    {
+     "id": "c09-concurrency-r2",
+     "question": "Compute 6 ms, copy 10 ms: best overlapped time and saving?",
+     "answer": "max(6, 10) = 10 ms; saving 6 ms.",
+     "anchor": "c09-concurrency-p04"
+    },
+    {
+     "id": "c09-concurrency-r3",
+     "question": "Why might two streams show no speedup?",
+     "answer": "Both kernels need the SMs, which are full. Streams share SMs; only the copy engine is a separate lane.",
+     "anchor": "c09-concurrency-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c10-tensor-cores",
+   "title": "C10: tensor cores",
+   "endAnchor": "c10-tensor-cores-end",
+   "blocks": [
+    {
+     "anchor": "c10-tensor-cores-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c10-tensor-cores-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c10-tensor-cores-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "tensor cores",
+     "definition": "Matrix-multiply units doing a whole tile per instruction.",
+     "anchor": "c10-tensor-cores-p01"
+    },
+    {
+     "term": "CUDA cores",
+     "definition": "One multiply-add per thread: the stairs.",
+     "anchor": "c10-tensor-cores-p03"
+    },
+    {
+     "term": "MMA tile",
+     "definition": "E.g. 16x16x16 per instruction (toy spec).",
+     "anchor": "c10-tensor-cores-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c10-tensor-cores-r1",
+     "question": "Name the three tensor-core contract items.",
+     "answer": "Reduced-precision dtype (fp16/bf16/int8), contracted dims as multiples of 8/16, aligned memory.",
+     "anchor": "c10-tensor-cores-list01"
+    },
+    {
+     "id": "c10-tensor-cores-r2",
+     "question": "(64,64,64) matmul: FLOPs and time at both toy peaks?",
+     "answer": "524288 FLOPs; 1.7 us at 3e14, 26 us at 2e13.",
+     "anchor": "c10-tensor-cores-p04"
+    },
+    {
+     "id": "c10-tensor-cores-r3",
+     "question": "Why might an fp16 matmul run at 5 percent of peak?",
+     "answer": "Wrong shapes or unaligned memory silently fall back to CUDA cores. Profile, do not assume.",
+     "anchor": "c10-tensor-cores-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c11-precision",
+   "title": "C11: precision",
+   "endAnchor": "c11-precision-end",
+   "blocks": [
+    {
+     "anchor": "c11-precision-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c11-precision-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c11-precision-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "fp16",
+     "definition": "2 bytes, range to 65504, 10 mantissa bits: fine precision, short range.",
+     "anchor": "c11-precision-p01"
+    },
+    {
+     "term": "bf16",
+     "definition": "2 bytes, fp32 range, 7 mantissa bits: long range, coarse precision.",
+     "anchor": "c11-precision-p01"
+    },
+    {
+     "term": "loss scaling",
+     "definition": "The fix for fp16's range failures in training.",
+     "anchor": "c11-precision-p07"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c11-precision-r1",
+     "question": "State the fp16 vs bf16 tradeoff in one line.",
+     "answer": "fp16: fine precision, short range (to 65504). bf16: fp32 range, coarse precision.",
+     "anchor": "c11-precision-list01"
+    },
+    {
+     "id": "c11-precision-r2",
+     "question": "Which of {1e5, 1e-5} overflow in fp16? Which lose precision in bf16?",
+     "answer": "1e5 overflows fp16 (max 65504); 1e-5 is fine in fp16. In bf16, 1e5 is representable but coarse, 1e-5 loses precision (7 mantissa bits).",
+     "anchor": "c11-precision-p04"
+    },
+    {
+     "id": "c11-precision-r3",
+     "question": "Why keep master weights in fp32?",
+     "answer": "bf16's coarse mantissa can stall tiny updates: a 1e-7 update to a 1.0 weight rounds to zero.",
+     "anchor": "c11-precision-p09"
+    }
+   ],
+   "minutes": 6
+  },
+  {
+   "anchor": "c12-memory-boundcompute-bound-tests",
+   "title": "C12: memory-bound/compute-bound tests",
+   "endAnchor": "c12-memory-boundcompute-bound-tests-end",
+   "blocks": [
+    {
+     "anchor": "c12-memory-boundcompute-bound-tests-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c12-memory-boundcompute-bound-tests-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c12-memory-boundcompute-bound-tests-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "triage",
+     "definition": "The doctor's three tests for which bound applies.",
+     "anchor": "c12-memory-boundcompute-bound-tests-p03"
+    },
+    {
+     "term": "batch sweep",
+     "definition": "Double the batch: speedup means bandwidth-bound.",
+     "anchor": "c12-memory-boundcompute-bound-tests-list01"
+    },
+    {
+     "term": "roofline",
+     "definition": "Test C: I < I* means memory-bound.",
+     "anchor": "c12-memory-boundcompute-bound-tests-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c12-memory-boundcompute-bound-tests-r1",
+     "question": "Name the three bound tests in one line each.",
+     "answer": "Batch sweep: double the batch, speedup means bandwidth-bound. Precision halving: halves bytes, helps only the bandwidth-bound. Roofline: I < I* means memory-bound.",
+     "anchor": "c12-memory-boundcompute-bound-tests-list01"
+    },
+    {
+     "id": "c12-memory-boundcompute-bound-tests-r2",
+     "question": "At toy ridge 150, which side are I = 64 and I = 512 on?",
+     "answer": "64 < 150: memory-bound, 64x the batch-1 ceiling. 512 > 150: compute-bound.",
+     "anchor": "c12-memory-boundcompute-bound-tests-p04"
+    },
+    {
+     "id": "c12-memory-boundcompute-bound-tests-r3",
+     "question": "The tests disagree. Name two confounders.",
+     "answer": "Low occupancy and launch overhead (or bank conflicts).",
+     "anchor": "c12-memory-boundcompute-bound-tests-p06"
+    }
+   ],
+   "minutes": 4
+  },
+  {
+   "anchor": "unit-chapter-plate",
+   "title": "Unit chapter plate",
+   "endAnchor": "unit-chapter-plate-end",
+   "blocks": [
+    {
+     "anchor": "unit-chapter-plate-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "naive view",
+     "definition": "FLOPs only, one memory pool.",
+     "anchor": "unit-chapter-plate-p01"
+    },
+    {
+     "term": "hardware-aware view",
+     "definition": "Intensity, roofline, fused kernels.",
+     "anchor": "unit-chapter-plate-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "unit-chapter-plate-r1",
+     "question": "What does the unit chapter plate contrast?",
+     "answer": "The naive view (FLOPs only, one memory pool) vs the hardware-aware view (intensity, roofline, fused kernels). Bottom line: count bytes first, FLOPs second.",
+     "anchor": "unit-chapter-plate-p01"
+    }
+   ],
+   "minutes": 2
+  },
+  {
+   "anchor": "russian-doll-ladder-the-roofline-major-mechanism",
+   "title": "Russian-doll ladder: the roofline (major mechanism)",
+   "endAnchor": "russian-doll-ladder-the-roofline-major-mechanism-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "attainable",
+     "definition": "min(pi, beta * I): the Shell 3 rule.",
+     "anchor": "russian-doll-ladder-the-roofline-major-mechanism-list01"
+    },
+    {
+     "term": "ridge",
+     "definition": "Where the bandwidth line meets the compute ceiling.",
+     "anchor": "russian-doll-ladder-the-roofline-major-mechanism-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "russian-doll-ladder-the-roofline-major-mechanism-r1",
+     "question": "What is the Shell 3 rule of the roofline ladder?",
+     "answer": "Attainable = min(pi, beta * I).",
+     "anchor": "russian-doll-ladder-the-roofline-major-mechanism-list01"
+    },
+    {
+     "id": "russian-doll-ladder-the-roofline-major-mechanism-r2",
+     "question": "What breaks the sustained-roof assumption (Shell 7)?",
+     "answer": "A low-occupancy kernel sits far below the roof.",
+     "anchor": "russian-doll-ladder-the-roofline-major-mechanism-list01"
+    }
+   ],
+   "minutes": 1
+  },
+  {
+   "anchor": "role-bridge",
+   "title": "Role bridge",
+   "endAnchor": "role-bridge-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "bound tests",
+     "definition": "The three bound tests (C12): the research engineer's first profiling move.",
+     "anchor": "role-bridge-list01"
+    },
+    {
+     "term": "launch overhead",
+     "definition": "Its math sizes small-batch serving budgets (MLOps).",
+     "anchor": "role-bridge-list01"
+    },
+    {
+     "term": "roofline",
+     "definition": "The one-picture answer to why it is slow (FDE).",
+     "anchor": "role-bridge-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "role-bridge-r1",
+     "question": "What is the research engineer's first move in any profiling session?",
+     "answer": "The three bound tests (C12).",
+     "anchor": "role-bridge-list01"
+    }
+   ],
+   "minutes": 1
+  }
+ ]
+}

@@ -150,27 +150,27 @@
   <main class="content" id="main">
     <article>
       <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U07 · Kernels and IO-aware attention</nav>
-      <h1>U07 · Kernels and IO-aware attention</h1>
+      <h1 id="u07_kernels-intro">U07 · Kernels and IO-aware attention</h1>
       <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
       <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u07-kernels-and-io-aware-attention">U07 , Kernels and IO-aware attention</h1>
-<p>Prerequisites: P06, P07, P14, P15. Bridge links in <code>../prerequisites.md</code>.
+<p id="u07_kernels-intro-p01" data-kind="aside" data-term="prerequisites">Prerequisites: P06, P07, P14, P15. Bridge links in <code>../prerequisites.md</code>.
 Session: cross-cutting branch (kernel work reported across course
 sessions, exact mapping in <code>../course_map.md</code>).
 Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
 PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
-<h2 id="standing-note">Standing note</h2>
-<p>No GPU on this box. Kernel algorithms are studied as numpy tiled
+<span id="u07_kernels-intro-end" data-end></span><h2 id="standing-note">Standing note</h2>
+<p id="standing-note-p01" data-kind="prose" data-term="tiled reference implementation">No GPU on this box. Kernel algorithms are studied as numpy tiled
 reference implementations on CPU, every number is computed, and the
 lesson states the hardware assumptions (100 KB toy SRAM budget) where
 used. Triton code is read and written as pseudocode, not executed.</p>
-<h2 id="local-remediation-tiling-and-the-memory-wall">Local remediation , tiling and the memory wall</h2>
-<p>Read this if diagnostic items D9 or D12 were not full marks. Fast
+<span id="standing-note-end" data-end></span><h2 id="local-remediation-tiling-and-the-memory-wall">Local remediation , tiling and the memory wall</h2>
+<p id="local-remediation-tiling-and-the-memory-wall-p01" data-kind="aside" data-term="tiling">Read this if diagnostic items D9 or D12 were not full marks. Fast
 memory (SRAM) is small, slow memory (HBM) is large. A kernel that
 streams data once from HBM and reuses it in SRAM beats one that
 re-reads it, even with identical FLOPs. Tiling splits the work into
 blocks that fit in SRAM, the online softmax lets attention tile over
 the sequence.</p>
-<p>Worked check: materializing (B=2,h=8,T=4096) bf16 scores moves 537
+<p id="local-remediation-tiling-and-the-memory-wall-p02" data-kind="example">Worked check: materializing (B=2,h=8,T=4096) bf16 scores moves 537
 MB, streaming Q/K/V once moves 25.2 MB (from
 <code>assets/compute_u07.py</code>, executed 2026-10-06).
 Assessment: with a 100 KB SRAM budget, dh=64, bf16, and 4 tiles
@@ -178,67 +178,67 @@ Assessment: with a 100 KB SRAM budget, dh=64, bf16, and 4 tiles
 R1.</p>
 <hr />
 <h3 id="c01-tiling-for-the-memory-hierarchy">C01: Tiling for the memory hierarchy</h3>
-<p>Leaf id <code>cs336-U07-C01</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-tiling-and-the-memory-wall-p03" data-kind="aside">Leaf id <code>cs336-U07-C01</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+<p id="local-remediation-tiling-and-the-memory-wall-p04" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
    Scope: blocking computation for SRAM. Objectives: size a tile from
    the SRAM budget, count HBM passes. Depends on P06, U06-C02.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: how big a block fits?
+<p id="local-remediation-tiling-and-the-memory-wall-p05" data-kind="prose"><strong>Motivating question and toy.</strong> Question: how big a block fits?
    Toy from <code>compute_u07.py</code>: 100 KB SRAM, dh=64, bf16, 4 resident
    tiles -&gt; Bc = 200, T=4096 needs 21 blocks.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> SRAM holds the working tiles, HBM holds the
+<p id="local-remediation-tiling-and-the-memory-wall-p06" data-kind="keyIdea"><strong>Mental model.</strong> SRAM holds the working tiles, HBM holds the
    matrices. The tile size is the largest block with all live tiles
    fitting: 4<em>Bc</em>dh*bytes &lt;= SRAM. Bigger tiles mean fewer HBM
    passes and better reuse.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Bc, Br: block
+<p id="local-remediation-tiling-and-the-memory-wall-p07" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Bc, Br: block
    sizes. Assumption: the 100 KB toy budget.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Bytes resident = tiles * Bc * dh *
+<p id="local-remediation-tiling-and-the-memory-wall-p08" data-kind="prose"><strong>Derivation / mechanism.</strong> Bytes resident = tiles * Bc * dh *
    bytes. Solve for Bc. The loop nest streams K/V blocks for each Q
    block, total HBM reads scale with the block count.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
+<p id="local-remediation-tiling-and-the-memory-wall-p09" data-kind="example"><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
    2026-10-06): Bc=200, 21 blocks for T=4096.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> <code>tile_size(sram, dh,
+<p id="local-remediation-tiling-and-the-memory-wall-p10" data-kind="steps"><strong>Algorithm and reference implementation.</strong> <code>tile_size(sram, dh,
    bytes, tiles)</code>: integer division. About 3 lines.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Bc<em>4</em>dh*bytes &lt;=
+<p id="local-remediation-tiling-and-the-memory-wall-p11" data-kind="example"><strong>Correctness checks and expected output.</strong> Bc<em>4</em>dh*bytes &lt;=
    SRAM, Bc+1 violates it. Expected outputs in the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> Tiling is pure win on memory-bound ops, the cost is
+<p id="local-remediation-tiling-and-the-memory-wall-p12" data-kind="prose"><strong>Costs.</strong> Tiling is pure win on memory-bound ops, the cost is
    code complexity.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> No tiling (simple,
+<p id="local-remediation-tiling-and-the-memory-wall-p13" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> No tiling (simple,
     slow). Every fast kernel tiles.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> Tiles sized for the wrong
+<p id="local-remediation-tiling-and-the-memory-wall-p14" data-kind="example"><strong>Failure case and counterexample.</strong> Tiles sized for the wrong
     SRAM: silent spilling to slower memory, 2-5x slower with correct
     results. The assumption &ldquo;the budget is right&rdquo; breaks across
     devices, query it, do not hardcode.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: tiled
+<p id="local-remediation-tiling-and-the-memory-wall-p15" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: tiled
     GEMM literature (primary: vendor guides). Extension: recompute
     Bc for dh=128, hypothesis: halves to 100.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the tile-size formula. (b) Oral ladder:
+<p id="local-remediation-tiling-and-the-memory-wall-p16" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the tile-size formula. (b) Oral ladder:
     define the resident set, compute Bc, justify the 4 tiles,
     implement, compare with no tiling, debug the spill, critique the
     fixed budget, design the dh=128 check. (c) Transfer: SRAM
@@ -246,79 +246,79 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     <code>../keys/u07_answers.md</code> A1.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U07 task 1 sizes tiles and counts
+<p id="local-remediation-tiling-and-the-memory-wall-p17" data-kind="aside"><strong>Lab and exercises.</strong> Lab U07 task 1 sizes tiles and counts
     blocks. See <code>../labs/u07_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Figure u07_fig01: lesson plate, tiles moving between
+<p id="local-remediation-tiling-and-the-memory-wall-p18" data-kind="aside"><strong>Visuals.</strong> Figure u07_fig01: lesson plate, tiles moving between
     HBM and SRAM. Source: original. Render: <code>assets/render_u07.py</code>.</p>
 </li>
 </ol>
-<figure><img alt="u07_fig01" src="../assets/u07_fig01.png"><figcaption>lesson plate, tiles moving between HBM and SRAM. Source: original.</figcaption></figure>
+<figure id="local-remediation-tiling-and-the-memory-wall-fig01" data-kind="figure" data-reveal="fade"><img alt="u07_fig01" src="../assets/u07_fig01.png"><figcaption>lesson plate, tiles moving between HBM and SRAM. Source: original.</figcaption></figure>
 <hr />
 <h3 id="c02-online-softmax">C02: Online softmax</h3>
-<p>Leaf id <code>cs336-U07-C02</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-tiling-and-the-memory-wall-p19" data-kind="aside">Leaf id <code>cs336-U07-C02</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+<p id="local-remediation-tiling-and-the-memory-wall-p20" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
    Scope: the rescaling trick. Objectives: derive the online update,
    prove equivalence. Depends on P05, U05-C01.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: softmax needs the max
+<p id="local-remediation-tiling-and-the-memory-wall-p21" data-kind="prose"><strong>Motivating question and toy.</strong> Question: softmax needs the max
    first, so how can it stream? Toy from <code>compute_u07.py</code>: blocks
    [1,2],[3,4] give m=4.0, l=1.5530, exactly matching the full
    computation.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Keep a running max m and normalizer l. A new
+<p id="local-remediation-tiling-and-the-memory-wall-p22" data-kind="keyIdea"><strong>Mental model.</strong> Keep a running max m and normalizer l. A new
    block with max mb rescales: m&rsquo; = max(m, mb), l&rsquo; = l*exp(m-m&rsquo;) +
    sum(exp(block-m&rsquo;)). The rescaling corrects the old terms to the
    new max.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> m: scalar, l:
+<p id="local-remediation-tiling-and-the-memory-wall-p23" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> m: scalar, l:
    scalar. Assumption: exact arithmetic (fp32 accumulation, C11).</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> exp(x-m&rsquo;) = exp(x-m)*exp(m-m&rsquo;): the
+<p id="local-remediation-tiling-and-the-memory-wall-p24" data-kind="prose"><strong>Derivation / mechanism.</strong> exp(x-m&rsquo;) = exp(x-m)*exp(m-m&rsquo;): the
    alpha factor rescales both the accumulator and the normalizer.
    Induction over blocks gives the exact softmax.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
+<p id="local-remediation-tiling-and-the-memory-wall-p25" data-kind="example"><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
    2026-10-06): m=4.0, l=1.5530, match True.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> <code>online_softmax(
+<p id="local-remediation-tiling-and-the-memory-wall-p26" data-kind="steps"><strong>Algorithm and reference implementation.</strong> <code>online_softmax(
    blocks)</code>: the loop. About 8 lines.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Matches the naive
+<p id="local-remediation-tiling-and-the-memory-wall-p27" data-kind="example"><strong>Correctness checks and expected output.</strong> Matches the naive
    softmax for any block split, including block size 1. Expected
    outputs in the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> O(T) extra exp calls for the rescaling, negligible.</p>
+<p id="local-remediation-tiling-and-the-memory-wall-p28" data-kind="prose"><strong>Costs.</strong> O(T) extra exp calls for the rescaling, negligible.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Two-pass softmax
+<p id="local-remediation-tiling-and-the-memory-wall-p29" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Two-pass softmax
     (needs the full row in SRAM). Online is the streaming answer.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> Accumulating l in fp16:
+<p id="local-remediation-tiling-and-the-memory-wall-p30" data-kind="example"><strong>Failure case and counterexample.</strong> Accumulating l in fp16:
     the rescaling underflows and rows go to nan. The assumption
     &ldquo;any dtype works&rdquo; breaks, the statistics stay in fp32.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+<p id="local-remediation-tiling-and-the-memory-wall-p31" data-kind="aside" data-term="FlashAttention"><strong>Research reading and falsifiable extension.</strong> Reading: the
     online-softmax derivation (primary: FlashAttention paper
     sections). Extension: verify block-size-1 equivalence,
     hypothesis: exact.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the update equations. (b) Oral ladder:
+<p id="local-remediation-tiling-and-the-memory-wall-p32" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the update equations. (b) Oral ladder:
     define the rescaling, hand-run the toy, justify alpha,
     implement, compare with two-pass, debug the fp16 l, critique the
     exactness claim, design the block-1 check. (c) Transfer: the row
@@ -326,80 +326,80 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     A2.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U07 task 2 implements online softmax
+<p id="local-remediation-tiling-and-the-memory-wall-p33" data-kind="aside"><strong>Lab and exercises.</strong> Lab U07 task 2 implements online softmax
     and the equivalence checks. See <code>../labs/u07_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the rescaling diagram (two blocks, alpha
+<p id="local-remediation-tiling-and-the-memory-wall-p34" data-kind="aside"><strong>Visuals.</strong> Audit row: the rescaling diagram (two blocks, alpha
     arrow). No figure, tabular claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c03-flashattention-forward">C03: FlashAttention forward</h3>
-<p>Leaf id <code>cs336-U07-C03</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-tiling-and-the-memory-wall-p35" data-kind="aside">Leaf id <code>cs336-U07-C03</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+<p id="local-remediation-tiling-and-the-memory-wall-p36" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
    Scope: the tiled forward pass. Objectives: write the algorithm,
    state the HBM savings. Depends on C01, C02.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: attention without the
+<p id="local-remediation-tiling-and-the-memory-wall-p37" data-kind="prose"><strong>Motivating question and toy.</strong> Question: attention without the
    T^2 matrix? Toy from <code>compute_u07.py</code>: the tiled forward matches
    naive to 3.33e-16, traffic 537 MB -&gt; 25.2 MB.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Outer loop over Q blocks (each fits in SRAM).
+<p id="local-remediation-tiling-and-the-memory-wall-p38" data-kind="keyIdea"><strong>Mental model.</strong> Outer loop over Q blocks (each fits in SRAM).
    Inner loop over K/V blocks: compute scores, update the online
    softmax statistics, accumulate O. Never materialize the full
    scores. Output rescaling happens once at the end per row.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Q,K,V,O tiles:
+<p id="local-remediation-tiling-and-the-memory-wall-p39" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Q,K,V,O tiles:
    (Bc,dh). m,l per row. Assumption: fp32 accumulators.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> The inner loop is exactly the online
+<p id="local-remediation-tiling-and-the-memory-wall-p40" data-kind="prose"><strong>Derivation / mechanism.</strong> The inner loop is exactly the online
    softmax with the V-weighted sum folded in: acc&rsquo; = acc*alpha +
    exp(S-m&rsquo;)V. Dividing by l at the end gives softmax(S)V.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
+<p id="local-remediation-tiling-and-the-memory-wall-p41" data-kind="example"><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
    2026-10-06): match True, max deviation 3.33e-16, 537 MB versus
    25.2 MB.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> <code>flash_attn_fwd(Q,K,V,
+<p id="local-remediation-tiling-and-the-memory-wall-p42" data-kind="steps"><strong>Algorithm and reference implementation.</strong> <code>flash_attn_fwd(Q,K,V,
    Bc)</code>: the nested loops. About 15 lines of numpy.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Matches naive for
+<p id="local-remediation-tiling-and-the-memory-wall-p43" data-kind="example"><strong>Correctness checks and expected output.</strong> Matches naive for
    random small inputs, causal variant matches the masked naive.
    Expected outputs in the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> Same FLOPs as naive, HBM traffic O(T) instead of
+<p id="local-remediation-tiling-and-the-memory-wall-p44" data-kind="prose"><strong>Costs.</strong> Same FLOPs as naive, HBM traffic O(T) instead of
    O(T^2). SRAM-sized tiles bound the inner loop.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Naive attention
+<p id="local-remediation-tiling-and-the-memory-wall-p45" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Naive attention
     (simple, memory-bound), linear attention (U04, approximate).
     FlashAttention is exact and IO-aware.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> Forgetting the final
+<p id="local-remediation-tiling-and-the-memory-wall-p46" data-kind="example"><strong>Failure case and counterexample.</strong> Forgetting the final
     division by l: outputs are scaled by the row normalizer and the
     model trains on garbage. The assumption &ldquo;acc is the answer&rdquo;
     breaks, the division is load-bearing.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+<p id="local-remediation-tiling-and-the-memory-wall-p47" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: the
     FlashAttention paper (Dao et al., 2022, primary). Extension:
     verify the causal variant, hypothesis: matches masked naive.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the loop nest. (b) Oral ladder:
+<p id="local-remediation-tiling-and-the-memory-wall-p48" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the loop nest. (b) Oral ladder:
     define the tile roles, trace one inner step, justify the
     rescaling, implement, compare traffic, debug the missing
     division, critique the fp32 assumption, design the causal check.
@@ -407,79 +407,79 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     Answers: <code>../keys/u07_answers.md</code> A3.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U07 task 3 implements the tiled
+<p id="local-remediation-tiling-and-the-memory-wall-p49" data-kind="aside"><strong>Lab and exercises.</strong> Lab U07 task 3 implements the tiled
     forward and the traffic comparison. See <code>../labs/u07_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Figure u07_fig02: lesson plate, the tiled forward
+<p id="local-remediation-tiling-and-the-memory-wall-p50" data-kind="aside"><strong>Visuals.</strong> Figure u07_fig02: lesson plate, the tiled forward
     loop nest. Source: original. Render: <code>assets/render_u07.py</code>.</p>
 </li>
 </ol>
-<figure><img alt="u07_fig02" src="../assets/u07_fig02.png"><figcaption>lesson plate, the tiled forward loop nest. Source: original.</figcaption></figure>
+<figure id="local-remediation-tiling-and-the-memory-wall-fig02" data-kind="figure" data-reveal="fade"><img alt="u07_fig02" src="../assets/u07_fig02.png"><figcaption>lesson plate, the tiled forward loop nest. Source: original.</figcaption></figure>
 <hr />
 <h3 id="c04-flashattention-backward">C04: FlashAttention backward</h3>
-<p>Leaf id <code>cs336-U07-C04</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-tiling-and-the-memory-wall-p51" data-kind="aside">Leaf id <code>cs336-U07-C04</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-tiling-and-the-memory-wall-p52" data-kind="aside" data-term="recomputation"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: the tiled backward pass. Objectives: explain
    recomputation, state the stored statistics. Depends on C03, P11.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: the forward never
+<p id="local-remediation-tiling-and-the-memory-wall-p53" data-kind="prose"><strong>Motivating question and toy.</strong> Question: the forward never
    stored the scores, so what does backward use? Answer: it stores
    only m and l per row (O(T)) and recomputes the scores tiles in
    the backward pass.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Backward needs dO, then per tile: recompute S,
+<p id="local-remediation-tiling-and-the-memory-wall-p54" data-kind="keyIdea"><strong>Mental model.</strong> Backward needs dO, then per tile: recompute S,
    P=softmax(S) from stored m/l, accumulate dQ += P^T dV-ish terms
    and dK, dV. Recomputation trades FLOPs (cheap) for HBM (the
    bottleneck).</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Stored: m, l
+<p id="local-remediation-tiling-and-the-memory-wall-p55" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Stored: m, l
    (T floats each), O, dO. Assumption: recompute is cheaper than
    storing.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> dV = P^T dO, dP = dO V^T, dS =
+<p id="local-remediation-tiling-and-the-memory-wall-p56" data-kind="prose"><strong>Derivation / mechanism.</strong> dV = P^T dO, dP = dO V^T, dS =
    P<em>(dP - rowsum(dP</em>P)), dQ = dS K, dK = dS^T Q. Each tiled with
    the same blocking.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> Lab: tiled-style dQ matches finite
+<p id="local-remediation-tiling-and-the-memory-wall-p57" data-kind="example"><strong>Computed example.</strong> Lab: tiled-style dQ matches finite
    differences to 3.41e-07 max relative error on the toy.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> <code>flash_attn_bwd(...)</code>:
+<p id="local-remediation-tiling-and-the-memory-wall-p58" data-kind="steps"><strong>Algorithm and reference implementation.</strong> <code>flash_attn_bwd(...)</code>:
    the tiled loops. About 25 lines of numpy.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Matches finite-
+<p id="local-remediation-tiling-and-the-memory-wall-p59" data-kind="example"><strong>Correctness checks and expected output.</strong> Matches finite-
    difference gradients (U05-C12) on the toy. Expected outputs in
    the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> ~2.5x the forward FLOPs (recompute), HBM stays O(T).</p>
+<p id="local-remediation-tiling-and-the-memory-wall-p60" data-kind="prose"><strong>Costs.</strong> ~2.5x the forward FLOPs (recompute), HBM stays O(T).</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Storing scores
+<p id="local-remediation-tiling-and-the-memory-wall-p61" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Storing scores
     (simple, O(T^2) memory). Recompute is the IO-aware answer.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> Storing m/l in fp16:
+<p id="local-remediation-tiling-and-the-memory-wall-p62" data-kind="example"><strong>Failure case and counterexample.</strong> Storing m/l in fp16:
     recomputed P mismatches and gradients are wrong. The assumption
     &ldquo;statistics are cheap to store&rdquo; needs the fp32 qualifier.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+<p id="local-remediation-tiling-and-the-memory-wall-p63" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: the
     FlashAttention backward derivation (primary). Extension: check
     dK against finite differences, hypothesis: passes.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: what is stored and what is
+<p id="local-remediation-tiling-and-the-memory-wall-p64" data-kind="aside"><strong>Assessment.</strong> (a) Recall: what is stored and what is
     recomputed. (b) Oral ladder: define the tradeoff, write the dV
     line, justify recompute, implement, compare memory, debug the
     fp16 statistics, critique the cheap-recompute assumption,
@@ -487,78 +487,78 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     backward? Answers: <code>../keys/u07_answers.md</code> A4.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U07 task 4 implements the tiled
+<p id="local-remediation-tiling-and-the-memory-wall-p65" data-kind="aside"><strong>Lab and exercises.</strong> Lab U07 task 4 implements the tiled
     backward and checks it. See <code>../labs/u07_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the stored-vs-recomputed table. No
+<p id="local-remediation-tiling-and-the-memory-wall-p66" data-kind="aside"><strong>Visuals.</strong> Audit row: the stored-vs-recomputed table. No
     figure, tabular claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c05-block-sparse-patterns">C05: Block-sparse patterns</h3>
-<p>Leaf id <code>cs336-U07-C05</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-tiling-and-the-memory-wall-p67" data-kind="aside">Leaf id <code>cs336-U07-C05</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-tiling-and-the-memory-wall-p68" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: skipping blocks. Objectives: define a block mask, state
    the savings condition. Depends on C03, U04-C02.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: what if most blocks
+<p id="local-remediation-tiling-and-the-memory-wall-p69" data-kind="prose"><strong>Motivating question and toy.</strong> Question: what if most blocks
    are masked anyway? Toy: a sliding-window mask at block
    granularity skips (21-3)/21 of the inner loop for Bc=200, T=4096.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> The mask becomes a block mask: fully-masked
+<p id="local-remediation-tiling-and-the-memory-wall-p70" data-kind="keyIdea"><strong>Mental model.</strong> The mask becomes a block mask: fully-masked
    blocks are skipped entirely (no loads, no math). Savings need
    coarse structure, random sparsity does not tile well.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Block mask:
+<p id="local-remediation-tiling-and-the-memory-wall-p71" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Block mask:
    (T/Bc, T/Bc) booleans. Assumption: the pattern is block-aligned.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Skipped fraction = masked blocks /
+<p id="local-remediation-tiling-and-the-memory-wall-p72" data-kind="prose"><strong>Derivation / mechanism.</strong> Skipped fraction = masked blocks /
    total blocks. The inner loop checks the block mask before
    loading.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> Lab: window w=3 blocks of 21: 18 skipped,
+<p id="local-remediation-tiling-and-the-memory-wall-p73" data-kind="example"><strong>Computed example.</strong> Lab: window w=3 blocks of 21: 18 skipped,
    6x fewer inner iterations (causal + window).</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> The block-mask check
+<p id="local-remediation-tiling-and-the-memory-wall-p74" data-kind="steps"><strong>Algorithm and reference implementation.</strong> The block-mask check
    inside the tiled forward. About 5 added lines.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Matches the dense
+<p id="local-remediation-tiling-and-the-memory-wall-p75" data-kind="example"><strong>Correctness checks and expected output.</strong> Matches the dense
    masked naive on the unmasked entries. Expected outputs in the lab
    key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> Savings proportional to skipped blocks, the mask check
+<p id="local-remediation-tiling-and-the-memory-wall-p76" data-kind="prose"><strong>Costs.</strong> Savings proportional to skipped blocks, the mask check
    is free.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Dense tiled
+<p id="local-remediation-tiling-and-the-memory-wall-p77" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Dense tiled
     (simpler), custom sparse kernels (more general). Block-sparse
     for structured patterns.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> A checkerboard mask at
+<p id="local-remediation-tiling-and-the-memory-wall-p78" data-kind="example"><strong>Failure case and counterexample.</strong> A checkerboard mask at
     element granularity: no block is fully masked, zero savings,
     plus mask overhead. The assumption &ldquo;sparsity helps&rdquo; breaks
     without block structure.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading:
+<p id="local-remediation-tiling-and-the-memory-wall-p79" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading:
     block-sparse attention papers (primary). Extension: measure the
     skip fraction for strided patterns, hypothesis: poor.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the block-mask rule. (b) Oral ladder:
+<p id="local-remediation-tiling-and-the-memory-wall-p80" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the block-mask rule. (b) Oral ladder:
     define block alignment, compute the skip fraction, justify the
     load skip, implement, compare with dense, debug the
     checkerboard, critique the structure assumption, design the
@@ -566,79 +566,79 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     breaks? Answers: <code>../keys/u07_answers.md</code> A5.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U07 task 5 implements block skipping.
+<p id="local-remediation-tiling-and-the-memory-wall-p81" data-kind="aside"><strong>Lab and exercises.</strong> Lab U07 task 5 implements block skipping.
     See <code>../labs/u07_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the pattern table (pattern, skip
+<p id="local-remediation-tiling-and-the-memory-wall-p82" data-kind="aside"><strong>Visuals.</strong> Audit row: the pattern table (pattern, skip
     fraction). No figure, tabular claim.</p>
 </li>
 </ol>
 <hr />
-<h3 id="c06-kernel-fusion">C06: Kernel fusion</h3>
-<p>Leaf id <code>cs336-U07-C06</code>. Claim class REQUESTED-BRANCH.
+<h3 id="c06-kernel-fusion" data-term="kernel fusion">C06: Kernel fusion</h3>
+<p id="local-remediation-tiling-and-the-memory-wall-p83" data-kind="aside">Leaf id <code>cs336-U07-C06</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-tiling-and-the-memory-wall-p84" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: merging elementwise passes. Objectives: compute the
    traffic savings, state the fusion rule. Depends on U06-C03.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: dropout, add, norm:
+<p id="local-remediation-tiling-and-the-memory-wall-p85" data-kind="prose"><strong>Motivating question and toy.</strong> Question: dropout, add, norm:
    three passes or one? Toy from <code>compute_u07.py</code>: 101 MB separate
    versus 34 MB fused for (B=2,T=4096,d=2048) bf16.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Elementwise chains are memory-bound: each pass
+<p id="local-remediation-tiling-and-the-memory-wall-p86" data-kind="keyIdea"><strong>Mental model.</strong> Elementwise chains are memory-bound: each pass
    streams the tensor. Fusing them into one kernel streams it once.
    The rule: fuse while the working set fits in SRAM and the ops
    stay elementwise.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Bytes per pass.
+<p id="local-remediation-tiling-and-the-memory-wall-p87" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Bytes per pass.
    Assumption: the fused working set fits.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Traffic = passes * elements * bytes.
+<p id="local-remediation-tiling-and-the-memory-wall-p88" data-kind="prose"><strong>Derivation / mechanism.</strong> Traffic = passes * elements * bytes.
    Fusing n passes into 1 divides traffic by n.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
+<p id="local-remediation-tiling-and-the-memory-wall-p89" data-kind="example"><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
    2026-10-06): 101 MB versus 34 MB.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> The fused loop
+<p id="local-remediation-tiling-and-the-memory-wall-p90" data-kind="steps"><strong>Algorithm and reference implementation.</strong> The fused loop
    pseudocode: load tile, apply the chain, store. About 8 lines.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Fused matches
+<p id="local-remediation-tiling-and-the-memory-wall-p91" data-kind="example"><strong>Correctness checks and expected output.</strong> Fused matches
    sequential within fp tolerance. Expected outputs in the
    lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> 3x traffic cut here, compile/code complexity.</p>
+<p id="local-remediation-tiling-and-the-memory-wall-p92" data-kind="prose"><strong>Costs.</strong> 3x traffic cut here, compile/code complexity.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Framework
+<p id="local-remediation-tiling-and-the-memory-wall-p93" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Framework
     fusion (torch.compile) versus hand fusion. Hand fusion for the
     hot path.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> Fusing a reduction across
+<p id="local-remediation-tiling-and-the-memory-wall-p94" data-kind="example"><strong>Failure case and counterexample.</strong> Fusing a reduction across
     the sequence with an elementwise op: the reduction needs the
     whole row, breaking the tile-at-a-time pattern. The assumption
     &ldquo;any chain fuses&rdquo; breaks at reductions, they need their own
     blocking (C02).</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading:
+<p id="local-remediation-tiling-and-the-memory-wall-p95" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading:
     compiler fusion literature (primary: framework docs).
     Extension: fuse the toy chain in numpy and compare, hypothesis:
     matches.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the fusion rule. (b) Oral ladder:
+<p id="local-remediation-tiling-and-the-memory-wall-p96" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the fusion rule. (b) Oral ladder:
     define the traffic model, compute the toy, justify the SRAM
     condition, sketch the fused loop, compare with torch.compile,
     debug the reduction case, critique the always-fuse instinct,
@@ -646,80 +646,80 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     softmax. What changes? Answers: <code>../keys/u07_answers.md</code> A6.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U07 task 6 fuses a toy chain.
+<p id="local-remediation-tiling-and-the-memory-wall-p97" data-kind="aside"><strong>Lab and exercises.</strong> Lab U07 task 6 fuses a toy chain.
     See <code>../labs/u07_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the pass-count table. No figure, tabular
+<p id="local-remediation-tiling-and-the-memory-wall-p98" data-kind="aside"><strong>Visuals.</strong> Audit row: the pass-count table. No figure, tabular
     claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c07-triton-programming-model">C07: Triton programming model</h3>
-<p>Leaf id <code>cs336-U07-C07</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-tiling-and-the-memory-wall-p99" data-kind="aside">Leaf id <code>cs336-U07-C07</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-tiling-and-the-memory-wall-p100" data-kind="aside" data-term="Triton"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: the tile programming model. Objectives: read a Triton
    kernel, map blocks to program ids. Depends on C01, P14.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: how do you write a
+<p id="local-remediation-tiling-and-the-memory-wall-p101" data-kind="prose"><strong>Motivating question and toy.</strong> Question: how do you write a
    tiled kernel without CUDA? Toy: a Triton-style vectorized add
    expressed as numpy blocks, annotated line by line.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Triton: each program instance handles one tile,
+<p id="local-remediation-tiling-and-the-memory-wall-p102" data-kind="keyIdea"><strong>Mental model.</strong> Triton: each program instance handles one tile,
    <code>tl.arange</code> builds indices, <code>tl.load/store</code> move tiles, the
    compiler handles the rest. The program id maps to the tile index:
    the grid is the loop over tiles.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> BLOCK: tile
+<p id="local-remediation-tiling-and-the-memory-wall-p103" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> BLOCK: tile
    size (power of two). Assumption: the model, not execution (no
    Triton on this box).</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> pid = tl.program_id(0), offs =
+<p id="local-remediation-tiling-and-the-memory-wall-p104" data-kind="prose"><strong>Derivation / mechanism.</strong> pid = tl.program_id(0), offs =
    pid*BLOCK + tl.arange(0, BLOCK), x = tl.load(ptr+offs, mask=&hellip;).
    The mask handles the tail.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> Lab: the numpy-block add with mask,
+<p id="local-remediation-tiling-and-the-memory-wall-p105" data-kind="example"><strong>Computed example.</strong> Lab: the numpy-block add with mask,
    annotated against the Triton lines.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> Pseudocode only (not
+<p id="local-remediation-tiling-and-the-memory-wall-p106" data-kind="steps"><strong>Algorithm and reference implementation.</strong> Pseudocode only (not
    executed): the add kernel in 10 lines.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> The numpy analog
+<p id="local-remediation-tiling-and-the-memory-wall-p107" data-kind="example"><strong>Correctness checks and expected output.</strong> The numpy analog
    matches plain add including the tail. Expected outputs in the lab
    key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> None on this box, on device, the compiler&rsquo;s tiling
+<p id="local-remediation-tiling-and-the-memory-wall-p108" data-kind="prose"><strong>Costs.</strong> None on this box, on device, the compiler&rsquo;s tiling
    choices.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> CUDA (full
+<p id="local-remediation-tiling-and-the-memory-wall-p109" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> CUDA (full
     control, more code), torch.compile (no kernel code). Triton for
     custom tiled ops.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> A BLOCK that is not a power
+<p id="local-remediation-tiling-and-the-memory-wall-p110" data-kind="example"><strong>Failure case and counterexample.</strong> A BLOCK that is not a power
     of two: the compiler pads and the mask logic silently covers
     garbage. The assumption &ldquo;any BLOCK works&rdquo; breaks, powers of two
     are the contract.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+<p id="local-remediation-tiling-and-the-memory-wall-p111" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: the
     Triton tutorial (primary). Extension: annotate a softmax kernel,
     hypothesis: the online form appears.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the pid-to-tile mapping. (b) Oral
+<p id="local-remediation-tiling-and-the-memory-wall-p112" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the pid-to-tile mapping. (b) Oral
     ladder: define the grid, trace the mask, justify the power of
     two, annotate, compare with CUDA, debug the tail, critique the
     no-execution limit, design the softmax annotation. (c) Transfer:
@@ -727,78 +727,78 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     Answers: <code>../keys/u07_answers.md</code> A7.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U07 task 7 annotates the numpy analog.
+<p id="local-remediation-tiling-and-the-memory-wall-p113" data-kind="aside"><strong>Lab and exercises.</strong> Lab U07 task 7 annotates the numpy analog.
     See <code>../labs/u07_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the pid mapping table. No figure,
+<p id="local-remediation-tiling-and-the-memory-wall-p114" data-kind="aside"><strong>Visuals.</strong> Audit row: the pid mapping table. No figure,
     tabular claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c08-correctness-against-a-reference">C08: Correctness against a reference</h3>
-<p>Leaf id <code>cs336-U07-C08</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-tiling-and-the-memory-wall-p115" data-kind="aside">Leaf id <code>cs336-U07-C08</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-tiling-and-the-memory-wall-p116" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: verifying tiled code. Objectives: state the reference-
    comparison protocol. Depends on U05-C12.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: the tiled kernel runs,
+<p id="local-remediation-tiling-and-the-memory-wall-p117" data-kind="prose"><strong>Motivating question and toy.</strong> Question: the tiled kernel runs,
    is it right? Toy: the tiled forward matches naive to 3.33e-16
    (from <code>compute_u07.py</code>).</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Every tiled kernel gets a naive reference on
+<p id="local-remediation-tiling-and-the-memory-wall-p118" data-kind="keyIdea"><strong>Mental model.</strong> Every tiled kernel gets a naive reference on
    small random inputs. Compare with allclose at a stated tolerance.
    Test the tails (non-divisible T), the causal variant, and
    block-size 1.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Tolerance
+<p id="local-remediation-tiling-and-the-memory-wall-p119" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Tolerance
    (1e-5 fp32, tighter fp64). Assumption: the naive reference is
    itself correct (checked by hand on tiny inputs).</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> The protocol: (1) tiny hand case,
+<p id="local-remediation-tiling-and-the-memory-wall-p120" data-kind="prose"><strong>Derivation / mechanism.</strong> The protocol: (1) tiny hand case,
    (2) random small vs naive, (3) edge shapes, (4) dtype variants.
    Each layer catches different bugs.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
+<p id="local-remediation-tiling-and-the-memory-wall-p121" data-kind="example"><strong>Computed example.</strong> From <code>assets/compute_u07.py</code> (executed
    2026-10-06): max deviation 3.33e-16 on the toy.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> <code>check_kernel(tiled,
+<p id="local-remediation-tiling-and-the-memory-wall-p122" data-kind="steps"><strong>Algorithm and reference implementation.</strong> <code>check_kernel(tiled,
    naive, shapes)</code>: the loop. About 10 lines.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Passes on correct
+<p id="local-remediation-tiling-and-the-memory-wall-p123" data-kind="example"><strong>Correctness checks and expected output.</strong> Passes on correct
    code, the lab&rsquo;s broken variant (missing rescale) fails loudly.
    Expected outputs in the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> Minutes on CPU, the alternative is wrong kernels.</p>
+<p id="local-remediation-tiling-and-the-memory-wall-p124" data-kind="prose"><strong>Costs.</strong> Minutes on CPU, the alternative is wrong kernels.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Device-side
+<p id="local-remediation-tiling-and-the-memory-wall-p125" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Device-side
     printf debugging (slower). Reference comparison is the first
     tool.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> Comparing in fp16 with a
+<p id="local-remediation-tiling-and-the-memory-wall-p126" data-kind="example"><strong>Failure case and counterexample.</strong> Comparing in fp16 with a
     1e-8 tolerance: fails on correct code. The assumption &ldquo;tight is
     better&rdquo; breaks, the tolerance must match the dtype.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: testing
+<p id="local-remediation-tiling-and-the-memory-wall-p127" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: testing
     guides (primary: framework docs). Extension: break the rescale
     deliberately, hypothesis: the check catches it.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the four protocol layers. (b) Oral
+<p id="local-remediation-tiling-and-the-memory-wall-p128" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the four protocol layers. (b) Oral
     ladder: define the tolerance, run the toy, justify the tails,
     implement, compare with device debugging, debug the fp16
     tolerance, critique the reference assumption, design the break
@@ -806,79 +806,79 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     next? Answers: <code>../keys/u07_answers.md</code> A8.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U07 task 8 runs the protocol.
+<p id="local-remediation-tiling-and-the-memory-wall-p129" data-kind="aside"><strong>Lab and exercises.</strong> Lab U07 task 8 runs the protocol.
     See <code>../labs/u07_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the protocol checklist. No figure,
+<p id="local-remediation-tiling-and-the-memory-wall-p130" data-kind="aside"><strong>Visuals.</strong> Audit row: the protocol checklist. No figure,
     tabular claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c09-benchmark-claims-as-source-verification-branches">C09: Benchmark claims as source-verification branches</h3>
-<p>Leaf id <code>cs336-U07-C09</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-tiling-and-the-memory-wall-p131" data-kind="aside">Leaf id <code>cs336-U07-C09</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-tiling-and-the-memory-wall-p132" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: kernel speedup claims. Objectives: apply the verification
    protocol to a &ldquo;Nx faster&rdquo; claim. Depends on U06-C05, U06-C09.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: &ldquo;3x faster attention&rdquo;:
+<p id="local-remediation-tiling-and-the-memory-wall-p133" data-kind="prose"><strong>Motivating question and toy.</strong> Question: &ldquo;3x faster attention&rdquo;:
    faster than what? Toy: the lab dissects the claim into baseline,
    shapes, dtype, and conditions.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> A speedup claim is a ratio: optimized over
+<p id="local-remediation-tiling-and-the-memory-wall-p134" data-kind="keyIdea"><strong>Mental model.</strong> A speedup claim is a ratio: optimized over
    baseline under conditions. Verify the baseline (is it the naive
    or the best known?), the shapes (long or short context?), and the
    dtype. The 537-&gt;25.2 MB traffic ratio bounds the plausible
    speedup.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Ratios with
+<p id="local-remediation-tiling-and-the-memory-wall-p135" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Ratios with
    conditions. Assumption: none unchecked.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> The protocol from U06-C09 applied to
+<p id="local-remediation-tiling-and-the-memory-wall-p136" data-kind="prose"><strong>Derivation / mechanism.</strong> The protocol from U06-C09 applied to
    kernels: quote, reproduce conditions, measure, explain the gap.
    The traffic ratio gives the memory-bound speedup ceiling.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> Lab: the toy claim &ldquo;21x less traffic&rdquo;
+<p id="local-remediation-tiling-and-the-memory-wall-p137" data-kind="example"><strong>Computed example.</strong> Lab: the toy claim &ldquo;21x less traffic&rdquo;
    (537/25.2) with the stated shapes.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> The claim template
+<p id="local-remediation-tiling-and-the-memory-wall-p138" data-kind="steps"><strong>Algorithm and reference implementation.</strong> The claim template
    filled for the traffic ratio. Written exercise.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Every ratio carries
+<p id="local-remediation-tiling-and-the-memory-wall-p139" data-kind="example"><strong>Correctness checks and expected output.</strong> Every ratio carries
    its shapes and dtype. Expected outputs in the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> An hour of checking beats misallocated tuning.</p>
+<p id="local-remediation-tiling-and-the-memory-wall-p140" data-kind="prose"><strong>Costs.</strong> An hour of checking beats misallocated tuning.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Independent
+<p id="local-remediation-tiling-and-the-memory-wall-p141" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Independent
     reproduction (stronger, slower). The template is the first
     pass.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> A claim measured against an
+<p id="local-remediation-tiling-and-the-memory-wall-p142" data-kind="example"><strong>Failure case and counterexample.</strong> A claim measured against an
     unoptimized baseline: the ratio is real and meaningless. The
     assumption &ldquo;faster means better&rdquo; breaks, the baseline defines
     the claim.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+<p id="local-remediation-tiling-and-the-memory-wall-p143" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: the
     FlashAttention benchmarks as primary sources for conditions.
     Extension: fill the template for one published claim,
     hypothesis: the shapes explain the ratio.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the ratio anatomy. (b) Oral ladder:
+<p id="local-remediation-tiling-and-the-memory-wall-p144" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the ratio anatomy. (b) Oral ladder:
     define the baseline, dissect the toy, justify the traffic
     ceiling, fill the template, compare with reproduction, debug
     the weak baseline, critique the template, design the fill.
@@ -886,76 +886,76 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     ask? Answers: <code>../keys/u07_answers.md</code> A9.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U07 task 9 fills the claim template.
+<p id="local-remediation-tiling-and-the-memory-wall-p145" data-kind="aside"><strong>Lab and exercises.</strong> Lab U07 task 9 fills the claim template.
     See <code>../labs/u07_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the claim template. No figure, tabular
+<p id="local-remediation-tiling-and-the-memory-wall-p146" data-kind="aside"><strong>Visuals.</strong> Audit row: the claim template. No figure, tabular
     claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c10-sram-sizing-math">C10: SRAM sizing math</h3>
-<p>Leaf id <code>cs336-U07-C10</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-tiling-and-the-memory-wall-p147" data-kind="aside">Leaf id <code>cs336-U07-C10</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-tiling-and-the-memory-wall-p148" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: the SRAM budget equation. Objectives: solve for block size
    under multi-tile residency. Depends on C01.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: the kernel needs Q, K,
+<p id="local-remediation-tiling-and-the-memory-wall-p149" data-kind="prose"><strong>Motivating question and toy.</strong> Question: the kernel needs Q, K,
    V, O, and statistics resident: what Bc? Toy: 5 tiles at dh=64
    bf16 in 100 KB -&gt; Bc = 160.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> The budget equation: tiles<em>Bc</em>dh*bytes +
+<p id="local-remediation-tiling-and-the-memory-wall-p150" data-kind="keyIdea"><strong>Mental model.</strong> The budget equation: tiles<em>Bc</em>dh*bytes +
    stats &lt;= SRAM. More resident tiles shrink Bc, smaller Bc means
    more blocks and more passes.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> The equation
+<p id="local-remediation-tiling-and-the-memory-wall-p151" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> The equation
    terms. Assumption: the 100 KB toy budget.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Bc = (SRAM - stats) //
+<p id="local-remediation-tiling-and-the-memory-wall-p152" data-kind="prose"><strong>Derivation / mechanism.</strong> Bc = (SRAM - stats) //
    (tiles<em>dh</em>bytes). The lab tabulates Bc for 3, 4, 5 resident
    tiles.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> Lab: 4 tiles -&gt; 200, 5 tiles -&gt; 160,
+<p id="local-remediation-tiling-and-the-memory-wall-p153" data-kind="example"><strong>Computed example.</strong> Lab: 4 tiles -&gt; 200, 5 tiles -&gt; 160,
    dh=128, 4 tiles -&gt; 100.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> <code>sram_blocks(sram,
+<p id="local-remediation-tiling-and-the-memory-wall-p154" data-kind="steps"><strong>Algorithm and reference implementation.</strong> <code>sram_blocks(sram,
    tiles, dh, bytes)</code>: two lines.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Monotonic in tiles
+<p id="local-remediation-tiling-and-the-memory-wall-p155" data-kind="example"><strong>Correctness checks and expected output.</strong> Monotonic in tiles
    and dh, the table matches hand division. Expected outputs in the
    lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> Free arithmetic, wrong Bc wastes the kernel.</p>
+<p id="local-remediation-tiling-and-the-memory-wall-p156" data-kind="prose"><strong>Costs.</strong> Free arithmetic, wrong Bc wastes the kernel.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Autotuning
+<p id="local-remediation-tiling-and-the-memory-wall-p157" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Autotuning
     (searches Bc empirically). The math narrows the search.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> Ignoring the statistics
+<p id="local-remediation-tiling-and-the-memory-wall-p158" data-kind="example"><strong>Failure case and counterexample.</strong> Ignoring the statistics
     (m, l, accumulators): the kernel spills mid-loop. The
     assumption &ldquo;tiles are the whole story&rdquo; breaks, count everything
     resident.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: kernel
+<p id="local-remediation-tiling-and-the-memory-wall-p159" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: kernel
     design notes (primary: paper appendices). Extension: add the
     accumulator tile, hypothesis: Bc drops further.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the budget equation. (b) Oral ladder:
+<p id="local-remediation-tiling-and-the-memory-wall-p160" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the budget equation. (b) Oral ladder:
     define residency, compute the 5-tile case, justify the floor,
     implement, compare with autotuning, debug the spill, critique
     the toy budget, design the accumulator check. (c) Transfer: dh
@@ -963,79 +963,79 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     <code>../keys/u07_answers.md</code> A10.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U07 task 10 tabulates Bc.
+<p id="local-remediation-tiling-and-the-memory-wall-p161" data-kind="aside"><strong>Lab and exercises.</strong> Lab U07 task 10 tabulates Bc.
     See <code>../labs/u07_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Figure u07_fig03: lesson plate, Bc versus resident
+<p id="local-remediation-tiling-and-the-memory-wall-p162" data-kind="aside"><strong>Visuals.</strong> Figure u07_fig03: lesson plate, Bc versus resident
     tiles (computed). Source: original. Render:
     <code>assets/render_u07.py</code>.</p>
 </li>
 </ol>
-<figure><img alt="u07_fig03" src="../assets/u07_fig03.png"><figcaption>lesson plate, Bc versus resident tiles (computed). Source: original. Render: assets/render_u07.py.</figcaption></figure>
+<figure id="local-remediation-tiling-and-the-memory-wall-fig03" data-kind="figure" data-reveal="fade"><img alt="u07_fig03" src="../assets/u07_fig03.png"><figcaption>lesson plate, Bc versus resident tiles (computed). Source: original. Render: assets/render_u07.py.</figcaption></figure>
 <hr />
 <h3 id="c11-numerical-differences-in-low-precision">C11: Numerical differences in low precision</h3>
-<p>Leaf id <code>cs336-U07-C11</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-tiling-and-the-memory-wall-p163" data-kind="aside">Leaf id <code>cs336-U07-C11</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-tiling-and-the-memory-wall-p164" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: fp32 accumulators and friends. Objectives: state the
    precision rules for tiled kernels. Depends on P08, C02.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: the tiled kernel
+<p id="local-remediation-tiling-and-the-memory-wall-p165" data-kind="prose"><strong>Motivating question and toy.</strong> Question: the tiled kernel
    disagrees with naive in bf16. Why? Toy: the lab shows the
    deviation shrinking when accumulators move to fp32.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Tiled kernels reorder floating-point sums, in
+<p id="local-remediation-tiling-and-the-memory-wall-p166" data-kind="keyIdea"><strong>Mental model.</strong> Tiled kernels reorder floating-point sums, in
    low precision the order matters. The rules: statistics (m, l) in
    fp32, accumulators in fp32, inputs/outputs in the working dtype.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> dtypes per
+<p id="local-remediation-tiling-and-the-memory-wall-p167" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> dtypes per
    tensor. Assumption: the working dtype is bf16 or fp16.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Error bounds grow with the number of
+<p id="local-remediation-tiling-and-the-memory-wall-p168" data-kind="prose"><strong>Derivation / mechanism.</strong> Error bounds grow with the number of
    reordered terms, fp32 accumulators keep the tiled result within
    1e-5 of naive in bf16.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> Lab: bf16 tiled vs naive max deviation with
+<p id="local-remediation-tiling-and-the-memory-wall-p169" data-kind="example"><strong>Computed example.</strong> Lab: bf16 tiled vs naive max deviation with
    fp16 versus fp32 accumulators.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> The dtype annotation
+<p id="local-remediation-tiling-and-the-memory-wall-p170" data-kind="steps"><strong>Algorithm and reference implementation.</strong> The dtype annotation
    on the tiled forward. About 5 lines of casts.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Deviation within the
+<p id="local-remediation-tiling-and-the-memory-wall-p171" data-kind="example"><strong>Correctness checks and expected output.</strong> Deviation within the
    stated tolerance, the check fails if accumulators are fp16.
    Expected outputs in the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> fp32 accumulators cost registers, the alternative is
+<p id="local-remediation-tiling-and-the-memory-wall-p172" data-kind="prose"><strong>Costs.</strong> fp32 accumulators cost registers, the alternative is
    wrong answers.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Full fp32
+<p id="local-remediation-tiling-and-the-memory-wall-p173" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Full fp32
     (slower, simpler). Mixed precision is the standard.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> fp16 accumulators on long
+<p id="local-remediation-tiling-and-the-memory-wall-p174" data-kind="example"><strong>Failure case and counterexample.</strong> fp16 accumulators on long
     sequences: the running sum saturates and attention collapses to
     uniform. The assumption &ldquo;accumulator dtype is a detail&rdquo; breaks
     at scale.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: mixed-
+<p id="local-remediation-tiling-and-the-memory-wall-p175" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: mixed-
     precision guides (primary: framework docs). Extension: sweep T
     and plot the deviation, hypothesis: grows with T in fp16.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the three dtype rules. (b) Oral
+<p id="local-remediation-tiling-and-the-memory-wall-p176" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the three dtype rules. (b) Oral
     ladder: define the reorder error, run the toy, justify fp32
     stats, annotate, compare with full fp32, debug the saturation,
     critique the tolerance, design the sweep. (c) Transfer: the
@@ -1043,76 +1043,76 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     Answers: <code>../keys/u07_answers.md</code> A11.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U07 task 11 tests accumulator dtype.
+<p id="local-remediation-tiling-and-the-memory-wall-p177" data-kind="aside"><strong>Lab and exercises.</strong> Lab U07 task 11 tests accumulator dtype.
     See <code>../labs/u07_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the dtype table. No figure, tabular
+<p id="local-remediation-tiling-and-the-memory-wall-p178" data-kind="aside"><strong>Visuals.</strong> Audit row: the dtype table. No figure, tabular
     claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c12-kernel-testing-invariants">C12: Kernel testing invariants</h3>
-<p>Leaf id <code>cs336-U07-C12</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-tiling-and-the-memory-wall-p179" data-kind="aside">Leaf id <code>cs336-U07-C12</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-tiling-and-the-memory-wall-p180" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: cheap alarms for kernels. Objectives: state the invariants,
    implement them. Depends on C08, U05-C12.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: what cheap checks catch
+<p id="local-remediation-tiling-and-the-memory-wall-p181" data-kind="prose"><strong>Motivating question and toy.</strong> Question: what cheap checks catch
    kernel bugs before the reference comparison? Toy: row sums of P
    equal 1, outputs are convex combos of V rows.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Invariants: attention rows sum to 1, outputs lie
+<p id="local-remediation-tiling-and-the-memory-wall-p182" data-kind="keyIdea"><strong>Mental model.</strong> Invariants: attention rows sum to 1, outputs lie
    in the convex hull of V, causal outputs at t do not depend on
    future inputs, block-size changes do not change results.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Tolerances per
+<p id="local-remediation-tiling-and-the-memory-wall-p183" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Tolerances per
    dtype. Assumption: the kernel claims exactness.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Each invariant follows from the math:
+<p id="local-remediation-tiling-and-the-memory-wall-p184" data-kind="prose"><strong>Derivation / mechanism.</strong> Each invariant follows from the math:
    softmax rows sum to 1, softmax(S)V is a convex combination, the
    online rescaling is block-size independent.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> Lab: all four invariants on the tiled toy,
+<p id="local-remediation-tiling-and-the-memory-wall-p185" data-kind="example"><strong>Computed example.</strong> Lab: all four invariants on the tiled toy,
    the broken variant (missing alpha) fails invariant 4.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> <code>kernel_invariants(
+<p id="local-remediation-tiling-and-the-memory-wall-p186" data-kind="steps"><strong>Algorithm and reference implementation.</strong> <code>kernel_invariants(
    tiled_fn)</code>: the four asserts. About 12 lines.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Pass on the correct
+<p id="local-remediation-tiling-and-the-memory-wall-p187" data-kind="example"><strong>Correctness checks and expected output.</strong> Pass on the correct
    toy, each injected bug fails exactly one invariant. Expected
    outputs in the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> Seconds, run before the expensive comparisons.</p>
+<p id="local-remediation-tiling-and-the-memory-wall-p188" data-kind="prose"><strong>Costs.</strong> Seconds, run before the expensive comparisons.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Full reference
+<p id="local-remediation-tiling-and-the-memory-wall-p189" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Full reference
     comparison (stronger, slower). Invariants are the smoke test.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> Invariants pass but the
+<p id="local-remediation-tiling-and-the-memory-wall-p190" data-kind="example"><strong>Failure case and counterexample.</strong> Invariants pass but the
     kernel is still wrong: a permuted-block bug preserves all four.
     The assumption &ldquo;invariants suffice&rdquo; breaks, they complement,
     not replace, the reference.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: property-
+<p id="local-remediation-tiling-and-the-memory-wall-p191" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: property-
     based testing references (primary). Extension: inject the
     permutation bug, hypothesis: invariants pass, reference fails.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the four invariants. (b) Oral ladder:
+<p id="local-remediation-tiling-and-the-memory-wall-p192" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the four invariants. (b) Oral ladder:
     define each, derive the convex hull, justify block-size
     independence, implement, compare with reference, debug the
     permutation, critique sufficiency, design the injection.
@@ -1120,17 +1120,17 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     survive? Answers: <code>../keys/u07_answers.md</code> A12.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U07 task 12 implements the invariants.
+<p id="local-remediation-tiling-and-the-memory-wall-p193" data-kind="aside"><strong>Lab and exercises.</strong> Lab U07 task 12 implements the invariants.
     See <code>../labs/u07_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the invariant checklist. No figure,
+<p id="local-remediation-tiling-and-the-memory-wall-p194" data-kind="aside"><strong>Visuals.</strong> Audit row: the invariant checklist. No figure,
     tabular claim.</p>
 </li>
 </ol>
 <hr />
-<h2 id="unit-russian-doll-ladder-u07">Unit Russian-doll ladder (U07)</h2>
-<ul>
+<span id="local-remediation-tiling-and-the-memory-wall-end" data-end></span><h2 id="unit-russian-doll-ladder-u07" data-term="Russian-doll ladder">Unit Russian-doll ladder (U07)</h2>
+<ul id="unit-russian-doll-ladder-u07-shells-1" data-term="shell">
 <li>Shell 0: how does attention avoid the T^2 memory?</li>
 <li>Shell 1: one tiled forward, one traffic ratio, one tile size.</li>
 <li>Shell 2: SRAM, HBM, tiles, statistics, accumulators.</li>
@@ -1147,7 +1147,7 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 </ul>
       
       <nav class="pager"><a href="../keys/u06_answers.html"><span class="lbl">← Previous</span>U06 · Answers</a><a href="../keys/u07_answers.html"><span class="lbl">Next →</span>U07 · Answers</a></nav>
-    </article>
+    <span id="unit-russian-doll-ladder-u07-end" data-end></span></article>
     <footer class="pagefoot">
       <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
     </footer>

@@ -1,0 +1,865 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229s-lessons-u04-lesson-04-cuda-efficient-attention",
+ "itemKind": "lesson",
+ "revision": "d429ece212286af7bacecd7540d825ec5b8dbd2bc6e6f62feb08a785329102c6",
+ "sections": [
+  {
+   "anchor": "lesson-04-cuda-efficient-attention-intro",
+   "title": "Lesson 04: CUDA and efficient attention",
+   "endAnchor": "lesson-04-cuda-efficient-attention-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229s-U04",
+     "definition": "Unit 04 of CS229S, covering CUDA and efficient attention.",
+     "anchor": "lesson-04-cuda-efficient-attention-intro-p02"
+    },
+    {
+     "term": "claim class",
+     "definition": "The evidence label on every lesson claim, here PLANNED with source attribution pending.",
+     "anchor": "lesson-04-cuda-efficient-attention-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-04-cuda-efficient-attention-intro-r1",
+     "question": "What unit and sessions anchor this lesson?",
+     "answer": "Unit cs229s-U04, concepts C01 to C12, calendar-anchored to Week 3, Oct 07 (Hardware Aware Algorithm Design) and Oct 11 (Efficient Attention).",
+     "anchor": "lesson-04-cuda-efficient-attention-intro-p02"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "how-to-read-this-lesson",
+   "title": "How to read this lesson",
+   "endAnchor": "how-to-read-this-lesson-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "15-item contract",
+     "definition": "The fixed structure every concept carries, from source and scope to visual units.",
+     "anchor": "how-to-read-this-lesson-p01"
+    },
+    {
+     "term": "Dao et al.",
+     "definition": "The FlashAttention papers (2022, 2023) this lesson is taught from.",
+     "anchor": "how-to-read-this-lesson-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "how-to-read-this-lesson-r1",
+     "question": "Do the labs need a GPU?",
+     "answer": "No: CUDA specifics are taught from the public programming model, no GPU is needed for the labs (CPU emulation).",
+     "anchor": "how-to-read-this-lesson-p01"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c01-threadswarpsblocks",
+   "title": "C01: threads/warps/blocks",
+   "endAnchor": "c01-threadswarpsblocks-end",
+   "blocks": [
+    {
+     "anchor": "c01-threadswarpsblocks-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c01-threadswarpsblocks-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c01-threadswarpsblocks-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "warp",
+     "definition": "32 threads moving in lockstep (SIMT): the scheduling quantum.",
+     "anchor": "c01-threadswarpsblocks-list01"
+    },
+    {
+     "term": "divergence",
+     "definition": "One warp taking both sides of a branch: both paths run serially.",
+     "anchor": "c01-threadswarpsblocks-p03"
+    },
+    {
+     "term": "block",
+     "definition": "A thread group running on one SM, with shared memory.",
+     "anchor": "c01-threadswarpsblocks-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c01-threadswarpsblocks-r1",
+     "question": "Define warp, block, grid in one line each.",
+     "answer": "Warp: 32 threads in lockstep. Block: runs on one SM, with shared memory. Grid: all blocks.",
+     "anchor": "c01-threadswarpsblocks-list01"
+    },
+    {
+     "id": "c01-threadswarpsblocks-r2",
+     "question": "1000 threads, blocks of 256. Warps? Blocks?",
+     "answer": "32 warps (ceil(1000/32)), 4 blocks (ceil(1000/256)).",
+     "anchor": "c01-threadswarpsblocks-p04"
+    },
+    {
+     "id": "c01-threadswarpsblocks-r3",
+     "question": "A kernel with heavy divergence is slow. Name the mechanism.",
+     "answer": "A split warp executes both branch paths serially, halving throughput for that warp.",
+     "anchor": "c01-threadswarpsblocks-p04"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c02-coalescing",
+   "title": "C02: coalescing",
+   "endAnchor": "c02-coalescing-end",
+   "blocks": [
+    {
+     "anchor": "c02-coalescing-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c02-coalescing-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c02-coalescing-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "coalescing",
+     "definition": "Adjacent threads touching adjacent addresses, merging into minimal transactions.",
+     "anchor": "c02-coalescing-p01"
+    },
+    {
+     "term": "bus stop",
+     "definition": "The mental model: 32 riders boarding one bus when they stand together.",
+     "anchor": "c02-coalescing-p03"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c02-coalescing-r1",
+     "question": "Define coalesced access in one line.",
+     "answer": "Thread i reads address base + i: 32 fp32 reads merge into one 128-byte transaction.",
+     "anchor": "c02-coalescing-list01"
+    },
+    {
+     "id": "c02-coalescing-r2",
+     "question": "fp16, stride 8. Transactions per warp?",
+     "answer": "32 threads span 512 bytes: 4 transactions.",
+     "anchor": "c02-coalescing-list01"
+    },
+    {
+     "id": "c02-coalescing-r3",
+     "question": "Kernel moves 32x the expected bytes. Name the pattern.",
+     "answer": "Strided access: stride-32 fp32 touches 32 different cache lines per warp.",
+     "anchor": "c02-coalescing-p04"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c03-tiling",
+   "title": "C03: tiling",
+   "endAnchor": "c03-tiling-end",
+   "blocks": [
+    {
+     "anchor": "c03-tiling-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c03-tiling-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c03-tiling-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "tiling",
+     "definition": "Blocking the working set so tiles fit in on-chip memory and get reused.",
+     "anchor": "c03-tiling-p01"
+    },
+    {
+     "term": "floor tiles",
+     "definition": "The mental model: work one tile at a time, loading A and B tiles into shared memory.",
+     "anchor": "c03-tiling-p03"
+    },
+    {
+     "term": "shared memory",
+     "definition": "On-chip memory holding one A tile plus one B tile.",
+     "anchor": "c03-tiling-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c03-tiling-r1",
+     "question": "Define tiling in one line.",
+     "answer": "You cannot lift the whole floor, so you work one tile at a time: load tiles into shared memory, multiply, accumulate, move on.",
+     "anchor": "c03-tiling-p03"
+    },
+    {
+     "id": "c03-tiling-r2",
+     "question": "(1024,1024,1024) matmul, tile 64. A HBM reads vs naive?",
+     "answer": "Naive: each A element read 1024 times. Tiled: reads drop by ~Tk, so ~16x fewer (1024/64).",
+     "anchor": "c03-tiling-p04"
+    },
+    {
+     "id": "c03-tiling-r3",
+     "question": "Tiled kernel fails to launch. Name the resource.",
+     "answer": "Shared memory: a 256x256 fp16 tile pair needs 256 KB, exceeding it.",
+     "anchor": "c03-tiling-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c04-synchronization",
+   "title": "C04: synchronization",
+   "endAnchor": "c04-synchronization-end",
+   "blocks": [
+    {
+     "anchor": "c04-synchronization-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c04-synchronization-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c04-synchronization-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "__syncthreads",
+     "definition": "Block-wide barrier: no thread passes until every thread in the block arrives.",
+     "anchor": "c04-synchronization-list01"
+    },
+    {
+     "term": "roll call",
+     "definition": "The mental model: the teacher calls everyone to stop until all are here.",
+     "anchor": "c04-synchronization-p03"
+    },
+    {
+     "term": "deadlock",
+     "definition": "A barrier inside divergent control flow: threads that never reach it wait forever.",
+     "anchor": "c04-synchronization-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c04-synchronization-r1",
+     "question": "What does __syncthreads guarantee?",
+     "answer": "No thread passes the barrier until every thread in the block reaches it, so shared-memory writes are visible to all reads after it.",
+     "anchor": "c04-synchronization-list01"
+    },
+    {
+     "id": "c04-synchronization-r2",
+     "question": "64 threads, barrier cost 20 cycles, 1e6 barriers. Total cycles?",
+     "answer": "64 * 1e6 * 20 = 1.28e9 cycles.",
+     "anchor": "c04-synchronization-p07"
+    },
+    {
+     "id": "c04-synchronization-r3",
+     "question": "Kernel hangs with a barrier inside an if. Explain.",
+     "answer": "Divergent barrier: threads that skip the if never reach the barrier, so the others wait forever.",
+     "anchor": "c04-synchronization-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c05-occupancy",
+   "title": "C05: occupancy",
+   "endAnchor": "c05-occupancy-end",
+   "blocks": [
+    {
+     "anchor": "c05-occupancy-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c05-occupancy-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c05-occupancy-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "occupancy",
+     "definition": "Active warps divided by max warps per SM.",
+     "anchor": "c05-occupancy-p01"
+    },
+    {
+     "term": "hotel rooms",
+     "definition": "The mental model: an SM holds fixed rooms (warp slots, registers, shared memory); blocks book them.",
+     "anchor": "c05-occupancy-p03"
+    },
+    {
+     "term": "latency hiding",
+     "definition": "What occupancy enables: enough parallel work to cover memory latency.",
+     "anchor": "c05-occupancy-p07"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c05-occupancy-r1",
+     "question": "Define occupancy.",
+     "answer": "Occupancy = active warps / max warps per SM, limited by threads/SM, registers/thread, and shared memory/block.",
+     "anchor": "c05-occupancy-list01"
+    },
+    {
+     "id": "c05-occupancy-r2",
+     "question": "256-thread blocks, 12 KB shared per block (toy: 100 KB/SM, 64 max warps). Occupancy?",
+     "answer": "8 blocks fit (threads, shared, and registers all allow 8): 8 * 8 = 64 warps = 100%.",
+     "anchor": "c05-occupancy-p04"
+    },
+    {
+     "id": "c05-occupancy-r3",
+     "question": "Occupancy 100% but slow. Name two other suspects.",
+     "answer": "Low instruction-level parallelism with stalls, or register spilling. Occupancy is a means, not a goal.",
+     "anchor": "c05-occupancy-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c06-reductions",
+   "title": "C06: reductions",
+   "endAnchor": "c06-reductions-end",
+   "blocks": [
+    {
+     "anchor": "c06-reductions-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c06-reductions-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c06-reductions-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "tree reduction",
+     "definition": "Parallel sum: pairs combine each round, halving the field.",
+     "anchor": "c06-reductions-p01"
+    },
+    {
+     "term": "tournament bracket",
+     "definition": "The mental model: 1024 -> 512 -> ... -> 1 in 10 rounds.",
+     "anchor": "c06-reductions-p03"
+    },
+    {
+     "term": "log2(N)",
+     "definition": "The round count: 1024 needs 10 rounds.",
+     "anchor": "c06-reductions-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c06-reductions-r1",
+     "question": "Rounds for N = 4096?",
+     "answer": "12 rounds (log2(4096)).",
+     "anchor": "c06-reductions-list01"
+    },
+    {
+     "id": "c06-reductions-r2",
+     "question": "sum(0..4095) via the tree. Value?",
+     "answer": "4095 * 4096 / 2 = 8386560.",
+     "anchor": "c06-reductions-p05"
+    },
+    {
+     "id": "c06-reductions-r3",
+     "question": "Sum is wrong for odd N. Name the fix.",
+     "answer": "Pad: the code appends 0 when the length is odd, preserving the sum.",
+     "anchor": "c06-reductions-code01"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c07-attention-bottleneck",
+   "title": "C07: attention bottleneck",
+   "endAnchor": "c07-attention-bottleneck-end",
+   "blocks": [
+    {
+     "anchor": "c07-attention-bottleneck-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c07-attention-bottleneck-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c07-attention-bottleneck-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "memory wall",
+     "definition": "O(T^2) HBM traffic from the score matrix: the bottleneck is bytes, not math.",
+     "anchor": "c07-attention-bottleneck-p01"
+    },
+    {
+     "term": "intensity",
+     "definition": "4T^2n FLOPs over 4T^2 bytes = n = 64 FLOP/byte, below ridge 150: memory-bound.",
+     "anchor": "c07-attention-bottleneck-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c07-attention-bottleneck-r1",
+     "question": "Name the four HBM trips.",
+     "answer": "Write scores, read for softmax, write probs, read for the values multiply: about 4 x 33.5 = 134 MB per head at T = 4096.",
+     "anchor": "c07-attention-bottleneck-list01"
+    },
+    {
+     "id": "c07-attention-bottleneck-r2",
+     "question": "T = 8192, h = 32, fp16. Score traffic bytes?",
+     "answer": "4 * 8192^2 * 32 * 2 = 1.7e10 bytes (about 16 GiB) per layer.",
+     "anchor": "c07-attention-bottleneck-p05"
+    },
+    {
+     "id": "c07-attention-bottleneck-r3",
+     "question": "Attention at 90% DRAM bandwidth. What is the fix direction?",
+     "answer": "Cut bytes, not FLOPs: never materialize the T x T score matrix (FlashAttention, C10).",
+     "anchor": "c07-attention-bottleneck-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c08-approximation-versus-exact-io-savings",
+   "title": "C08: approximation versus exact IO savings",
+   "endAnchor": "c08-approximation-versus-exact-io-savings-end",
+   "blocks": [
+    {
+     "anchor": "c08-approximation-versus-exact-io-savings-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c08-approximation-versus-exact-io-savings-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c08-approximation-versus-exact-io-savings-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "approximate",
+     "definition": "Changing the math: sparse, low-rank, or kernel attention cut work but change the function.",
+     "anchor": "c08-approximation-versus-exact-io-savings-p02"
+    },
+    {
+     "term": "express lane",
+     "definition": "Exact IO: FlashAttention computes the same thing with fewer HBM trips.",
+     "anchor": "c08-approximation-versus-exact-io-savings-p03"
+    },
+    {
+     "term": "sparse",
+     "definition": "Attend to a subset, e.g. local window w: O(Tw) work.",
+     "anchor": "c08-approximation-versus-exact-io-savings-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c08-approximation-versus-exact-io-savings-r1",
+     "question": "Name the three approximation families and one complexity each.",
+     "answer": "Sparse: O(Tw). Low-rank: O(Tr). Kernel: O(T).",
+     "anchor": "c08-approximation-versus-exact-io-savings-list01"
+    },
+    {
+     "id": "c08-approximation-versus-exact-io-savings-r2",
+     "question": "T = 8192, w = 512. Sparse work ratio?",
+     "answer": "512/8192 = 1/16.",
+     "anchor": "c08-approximation-versus-exact-io-savings-p04"
+    },
+    {
+     "id": "c08-approximation-versus-exact-io-savings-r3",
+     "question": "Error budget is zero. Which family survives?",
+     "answer": "Exact IO (FlashAttention): the approximations change the model, exact IO keeps the address.",
+     "anchor": "c08-approximation-versus-exact-io-savings-p08"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c09-online-softmax",
+   "title": "C09: online softmax",
+   "endAnchor": "c09-online-softmax-end",
+   "blocks": [
+    {
+     "anchor": "c09-online-softmax-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c09-online-softmax-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c09-online-softmax-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "online softmax",
+     "definition": "Streaming softmax: one pass over row blocks with running (m, l).",
+     "anchor": "c09-online-softmax-p01"
+    },
+    {
+     "term": "running high score",
+     "definition": "The mental model: keep the max so far (m) and the running sum (l), rescaling as new blocks arrive.",
+     "anchor": "c09-online-softmax-p03"
+    },
+    {
+     "term": "m",
+     "definition": "The running row max.",
+     "anchor": "c09-online-softmax-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c09-online-softmax-r1",
+     "question": "Write the (m, l) update.",
+     "answer": "m_b = max(x), l_b = sum(exp(x - m_b)). m' = max(m, m_b), l' = l exp(m - m') + l_b exp(m_b - m').",
+     "anchor": "c09-online-softmax-list01"
+    },
+    {
+     "id": "c09-online-softmax-r2",
+     "question": "Blocks [1,2],[3,100]. m' and l'?",
+     "answer": "m' = 100, l' about 1.0: softmax is about [0, 0, 0, 1].",
+     "anchor": "c09-online-softmax-p05"
+    },
+    {
+     "id": "c09-online-softmax-r3",
+     "question": "Probabilities do not sum to 1. Name the missing factor.",
+     "answer": "The rescale exp(m - m'): forgetting it gives l = 2.368 instead of 1.0 for the toy.",
+     "anchor": "c09-online-softmax-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c10-flashattention",
+   "title": "C10: FlashAttention",
+   "endAnchor": "c10-flashattention-end",
+   "blocks": [
+    {
+     "anchor": "c10-flashattention-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c10-flashattention-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c10-flashattention-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "FlashAttention",
+     "definition": "Tiling plus online softmax: exact attention with O(T) HBM traffic.",
+     "anchor": "c10-flashattention-p01"
+    },
+    {
+     "term": "assembly line",
+     "definition": "The mental model: outer K/V loop, inner Q loop, score block computed on chip.",
+     "anchor": "c10-flashattention-p03"
+    },
+    {
+     "term": "notebook",
+     "definition": "The running (m, l, o) statistics: the only thing that survives.",
+     "anchor": "c10-flashattention-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c10-flashattention-r1",
+     "question": "Name the two loops and what each streams.",
+     "answer": "Outer loop streams K/V blocks (size Bc), inner loop streams Q blocks (size Br); each step holds one (Br, Bc) score block on chip.",
+     "anchor": "c10-flashattention-list01"
+    },
+    {
+     "id": "c10-flashattention-r2",
+     "question": "T = 4, Br = Bc = 2. Block pairs?",
+     "answer": "2 Q blocks x 2 K/V blocks = 4 block pairs.",
+     "anchor": "c10-flashattention-p05"
+    },
+    {
+     "id": "c10-flashattention-r3",
+     "question": "Outputs match at T = 64 but not at T = 65. Name the suspect.",
+     "answer": "Tile-edge handling: causal masking or the last partial block at the block boundary.",
+     "anchor": "c10-flashattention-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c11-backward-recomputation",
+   "title": "C11: backward recomputation",
+   "endAnchor": "c11-backward-recomputation-end",
+   "blocks": [
+    {
+     "anchor": "c11-backward-recomputation-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c11-backward-recomputation-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c11-backward-recomputation-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "recompute",
+     "definition": "Rebuilding score tiles in the backward pass instead of storing them.",
+     "anchor": "c11-backward-recomputation-p01"
+    },
+    {
+     "term": "chef",
+     "definition": "The mental model: throw away the prep bowls and re-chop; FLOPs are cheap, memory is scarce.",
+     "anchor": "c11-backward-recomputation-p03"
+    },
+    {
+     "term": "O(Td)",
+     "definition": "Backward memory with recompute, vs O(T^2) stored scores.",
+     "anchor": "c11-backward-recomputation-p07"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c11-backward-recomputation-r1",
+     "question": "What does the forward store, and what does the backward recompute?",
+     "answer": "Forward stores m, l (O(T)), not scores. Backward recomputes S tiles from Q, K blocks, then the dQ, dK, dV updates.",
+     "anchor": "c11-backward-recomputation-list01"
+    },
+    {
+     "id": "c11-backward-recomputation-r2",
+     "question": "T = 4096. Stored numbers: scores vs (m, l)?",
+     "answer": "Scores: 16.7M numbers. (m, l): 8192 numbers.",
+     "anchor": "c11-backward-recomputation-p05"
+    },
+    {
+     "id": "c11-backward-recomputation-r3",
+     "question": "Backward OOMs but forward fits. Name the cause.",
+     "answer": "Something stores the T^2 scores: the backward path is not recomputing as designed.",
+     "anchor": "c11-backward-recomputation-p09"
+    }
+   ],
+   "minutes": 6
+  },
+  {
+   "anchor": "c12-benchmark-validity",
+   "title": "C12: benchmark validity",
+   "endAnchor": "c12-benchmark-validity-end",
+   "blocks": [
+    {
+     "anchor": "c12-benchmark-validity-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c12-benchmark-validity-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c12-benchmark-validity-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "warmup",
+     "definition": "Warmup runs before timing, so compile and first-run effects do not pollute the numbers.",
+     "anchor": "c12-benchmark-validity-list01"
+    },
+    {
+     "term": "photo finish",
+     "definition": "Synchronized timing: device synchronize before/after, so time measures work, not launch.",
+     "anchor": "c12-benchmark-validity-p03"
+    },
+    {
+     "term": "median",
+     "definition": "Median of 100 beats mean of 3: outliers do not get a vote.",
+     "anchor": "c12-benchmark-validity-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c12-benchmark-validity-r1",
+     "question": "Name the five rules.",
+     "answer": "Same shapes/dtype/hardware, warmup, device synchronize before/after, report median-of-N, include the baseline's best config.",
+     "anchor": "c12-benchmark-validity-list01"
+    },
+    {
+     "id": "c12-benchmark-validity-r2",
+     "question": "Times [5, 50, 51, 49, 200] us. Mean vs median. Which do you report?",
+     "answer": "Mean 71, median 50. Report the median.",
+     "anchor": "c12-benchmark-validity-p04"
+    },
+    {
+     "id": "c12-benchmark-validity-r3",
+     "question": "9x claim, no sync in the script. What happened?",
+     "answer": "Time without sync measures launch, not work: the no-sync fake 9x. Follow the checklist.",
+     "anchor": "c12-benchmark-validity-p05"
+    }
+   ],
+   "minutes": 4
+  },
+  {
+   "anchor": "unit-chapter-plate",
+   "title": "Unit chapter plate",
+   "endAnchor": "unit-chapter-plate-end",
+   "blocks": [
+    {
+     "anchor": "unit-chapter-plate-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "T x T matrix",
+     "definition": "The thing never to materialize: naive attention's score matrix.",
+     "anchor": "unit-chapter-plate-p01"
+    },
+    {
+     "term": "IO-aware algorithm",
+     "definition": "Tiled, online softmax, exact: the right side of the plate.",
+     "anchor": "unit-chapter-plate-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "unit-chapter-plate-r1",
+     "question": "What does the unit chapter plate contrast?",
+     "answer": "Naive attention (three kernels, T^2 HBM trips) vs the IO-aware algorithm (tiled, online softmax, exact). Bottom line: never materialize the T x T matrix.",
+     "anchor": "unit-chapter-plate-p01"
+    }
+   ],
+   "minutes": 2
+  },
+  {
+   "anchor": "russian-doll-ladder-flashattention-major-mechanism",
+   "title": "Russian-doll ladder: FlashAttention (major mechanism)",
+   "endAnchor": "russian-doll-ladder-flashattention-major-mechanism-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "O(T) HBM traffic",
+     "definition": "The Shell 0 question: can attention be exact with O(T) HBM traffic?",
+     "anchor": "russian-doll-ladder-flashattention-major-mechanism-list01"
+    },
+    {
+     "term": "Shell 3 rule",
+     "definition": "The online softmax rescale (C09).",
+     "anchor": "russian-doll-ladder-flashattention-major-mechanism-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "russian-doll-ladder-flashattention-major-mechanism-r1",
+     "question": "What is the Shell 3 rule of the FlashAttention ladder?",
+     "answer": "The online softmax rescale (C09).",
+     "anchor": "russian-doll-ladder-flashattention-major-mechanism-list01"
+    },
+    {
+     "id": "russian-doll-ladder-flashattention-major-mechanism-r2",
+     "question": "What breaks the ladder (Shell 7)?",
+     "answer": "Breaking the SRAM fit: blocks too big, the kernel cannot launch.",
+     "anchor": "russian-doll-ladder-flashattention-major-mechanism-list01"
+    }
+   ],
+   "minutes": 1
+  },
+  {
+   "anchor": "role-bridge",
+   "title": "Role bridge",
+   "endAnchor": "role-bridge-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "T* crossover",
+     "definition": "Decides the serving kernel per context length (LLM engineer).",
+     "anchor": "role-bridge-list01"
+    },
+    {
+     "term": "online softmax derivation",
+     "definition": "C09: the debugging tool for any attention kernel.",
+     "anchor": "role-bridge-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "role-bridge-r1",
+     "question": "What decides the serving kernel per context length?",
+     "answer": "The T* crossover: FlashAttention wins past it, naive wins below it.",
+     "anchor": "role-bridge-list01"
+    }
+   ],
+   "minutes": 1
+  }
+ ]
+}

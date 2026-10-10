@@ -1,0 +1,832 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229s-lessons-u07-lesson-07-linear-attention-ssm-fft",
+ "itemKind": "lesson",
+ "revision": "3bc7111e506951b537d89907434d65c158c4d37c97c10d1060a5e888c9048bc6",
+ "sections": [
+  {
+   "anchor": "lesson-07-linear-attention-ssm-fft-intro",
+   "title": "Lesson 07: Linear attention, SSMs, and FFT",
+   "endAnchor": "lesson-07-linear-attention-ssm-fft-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229s-U07",
+     "definition": "Unit 07 of CS229S, covering linear attention, SSMs, and FFT.",
+     "anchor": "lesson-07-linear-attention-ssm-fft-intro-p02"
+    },
+    {
+     "term": "claim class",
+     "definition": "The evidence label on every lesson claim, here PLANNED with source attribution pending.",
+     "anchor": "lesson-07-linear-attention-ssm-fft-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-07-linear-attention-ssm-fft-intro-r1",
+     "question": "What unit and sessions anchor this lesson?",
+     "answer": "Unit cs229s-U07, concepts C01 to C12, calendar-anchored to Oct 28 (Efficient Attention-Free Architectures) and Nov 1 (State Space Models).",
+     "anchor": "lesson-07-linear-attention-ssm-fft-intro-p02"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "how-to-read-this-lesson",
+   "title": "How to read this lesson",
+   "endAnchor": "how-to-read-this-lesson-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "15-item contract",
+     "definition": "The fixed structure every concept carries, from source and scope to visual units.",
+     "anchor": "how-to-read-this-lesson-p01"
+    },
+    {
+     "term": "lesson toys",
+     "definition": "All numbers are computed here, not vendor claims.",
+     "anchor": "how-to-read-this-lesson-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "how-to-read-this-lesson-r1",
+     "question": "What are the shared bridges for this lesson?",
+     "answer": "P04 (spectral and numerical linear algebra), P12 (PyTorch, tensors, and numerical stability), P14 (transformer mechanics), P15 (hardware and computer architecture).",
+     "anchor": "how-to-read-this-lesson-p01"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c01-convolution-versus-recurrence",
+   "title": "C01: convolution versus recurrence",
+   "endAnchor": "c01-convolution-versus-recurrence-end",
+   "blocks": [
+    {
+     "anchor": "c01-convolution-versus-recurrence-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c01-convolution-versus-recurrence-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c01-convolution-versus-recurrence-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "conveyor belt",
+     "definition": "Recurrence: one state moves along, each step costs O(1), sequential.",
+     "anchor": "c01-convolution-versus-recurrence-p03"
+    },
+    {
+     "term": "recurrence",
+     "definition": "x_t = A x_{t-1} + B u_t: O(T) time, O(1) memory.",
+     "anchor": "c01-convolution-versus-recurrence-list01"
+    },
+    {
+     "term": "stencil",
+     "definition": "Convolution: the kernel stamps every position at once, O(T K), parallel.",
+     "anchor": "c01-convolution-versus-recurrence-p03"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c01-convolution-versus-recurrence-r1",
+     "question": "Write both update rules and their costs.",
+     "answer": "Recurrence: x_t = 0.9 x_{t-1} + u_t, O(T). Convolution: y_t = sum k_i u_{t-i}, O(T K).",
+     "anchor": "c01-convolution-versus-recurrence-list01"
+    },
+    {
+     "id": "c01-convolution-versus-recurrence-r2",
+     "question": "u = [1,0,1,0], x_t = 0.9 x_{t-1} + u_t; k = [1,0.5,0.25]. Compute both outputs.",
+     "answer": "Recurrence states: [1.0, 0.9, 1.81, 1.629]. Convolution: [1, 0.5, 1.25, 0.5].",
+     "anchor": "c01-convolution-versus-recurrence-p05"
+    },
+    {
+     "id": "c01-convolution-versus-recurrence-r3",
+     "question": "A conv model fails a task at distance 1000 with K=64. Name the cause.",
+     "answer": "K covers only 64 steps back: the convolution never sees position 0 at position 1000.",
+     "anchor": "c01-convolution-versus-recurrence-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c02-quadratic-attention",
+   "title": "C02: quadratic attention",
+   "endAnchor": "c02-quadratic-attention-end",
+   "blocks": [
+    {
+     "anchor": "c02-quadratic-attention-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c02-quadratic-attention-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c02-quadratic-attention-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "town meeting",
+     "definition": "Attention: every token talks to every other token, T^2 conversations.",
+     "anchor": "c02-quadratic-attention-p03"
+    },
+    {
+     "term": "T^2",
+     "definition": "The scaling that the rest of this unit tries to remove.",
+     "anchor": "c02-quadratic-attention-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c02-quadratic-attention-r1",
+     "question": "Write the FLOP and memory formulas.",
+     "answer": "FLOPs: 2 T^2 d (scores) + 2 T^2 d (values) per head. Memory: T^2 floats for scores.",
+     "anchor": "c02-quadratic-attention-list01"
+    },
+    {
+     "id": "c02-quadratic-attention-r2",
+     "question": "T = 8192, d = 128, one head. Per-head FLOPs with values and score memory?",
+     "answer": "34.4 TFLOPs, 256 MiB of score memory in fp32.",
+     "anchor": "c02-quadratic-attention-p05"
+    },
+    {
+     "id": "c02-quadratic-attention-r3",
+     "question": "OOM at T = 32768 with 8 heads. How much score memory did it want?",
+     "answer": "4 GiB per head in fp32, 32 GiB for 8 heads.",
+     "anchor": "c02-quadratic-attention-p04"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c03-kernelized-linear-attention",
+   "title": "C03: kernelized linear attention",
+   "endAnchor": "c03-kernelized-linear-attention-end",
+   "blocks": [
+    {
+     "anchor": "c03-kernelized-linear-attention-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c03-kernelized-linear-attention-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c03-kernelized-linear-attention-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "parenthesis",
+     "definition": "The whole trick: regroup phi(Q) (phi(K)^T V) so no T^2 object ever exists.",
+     "anchor": "c03-kernelized-linear-attention-p03"
+    },
+    {
+     "term": "phi",
+     "definition": "The feature map, e.g. elu(x) + 1, applied row-wise.",
+     "anchor": "c03-kernelized-linear-attention-list01"
+    },
+    {
+     "term": "64x",
+     "definition": "The toy FLOP ratio: 0.268 GFLOPs vs 17.2 TFLOPs.",
+     "anchor": "c03-kernelized-linear-attention-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c03-kernelized-linear-attention-r1",
+     "question": "Write the regrouped formula and the state shape.",
+     "answer": "phi(Q) (phi(K)^T V). S = phi(K)^T V is a (d, d) state.",
+     "anchor": "c03-kernelized-linear-attention-list01"
+    },
+    {
+     "id": "c03-kernelized-linear-attention-r2",
+     "question": "T = 8192, d = 128. Both FLOP counts and the ratio?",
+     "answer": "Linear: 0.268 GFLOPs. Softmax scores: 17.2 TFLOPs. Ratio 64x.",
+     "anchor": "c03-kernelized-linear-attention-p05"
+    },
+    {
+     "id": "c03-kernelized-linear-attention-r3",
+     "question": "Copy accuracy collapses under linear attention. Name the cause.",
+     "answer": "phi is too flat: elu+1 cannot do sharp near-one-hot selection, the output blurs.",
+     "anchor": "c03-kernelized-linear-attention-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c04-state-space-recurrence",
+   "title": "C04: state-space recurrence",
+   "endAnchor": "c04-state-space-recurrence-end",
+   "blocks": [
+    {
+     "anchor": "c04-state-space-recurrence-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c04-state-space-recurrence-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c04-state-space-recurrence-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "leaky bucket",
+     "definition": "The state: each input pours in, each step leaks 10%.",
+     "anchor": "c04-state-space-recurrence-p03"
+    },
+    {
+     "term": "h_t",
+     "definition": "The (N,) state, N = 1 in the toy.",
+     "anchor": "c04-state-space-recurrence-list01"
+    },
+    {
+     "term": "pulse",
+     "definition": "A single input of 1 then zeros: still 73% visible after 3 steps.",
+     "anchor": "c04-state-space-recurrence-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c04-state-space-recurrence-r1",
+     "question": "Write the SSM recurrence and name the shapes.",
+     "answer": "h_t = A h_{t-1} + B x_t, y_t = C h_t. A: (N,N), B: (N,1), C: (1,N).",
+     "anchor": "c04-state-space-recurrence-list01"
+    },
+    {
+     "id": "c04-state-space-recurrence-r2",
+     "question": "h_t = 0.9 h_{t-1} + x_t, x = [1,0,1,0]. Compute h and the pulse value at t=3.",
+     "answer": "h = [1.0, 0.9, 1.81, 1.629]. Pulse x = [1,0,0,0]: h_3 = 0.729.",
+     "anchor": "c04-state-space-recurrence-p05"
+    },
+    {
+     "id": "c04-state-space-recurrence-r3",
+     "question": "Document 2 answers contain document 1 facts. Name the mechanism.",
+     "answer": "Fixed A cannot dump the bucket: the old document pollutes the new one. This motivates input-dependent A.",
+     "anchor": "c04-state-space-recurrence-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c05-convolution-view",
+   "title": "C05: convolution view",
+   "endAnchor": "c05-convolution-view-end",
+   "blocks": [
+    {
+     "anchor": "c05-convolution-view-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c05-convolution-view-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c05-convolution-view-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "different clothes",
+     "definition": "The recurrence and the convolution are the same computation: one for streaming, one for parallel training.",
+     "anchor": "c05-convolution-view-p03"
+    },
+    {
+     "term": "K_k",
+     "definition": "The kernel: K_k = C A^k B for k = 0..T-1.",
+     "anchor": "c05-convolution-view-list01"
+    },
+    {
+     "term": "FFT-fast",
+     "definition": "The convolution view runs in O(T log T) via FFT.",
+     "anchor": "c05-convolution-view-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c05-convolution-view-r1",
+     "question": "Write K_k and the duality.",
+     "answer": "K_k = C A^k B. y = K * x (convolution) equals the recurrence: duality.",
+     "anchor": "c05-convolution-view-list01"
+    },
+    {
+     "id": "c05-convolution-view-r2",
+     "question": "A = 0.9, B = C = 1, x = [1,0,1,0]. Compute K and y both ways.",
+     "answer": "K = [1, 0.9, 0.81, 0.729], y = [1.0, 0.9, 1.81, 1.629], matching the recurrence.",
+     "anchor": "c05-convolution-view-p05"
+    },
+    {
+     "id": "c05-convolution-view-r3",
+     "question": "The kernel changes per position. Which view survives?",
+     "answer": "The scan (C06): input-dependent A collapses the convolution view.",
+     "anchor": "c05-convolution-view-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c06-scan",
+   "title": "C06: scan",
+   "endAnchor": "c06-scan-end",
+   "blocks": [
+    {
+     "anchor": "c06-scan-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c06-scan-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c06-scan-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "tournament bracket",
+     "definition": "Pair up neighbors, combine, repeat: log2(n) rounds, every prefix known.",
+     "anchor": "c06-scan-p03"
+    },
+    {
+     "term": "associative",
+     "definition": "The combine must be associative: the bracket order cannot matter.",
+     "anchor": "c06-scan-list01"
+    },
+    {
+     "term": "Blelloch scan",
+     "definition": "Yields all prefixes with about 2n work at log depth.",
+     "anchor": "c06-scan-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c06-scan-r1",
+     "question": "Write the combine rule.",
+     "answer": "(a2, b2) o (a1, b1) = (a2 a1, a2 b1 + b2): composition of affine maps.",
+     "anchor": "c06-scan-list01"
+    },
+    {
+     "id": "c06-scan-r2",
+     "question": "8 positions, A = 0.9, Bx = [1,0,1,0,0.5,0,0,0.5]. Final state and depth?",
+     "answer": "Final state b = 1.9333. Depth 3 = log2(8).",
+     "anchor": "c06-scan-p05"
+    },
+    {
+     "id": "c06-scan-r3",
+     "question": "Tree and loop disagree. What property failed?",
+     "answer": "Associativity: e.g. rounding at each combine level makes order matter.",
+     "anchor": "c06-scan-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c07-fft",
+   "title": "C07: FFT",
+   "endAnchor": "c07-fft-end",
+   "blocks": [
+    {
+     "anchor": "c07-fft-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c07-fft-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c07-fft-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "theorem",
+     "definition": "Convolution in time is multiplication in frequency.",
+     "anchor": "c07-fft-p03"
+    },
+    {
+     "term": "33.0x",
+     "definition": "The toy FLOP ratio at n = 1024.",
+     "anchor": "c07-fft-p05"
+    },
+    {
+     "term": "twiddle factors",
+     "definition": "The FFT implementation detail, with bit-reversal.",
+     "anchor": "c07-fft-p07"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c07-fft-r1",
+     "question": "State the convolution theorem.",
+     "answer": "conv(x, k) = IFFT(FFT(x) * FFT(k)).",
+     "anchor": "c07-fft-p04"
+    },
+    {
+     "id": "c07-fft-r2",
+     "question": "n = 1024. Naive count, FFT-path count, ratio?",
+     "answer": "Naive 1,048,576. FFT path 31,744. Ratio 33.0x.",
+     "anchor": "c07-fft-p05"
+    },
+    {
+     "id": "c07-fft-r3",
+     "question": "FFT conv is slower than direct at n = 64. Why?",
+     "answer": "FFT overhead dominates at small n: the crossover sits near n = 128-512 on this CPU.",
+     "anchor": "c07-fft-p10"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c08-numerical-stability",
+   "title": "C08: numerical stability",
+   "endAnchor": "c08-numerical-stability-end",
+   "blocks": [
+    {
+     "anchor": "c08-numerical-stability-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c08-numerical-stability-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c08-numerical-stability-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "compound interest",
+     "definition": "A is compound interest on the state: below 1 it melts, above 1 it explodes.",
+     "anchor": "c08-numerical-stability-p03"
+    },
+    {
+     "term": "A^n",
+     "definition": "The growth after n steps.",
+     "anchor": "c08-numerical-stability-list01"
+    },
+    {
+     "term": "death step",
+     "definition": "The step where 1.01^n exceeds the fp16 max 65,504: step 1115.",
+     "anchor": "c08-numerical-stability-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c08-numerical-stability-r1",
+     "question": "Write the growth formula and the discretization.",
+     "answer": "Growth: A^n after n steps. Discretization: A_d = exp(step * A_c).",
+     "anchor": "c08-numerical-stability-list01"
+    },
+    {
+     "id": "c08-numerical-stability-r2",
+     "question": "A = 0.99 vs 1.01 at 1000 steps. Values? fp16 death step for 1.01?",
+     "answer": "0.99^1000 = 4.32e-5. 1.01^1000 = 20,959. Death step 1115.",
+     "anchor": "c08-numerical-stability-p05"
+    },
+    {
+     "id": "c08-numerical-stability-r3",
+     "question": "Long eval explodes, short eval is fine. Name the suspect.",
+     "answer": "A drifted past 1 during training (or eigenvalues left the unit disk).",
+     "anchor": "c08-numerical-stability-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c09-causal-constraints",
+   "title": "C09: causal constraints",
+   "endAnchor": "c09-causal-constraints-end",
+   "blocks": [
+    {
+     "anchor": "c09-causal-constraints-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c09-causal-constraints-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c09-causal-constraints-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "one-way street",
+     "definition": "Generation: position t may only read positions <= t.",
+     "anchor": "c09-causal-constraints-p03"
+    },
+    {
+     "term": "causal",
+     "definition": "y_t uses x_t, x_{t-1}, x_{t-2}: no future taps.",
+     "anchor": "c09-causal-constraints-list01"
+    },
+    {
+     "term": "padding",
+     "definition": "One wrong padding mode leaks the future.",
+     "anchor": "c09-causal-constraints-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c09-causal-constraints-r1",
+     "question": "Define causal vs centered.",
+     "answer": "Centered: y_t uses x_{t-1}, x_t, x_{t+1}. Causal: y_t uses x_t, x_{t-1}, x_{t-2}.",
+     "anchor": "c09-causal-constraints-list01"
+    },
+    {
+     "id": "c09-causal-constraints-r2",
+     "question": "x = [1,2,3,4], centered [0.5,1,0.5] vs causal [1,0.5,0.25]. y_1 both ways?",
+     "answer": "Centered y_1 = 4.0 (leaks x_2 = 3). Causal y_1 = 2.5 (clean).",
+     "anchor": "c09-causal-constraints-p05"
+    },
+    {
+     "id": "c09-causal-constraints-r3",
+     "question": "Eval is great, generation is garbage. What leaked?",
+     "answer": "The future: a centered kernel or wrong-side padding taught the model to cheat.",
+     "anchor": "c09-causal-constraints-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c10-expressivity-tradeoffs",
+   "title": "C10: expressivity tradeoffs",
+   "endAnchor": "c10-expressivity-tradeoffs-end",
+   "blocks": [
+    {
+     "anchor": "c10-expressivity-tradeoffs-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c10-expressivity-tradeoffs-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c10-expressivity-tradeoffs-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "filing cabinet",
+     "definition": "Softmax attention: T drawers, every token its own slot.",
+     "anchor": "c10-expressivity-tradeoffs-p03"
+    },
+    {
+     "term": "d^2",
+     "definition": "Linear state capacity: 16,384 numbers at d = 128.",
+     "anchor": "c10-expressivity-tradeoffs-list01"
+    },
+    {
+     "term": "passkey retrieval",
+     "definition": "The classic casualty: find the number hidden at position 5000.",
+     "anchor": "c10-expressivity-tradeoffs-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c10-expressivity-tradeoffs-r1",
+     "question": "Define the copy capacity bound.",
+     "answer": "Exact copy needs T distinguishable slots; the linear state holds d^2 numbers.",
+     "anchor": "c10-expressivity-tradeoffs-list01"
+    },
+    {
+     "id": "c10-expressivity-tradeoffs-r2",
+     "question": "T = 8192, d = 128. Need, have, shortfall?",
+     "answer": "Need 1,048,576 numbers, have 16,384: 64x short.",
+     "anchor": "c10-expressivity-tradeoffs-p05"
+    },
+    {
+     "id": "c10-expressivity-tradeoffs-r3",
+     "question": "Passkey retrieval fails on a linear model. Name the cause.",
+     "answer": "Sharp selection is the failure: smooth kernels blur, softmax one-hots.",
+     "anchor": "c10-expressivity-tradeoffs-p09"
+    }
+   ],
+   "minutes": 8
+  },
+  {
+   "anchor": "c11-hardware-realization",
+   "title": "C11: hardware realization",
+   "endAnchor": "c11-hardware-realization-end",
+   "blocks": [
+    {
+     "anchor": "c11-hardware-realization-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c11-hardware-realization-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c11-hardware-realization-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "seating chart",
+     "definition": "Attention ships the T^2 score matrix through HBM.",
+     "anchor": "c11-hardware-realization-p03"
+    },
+    {
+     "term": "fused scan kernel",
+     "definition": "The SSM win is realized only with one fused kernel.",
+     "anchor": "c11-hardware-realization-p07"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c11-hardware-realization-r1",
+     "question": "Write both traffic formulas.",
+     "answer": "Attention: T^2 * 2 bytes (fp16 scores). SSM: T*d*2 streaming plus N floats per channel resident.",
+     "anchor": "c11-hardware-realization-list01"
+    },
+    {
+     "id": "c11-hardware-realization-r2",
+     "question": "T = 8192, d = 128, N = 64. Three byte counts and the ratio?",
+     "answer": "134,217,728 vs 2,097,152 stream vs 32 KiB state: about 64x less HBM movement.",
+     "anchor": "c11-hardware-realization-p05"
+    },
+    {
+     "id": "c11-hardware-realization-r3",
+     "question": "The SSM runs slow in PyTorch eager. Name the likely cause.",
+     "answer": "An unfused loop: h_t written to HBM each step, traffic back to O(T N).",
+     "anchor": "c11-hardware-realization-p09"
+    }
+   ],
+   "minutes": 6
+  },
+  {
+   "anchor": "c12-workload-comparisons",
+   "title": "C12: workload comparisons",
+   "endAnchor": "c12-workload-comparisons-end",
+   "blocks": [
+    {
+     "anchor": "c12-workload-comparisons-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c12-workload-comparisons-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c12-workload-comparisons-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "three tools",
+     "definition": "Transformer pays in pairs (T^2), SSM in state (T d^2), CNN in kernel width (T K d).",
+     "anchor": "c12-workload-comparisons-p03"
+    },
+    {
+     "term": "128x",
+     "definition": "The toy transformer/SSM FLOP ratio.",
+     "anchor": "c12-workload-comparisons-p04"
+    },
+    {
+     "term": "hybrids",
+     "definition": "A few softmax layers among linear ones: the practical answer.",
+     "anchor": "c12-workload-comparisons-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c12-workload-comparisons-r1",
+     "question": "Fill the three-row table from memory.",
+     "answer": "Transformer: 34.4 TFLOPs, O(Td) state, full range. SSM: 0.268 GFLOPs, 64 KiB, full (faded). CNN K=512: 1.07 TFLOPs, O(Kd), range 512.",
+     "anchor": "c12-workload-comparisons-p05"
+    },
+    {
+     "id": "c12-workload-comparisons-r2",
+     "question": "T = 8192, d = 128, K = 512. Three FLOP counts and the transformer/SSM ratio?",
+     "answer": "34,359,738,368; 268,435,456; 1,073,741,824. Ratio 128.",
+     "anchor": "c12-workload-comparisons-code01"
+    },
+    {
+     "id": "c12-workload-comparisons-r3",
+     "question": "T drops to 512. Who wins now?",
+     "answer": "The transformer: T^2 fits comfortably and exact recall decides quality.",
+     "anchor": "c12-workload-comparisons-p09"
+    }
+   ],
+   "minutes": 3
+  },
+  {
+   "anchor": "u07-chapter-plate",
+   "title": "U07 chapter plate",
+   "endAnchor": "u07-chapter-plate-end",
+   "blocks": [
+    {
+     "anchor": "u07-chapter-plate-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "subquadratic ladder",
+     "definition": "quadratic attention -> kernelized linear -> SSM recurrence -> convolution view -> scan, FFT as the engine.",
+     "anchor": "u07-chapter-plate-p01"
+    },
+    {
+     "term": "FFT as the engine",
+     "definition": "Under the convolution view.",
+     "anchor": "u07-chapter-plate-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "u07-chapter-plate-r1",
+     "question": "What is the U07 chapter plate?",
+     "answer": "The subquadratic ladder: quadratic attention to kernelized linear to SSM recurrence to convolution view to scan, with FFT as the engine under the convolution view.",
+     "anchor": "u07-chapter-plate-p01"
+    }
+   ],
+   "minutes": 1
+  },
+  {
+   "anchor": "unit-scope-replication-proposal-proposed-not-executed",
+   "title": "Unit-scope replication proposal (PROPOSED, not executed)",
+   "endAnchor": "unit-scope-replication-proposal-proposed-not-executed-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "capstones",
+     "definition": "Course-level capstones live in capstones/.",
+     "anchor": "unit-scope-replication-proposal-proposed-not-executed-p01"
+    },
+    {
+     "term": "triple identity",
+     "definition": "Verify the recurrence/convolution/scan triple identity on a random SSM.",
+     "anchor": "unit-scope-replication-proposal-proposed-not-executed-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "unit-scope-replication-proposal-proposed-not-executed-r1",
+     "question": "What does this unit propose?",
+     "answer": "Verify the recurrence/convolution/scan triple identity on a random SSM, then measure the FFT crossover where conv-view beats the sequential loop. See lab-07.",
+     "anchor": "unit-scope-replication-proposal-proposed-not-executed-p01"
+    }
+   ],
+   "minutes": 1
+  }
+ ]
+}

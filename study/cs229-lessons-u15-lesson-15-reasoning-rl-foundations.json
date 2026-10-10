@@ -1,0 +1,908 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229-lessons-u15-lesson-15-reasoning-rl-foundations",
+ "itemKind": "lesson",
+ "revision": "3b9f291d9c4cbc94c344d06c3f889ffebb0f16049b471360267534f212fb0a60",
+ "sections": [
+  {
+   "anchor": "lesson-15-reasoning-rl-foundations-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "lesson-15-reasoning-rl-foundations-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229-U15",
+     "definition": "The unit code for this lesson in the Stanford CS229 foundations course.",
+     "anchor": "lesson-15-reasoning-rl-foundations-intro-p02"
+    },
+    {
+     "term": "leaf concepts",
+     "definition": "The fine-grained concepts the lesson covers, labeled C01 to C12.",
+     "anchor": "lesson-15-reasoning-rl-foundations-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-15-reasoning-rl-foundations-intro-r1",
+     "question": "Who teaches this course?",
+     "answer": "Tengyu Ma and Andrew Ng.",
+     "anchor": "lesson-15-reasoning-rl-foundations-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "source-mapping",
+   "title": "Source mapping",
+   "minutes": 1,
+   "endAnchor": "source-mapping-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "chain of thought",
+     "definition": "Writing intermediate steps before the final answer.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "RLVR",
+     "definition": "Training traces with verifiable rewards.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "token MDP",
+     "definition": "States are prefixes, actions are next tokens, no discount.",
+     "anchor": "source-mapping-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "source-mapping-r1",
+     "question": "What does notes chapter 18 give?",
+     "answer": "Chain of thought (18.1), RLVR with long CoT (18.2) with the o1 and DeepSeek-R1-Zero scaling plots, the finite-horizon token MDP formulation, the KL-regularized objective, token-level PPO, GRPO, and CISPO.",
+     "anchor": "source-mapping-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "scope-and-objectives",
+   "title": "Scope and objectives",
+   "minutes": 1,
+   "endAnchor": "scope-and-objectives-end",
+   "blocks": [
+    {
+     "anchor": "scope-and-objectives-p01",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "RLVR",
+     "definition": "Training reasoning traces with verifiable rewards.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "MDP",
+     "definition": "Markov decision process: (S, A, {P_sa}, gamma, R).",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "value iteration",
+     "definition": "V(s) := R(s) + max_a gamma sum_{s'} P_{sa}(s') V(s').",
+     "anchor": "scope-and-objectives-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "scope-and-objectives-r1",
+     "question": "What does the scope cover?",
+     "answer": "How language models reason in explicit traces, how RLVR trains such traces with verifiable rewards, and the classical RL foundation: MDPs, Bellman equations, value and policy iteration, model learning, continuous-state methods.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "id": "scope-and-objectives-r2",
+     "question": "What does objective 3 ask the learner to do?",
+     "answer": "Compute a GRPO advantage from a group of completions.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "dependencies",
+   "title": "Dependencies",
+   "minutes": 1,
+   "endAnchor": "dependencies-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "prerequisites",
+     "definition": "The shared bridge units P06 and P17, plus U07 and U14, needed before this lesson.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "term": "token MDP",
+     "definition": "Remediated in SL-03.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "fitted value iteration",
+     "definition": "Why it has no convergence guarantee, remediated in SL-11.",
+     "anchor": "dependencies-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "dependencies-r1",
+     "question": "Which prerequisites does this lesson list?",
+     "answer": "P06, P17, unit U07 (neural nets), unit U14 (LLMs, autoregressive factorization).",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "id": "dependencies-r2",
+     "question": "What does the list ask about the token MDP?",
+     "answer": "Why the token MDP needs no discount, remediated in SL-03.",
+     "anchor": "dependencies-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-01-reasoning-traces",
+   "title": "SL-01: Reasoning traces",
+   "minutes": 2,
+   "endAnchor": "sl-01-reasoning-traces-end",
+   "blocks": [
+    {
+     "anchor": "sl-01-reasoning-traces-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "chain-of-thought",
+     "definition": "Writing intermediate steps before the final answer.",
+     "anchor": "sl-01-reasoning-traces-p02"
+    },
+    {
+     "term": "few-shot CoT",
+     "definition": "Each demonstration is (x, z, a): input, trace, answer.",
+     "anchor": "sl-01-reasoning-traces-p04"
+    },
+    {
+     "term": "zero-shot CoT",
+     "definition": "No demonstrations; append 'Let us think step by step'.",
+     "anchor": "sl-01-reasoning-traces-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-01-reasoning-traces-r1",
+     "question": "What do reasoning traces buy an autoregressive model?",
+     "answer": "More compute (more time to think) and more memory (a place to log intermediate results). Later tokens condition on earlier partial computations.",
+     "anchor": "sl-01-reasoning-traces-p03"
+    },
+    {
+     "id": "sl-01-reasoning-traces-r2",
+     "question": "What is few-shot CoT?",
+     "answer": "Each in-context demonstration is (x, z, a): input, trace, answer. The prompt concatenates m such triples and the query x. The model continues with a new trace z and answer a.",
+     "anchor": "sl-01-reasoning-traces-p04"
+    },
+    {
+     "id": "sl-01-reasoning-traces-r3",
+     "question": "What is the trace-decoupling failure?",
+     "answer": "A trace that reads well but does not drive the answer: the model writes plausible steps then ignores them. The truncation test catches it.",
+     "anchor": "sl-01-reasoning-traces-p07"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-02-rlvr-with-long-chains-of-thought",
+   "title": "SL-02: RLVR with long chains of thought",
+   "minutes": 2,
+   "endAnchor": "sl-02-rlvr-with-long-chains-of-thought-end",
+   "blocks": [
+    {
+     "anchor": "sl-02-rlvr-with-long-chains-of-thought-p06",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "RLVR",
+     "definition": "Reinforcement learning with verifiable rewards: trains traces, not just elicits them.",
+     "anchor": "sl-02-rlvr-with-long-chains-of-thought-p02"
+    },
+    {
+     "term": "verifier",
+     "definition": "Produces the scalar reward R(x, y) in [0, 1].",
+     "anchor": "sl-02-rlvr-with-long-chains-of-thought-p03"
+    },
+    {
+     "term": "KL penalty",
+     "definition": "beta E[D_KL(pi_theta || pi_ref)]: keeps the policy near the reference model.",
+     "anchor": "sl-02-rlvr-with-long-chains-of-thought-p06"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-02-rlvr-with-long-chains-of-thought-r1",
+     "question": "What is the RLVR formulation?",
+     "answer": "Prompt x from D, response y with CoT and final answer. Verifier gives scalar reward R(x, y) in [0, 1]. J_R(theta) = E[R(x, y)]. Regularized: J_beta = J_R - beta E[D_KL(pi_theta || pi_ref)].",
+     "anchor": "sl-02-rlvr-with-long-chains-of-thought-p07"
+    },
+    {
+     "id": "sl-02-rlvr-with-long-chains-of-thought-r2",
+     "question": "What are the two scaling axes?",
+     "answer": "o1: reasoning accuracy improves with more RL train-time compute and more test-time thinking compute. DeepSeek-R1-Zero: improves during RLVR, producing longer traces.",
+     "anchor": "sl-02-rlvr-with-long-chains-of-thought-p09"
+    },
+    {
+     "id": "sl-02-rlvr-with-long-chains-of-thought-r3",
+     "question": "What is the reward-validity failure?",
+     "answer": "The verifier checks format only and the model learns fluent empty traces. The answer never gets checked.",
+     "anchor": "sl-02-rlvr-with-long-chains-of-thought-p11"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-03-reward-validity",
+   "title": "SL-03: Reward validity",
+   "minutes": 2,
+   "endAnchor": "sl-03-reward-validity-end",
+   "blocks": [
+    {
+     "anchor": "sl-03-reward-validity-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "reward validity",
+     "definition": "Whether the verifier measures the true task goal.",
+     "anchor": "sl-03-reward-validity-p02"
+    },
+    {
+     "term": "reward hacking",
+     "definition": "Exploiting verifier quirks for reward without solving the task.",
+     "anchor": "sl-03-reward-validity-p04"
+    },
+    {
+     "term": "KL penalty",
+     "definition": "The notes' own guardrail in (18.2) against drift from pi_ref.",
+     "anchor": "sl-03-reward-validity-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-03-reward-validity-r1",
+     "question": "What are the first two validity checks?",
+     "answer": "(1) The verifier must test the real property (answer correctness, tests passing), not a proxy (answer present, tests exist). (2) The verifier must be hard to game: unit tests with hidden cases beat tests the model can memorize.",
+     "anchor": "sl-03-reward-validity-p03"
+    },
+    {
+     "id": "sl-03-reward-validity-r2",
+     "question": "What does the KL penalty guard against, and what does it not fix?",
+     "answer": "It penalizes drift from pi_ref, limiting how far the model travels to exploit verifier quirks. It does not fix a broken verifier.",
+     "anchor": "sl-03-reward-validity-p04"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-04-the-mdp",
+   "title": "SL-04: The MDP",
+   "minutes": 2,
+   "endAnchor": "sl-04-the-mdp-end",
+   "blocks": [
+    {
+     "anchor": "sl-04-the-mdp-l01",
+     "kind": "definition",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-04-the-mdp-p06",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-04-the-mdp-p09",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "MDP",
+     "definition": "A tuple (S, A, {P_sa}, gamma, R).",
+     "anchor": "sl-04-the-mdp-p02"
+    },
+    {
+     "term": "discount factor",
+     "definition": "gamma in [0, 1): makes early rewards worth more than late ones.",
+     "anchor": "sl-04-the-mdp-l01"
+    },
+    {
+     "term": "value function",
+     "definition": "V^pi(s): the expected discounted return from s under pi.",
+     "anchor": "sl-04-the-mdp-p06"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-04-the-mdp-r1",
+     "question": "What is the MDP tuple?",
+     "answer": "(S, A, {P_sa}, gamma, R): states, actions, transition probabilities, discount factor, reward function.",
+     "anchor": "sl-04-the-mdp-l01"
+    },
+    {
+     "id": "sl-04-the-mdp-r2",
+     "question": "In the two-state toy, what are V(A) and V(B)?",
+     "answer": "R(A) = 0, R(B) = 1, gamma = 0.9: V(B) = 1/(1-0.9) = 10, V(A) = 0.9 * 10 = 9.",
+     "anchor": "sl-04-the-mdp-p09"
+    },
+    {
+     "id": "sl-04-the-mdp-r3",
+     "question": "When does the MDP framing break?",
+     "answer": "When the Markov property fails: the next state depends on history, not just (s, a). Then Bellman equations do not hold.",
+     "anchor": "sl-04-the-mdp-p11"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-05-bellman-equations",
+   "title": "SL-05: Bellman equations",
+   "minutes": 2,
+   "endAnchor": "sl-05-bellman-equations-end",
+   "blocks": [
+    {
+     "anchor": "sl-05-bellman-equations-p05",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-05-bellman-equations-p11",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "Bellman equation",
+     "definition": "V^pi(s) = R(s) + gamma sum_{s'} P_{s pi(s)}(s') V^pi(s').",
+     "anchor": "sl-05-bellman-equations-p03"
+    },
+    {
+     "term": "V*",
+     "definition": "V*(s) = max_pi V^pi(s): the best achievable return from s.",
+     "anchor": "sl-05-bellman-equations-p05"
+    },
+    {
+     "term": "optimal policy",
+     "definition": "One policy optimal for every state at once.",
+     "anchor": "sl-05-bellman-equations-p08"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-05-bellman-equations-r1",
+     "question": "What is the Bellman equation for V^pi?",
+     "answer": "V^pi(s) = R(s) + gamma sum_{s'} P_{s pi(s)}(s') V^pi(s'). Immediate reward plus discounted expected value of the next state.",
+     "anchor": "sl-05-bellman-equations-p03"
+    },
+    {
+     "id": "sl-05-bellman-equations-r2",
+     "question": "What is the key fact about pi*?",
+     "answer": "pi* is optimal for every state at once. One policy attains the max for all s; the starting state does not change which policy is best.",
+     "anchor": "sl-05-bellman-equations-p10"
+    },
+    {
+     "id": "sl-05-bellman-equations-r3",
+     "question": "In the toy with a second action, what does the max pick?",
+     "answer": "Stay in A has value 0; moving to B has value 9. The max picks the move to B: V*(A) = 9, pi*(A) = move.",
+     "anchor": "sl-05-bellman-equations-p11"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-06-value-iteration-and-policy-iteration",
+   "title": "SL-06: Value iteration and policy iteration",
+   "minutes": 2,
+   "endAnchor": "sl-06-value-iteration-and-policy-iteration-end",
+   "blocks": [
+    {
+     "anchor": "sl-06-value-iteration-and-policy-iteration-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "value iteration",
+     "definition": "V(s) := R(s) + max_a gamma sum_{s'} P_{sa}(s') V(s'), repeated.",
+     "anchor": "sl-06-value-iteration-and-policy-iteration-p03"
+    },
+    {
+     "term": "policy iteration",
+     "definition": "Evaluate V^pi, then improve pi greedily; finitely many iterations to pi*.",
+     "anchor": "sl-06-value-iteration-and-policy-iteration-p06"
+    },
+    {
+     "term": "gamma-contraction",
+     "definition": "The Bellman operator shrinks errors by gamma per sweep.",
+     "anchor": "sl-06-value-iteration-and-policy-iteration-p08"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-06-value-iteration-and-policy-iteration-r1",
+     "question": "What is the value iteration update?",
+     "answer": "V(s) := R(s) + max_a gamma sum_{s'} P_{sa}(s') V(s'). Synchronous or asynchronous; both converge to V*.",
+     "anchor": "sl-06-value-iteration-and-policy-iteration-p04"
+    },
+    {
+     "id": "sl-06-value-iteration-and-policy-iteration-r2",
+     "question": "What is the policy iteration loop?",
+     "answer": "Evaluate V := V^pi (solve the linear Bellman equations), then improve pi greedily. Reaches pi* in finitely many iterations with an exact solver.",
+     "anchor": "sl-06-value-iteration-and-policy-iteration-p06"
+    },
+    {
+     "id": "sl-06-value-iteration-and-policy-iteration-r3",
+     "question": "In the two-state toy, how do values converge?",
+     "answer": "From V = 0: V(B) = 1, 1.9, 2.71 and V(A) = 0, 0.9, 1.71, climbing toward 10 and 9 geometrically, error shrinking by 0.9 per sweep.",
+     "anchor": "sl-06-value-iteration-and-policy-iteration-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-07-learning-a-model",
+   "title": "SL-07: Learning a model",
+   "minutes": 2,
+   "endAnchor": "sl-07-learning-a-model-end",
+   "blocks": [
+    {
+     "anchor": "sl-07-learning-a-model-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-07-learning-a-model-l01",
+     "kind": "steps",
+     "reveal": "stepwise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "maximum likelihood",
+     "definition": "P_sa(s') = count(s,a -> s') / count(s,a); unvisited gets uniform 1/|S|.",
+     "anchor": "sl-07-learning-a-model-p03"
+    },
+    {
+     "term": "learn-then-plan",
+     "definition": "Run pi, update estimates, warm-start value iteration, repeat.",
+     "anchor": "sl-07-learning-a-model-l01"
+    },
+    {
+     "term": "uniform fallback",
+     "definition": "Uniform 1/|S| for never-tried (s, a) pairs.",
+     "anchor": "sl-07-learning-a-model-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-07-learning-a-model-r1",
+     "question": "How are transition probabilities estimated?",
+     "answer": "P_sa(s') = (times a in s led to s') / (times a was taken in s). Unvisited: uniform 1/|S|. Keep counts; R(s) is the average observed reward.",
+     "anchor": "sl-07-learning-a-model-p03"
+    },
+    {
+     "id": "sl-07-learning-a-model-r2",
+     "question": "What is the learn-then-plan loop?",
+     "answer": "Initialize pi at random. Repeat: run pi for trials, update P_sa and R estimates from accumulated experience. Warm-start value iteration from the previous V.",
+     "anchor": "sl-07-learning-a-model-l01"
+    },
+    {
+     "id": "sl-07-learning-a-model-r3",
+     "question": "In the counts example, what is P_hat?",
+     "answer": "10 trials: 7 to s1, 3 to s2: P_hat = [0.7, 0.3]. After 10 more (5,5): [0.6, 0.4].",
+     "anchor": "sl-07-learning-a-model-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-08-exploration",
+   "title": "SL-08: Exploration",
+   "minutes": 2,
+   "endAnchor": "sl-08-exploration-end",
+   "blocks": [
+    {
+     "anchor": "sl-08-exploration-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "exploration trap",
+     "definition": "The policy never tries unseen pairs, so the planner never discovers them.",
+     "anchor": "sl-08-exploration-p03"
+    },
+    {
+     "term": "epsilon-greedy",
+     "definition": "With probability epsilon take a random action.",
+     "anchor": "sl-08-exploration-p04"
+    },
+    {
+     "term": "optimism",
+     "definition": "Optimistic initial estimates making untried actions attractive.",
+     "anchor": "sl-08-exploration-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-08-exploration-r1",
+     "question": "What is the exploration trap?",
+     "answer": "The model is estimated only on visited (s, a) pairs. A pair never tried keeps its fallback estimate, so the planner never discovers it is good. The data distribution follows the policy, and the policy follows the data.",
+     "anchor": "sl-08-exploration-p03"
+    },
+    {
+     "id": "sl-08-exploration-r2",
+     "question": "What are the standard fixes?",
+     "answer": "Epsilon-greedy (random action with probability epsilon), optimism (optimistic initial estimates), and in RLVR, sampling temperature for diverse completions.",
+     "anchor": "sl-08-exploration-p04"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-09-continuous-states",
+   "title": "SL-09: Continuous states",
+   "minutes": 1,
+   "endAnchor": "sl-09-continuous-states-end",
+   "blocks": [
+    {
+     "anchor": "sl-09-continuous-states-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "continuous state",
+     "definition": "S = R^d: car, pendulum, helicopter states.",
+     "anchor": "sl-09-continuous-states-p01"
+    },
+    {
+     "term": "R^6",
+     "definition": "S = R^6 for the car: position, heading, velocities.",
+     "anchor": "sl-09-continuous-states-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-09-continuous-states-r1",
+     "question": "Why do tabular methods break on continuous states?",
+     "answer": "Value iteration stores one value per state: infinitely many. Bellman sums become integrals. The algorithms need a finite representation of V.",
+     "anchor": "sl-09-continuous-states-p03"
+    },
+    {
+     "id": "sl-09-continuous-states-r2",
+     "question": "What are the notes' continuous-state examples?",
+     "answer": "Car: (x, y, theta, xdot, ydot, thetadot), S = R^6. Inverted pendulum: R^4. Helicopter: 12d.",
+     "anchor": "sl-09-continuous-states-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-10-discretization",
+   "title": "SL-10: Discretization",
+   "minutes": 2,
+   "endAnchor": "sl-10-discretization-end",
+   "blocks": [
+    {
+     "anchor": "sl-10-discretization-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-10-discretization-p05",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "discretization",
+     "definition": "Lay a grid over the state space; each cell is a discrete state.",
+     "anchor": "sl-10-discretization-p02"
+    },
+    {
+     "term": "curse of dimensionality",
+     "definition": "k^d states for k values in d dimensions.",
+     "anchor": "sl-10-discretization-p04"
+    },
+    {
+     "term": "grid",
+     "definition": "Cells mapping continuous states to discrete ones.",
+     "anchor": "sl-10-discretization-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-10-discretization-r1",
+     "question": "What is the curse of dimensionality for grids?",
+     "answer": "k values per dimension, d dimensions: k^d states. d = 10, k = 100: 100^10 = 1e20 states, far beyond any computer.",
+     "anchor": "sl-10-discretization-p04"
+    },
+    {
+     "id": "sl-10-discretization-r2",
+     "question": "What are the two downsides of discretization?",
+     "answer": "Piecewise constant values (staircase, no smoothing across cells) and the curse of dimensionality.",
+     "anchor": "sl-10-discretization-p04"
+    },
+    {
+     "id": "sl-10-discretization-r3",
+     "question": "What is the notes' rule of thumb?",
+     "answer": "Works well for 1d and 2d, often up to 4d with care, rarely above 6d, almost never higher.",
+     "anchor": "sl-10-discretization-p04"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-11-value-function-approximation",
+   "title": "SL-11: Value function approximation",
+   "minutes": 2,
+   "endAnchor": "sl-11-value-function-approximation-end",
+   "blocks": [
+    {
+     "anchor": "sl-11-value-function-approximation-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-11-value-function-approximation-l01",
+     "kind": "steps",
+     "reveal": "stepwise"
+    },
+    {
+     "anchor": "sl-11-value-function-approximation-p08",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "fitted value iteration",
+     "definition": "V(s) = theta^T phi(s) fit by least squares on simulator targets.",
+     "anchor": "sl-11-value-function-approximation-p04"
+    },
+    {
+     "term": "simulator",
+     "definition": "Samples next states from P_{s a}: physics engine or learned model.",
+     "anchor": "sl-11-value-function-approximation-p03"
+    },
+    {
+     "term": "noise shortcut",
+     "definition": "E[V(s')] ~= V(E[s']) for small zero-mean noise.",
+     "anchor": "sl-11-value-function-approximation-p06"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-11-value-function-approximation-r1",
+     "question": "What is fitted value iteration?",
+     "answer": "Represent V(s) = theta^T phi(s). Repeat: sample n states, for each compute y^(i) = max_a q(a) via k simulator draws, fit theta by least squares. Then act greedily.",
+     "anchor": "sl-11-value-function-approximation-p04"
+    },
+    {
+     "id": "sl-11-value-function-approximation-r2",
+     "question": "What is its convergence boundary?",
+     "answer": "Unlike tabular value iteration, no convergence guarantee. In practice it often converges approximately and works well.",
+     "anchor": "sl-11-value-function-approximation-p07"
+    },
+    {
+     "id": "sl-11-value-function-approximation-r3",
+     "question": "In the 1-D example, what is the fit?",
+     "answer": "V(s) = theta_0 + theta_1 s, targets [1.0, 1.9, 2.71] at s = [0,1,2]: theta = [1.0033, 0.8550], residual norm 0.0044.",
+     "anchor": "sl-11-value-function-approximation-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-12-source-and-reward-confounding",
+   "title": "SL-12: Source and reward confounding",
+   "minutes": 2,
+   "endAnchor": "sl-12-source-and-reward-confounding-end",
+   "blocks": [
+    {
+     "anchor": "sl-12-source-and-reward-confounding-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "reward confounding",
+     "definition": "The verifier is a stand-in for the true goal; the optimizer finds the gap.",
+     "anchor": "sl-12-source-and-reward-confounding-p03"
+    },
+    {
+     "term": "source confounding",
+     "definition": "The model is estimated from the policy's own trajectories.",
+     "anchor": "sl-12-source-and-reward-confounding-p04"
+    },
+    {
+     "term": "off-policy evaluation",
+     "definition": "Correcting for the source difference with importance weights.",
+     "anchor": "sl-12-source-and-reward-confounding-p06"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-12-source-and-reward-confounding-r1",
+     "question": "What are the two confounds?",
+     "answer": "Reward confounding: the verifier is a stand-in for the true goal; any gap is a confound the optimizer finds. Source confounding: the model is estimated from the policy's own trajectories, so estimate and policy confound each other.",
+     "anchor": "sl-12-source-and-reward-confounding-p04"
+    },
+    {
+     "id": "sl-12-source-and-reward-confounding-r2",
+     "question": "What breaks the source-confounding loop?",
+     "answer": "Independent data: collect transitions with a coverage policy, not a reward policy. In RLVR: sample completions with high temperature before scoring.",
+     "anchor": "sl-12-source-and-reward-confounding-p05"
+    },
+    {
+     "id": "sl-12-source-and-reward-confounding-r3",
+     "question": "What is the worst-case confound?",
+     "answer": "RLVR on a verifier the model helped write: the model generates its own unit tests, then optimizes against them. The reported reward is meaningless.",
+     "anchor": "sl-12-source-and-reward-confounding-p07"
+    }
+   ]
+  },
+  {
+   "anchor": "assessment",
+   "title": "Assessment",
+   "minutes": 2,
+   "endAnchor": "assessment-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "chain-of-thought",
+     "definition": "Intermediate tokens before the final answer: more compute, more memory.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "RLVR objective",
+     "definition": "J_R(theta) = E[R(x, y)]; J_beta = J_R - beta E[D_KL(pi_theta || pi_ref)].",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "MDP tuple",
+     "definition": "(S, A, {P_sa}, gamma, R).",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "Bellman equation",
+     "definition": "V^pi(s) = R(s) + gamma sum_{s'} P_{s pi(s)}(s') V^pi(s').",
+     "anchor": "assessment-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "assessment-r1",
+     "question": "What does E03 ask?",
+     "answer": "What a verifier is, and what makes one valid.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "id": "assessment-r2",
+     "question": "What does E09 describe?",
+     "answer": "Fitted value iteration converges but the greedy policy performs badly. Diagnose with the notes' own convergence statement.",
+     "anchor": "assessment-p05"
+    },
+    {
+     "id": "assessment-r3",
+     "question": "What does E10 ask?",
+     "answer": "Team A discretizes a 4d pendulum state with k = 50 per dimension. Team B uses fitted value iteration with quadratic features. Who wins on memory, who on smoothness, and what single check decides?",
+     "anchor": "assessment-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "visual-units",
+   "title": "Visual units",
+   "minutes": 1,
+   "endAnchor": "visual-units-end",
+   "blocks": [
+    {
+     "anchor": "visual-units-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "visual-units-fig02",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "value iteration sweeps",
+     "definition": "The visual of value iteration sweeps on the two-state toy.",
+     "anchor": "visual-units-fig01"
+    },
+    {
+     "term": "PPO clipped surrogate",
+     "definition": "The visual of the PPO clipped surrogate for Ahat = +1 and -1.",
+     "anchor": "visual-units-fig02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "visual-units-r1",
+     "question": "What does the first visual unit show?",
+     "answer": "Value iteration sweeps on the two-state toy, error ratio per sweep, computed.",
+     "anchor": "visual-units-l01"
+    },
+    {
+     "id": "visual-units-r2",
+     "question": "What does the second visual unit show?",
+     "answer": "The PPO clipped surrogate C(r) for Ahat = +1 and Ahat = -1 with epsilon = 0.2, computed.",
+     "anchor": "visual-units-l02"
+    }
+   ]
+  },
+  {
+   "anchor": "research-reading-and-extension",
+   "title": "Research reading and extension",
+   "minutes": 1,
+   "endAnchor": "research-reading-and-extension-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "falsifiable claim",
+     "definition": "A claim an experiment can disprove, here about fitted value iteration features.",
+     "anchor": "research-reading-and-extension-p01"
+    },
+    {
+     "term": "feature map",
+     "definition": "Linear versus quadratic for representing V*.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "research-reading-and-extension-r1",
+     "question": "What is the falsifiable claim?",
+     "answer": "The linear map cannot represent the true quadratic V*, so its greedy policy underperforms the quadratic map's policy by a measured margin.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "role-bridges",
+   "title": "Role bridges",
+   "minutes": 1,
+   "endAnchor": "role-bridges-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "verifier",
+     "definition": "The training objective in RLVR; audit it like a loss function.",
+     "anchor": "role-bridges-l01"
+    },
+    {
+     "term": "value iteration",
+     "definition": "The exact baseline every approximate RL method must beat on small MDPs.",
+     "anchor": "role-bridges-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "role-bridges-r1",
+     "question": "What is the LLM engineer bridge?",
+     "answer": "The KL penalty in (18.2) is the lever between capability preservation and reward exploitation. Track it during training.",
+     "anchor": "role-bridges-l01"
+    }
+   ]
+  }
+ ]
+}

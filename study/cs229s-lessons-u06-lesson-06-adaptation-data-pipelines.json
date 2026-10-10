@@ -1,0 +1,822 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229s-lessons-u06-lesson-06-adaptation-data-pipelines",
+ "itemKind": "lesson",
+ "revision": "0a660551860908b64b4eaa30b4b00ff99781fc9a413423ef4507fc0deb4c20e1",
+ "sections": [
+  {
+   "anchor": "lesson-06-adaptation-data-pipelines-intro",
+   "title": "Lesson 06: Training, adaptation, and data pipelines",
+   "endAnchor": "lesson-06-adaptation-data-pipelines-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229s-U06",
+     "definition": "Unit 06 of CS229S, covering training, adaptation, and data pipelines.",
+     "anchor": "lesson-06-adaptation-data-pipelines-intro-p02"
+    },
+    {
+     "term": "claim class",
+     "definition": "The evidence label on every lesson claim, here PLANNED with source attribution pending.",
+     "anchor": "lesson-06-adaptation-data-pipelines-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-06-adaptation-data-pipelines-intro-r1",
+     "question": "What unit and sessions anchor this lesson?",
+     "answer": "Unit cs229s-U06, concepts C01 to C12, calendar-anchored to Oct 18 (Adapting LLMs), Oct 21, Oct 25 (Data in AI Pipelines), and the Oct 23 Dettmers guest talk.",
+     "anchor": "lesson-06-adaptation-data-pipelines-intro-p02"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "how-to-read-this-lesson",
+   "title": "How to read this lesson",
+   "endAnchor": "how-to-read-this-lesson-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "15-item contract",
+     "definition": "The fixed structure every concept carries, from source and scope to visual units.",
+     "anchor": "how-to-read-this-lesson-p01"
+    },
+    {
+     "term": "lesson toys",
+     "definition": "Scaling-law and pipeline numbers computed here, not vendor claims.",
+     "anchor": "how-to-read-this-lesson-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "how-to-read-this-lesson-r1",
+     "question": "What are the shared bridges for this lesson?",
+     "answer": "P10 (ML foundations and evaluation), P11 (neural networks and autodiff), P14 (transformer mechanics), P17 (reinforcement learning).",
+     "anchor": "how-to-read-this-lesson-p01"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c01-scaling-laws",
+   "title": "C01: scaling laws",
+   "endAnchor": "c01-scaling-laws-end",
+   "blocks": [
+    {
+     "anchor": "c01-scaling-laws-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c01-scaling-laws-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c01-scaling-laws-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "log-log paper",
+     "definition": "Loss is a straight line on log-log paper, with a floor.",
+     "anchor": "c01-scaling-laws-p03"
+    },
+    {
+     "term": "L(N)",
+     "definition": "Test loss at parameter count N.",
+     "anchor": "c01-scaling-laws-list01"
+    },
+    {
+     "term": "recipe",
+     "definition": "Architecture, data mix, and optimizer recipe: change any and the line moves.",
+     "anchor": "c01-scaling-laws-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c01-scaling-laws-r1",
+     "question": "Write the two-point fit formulas.",
+     "answer": "Slope b = (log10 L2 - log10 L1) / (log10 N2 - log10 N1). Intercept a = log10 L1 - b * log10 N1.",
+     "anchor": "c01-scaling-laws-p04"
+    },
+    {
+     "id": "c01-scaling-laws-r2",
+     "question": "N1=1e9 L1=2.40, N2=1e10 L2=2.02. Fit and predict N=1e11.",
+     "answer": "b = -0.0748 per decade, a = 1.0534. Predicted L3 = 1.70.",
+     "anchor": "c01-scaling-laws-p05"
+    },
+    {
+     "id": "c01-scaling-laws-r3",
+     "question": "The big run beats the prediction by 0.2 loss. Name two causes.",
+     "answer": "The data mix improved (intercept shift), or the recipe changed. Keep N fixed and double data quality: loss drops while the parameter-only law says it cannot.",
+     "anchor": "c01-scaling-laws-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c02-zerofew-shot",
+   "title": "C02: zero/few-shot",
+   "endAnchor": "c02-zerofew-shot-end",
+   "blocks": [
+    {
+     "anchor": "c02-zerofew-shot-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c02-zerofew-shot-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c02-zerofew-shot-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "temporary program",
+     "definition": "The prompt: examples set the format and decision rule in context, weights frozen.",
+     "anchor": "c02-zerofew-shot-p03"
+    },
+    {
+     "term": "k",
+     "definition": "Number of in-context examples.",
+     "anchor": "c02-zerofew-shot-list01"
+    },
+    {
+     "term": "saturation",
+     "definition": "The curve flattens when the pattern is fully specified.",
+     "anchor": "c02-zerofew-shot-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c02-zerofew-shot-r1",
+     "question": "Define k-shot with no weight update.",
+     "answer": "No gradient flows: P(y | prompt with k examples) concentrates on the demonstrated pattern as k grows.",
+     "anchor": "c02-zerofew-shot-p04"
+    },
+    {
+     "id": "c02-zerofew-shot-r2",
+     "question": "Accuracies 0.52, 0.61, 0.68, 0.71 at k = 0, 1, 5, 10. Deltas?",
+     "answer": "0.09, 0.07, 0.03: shrinking deltas, the curve saturates.",
+     "anchor": "c02-zerofew-shot-p05"
+    },
+    {
+     "id": "c02-zerofew-shot-r3",
+     "question": "A(50) < A(10). Name the cause.",
+     "answer": "Noisy examples: the context fills with contradictions and the format signal dilutes.",
+     "anchor": "c02-zerofew-shot-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c03-emergence-caveats",
+   "title": "C03: emergence caveats",
+   "endAnchor": "c03-emergence-caveats-end",
+   "blocks": [
+    {
+     "anchor": "c03-emergence-caveats-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c03-emergence-caveats-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c03-emergence-caveats-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "cliff",
+     "definition": "A step function on top of a ramp looks like a cliff: the jump is in the measurement.",
+     "anchor": "c03-emergence-caveats-p03"
+    },
+    {
+     "term": "s(N)",
+     "definition": "The continuous underlying skill, smooth in log N.",
+     "anchor": "c03-emergence-caveats-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c03-emergence-caveats-r1",
+     "question": "Define the threshold artifact.",
+     "answer": "A discontinuous reported metric M(N) = 1[s(N) > t] on a smooth ramp s(N): the jump is in the measurement, not the mind.",
+     "anchor": "c03-emergence-caveats-list01"
+    },
+    {
+     "id": "c03-emergence-caveats-r2",
+     "question": "s(N) = 0.05*log10(N) + 0.1, threshold 0.7. Find N* and the continuous gap from 1e9 to 1e12.",
+     "answer": "N* = 1e12. Continuous scores 0.55 to 0.70: gap 0.15 while the metric jumps 1.0.",
+     "anchor": "c03-emergence-caveats-p05"
+    },
+    {
+     "id": "c03-emergence-caveats-r3",
+     "question": "A benchmark jumps 40 points at one scale. What do you check first?",
+     "answer": "Whether the metric is a threshold on a smooth underlying score: replace the 0/1 metric with the continuous score and replot.",
+     "anchor": "c03-emergence-caveats-p08"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c04-instruction-following",
+   "title": "C04: instruction following",
+   "endAnchor": "c04-instruction-following-end",
+   "blocks": [
+    {
+     "anchor": "c04-instruction-following-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c04-instruction-following-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c04-instruction-following-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "supervised fine-tuning",
+     "definition": "SFT on instruction-response pairs: imitation with a mask.",
+     "anchor": "c04-instruction-following-p01"
+    },
+    {
+     "term": "mask",
+     "definition": "The whole trick: instruction tokens carry zero loss weight.",
+     "anchor": "c04-instruction-following-p03"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c04-instruction-following-r1",
+     "question": "Write the masked SFT loss.",
+     "answer": "Loss = -mean over response tokens of log P(y_t | x, y_<t).",
+     "anchor": "c04-instruction-following-list01"
+    },
+    {
+     "id": "c04-instruction-following-r2",
+     "question": "Response log-probs sum to -4.3 over 12 tokens. Loss and response perplexity?",
+     "answer": "Loss = 0.358. Perplexity = e^0.358 = 1.43.",
+     "anchor": "c04-instruction-following-code01"
+    },
+    {
+     "id": "c04-instruction-following-r3",
+     "question": "The model echoes instructions instead of answering. What leaked?",
+     "answer": "The mask: instruction tokens counted in the loss teach the model to predict instructions.",
+     "anchor": "c04-instruction-following-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c05-rlhfrlaif",
+   "title": "C05: RLHF/RLAIF",
+   "endAnchor": "c05-rlhfrlaif-end",
+   "blocks": [
+    {
+     "anchor": "c05-rlhfrlaif-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c05-rlhfrlaif-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c05-rlhfrlaif-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "leash",
+     "definition": "The KL to the SFT model: no leash, the policy games the reward.",
+     "anchor": "c05-rlhfrlaif-p03"
+    },
+    {
+     "term": "Bradley-Terry",
+     "definition": "P(A beats B) = sigmoid(r_A - r_B).",
+     "anchor": "c05-rlhfrlaif-list01"
+    },
+    {
+     "term": "reward hacking",
+     "definition": "The policy finds high-scoring, unhelpful answers.",
+     "anchor": "c05-rlhfrlaif-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c05-rlhfrlaif-r1",
+     "question": "Write the Bradley-Terry formula and the KL-regularized objective.",
+     "answer": "P(A beats B) = sigmoid(r_A - r_B). RL objective: E[r] - beta * KL(policy || SFT).",
+     "anchor": "c05-rlhfrlaif-list01"
+    },
+    {
+     "id": "c05-rlhfrlaif-r2",
+     "question": "r_A=1.2, r_B=0.8, KL=2.5, beta=0.1. Compute P(A wins) and the objective.",
+     "answer": "P(A wins) = sigmoid(0.4) = 0.5987. Objective = 1.0 - 0.25 = 0.75.",
+     "anchor": "c05-rlhfrlaif-p05"
+    },
+    {
+     "id": "c05-rlhfrlaif-r3",
+     "question": "Reward climbs, human ratings fall. Name the failure.",
+     "answer": "Reward hacking.",
+     "anchor": "c05-rlhfrlaif-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c06-constitutional-feedback",
+   "title": "C06: constitutional feedback",
+   "endAnchor": "c06-constitutional-feedback-end",
+   "blocks": [
+    {
+     "anchor": "c06-constitutional-feedback-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c06-constitutional-feedback-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c06-constitutional-feedback-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "rubric",
+     "definition": "The constitution: principles in prose the model grades itself against.",
+     "anchor": "c06-constitutional-feedback-p03"
+    },
+    {
+     "term": "Score(y)",
+     "definition": "sum_i w_i * s_i(y): principle weights summing to 1.",
+     "anchor": "c06-constitutional-feedback-list01"
+    },
+    {
+     "term": "verbosity",
+     "definition": "The classic unstated bias: the judge rewards long, confident-sounding answers.",
+     "anchor": "c06-constitutional-feedback-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c06-constitutional-feedback-r1",
+     "question": "Define the critique-revise loop.",
+     "answer": "The model reads its draft, critiques it per principle, rewrites it; the pair (revised beats original) trains the reward model.",
+     "anchor": "c06-constitutional-feedback-p03"
+    },
+    {
+     "id": "c06-constitutional-feedback-r2",
+     "question": "Weights (0.6, 0.4), scores (0.9, 0.5), revision lifts helpful to 0.8. Scores and margin?",
+     "answer": "Original 0.74, revised 0.86, margin 0.12.",
+     "anchor": "c06-constitutional-feedback-p05"
+    },
+    {
+     "id": "c06-constitutional-feedback-r3",
+     "question": "Revisions get longer but not better. What is missing?",
+     "answer": "A verbosity principle: the constitution says nothing about length, so the judge's bias flows into the policy.",
+     "anchor": "c06-constitutional-feedback-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c07-peftlora",
+   "title": "C07: PEFT/LoRA",
+   "endAnchor": "c07-peftlora-end",
+   "blocks": [
+    {
+     "anchor": "c07-peftlora-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c07-peftlora-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c07-peftlora-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "detour",
+     "definition": "The mental model: freeze the giant, train a thin rank-r detour B A.",
+     "anchor": "c07-peftlora-p03"
+    },
+    {
+     "term": "W0",
+     "definition": "The frozen (d, k) weight; at inference, fold the hallway in: W = W0 + B A.",
+     "anchor": "c07-peftlora-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c07-peftlora-r1",
+     "question": "Write the LoRA update and the param count.",
+     "answer": "W = W0 + B A. Trainable params: r * (d + k) vs full d * k.",
+     "anchor": "c07-peftlora-list01"
+    },
+    {
+     "id": "c07-peftlora-r2",
+     "question": "d=k=4096, r=16. LoRA params, full params, ratio?",
+     "answer": "LoRA 131,072. Full 16,777,216. Ratio 128.",
+     "anchor": "c07-peftlora-p04"
+    },
+    {
+     "id": "c07-peftlora-r3",
+     "question": "Loss stalls at rank 8 but full fine-tuning works. Name the cause.",
+     "answer": "Rank r is insufficient: the task needs a move the low-rank subspace cannot carry.",
+     "anchor": "c07-peftlora-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c08-data-loading",
+   "title": "C08: data loading",
+   "endAnchor": "c08-data-loading-end",
+   "blocks": [
+    {
+     "anchor": "c08-data-loading-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c08-data-loading-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c08-data-loading-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "assembly line",
+     "definition": "Training: fetch, decode, batch, compute. The line runs at the slowest station.",
+     "anchor": "c08-data-loading-p03"
+    },
+    {
+     "term": "t_compute",
+     "definition": "Per-step compute time: the line speed when compute-bound.",
+     "anchor": "c08-data-loading-list01"
+    },
+    {
+     "term": "metadata server",
+     "definition": "The next bottleneck when workers exceed disk concurrency.",
+     "anchor": "c08-data-loading-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c08-data-loading-r1",
+     "question": "Write the overlapped step-time formula.",
+     "answer": "Step time = max(t_compute, t_fetch + t_assemble) when fully overlapped.",
+     "anchor": "c08-data-loading-list01"
+    },
+    {
+     "id": "c08-data-loading-r2",
+     "question": "Compute 2.0 s, fetch 0.5 s, assemble 0.3 s; slow disk fetch 2.5 s; then doubled workers. Step time and utilization?",
+     "answer": "Fast: 2.0 s, 100%. Slow disk: 2.8 s, 71%. Doubled workers: 2.0 s, 100%.",
+     "anchor": "c08-data-loading-p05"
+    },
+    {
+     "id": "c08-data-loading-r3",
+     "question": "32 workers, no speedup. Name the likely bottleneck.",
+     "answer": "The metadata server or disk concurrency: fetch stops falling and jitter rises.",
+     "anchor": "c08-data-loading-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c09-preprocessing",
+   "title": "C09: preprocessing",
+   "endAnchor": "c09-preprocessing-end",
+   "blocks": [
+    {
+     "anchor": "c09-preprocessing-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c09-preprocessing-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c09-preprocessing-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "funnel",
+     "definition": "Preprocessing: each stage keeps a fraction, token yield is the product.",
+     "anchor": "c09-preprocessing-p03"
+    },
+    {
+     "term": "keep rates",
+     "definition": "q1, q2, ... per stage: yield = product of q_i.",
+     "anchor": "c09-preprocessing-list01"
+    },
+    {
+     "term": "MinHash",
+     "definition": "Dedup needs a hash table of the corpus: MinHash or exact.",
+     "anchor": "c09-preprocessing-p07"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c09-preprocessing-r1",
+     "question": "Write the yield formula.",
+     "answer": "Yield = product of keep rates. Tokens out = tokens in * yield.",
+     "anchor": "c09-preprocessing-list01"
+    },
+    {
+     "id": "c09-preprocessing-r2",
+     "question": "1000 docs, 500 tokens each, keep 0.85 then 0.80. Yield and tokens? Then q2 = 0.5?",
+     "answer": "Yield 0.68, 340,000 tokens. With q2 = 0.5: yield 0.425, 212,500 tokens.",
+     "anchor": "c09-preprocessing-p05"
+    },
+    {
+     "id": "c09-preprocessing-r3",
+     "question": "Math scores drop after filtering. What did the filter do?",
+     "answer": "The aggressive quality filter dropped code and math (odd punctuation): it kept what it could score.",
+     "anchor": "c09-preprocessing-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c10-shufflingpacking",
+   "title": "C10: shuffling/packing",
+   "endAnchor": "c10-shufflingpacking-end",
+   "blocks": [
+    {
+     "anchor": "c10-shufflingpacking-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c10-shufflingpacking-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c10-shufflingpacking-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "packing",
+     "definition": "Concatenate short sequences into full bins instead of padding to the longest.",
+     "anchor": "c10-shufflingpacking-p01"
+    },
+    {
+     "term": "document mask",
+     "definition": "Blocks cross-document attention inside a bin: packing corrupts training without it.",
+     "anchor": "c10-shufflingpacking-p03"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c10-shufflingpacking-r1",
+     "question": "Define packing and the document mask.",
+     "answer": "Packing concatenates short sequences into full bins. The document mask stops attention leaking across documents.",
+     "anchor": "c10-shufflingpacking-list01"
+    },
+    {
+     "id": "c10-shufflingpacking-r2",
+     "question": "Lengths [800,600,400,300,200,100], bin 1024. Naive vs packed efficiency and pad counts?",
+     "answer": "Naive: 50%, 2400 pad tokens. Packed: 78%, 672 pad tokens (3.6x fewer).",
+     "anchor": "c10-shufflingpacking-p05"
+    },
+    {
+     "id": "c10-shufflingpacking-r3",
+     "question": "Eval looks fine but long documents ramble. What broke?",
+     "answer": "The document mask: a bug lets tokens attend across documents, and eval perplexity misses the coherence break.",
+     "anchor": "c10-shufflingpacking-p09"
+    }
+   ],
+   "minutes": 8
+  },
+  {
+   "anchor": "c11-throughput",
+   "title": "C11: throughput",
+   "endAnchor": "c11-throughput-end",
+   "blocks": [
+    {
+     "anchor": "c11-throughput-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c11-throughput-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c11-throughput-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "speedometer",
+     "definition": "Throughput: tokens per second = batch * length / step time.",
+     "anchor": "c11-throughput-p03"
+    },
+    {
+     "term": "R",
+     "definition": "Throughput: B * T / t_step tokens/s.",
+     "anchor": "c11-throughput-list01"
+    },
+    {
+     "term": "time-to-accuracy",
+     "definition": "Tokens to a target loss: the metric for recipe choices.",
+     "anchor": "c11-throughput-p08"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c11-throughput-r1",
+     "question": "Write the throughput formula.",
+     "answer": "R = B * T / t_step (tokens/s).",
+     "anchor": "c11-throughput-list01"
+    },
+    {
+     "id": "c11-throughput-r2",
+     "question": "Batch 32, seq 512, step 2.0 s, toy price $24/hour. R and cost per million? With packing lift?",
+     "answer": "R = 8192 tok/s, $0.81 per million tokens. Packing lifts real tokens 1.56x: 12,779 tok/s, $0.52 per million.",
+     "anchor": "c11-throughput-p05"
+    },
+    {
+     "id": "c11-throughput-r3",
+     "question": "R rises but loss stalls. What is wrong with the metric?",
+     "answer": "All tokens are not equal: pad tokens taught nothing. Time-to-loss improves only on real tokens.",
+     "anchor": "c11-throughput-p09"
+    }
+   ],
+   "minutes": 5
+  },
+  {
+   "anchor": "c12-reproducibility",
+   "title": "C12: reproducibility",
+   "endAnchor": "c12-reproducibility-end",
+   "blocks": [
+    {
+     "anchor": "c12-reproducibility-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c12-reproducibility-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c12-reproducibility-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "anecdote",
+     "definition": "One run is an anecdote. A seed sweep is evidence.",
+     "anchor": "c12-reproducibility-p03"
+    },
+    {
+     "term": "sample std",
+     "definition": "s over n seeds: the spread a recipe gap must clear.",
+     "anchor": "c12-reproducibility-list01"
+    },
+    {
+     "term": "nondeterministic GPU kernels",
+     "definition": "Atomic adds make the same seed give different losses: spread measures kernel noise.",
+     "anchor": "c12-reproducibility-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c12-reproducibility-r1",
+     "question": "Define the seed-sweep protocol.",
+     "answer": "Fix code and data order per seed, vary only the seed, report mean plus spread.",
+     "anchor": "c12-reproducibility-p03"
+    },
+    {
+     "id": "c12-reproducibility-r2",
+     "question": "Losses [2.31, 2.29, 2.33, 2.30, 2.32]. Mean, std, tie call vs recipe B at 2.295?",
+     "answer": "Mean 2.31, std 0.0158. Gap 0.015 is under 1 std: call it a tie, keep the simpler recipe.",
+     "anchor": "c12-reproducibility-p05"
+    },
+    {
+     "id": "c12-reproducibility-r3",
+     "question": "Same seed, different loss on rerun. Name two causes.",
+     "answer": "Nondeterministic GPU kernels (atomic adds), or unseeded data ordering.",
+     "anchor": "c12-reproducibility-p09"
+    }
+   ],
+   "minutes": 3
+  },
+  {
+   "anchor": "u06-chapter-plate",
+   "title": "U06 chapter plate",
+   "endAnchor": "u06-chapter-plate-end",
+   "blocks": [
+    {
+     "anchor": "u06-chapter-plate-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "adaptation ladder",
+     "definition": "pretrain -> SFT (masked) -> preference (RLHF/RLAIF) -> LoRA patch, data pipeline feeding every stage.",
+     "anchor": "u06-chapter-plate-p01"
+    },
+    {
+     "term": "data pipeline",
+     "definition": "Feeds every adaptation stage.",
+     "anchor": "u06-chapter-plate-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "u06-chapter-plate-r1",
+     "question": "What is the U06 chapter plate?",
+     "answer": "The adaptation ladder: pretrain to SFT (masked) to preference (RLHF/RLAIF) to LoRA patch, with the data pipeline feeding every stage.",
+     "anchor": "u06-chapter-plate-p01"
+    }
+   ],
+   "minutes": 1
+  },
+  {
+   "anchor": "unit-scope-replication-proposal-proposed-not-executed",
+   "title": "Unit-scope replication proposal (PROPOSED, not executed)",
+   "endAnchor": "unit-scope-replication-proposal-proposed-not-executed-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "capstones",
+     "definition": "Course-level capstones live in capstones/.",
+     "anchor": "unit-scope-replication-proposal-proposed-not-executed-p01"
+    },
+    {
+     "term": "replication proposal",
+     "definition": "Replicate the scaling-law fit on three toy scales; test whether a threshold metric manufactures an emergence jump.",
+     "anchor": "unit-scope-replication-proposal-proposed-not-executed-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "unit-scope-replication-proposal-proposed-not-executed-r1",
+     "question": "What does this unit propose?",
+     "answer": "Replicate the scaling-law fit on three toy model scales, then test whether a threshold metric manufactures an emergence jump on a synthetic task. See lab-06.",
+     "anchor": "unit-scope-replication-proposal-proposed-not-executed-p01"
+    }
+   ],
+   "minutes": 1
+  }
+ ]
+}

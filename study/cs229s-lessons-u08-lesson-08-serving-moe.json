@@ -1,0 +1,795 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229s-lessons-u08-lesson-08-serving-moe",
+ "itemKind": "lesson",
+ "revision": "e4c600c72089c7328a4532be9062929841b9a60dbaa06fe29bf7b3fc23f219c7",
+ "sections": [
+  {
+   "anchor": "lesson-08-serving-moe-intro",
+   "title": "Lesson 08: Serving and sparse MoE",
+   "endAnchor": "lesson-08-serving-moe-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229s-U08",
+     "definition": "Unit 08 of CS229S, covering serving and sparse MoE.",
+     "anchor": "lesson-08-serving-moe-intro-p02"
+    },
+    {
+     "term": "claim class",
+     "definition": "The evidence label on every lesson claim, here PLANNED with source attribution pending.",
+     "anchor": "lesson-08-serving-moe-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-08-serving-moe-intro-r1",
+     "question": "What unit and sessions anchor this lesson?",
+     "answer": "Unit cs229s-U08, concepts C01 to C12, calendar-anchored to Nov 04 (LLM Serving Efficiency), Nov 08 (Sparse MoE), and the Nov 11 Dylan Patel guest lecture.",
+     "anchor": "lesson-08-serving-moe-intro-p02"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c01-continuous-batching",
+   "title": "C01: continuous batching",
+   "endAnchor": "c01-continuous-batching-end",
+   "blocks": [
+    {
+     "anchor": "c01-continuous-batching-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c01-continuous-batching-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c01-continuous-batching-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "iteration-level scheduling",
+     "definition": "The batch is re-formed every iteration.",
+     "anchor": "c01-continuous-batching-p01"
+    },
+    {
+     "term": "taxi line",
+     "definition": "Each arrival boards the next free seat; the GPU never idles waiting for company.",
+     "anchor": "c01-continuous-batching-p03"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c01-continuous-batching-r1",
+     "question": "Define iteration-level scheduling.",
+     "answer": "Continuous batching: each arrival boards the next free seat, and the batch is re-formed every iteration.",
+     "anchor": "c01-continuous-batching-p03"
+    },
+    {
+     "id": "c01-continuous-batching-r2",
+     "question": "4 requests arrive at t = 0,1,2,3, each 10 decode tokens at 0.1 s/token. Both mean completions and both mean latencies?",
+     "answer": "Continuous: mean completion 2.5 s, mean latency 1.0 s. Static pairs: 3.0 s and 1.5 s.",
+     "anchor": "c01-continuous-batching-p04"
+    },
+    {
+     "id": "c01-continuous-batching-r3",
+     "question": "Decodes stall whenever a long prompt arrives. What is the scheduler doing wrong?",
+     "answer": "Naive insertion: a huge prefill stalls every running decode for its duration. Chunk it or queue it.",
+     "anchor": "c01-continuous-batching-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c02-admissionbackpressure",
+   "title": "C02: admission/backpressure",
+   "endAnchor": "c02-admissionbackpressure-end",
+   "blocks": [
+    {
+     "anchor": "c02-admissionbackpressure-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c02-admissionbackpressure-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c02-admissionbackpressure-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "door policy",
+     "definition": "Admission control decides who enters the running set.",
+     "anchor": "c02-admissionbackpressure-p03"
+    },
+    {
+     "term": "floor(p / R)",
+     "definition": "Queue wait for position p with running cap R.",
+     "anchor": "c02-admissionbackpressure-list01"
+    },
+    {
+     "term": "HTTP 429",
+     "definition": "Shed load with fast rejection and retry.",
+     "anchor": "c02-admissionbackpressure-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c02-admissionbackpressure-r1",
+     "question": "Define admission control and backpressure.",
+     "answer": "Admission control decides who enters the running set; the rest wait. Backpressure is the signal upstream: slow down, the room is full.",
+     "anchor": "c02-admissionbackpressure-p03"
+    },
+    {
+     "id": "c02-admissionbackpressure-r2",
+     "question": "10 requests, running cap 4, 1.0 s each, FIFO. Peak queue, max wait, mean wait?",
+     "answer": "Peak queue 6, max wait 2.0 s, mean wait 0.8 s.",
+     "anchor": "c02-admissionbackpressure-p05"
+    },
+    {
+     "id": "c02-admissionbackpressure-r3",
+     "question": "p99 latency grows linearly for an hour. What changed?",
+     "answer": "Arrival rate exceeds service rate permanently: the queue never drains.",
+     "anchor": "c02-admissionbackpressure-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c03-prefilldecode-scheduling",
+   "title": "C03: prefill/decode scheduling",
+   "endAnchor": "c03-prefilldecode-scheduling-end",
+   "blocks": [
+    {
+     "anchor": "c03-prefilldecode-scheduling-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c03-prefilldecode-scheduling-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c03-prefilldecode-scheduling-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "gulp",
+     "definition": "Prefill: one big parallel gulp, compute-bound, fast per token.",
+     "anchor": "c03-prefilldecode-scheduling-p03"
+    },
+    {
+     "term": "prefill time",
+     "definition": "prompt_tokens / prefill_rate.",
+     "anchor": "c03-prefilldecode-scheduling-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c03-prefilldecode-scheduling-r1",
+     "question": "Define the two phases and their bounds.",
+     "answer": "Prefill is one big parallel gulp: compute-bound. Decode is sips: memory-bound, slow per token.",
+     "anchor": "c03-prefilldecode-scheduling-p03"
+    },
+    {
+     "id": "c03-prefilldecode-scheduling-r2",
+     "question": "Prompt 512 tokens at 2000 tok/s prefill, decode at 50 tok/s. Prefill, decode-token, and 2-chunk times?",
+     "answer": "Prefill 0.256 s, decode token 0.02 s, chunk 0.128 s.",
+     "anchor": "c03-prefilldecode-scheduling-p05"
+    },
+    {
+     "id": "c03-prefilldecode-scheduling-r3",
+     "question": "Decodes stall 0.25 s on every new arrival. Name the missing mechanism.",
+     "answer": "Chunked prefill: split the prompt into pieces and interleave.",
+     "anchor": "c03-prefilldecode-scheduling-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c04-cache-management",
+   "title": "C04: cache management",
+   "endAnchor": "c04-cache-management-end",
+   "blocks": [
+    {
+     "anchor": "c04-cache-management-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c04-cache-management-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c04-cache-management-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "parking lot",
+     "definition": "The cache: 4 spaces, each request parks its KV.",
+     "anchor": "c04-cache-management-p03"
+    },
+    {
+     "term": "0.5 MiB",
+     "definition": "Per-token KV at L = 32, n = 4096, fp16.",
+     "anchor": "c04-cache-management-p04"
+    },
+    {
+     "term": "thrash",
+     "definition": "Working set of 5, lot of 4: every access evicts the next needed request.",
+     "anchor": "c04-cache-management-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c04-cache-management-r1",
+     "question": "Write the per-token KV formula.",
+     "answer": "Bytes per token = 2 * L * n * bytes_per_float.",
+     "anchor": "c04-cache-management-list01"
+    },
+    {
+     "id": "c04-cache-management-r2",
+     "question": "L = 32, n = 4096, fp16. Bytes per token? Accesses A,B,C,D,A,E: evicted?",
+     "answer": "0.5 MiB per token. B is evicted (unused longest); 1 hit in 6 accesses.",
+     "anchor": "c04-cache-management-p05"
+    },
+    {
+     "id": "c04-cache-management-r3",
+     "question": "Hit rate 0 with 5 hot requests and 4 slots. Name it.",
+     "answer": "Thrash.",
+     "anchor": "c04-cache-management-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c05-throughputtail-latency",
+   "title": "C05: throughput/tail latency",
+   "endAnchor": "c05-throughputtail-latency-end",
+   "blocks": [
+    {
+     "anchor": "c05-throughputtail-latency-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c05-throughputtail-latency-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c05-throughputtail-latency-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "turnstile",
+     "definition": "Throughput: the turnstile count, completions per second.",
+     "anchor": "c05-throughputtail-latency-p03"
+    },
+    {
+     "term": "Little's law",
+     "definition": "concurrency = throughput * mean_latency.",
+     "anchor": "c05-throughputtail-latency-list01"
+    },
+    {
+     "term": "p99",
+     "definition": "The longest wait in line: SLOs are written on tails, not means.",
+     "anchor": "c05-throughputtail-latency-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c05-throughputtail-latency-r1",
+     "question": "Define p99 and Little's law.",
+     "answer": "p99: the 99th-percentile latency. Little's law: concurrency = X * mean_latency.",
+     "anchor": "c05-throughputtail-latency-list01"
+    },
+    {
+     "id": "c05-throughputtail-latency-r2",
+     "question": "100 requests: 90 at 1.0 s, 10 at 3.0 s. Mean, p50, p99, concurrency at 50 req/s?",
+     "answer": "Mean 1.2 s, p50 1.0 s, p99 3.0 s, 60 concurrent.",
+     "anchor": "c05-throughputtail-latency-p05"
+    },
+    {
+     "id": "c05-throughputtail-latency-r3",
+     "question": "Mean is fine, p99 tripled overnight. Where do you look?",
+     "answer": "Attribute the tail: tag each slow request with its cause (long prefills? cache misses?).",
+     "anchor": "c05-throughputtail-latency-p10"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c06-expert-routing",
+   "title": "C06: expert routing",
+   "endAnchor": "c06-expert-routing-end",
+   "blocks": [
+    {
+     "anchor": "c06-expert-routing-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c06-expert-routing-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c06-expert-routing-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "top-2",
+     "definition": "Each token visits only 2 of 8 experts.",
+     "anchor": "c06-expert-routing-p01"
+    },
+    {
+     "term": "receptionist",
+     "definition": "The gate scores every expert, picks the top 2, splits the weight by softmax.",
+     "anchor": "c06-expert-routing-p03"
+    },
+    {
+     "term": "gate collapse",
+     "definition": "One expert wins early, gets all the gradient, the other 7 starve.",
+     "anchor": "c06-expert-routing-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c06-expert-routing-r1",
+     "question": "Write the top-k routing formula.",
+     "answer": "g(x) = softmax(W_g x), keep k largest, renormalize. Output = sum w_i E_i(x).",
+     "anchor": "c06-expert-routing-list01"
+    },
+    {
+     "id": "c06-expert-routing-r2",
+     "question": "Gate logits [2.1, 0.3, 1.5, -0.2, 0.8, 1.1, -1.0, 0.1], top-2. Weights?",
+     "answer": "Experts 0 and 2, weights 0.646 and 0.354.",
+     "anchor": "c06-expert-routing-p05"
+    },
+    {
+     "id": "c06-expert-routing-r3",
+     "question": "7 experts get zero tokens for an epoch. Name it.",
+     "answer": "Gate collapse.",
+     "anchor": "c06-expert-routing-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c07-expert-capacity",
+   "title": "C07: expert capacity",
+   "endAnchor": "c07-expert-capacity-end",
+   "blocks": [
+    {
+     "anchor": "c07-expert-capacity-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c07-expert-capacity-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c07-expert-capacity-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "capacity factor",
+     "definition": "Slack: how much overflow the lane tolerates.",
+     "anchor": "c07-expert-capacity-p01"
+    },
+    {
+     "term": "checkout lane",
+     "definition": "Each expert: fixed lane length, tokens past capacity are dropped.",
+     "anchor": "c07-expert-capacity-p03"
+    },
+    {
+     "term": "drop rate",
+     "definition": "At expert 0: 20 of 40 dropped, 50%.",
+     "anchor": "c07-expert-capacity-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c07-expert-capacity-r1",
+     "question": "Write the capacity formula.",
+     "answer": "Capacity = (tokens * k / experts) * factor.",
+     "anchor": "c07-expert-capacity-list01"
+    },
+    {
+     "id": "c07-expert-capacity-r2",
+     "question": "64 tokens, 8 experts, top-2, factor 1.25; expert 0 gets 40. Capacity, drops, global drop rate?",
+     "answer": "Capacity 20. Expert 0 drops 20. Global drop 15.6% (20/128 routed slots).",
+     "anchor": "c07-expert-capacity-p05"
+    },
+    {
+     "id": "c07-expert-capacity-r3",
+     "question": "One expert's loss will not fall. What do its drops look like?",
+     "answer": "High: a spiky gate with factor 1.0 drops ~30% every step, training on a biased subset.",
+     "anchor": "c07-expert-capacity-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c08-load-imbalance",
+   "title": "C08: load imbalance",
+   "endAnchor": "c08-load-imbalance-end",
+   "blocks": [
+    {
+     "anchor": "c08-load-imbalance-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c08-load-imbalance-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c08-load-imbalance-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "traffic jam",
+     "definition": "Imbalance: one lane jammed while seven sit empty.",
+     "anchor": "c08-load-imbalance-p03"
+    },
+    {
+     "term": "imbalance",
+     "definition": "max(c_i) / c_bar: the step time is set by the fullest expert.",
+     "anchor": "c08-load-imbalance-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c08-load-imbalance-r1",
+     "question": "Define the imbalance ratio.",
+     "answer": "Imbalance = max(c_i) / c_bar, where c_bar = total / experts.",
+     "anchor": "c08-load-imbalance-list01"
+    },
+    {
+     "id": "c08-load-imbalance-r2",
+     "question": "Counts [40,10,5,3,2,2,1,1]. Mean, max, ratio?",
+     "answer": "Mean 8, max 40, ratio 5.0x.",
+     "anchor": "c08-load-imbalance-p05"
+    },
+    {
+     "id": "c08-load-imbalance-r3",
+     "question": "Balance weight too high. What breaks?",
+     "answer": "The gate routes uniformly and experts never specialize.",
+     "anchor": "c08-load-imbalance-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c09-token-dispatch",
+   "title": "C09: token dispatch",
+   "endAnchor": "c09-token-dispatch-end",
+   "blocks": [
+    {
+     "anchor": "c09-token-dispatch-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c09-token-dispatch-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c09-token-dispatch-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "mailroom",
+     "definition": "Dispatch: each token copied to its 2 experts' GPUs, outputs mailed back.",
+     "anchor": "c09-token-dispatch-p03"
+    },
+    {
+     "term": "all-to-all tax",
+     "definition": "The MoE communication tax on every step.",
+     "anchor": "c09-token-dispatch-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c09-token-dispatch-r1",
+     "question": "Write the dispatch byte formula.",
+     "answer": "Bytes one way = tokens * k * d * bytes_float. Round trip doubles it.",
+     "anchor": "c09-token-dispatch-list01"
+    },
+    {
+     "id": "c09-token-dispatch-r2",
+     "question": "64 tokens, top-2, d = 4096, fp16. One-way, round-trip, 32-layer totals?",
+     "answer": "1 MiB each way, 2 MiB round trip per layer per step. 32 layers: 64 MiB per step.",
+     "anchor": "c09-token-dispatch-p05"
+    },
+    {
+     "id": "c09-token-dispatch-r3",
+     "question": "MoE step slower than dense at the same FLOPs. What dominates?",
+     "answer": "Dispatch: slow interconnect makes the all-to-all dominate the step.",
+     "anchor": "c09-token-dispatch-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c10-communication-cost",
+   "title": "C10: communication cost",
+   "endAnchor": "c10-communication-cost-end",
+   "blocks": [
+    {
+     "anchor": "c10-communication-cost-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c10-communication-cost-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c10-communication-cost-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "group huddle",
+     "definition": "All-reduce: everyone ends with the same sum.",
+     "anchor": "c10-communication-cost-p03"
+    },
+    {
+     "term": "ring all-reduce",
+     "definition": "Per GPU: 2*(n-1)/n * S bytes.",
+     "anchor": "c10-communication-cost-list01"
+    },
+    {
+     "term": "incast collapse",
+     "definition": "All 8 GPUs blast one peer: measured cost is multiples of the formula.",
+     "anchor": "c10-communication-cost-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c10-communication-cost-r1",
+     "question": "Write both cost formulas.",
+     "answer": "Ring all-reduce per GPU: 2*(n-1)/n * S. All-to-all per GPU: ~S sent.",
+     "anchor": "c10-communication-cost-list01"
+    },
+    {
+     "id": "c10-communication-cost-r2",
+     "question": "8 GPUs, 1 MiB payload. Per-GPU bytes for both?",
+     "answer": "All-reduce 1.75 MiB/GPU, all-to-all ~1 MiB/GPU each way.",
+     "anchor": "c10-communication-cost-p05"
+    },
+    {
+     "id": "c10-communication-cost-r3",
+     "question": "Measured all-to-all is 4x the formula. Name the likely cause.",
+     "answer": "Incast collapse: congestion, not the pattern's ideal cost.",
+     "anchor": "c10-communication-cost-p09"
+    }
+   ],
+   "minutes": 7
+  },
+  {
+   "anchor": "c11-batching-effects",
+   "title": "C11: batching effects",
+   "endAnchor": "c11-batching-effects-end",
+   "blocks": [
+    {
+     "anchor": "c11-batching-effects-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c11-batching-effects-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c11-batching-effects-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "amortizes",
+     "definition": "Bigger B amortizes the model read over more tokens.",
+     "anchor": "c11-batching-effects-p03"
+    },
+    {
+     "term": "t(B)",
+     "definition": "Seconds per decode step: c0 + c1*B.",
+     "anchor": "c11-batching-effects-list01"
+    },
+    {
+     "term": "asymptote",
+     "definition": "1/c1 = 500 tok/s: batching approaches it but never passes.",
+     "anchor": "c11-batching-effects-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c11-batching-effects-r1",
+     "question": "Write the rate formula and the asymptote.",
+     "answer": "R = B / (c0 + c1*B). Asymptote 1/c1.",
+     "anchor": "c11-batching-effects-list01"
+    },
+    {
+     "id": "c11-batching-effects-r2",
+     "question": "t(B) = 0.005 + 0.002*B. Rates at B = 1, 4, 8? Gain ratios?",
+     "answer": "142.9, 307.7, 381.0 tok/s. Gains 2.15x then 1.24x: diminishing.",
+     "anchor": "c11-batching-effects-p05"
+    },
+    {
+     "id": "c11-batching-effects-r3",
+     "question": "B = 64 OOMs. What bounds the batch in practice?",
+     "answer": "KV-cache memory: the batch that maximizes the formula does not run.",
+     "anchor": "c11-batching-effects-p09"
+    }
+   ],
+   "minutes": 5
+  },
+  {
+   "anchor": "c12-cost-per-request",
+   "title": "C12: cost per request",
+   "endAnchor": "c12-cost-per-request-end",
+   "blocks": [
+    {
+     "anchor": "c12-cost-per-request-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c12-cost-per-request-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c12-cost-per-request-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "denominator",
+     "definition": "Every systems win shows up in the tokens-per-second denominator.",
+     "anchor": "c12-cost-per-request-p03"
+    },
+    {
+     "term": "$1.67",
+     "definition": "Per million tokens at 500 tok/s and the $3/hour toy price.",
+     "anchor": "c12-cost-per-request-p05"
+    },
+    {
+     "term": "utilization",
+     "definition": "The first suspect when the bill is 2.5x the model.",
+     "anchor": "c12-cost-per-request-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c12-cost-per-request-r1",
+     "question": "Write the cost formula.",
+     "answer": "Cost per 1M = 1e6 / R * p / 3600.",
+     "anchor": "c12-cost-per-request-list01"
+    },
+    {
+     "id": "c12-cost-per-request-r2",
+     "question": "500 tok/s, $3/hour toy price. Cost per MTok at 500 and 1000 tok/s? Per 640-token request?",
+     "answer": "$1.67 at 500, $0.83 at 1000. A 640-token request: $0.00107.",
+     "anchor": "c12-cost-per-request-p05"
+    },
+    {
+     "id": "c12-cost-per-request-r3",
+     "question": "Price halves, R halves. What happens to cost?",
+     "answer": "Unchanged: the ratio p/R is what matters.",
+     "anchor": "c12-cost-per-request-p04"
+    }
+   ],
+   "minutes": 3
+  },
+  {
+   "anchor": "u08-chapter-plate",
+   "title": "U08 chapter plate",
+   "endAnchor": "u08-chapter-plate-end",
+   "blocks": [
+    {
+     "anchor": "u08-chapter-plate-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "serving pipeline",
+     "definition": "admit -> schedule (prefill/decode) -> batch -> route (MoE) -> dispatch -> bill.",
+     "anchor": "u08-chapter-plate-p01"
+    },
+    {
+     "term": "bill",
+     "definition": "The last stage: dollars per million tokens.",
+     "anchor": "u08-chapter-plate-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "u08-chapter-plate-r1",
+     "question": "What is the U08 chapter plate?",
+     "answer": "The serving pipeline: admit to schedule (prefill/decode) to batch to route (MoE) to dispatch to bill.",
+     "anchor": "u08-chapter-plate-p01"
+    }
+   ],
+   "minutes": 1
+  },
+  {
+   "anchor": "unit-scope-replication-proposal-proposed-not-executed",
+   "title": "Unit-scope replication proposal (PROPOSED, not executed)",
+   "endAnchor": "unit-scope-replication-proposal-proposed-not-executed-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "capstones",
+     "definition": "Course-level capstones live in capstones/.",
+     "anchor": "unit-scope-replication-proposal-proposed-not-executed-p01"
+    },
+    {
+     "term": "dispatch tax",
+     "definition": "Measure the MoE dispatch tax vs a dense baseline at matched FLOPs.",
+     "anchor": "unit-scope-replication-proposal-proposed-not-executed-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "unit-scope-replication-proposal-proposed-not-executed-r1",
+     "question": "What does this unit propose?",
+     "answer": "Simulate continuous vs static batching on a bursty trace, then measure the MoE dispatch tax vs a dense baseline at matched FLOPs. See lab-08.",
+     "anchor": "unit-scope-replication-proposal-proposed-not-executed-p01"
+    }
+   ],
+   "minutes": 1
+  }
+ ]
+}

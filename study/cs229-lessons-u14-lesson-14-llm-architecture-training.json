@@ -1,0 +1,763 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229-lessons-u14-lesson-14-llm-architecture-training",
+ "itemKind": "lesson",
+ "revision": "17f51e678789f4eac2c9ad6bef3f15fe2ddef19c0fd51e40b90c77a38862caf1",
+ "sections": [
+  {
+   "anchor": "lesson-14-llm-architecture-training-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "lesson-14-llm-architecture-training-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229-U14",
+     "definition": "The unit code for this lesson in the Stanford CS229 foundations course.",
+     "anchor": "lesson-14-llm-architecture-training-intro-p02"
+    },
+    {
+     "term": "leaf concepts",
+     "definition": "The fine-grained concepts the lesson covers, labeled C01 to C12.",
+     "anchor": "lesson-14-llm-architecture-training-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-14-llm-architecture-training-intro-r1",
+     "question": "Who teaches this course?",
+     "answer": "Tengyu Ma and Andrew Ng.",
+     "anchor": "lesson-14-llm-architecture-training-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "source-mapping",
+   "title": "Source mapping",
+   "minutes": 1,
+   "endAnchor": "source-mapping-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "tokenization",
+     "definition": "Breaking text into tokens before modeling.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "autoregressive modeling",
+     "definition": "p(x_1..x_T) factored into per-position conditionals.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "SFT",
+     "definition": "Supervised finetuning on prompt-completion pairs.",
+     "anchor": "source-mapping-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "source-mapping-r1",
+     "question": "What does notes chapter 17 give?",
+     "answer": "Tokenization, autoregressive modeling and the next-token loss, the transformer interface, single-head and multi-head attention with masking, KV cache and memory/compute, attention variants, MoE, in-context learning, zero-shot prompting, and SFT.",
+     "anchor": "source-mapping-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "scope-and-objectives",
+   "title": "Scope and objectives",
+   "minutes": 1,
+   "endAnchor": "scope-and-objectives-end",
+   "blocks": [
+    {
+     "anchor": "scope-and-objectives-p01",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "next-token loss",
+     "definition": "(1/T) sum_t cross-entropy between logits and the true next token.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "transformer blocks",
+     "definition": "Stacks of multi-head self-attention and position-wise MLPs.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "MoE",
+     "definition": "Sparse expert layers routing tokens to specialists.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "in-context learning",
+     "definition": "Adapting via examples in the prompt, no weight updates.",
+     "anchor": "scope-and-objectives-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "scope-and-objectives-r1",
+     "question": "What does the scope cover?",
+     "answer": "How a modern autoregressive LLM is built and trained: tokens in, next-token loss, transformer blocks, attention and its variants, MoE, post-training adaptations, the train/inference gap, and the resource ledger.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "id": "scope-and-objectives-r2",
+     "question": "What does objective 3 ask the learner to do?",
+     "answer": "Compute single-head causal attention by hand.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "dependencies",
+   "title": "Dependencies",
+   "minutes": 1,
+   "endAnchor": "dependencies-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "prerequisites",
+     "definition": "The shared bridge units P12, P13, and P14, plus U07 and U13, needed before this lesson.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "term": "mask",
+     "definition": "Remediated in SL-04.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "SFT",
+     "definition": "What it changes versus prompting, remediated in SL-08.",
+     "anchor": "dependencies-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "dependencies-r1",
+     "question": "Which prerequisites does this lesson list?",
+     "answer": "P12, P13, P14, unit U07 (neural nets), unit U13 (pretraining/transfer).",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "id": "dependencies-r2",
+     "question": "What does the list ask about the mask?",
+     "answer": "Why attention needs a mask, remediated in SL-04.",
+     "anchor": "dependencies-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-01-tokenization",
+   "title": "SL-01: Tokenization",
+   "minutes": 2,
+   "endAnchor": "sl-01-tokenization-end",
+   "blocks": [
+    {
+     "anchor": "sl-01-tokenization-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "tokenization",
+     "definition": "Breaking text into tokens: words, pieces, punctuation, bytes.",
+     "anchor": "sl-01-tokenization-p02"
+    },
+    {
+     "term": "BPE",
+     "definition": "Byte-pair encoding: repeatedly merge the most frequent adjacent pair.",
+     "anchor": "sl-01-tokenization-p02"
+    },
+    {
+     "term": "subword",
+     "definition": "Between characters and words: |V| ~ 1e5, manageable T.",
+     "anchor": "sl-01-tokenization-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-01-tokenization-r1",
+     "question": "What is the BPE intuition?",
+     "answer": "Start from tiny pieces (bytes or characters). Repeatedly add a token for the most frequent adjacent pair. Common strings become single tokens, rare words still split into pieces.",
+     "anchor": "sl-01-tokenization-p03"
+    },
+    {
+     "id": "sl-01-tokenization-r2",
+     "question": "What breaks when train and serve tokenizers differ?",
+     "answer": "Token ids shift meaning and the learned embeddings misalign. Silent and catastrophic.",
+     "anchor": "sl-01-tokenization-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-02-autoregressive-factorization-and-the-loss",
+   "title": "SL-02: Autoregressive factorization and the loss",
+   "minutes": 2,
+   "endAnchor": "sl-02-autoregressive-factorization-and-the-loss-end",
+   "blocks": [
+    {
+     "anchor": "sl-02-autoregressive-factorization-and-the-loss-p09",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "autoregressive",
+     "definition": "p(x_1..x_T) factored by the chain rule into per-position conditionals.",
+     "anchor": "sl-02-autoregressive-factorization-and-the-loss-p01"
+    },
+    {
+     "term": "next-token loss",
+     "definition": "(1/T) sum_t l_ce(f_theta(x_{<t}), x_t): maximum likelihood normalized by length.",
+     "anchor": "sl-02-autoregressive-factorization-and-the-loss-p05"
+    },
+    {
+     "term": "chain rule",
+     "definition": "The rule factoring the joint into conditionals.",
+     "anchor": "sl-02-autoregressive-factorization-and-the-loss-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-02-autoregressive-factorization-and-the-loss-r1",
+     "question": "What is the autoregressive factorization?",
+     "answer": "p(x_1, ..., x_T) = p(x_1) p(x_2 | x_1) ... p(x_T | x_1, ..., x_{T-1}). Each conditional has support |V|.",
+     "anchor": "sl-02-autoregressive-factorization-and-the-loss-p03"
+    },
+    {
+     "id": "sl-02-autoregressive-factorization-and-the-loss-r2",
+     "question": "What is the mental model of next-token training?",
+     "answer": "Every position is a classification problem with |V| classes, and the label is free: it is the next token. One document yields T training examples.",
+     "anchor": "sl-02-autoregressive-factorization-and-the-loss-p09"
+    },
+    {
+     "id": "sl-02-autoregressive-factorization-and-the-loss-r3",
+     "question": "What goes wrong packing documents without boundaries?",
+     "answer": "The model learns to continue across document boundaries and blends unrelated contexts.",
+     "anchor": "sl-02-autoregressive-factorization-and-the-loss-p11"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-03-the-transformer-interface",
+   "title": "SL-03: The transformer interface",
+   "minutes": 2,
+   "endAnchor": "sl-03-the-transformer-interface-end",
+   "blocks": [
+    {
+     "anchor": "sl-03-the-transformer-interface-p05",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "transformer",
+     "definition": "f_theta mapping embedding sequences to logit vectors.",
+     "anchor": "sl-03-the-transformer-interface-p02"
+    },
+    {
+     "term": "PreNorm",
+     "definition": "Layer norm before attention and the MLP.",
+     "anchor": "sl-03-the-transformer-interface-p05"
+    },
+    {
+     "term": "causal mask",
+     "definition": "M_{t,j} = 0 for j <= t, -inf after: no future visibility.",
+     "anchor": "sl-03-the-transformer-interface-p08"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-03-the-transformer-interface-r1",
+     "question": "What does a transformer block contain?",
+     "answer": "Multi-head self-attention and position-wise MLPs (GELU or SwiGLU). Modern LLMs use PreNorm, usually with RMSNorm. Attention is the only cross-position mixing.",
+     "anchor": "sl-03-the-transformer-interface-p05"
+    },
+    {
+     "id": "sl-03-the-transformer-interface-r2",
+     "question": "What happens if you forget the causal mask in training?",
+     "answer": "The model reads the answer from the future, training loss collapses to near zero, and the model is useless at generation.",
+     "anchor": "sl-03-the-transformer-interface-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-04-attention-scaling-masking",
+   "title": "SL-04: Attention, scaling, masking",
+   "minutes": 2,
+   "endAnchor": "sl-04-attention-scaling-masking-end",
+   "blocks": [
+    {
+     "anchor": "sl-04-attention-scaling-masking-p05",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-04-attention-scaling-masking-p09",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "attention",
+     "definition": "Queries ask, keys advertise, values carry the payload.",
+     "anchor": "sl-04-attention-scaling-masking-p02"
+    },
+    {
+     "term": "scaling",
+     "definition": "c = sqrt(d_h): keeps logit variance near 1.",
+     "anchor": "sl-04-attention-scaling-masking-p05"
+    },
+    {
+     "term": "causal mask",
+     "definition": "M_{t,j} = 0 for j <= t, -inf for j > t, added before softmax.",
+     "anchor": "sl-04-attention-scaling-masking-p06"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-04-attention-scaling-masking-r1",
+     "question": "Why divide by sqrt(d_h)?",
+     "answer": "At initialization, q and k dot products have variance d_h. Without scaling, logits grow with head dimension and the softmax saturates (tiny gradients). Dividing keeps logit variance near 1.",
+     "anchor": "sl-04-attention-scaling-masking-p05"
+    },
+    {
+     "id": "sl-04-attention-scaling-masking-r2",
+     "question": "What does the causal mask do?",
+     "answer": "M_{t,j} = 0 for j <= t, -infinity for j > t, added before the softmax: probabilities of future positions are exactly zero.",
+     "anchor": "sl-04-attention-scaling-masking-p08"
+    },
+    {
+     "id": "sl-04-attention-scaling-masking-r3",
+     "question": "What goes wrong applying the mask after softmax?",
+     "answer": "The -infinity never enters the normalization and future positions leak.",
+     "anchor": "sl-04-attention-scaling-masking-p11"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-05-multi-head-kv-cache-costs",
+   "title": "SL-05: Multi-head, KV cache, costs",
+   "minutes": 2,
+   "endAnchor": "sl-05-multi-head-kv-cache-costs-end",
+   "blocks": [
+    {
+     "anchor": "sl-05-multi-head-kv-cache-costs-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-05-multi-head-kv-cache-costs-p05",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "KV cache",
+     "definition": "Stores K_{1:t} and V_{1:t} across generation steps.",
+     "anchor": "sl-05-multi-head-kv-cache-costs-p03"
+    },
+    {
+     "term": "multi-head attention",
+     "definition": "n_h heads in parallel, outputs concatenated and projected.",
+     "anchor": "sl-05-multi-head-kv-cache-costs-p02"
+    },
+    {
+     "term": "FlashAttention",
+     "definition": "Streams the score matrix for O(T) memory.",
+     "anchor": "sl-05-multi-head-kv-cache-costs-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-05-multi-head-kv-cache-costs-r1",
+     "question": "What is the KV cache?",
+     "answer": "Stores K_{1:t} and V_{1:t} so prefix keys/values are not recomputed each generation step. New rows append, old rows never recompute.",
+     "anchor": "sl-05-multi-head-kv-cache-costs-p03"
+    },
+    {
+     "id": "sl-05-multi-head-kv-cache-costs-r2",
+     "question": "In the 4096 example, how big is the cache?",
+     "answer": "T = 8192: 128.0 MiB per layer. At 32 layers: 4.0 GiB for one sequence.",
+     "anchor": "sl-05-multi-head-kv-cache-costs-p05"
+    },
+    {
+     "id": "sl-05-multi-head-kv-cache-costs-r3",
+     "question": "What is the main difficulty past 10K tokens?",
+     "answer": "Attention compute is quadratic in T: O(T^2 d). FlashAttention streams the score matrix for O(T) memory.",
+     "anchor": "sl-05-multi-head-kv-cache-costs-p04"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-06-attention-variants",
+   "title": "SL-06: Attention variants",
+   "minutes": 2,
+   "endAnchor": "sl-06-attention-variants-end",
+   "blocks": [
+    {
+     "anchor": "sl-06-attention-variants-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-06-attention-variants-p07",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "MQA",
+     "definition": "Many query heads share one key/value head.",
+     "anchor": "sl-06-attention-variants-p03"
+    },
+    {
+     "term": "GQA",
+     "definition": "Query groups share one key/value head each; n_g between 1 and n_h.",
+     "anchor": "sl-06-attention-variants-p04"
+    },
+    {
+     "term": "sliding-window attention",
+     "definition": "Each token attends only to the last w tokens.",
+     "anchor": "sl-06-attention-variants-p05"
+    },
+    {
+     "term": "QK-Norm",
+     "definition": "Normalize q and k before the dot product.",
+     "anchor": "sl-06-attention-variants-p06"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-06-attention-variants-r1",
+     "question": "What is the MQA-GQA-MHA spectrum?",
+     "answer": "MQA: many query heads share one key/value head. GQA: groups share one key/value head each. MHA is n_g = n_h, MQA is n_g = 1. Fewer KV heads, smaller cache: quality vs decoding efficiency.",
+     "anchor": "sl-06-attention-variants-p04"
+    },
+    {
+     "id": "sl-06-attention-variants-r2",
+     "question": "How does the cache scale?",
+     "answer": "With n_g, not n_h: MHA 128.0 MiB, GQA (n_g=8) 32.0 MiB, MQA 4.0 MiB per layer at T=8192.",
+     "anchor": "sl-06-attention-variants-p07"
+    },
+    {
+     "id": "sl-06-attention-variants-r3",
+     "question": "When does aggressive MQA hurt?",
+     "answer": "On quality-sensitive tasks: the shared key head bottlenecks distinct query behaviors and quality drops.",
+     "anchor": "sl-06-attention-variants-p09"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-07-mixture-of-experts",
+   "title": "SL-07: Mixture of Experts",
+   "minutes": 2,
+   "endAnchor": "sl-07-mixture-of-experts-end",
+   "blocks": [
+    {
+     "anchor": "sl-07-mixture-of-experts-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "MoE",
+     "definition": "Sparse layers routing tokens to expert MLPs.",
+     "anchor": "sl-07-mixture-of-experts-p02"
+    },
+    {
+     "term": "router",
+     "definition": "The tiny classifier choosing experts per token.",
+     "anchor": "sl-07-mixture-of-experts-p02"
+    },
+    {
+     "term": "top-k",
+     "definition": "The small chosen expert set per token.",
+     "anchor": "sl-07-mixture-of-experts-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-07-mixture-of-experts-r1",
+     "question": "What is the MoE idea?",
+     "answer": "Each token consults a few specialists. Total parameters grow with m, per-token compute grows with k. The router is a tiny classifier: which experts fit this token?",
+     "anchor": "sl-07-mixture-of-experts-p04"
+    },
+    {
+     "id": "sl-07-mixture-of-experts-r2",
+     "question": "What is router collapse?",
+     "answer": "Every token routes to the same few experts and the rest starve. Load-balancing losses prevent it.",
+     "anchor": "sl-07-mixture-of-experts-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-08-icl-zero-shot-sft",
+   "title": "SL-08: ICL, zero-shot, SFT",
+   "minutes": 2,
+   "endAnchor": "sl-08-icl-zero-shot-sft-end",
+   "blocks": [
+    {
+     "anchor": "sl-08-icl-zero-shot-sft-p09",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "in-context learning",
+     "definition": "Concatenate labeled examples and the test input; generate the continuation.",
+     "anchor": "sl-08-icl-zero-shot-sft-p03"
+    },
+    {
+     "term": "zero-shot prompting",
+     "definition": "No examples, just a task description; no gradient updates.",
+     "anchor": "sl-08-icl-zero-shot-sft-p04"
+    },
+    {
+     "term": "SFT",
+     "definition": "Update parameters on prompt-completion pairs.",
+     "anchor": "sl-08-icl-zero-shot-sft-p05"
+    },
+    {
+     "term": "loss mask",
+     "definition": "0 on prompt tokens, 1 on answer tokens.",
+     "anchor": "sl-08-icl-zero-shot-sft-p07"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-08-icl-zero-shot-sft-r1",
+     "question": "What changes in prompting versus SFT?",
+     "answer": "Prompting (ICL, zero-shot) changes the text, not the weights. SFT changes the weights: it teaches p(y | x). The loss mask is the key detail: the model learns to produce answers, not predict prompts.",
+     "anchor": "sl-08-icl-zero-shot-sft-p09"
+    },
+    {
+     "id": "sl-08-icl-zero-shot-sft-r2",
+     "question": "What is the SFT loss?",
+     "answer": "min_theta -(1/n) sum_i sum_t log p_theta(y_t^(i) | x^(i), y_{<t}^(i)), with the loss mask 0 on prompt tokens, 1 on answer tokens.",
+     "anchor": "sl-08-icl-zero-shot-sft-p06"
+    },
+    {
+     "id": "sl-08-icl-zero-shot-sft-r3",
+     "question": "What is format overfitting in SFT?",
+     "answer": "SFT on a narrow answer style: the model learns the format but forgets the pretraining distribution. Mix SFT data with pretraining-style data.",
+     "anchor": "sl-08-icl-zero-shot-sft-p11"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-09-traininfer-mismatch-and-resource-accounting",
+   "title": "SL-09: Train/infer mismatch and resource accounting",
+   "minutes": 2,
+   "endAnchor": "sl-09-traininfer-mismatch-and-resource-accounting-end",
+   "blocks": [
+    {
+     "anchor": "sl-09-traininfer-mismatch-and-resource-accounting-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-09-traininfer-mismatch-and-resource-accounting-p04",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "exposure bias",
+     "definition": "The model never saw its own mistakes during training; errors compound.",
+     "anchor": "sl-09-traininfer-mismatch-and-resource-accounting-p03"
+    },
+    {
+     "term": "teacher forcing",
+     "definition": "Training on ground-truth prefixes.",
+     "anchor": "sl-09-traininfer-mismatch-and-resource-accounting-p03"
+    },
+    {
+     "term": "top-p",
+     "definition": "Keep the top tokens totaling probability 0.9, renormalize.",
+     "anchor": "sl-09-traininfer-mismatch-and-resource-accounting-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-09-traininfer-mismatch-and-resource-accounting-r1",
+     "question": "What is the train/infer mismatch?",
+     "answer": "Training feeds ground-truth prefixes (teacher forcing). Inference feeds the model's own outputs. Errors compound: a small early mistake shifts the whole continuation distribution.",
+     "anchor": "sl-09-traininfer-mismatch-and-resource-accounting-p03"
+    },
+    {
+     "id": "sl-09-traininfer-mismatch-and-resource-accounting-r2",
+     "question": "In the temperature example, what does tau do?",
+     "answer": "tau = 0.5 sharpens to [0.8282, 0.1121, 0.0412, 0.0185]; tau = 2.0 flattens to [0.4056, 0.2460, 0.1916, 0.1569].",
+     "anchor": "sl-09-traininfer-mismatch-and-resource-accounting-p04"
+    },
+    {
+     "id": "sl-09-traininfer-mismatch-and-resource-accounting-r3",
+     "question": "What is the deployment ledger?",
+     "answer": "Model weights, KV cache per concurrent sequence (grows with T and batch), compute per token (T^2 prefill, T per decode step).",
+     "anchor": "sl-09-traininfer-mismatch-and-resource-accounting-p05"
+    }
+   ]
+  },
+  {
+   "anchor": "assessment",
+   "title": "Assessment",
+   "minutes": 2,
+   "endAnchor": "assessment-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "BPE",
+     "definition": "Repeatedly merge the most frequent adjacent pair from tiny pieces.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "autoregressive factorization",
+     "definition": "p(x_1..x_T) = prod_t p(x_t | x_{<t}).",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "next-token training loss",
+     "definition": "(1/T) sum_t l_ce(f_theta(x_{<t}), x_t).",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "causal mask",
+     "definition": "M_{t,j} = 0 for j <= t, -inf for j > t, added before softmax.",
+     "anchor": "assessment-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "assessment-r1",
+     "question": "What does E04 ask?",
+     "answer": "Write single-head attention (scores and output).",
+     "anchor": "assessment-p01"
+    },
+    {
+     "id": "assessment-r2",
+     "question": "What does E09 describe?",
+     "answer": "Training loss is near zero after one epoch but generated text is incoherent. Diagnose.",
+     "anchor": "assessment-p05"
+    },
+    {
+     "id": "assessment-r3",
+     "question": "What does E10 ask?",
+     "answer": "Team A adapts with zero-shot prompting. Team B adapts with SFT on 5,000 pairs. When does each win, and what does the loss mask buy B?",
+     "anchor": "assessment-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "visual-units",
+   "title": "Visual units",
+   "minutes": 1,
+   "endAnchor": "visual-units-end",
+   "blocks": [
+    {
+     "anchor": "visual-units-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "visual-units-fig02",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "causal attention",
+     "definition": "The visual of the causal mask and computed attention scores.",
+     "anchor": "visual-units-fig01"
+    },
+    {
+     "term": "KV-cache memory",
+     "definition": "The visual of KV-cache memory vs context length.",
+     "anchor": "visual-units-fig02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "visual-units-r1",
+     "question": "What does the first visual unit show?",
+     "answer": "The causal mask and the computed attention scores, computed.",
+     "anchor": "visual-units-l01"
+    },
+    {
+     "id": "visual-units-r2",
+     "question": "What does the second visual unit show?",
+     "answer": "KV-cache memory vs context length for MHA/GQA/MQA and the quadratic compute curve, computed.",
+     "anchor": "visual-units-l02"
+    }
+   ]
+  },
+  {
+   "anchor": "research-reading-and-extension",
+   "title": "Research reading and extension",
+   "minutes": 1,
+   "endAnchor": "research-reading-and-extension-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "falsifiable claim",
+     "definition": "A claim an experiment can disprove, here about the mask test.",
+     "anchor": "research-reading-and-extension-p01"
+    },
+    {
+     "term": "mask test",
+     "definition": "u_t invariant to future perturbation.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "research-reading-and-extension-r1",
+     "question": "What is the falsifiable claim?",
+     "answer": "Removing the mask drops the loss to near zero on training data while generation coherence collapses.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "role-bridges",
+   "title": "Role bridges",
+   "minutes": 1,
+   "endAnchor": "role-bridges-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "causal mask",
+     "definition": "Must be right in every serving stack.",
+     "anchor": "role-bridges-l01"
+    },
+    {
+     "term": "KV cache",
+     "definition": "Must be right in every serving stack.",
+     "anchor": "role-bridges-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "role-bridges-r1",
+     "question": "What is the ML engineer bridge?",
+     "answer": "The causal mask and the KV cache are the two things that must be right in every serving stack. Test both.",
+     "anchor": "role-bridges-l01"
+    }
+   ]
+  }
+ ]
+}

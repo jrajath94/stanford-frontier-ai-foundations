@@ -1,0 +1,800 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229s-lessons-u09-lesson-09-parallelism-clusters-scheduling",
+ "itemKind": "lesson",
+ "revision": "09802e8500818c3203aefc043b8a622080641904d1167fe5818f1498614e1d48",
+ "sections": [
+  {
+   "anchor": "lesson-09-parallelism-clusters-scheduling-intro",
+   "title": "Lesson 09: Parallelism, clusters, and scheduling",
+   "endAnchor": "lesson-09-parallelism-clusters-scheduling-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229s-U09",
+     "definition": "Unit 09 of CS229S, covering parallelism, clusters, and scheduling.",
+     "anchor": "lesson-09-parallelism-clusters-scheduling-intro-p02"
+    },
+    {
+     "term": "claim class",
+     "definition": "The evidence label on every lesson claim, here PLANNED with source attribution pending.",
+     "anchor": "lesson-09-parallelism-clusters-scheduling-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-09-parallelism-clusters-scheduling-intro-r1",
+     "question": "What unit and sessions anchor this lesson?",
+     "answer": "Unit cs229s-U09, concepts C01 to C12, calendar-anchored to Oct 25 (Parallelism Fundamentals), the Oct 30 Narayanan guest talk, Nov 15 (Parallelism), and Nov 18 (Cluster Scheduling).",
+     "anchor": "lesson-09-parallelism-clusters-scheduling-intro-p02"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c01-datatensorpipelineexpert-splits",
+   "title": "C01: data/tensor/pipeline/expert splits",
+   "endAnchor": "c01-datatensorpipelineexpert-splits-end",
+   "blocks": [
+    {
+     "anchor": "c01-datatensorpipelineexpert-splits-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c01-datatensorpipelineexpert-splits-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c01-datatensorpipelineexpert-splits-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "four ways",
+     "definition": "Data, tensor, pipeline, expert: the four ways to cut a model across GPUs.",
+     "anchor": "c01-datatensorpipelineexpert-splits-p01"
+    },
+    {
+     "term": "DP",
+     "definition": "Data parallel: 8 full copies, different data.",
+     "anchor": "c01-datatensorpipelineexpert-splits-list01"
+    },
+    {
+     "term": "thin inter-node link",
+     "definition": "What a TP-8 all-reduce crosses across two nodes: step time doubles.",
+     "anchor": "c01-datatensorpipelineexpert-splits-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c01-datatensorpipelineexpert-splits-r1",
+     "question": "Name the four splits and what each replicates vs shards.",
+     "answer": "DP replicates the model, shards data. TP shards layers, every GPU does a piece of every matmul. PP shards stages. EP shards experts.",
+     "anchor": "c01-datatensorpipelineexpert-splits-p03"
+    },
+    {
+     "id": "c01-datatensorpipelineexpert-splits-r2",
+     "question": "10B params fp16 = 20 GB, 8 GPUs. Per-GPU bytes for all four?",
+     "answer": "DP 20 GB/GPU, TP 2.5 GB/GPU, PP 2.5 GB/stage, EP 2.5 GB/GPU.",
+     "anchor": "c01-datatensorpipelineexpert-splits-p05"
+    },
+    {
+     "id": "c01-datatensorpipelineexpert-splits-r3",
+     "question": "The model is 100 GB. Which splits still run on 40 GB GPUs?",
+     "answer": "TP-8 (12.5 GB/GPU), PP-8, EP-8. DP needs 100 GB per GPU: fails.",
+     "anchor": "c01-datatensorpipelineexpert-splits-p04"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c02-collective-cost",
+   "title": "C02: collective cost",
+   "endAnchor": "c02-collective-cost-end",
+   "blocks": [
+    {
+     "anchor": "c02-collective-cost-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c02-collective-cost-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c02-collective-cost-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "bucket brigade",
+     "definition": "Ring all-reduce: each GPU passes its chunk to the next, twice around.",
+     "anchor": "c02-collective-cost-p03"
+    },
+    {
+     "term": "1.75",
+     "definition": "The ring factor 2*(n-1)/n at n = 8.",
+     "anchor": "c02-collective-cost-p04"
+    },
+    {
+     "term": "reduce-scatter",
+     "definition": "The first pass: then all-gather.",
+     "anchor": "c02-collective-cost-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c02-collective-cost-r1",
+     "question": "Write the ring formula and name the two passes.",
+     "answer": "t = 2*(n-1)/n * S/BW. Passes: reduce-scatter then all-gather.",
+     "anchor": "c02-collective-cost-list01"
+    },
+    {
+     "id": "c02-collective-cost-r2",
+     "question": "S = 20 GB, BW = 100 GB/s. t at n=8 and n=64?",
+     "answer": "n=8: 0.35 s. n=64: 0.39375 s: barely worse per byte, the pain is hop latency.",
+     "anchor": "c02-collective-cost-p05"
+    },
+    {
+     "id": "c02-collective-cost-r3",
+     "question": "Sync takes 3x the formula. Name two causes.",
+     "answer": "Incast congestion on a shared switch, or the ring not matching the topology.",
+     "anchor": "c02-collective-cost-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c03-interconnect-placement",
+   "title": "C03: interconnect placement",
+   "endAnchor": "c03-interconnect-placement-end",
+   "blocks": [
+    {
+     "anchor": "c03-interconnect-placement-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c03-interconnect-placement-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c03-interconnect-placement-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "urban planning",
+     "definition": "Placement is urban planning for bytes: fast streets in the node, slow highways across.",
+     "anchor": "c03-interconnect-placement-p03"
+    },
+    {
+     "term": "12x",
+     "definition": "The toy cross-node penalty: 0.058 s vs 0.70 s.",
+     "anchor": "c03-interconnect-placement-p05"
+    },
+    {
+     "term": "BW_out",
+     "definition": "The inter-node bandwidth: what a crossing collective pays.",
+     "anchor": "c03-interconnect-placement-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c03-interconnect-placement-r1",
+     "question": "State the placement rule.",
+     "answer": "Keep TP groups inside the node. Let DP (fewer, bigger syncs) cross nodes.",
+     "anchor": "c03-interconnect-placement-p04"
+    },
+    {
+     "id": "c03-interconnect-placement-r2",
+     "question": "20 GB all-reduce, intra 600 GB/s vs inter 50 GB/s. Both times and ratio?",
+     "answer": "0.058 s vs 0.70 s: 12x slower.",
+     "anchor": "c03-interconnect-placement-p05"
+    },
+    {
+     "id": "c03-interconnect-placement-r3",
+     "question": "TP job is 12x slower than expected. What is the placement?",
+     "answer": "Split across nodes: the all-reduce crosses the thin link every matmul.",
+     "anchor": "c03-interconnect-placement-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c04-stragglers",
+   "title": "C04: stragglers",
+   "endAnchor": "c04-stragglers-end",
+   "blocks": [
+    {
+     "anchor": "c04-stragglers-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c04-stragglers-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c04-stragglers-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "group hike",
+     "definition": "Synchronous training: the group moves at the slowest hiker's pace.",
+     "anchor": "c04-stragglers-p03"
+    },
+    {
+     "term": "40%",
+     "definition": "The toy straggler tax: (14 - 10) / 10.",
+     "anchor": "c04-stragglers-p04"
+    },
+    {
+     "term": "max(worker times)",
+     "definition": "The step-time rule under a bulk barrier.",
+     "anchor": "c04-stragglers-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c04-stragglers-r1",
+     "question": "Write the step-time rule.",
+     "answer": "Step time = max(worker times). Straggler tax = (max - median) / median.",
+     "anchor": "c04-stragglers-list01"
+    },
+    {
+     "id": "c04-stragglers-r2",
+     "question": "Times [10 x7, 14]. Step, tax, wasted GPU-seconds per step?",
+     "answer": "Step 14 s, tax 40%, 28 GPU-seconds wasted.",
+     "anchor": "c04-stragglers-p05"
+    },
+    {
+     "id": "c04-stragglers-r3",
+     "question": "Step time climbs over a week with no code change. What do you check?",
+     "answer": "Per-worker step times: a hot chip, noisy neighbor, or bad disk emerging as a straggler.",
+     "anchor": "c04-stragglers-p10"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c05-bubbles",
+   "title": "C05: bubbles",
+   "endAnchor": "c05-bubbles-end",
+   "blocks": [
+    {
+     "anchor": "c05-bubbles-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c05-bubbles-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c05-bubbles-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "car wash",
+     "definition": "A pipeline: at the start later stations wait, at the end early stations wait.",
+     "anchor": "c05-bubbles-p03"
+    },
+    {
+     "term": "bubble fraction",
+     "definition": "(p - 1) / (m + p - 1) for p stages and m microbatches.",
+     "anchor": "c05-bubbles-list01"
+    },
+    {
+     "term": "1F1B",
+     "definition": "One forward, one backward: same bubble with less activation memory.",
+     "anchor": "c05-bubbles-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c05-bubbles-r1",
+     "question": "Write the bubble formula.",
+     "answer": "Bubble fraction = (p - 1) / (m + p - 1).",
+     "anchor": "c05-bubbles-list01"
+    },
+    {
+     "id": "c05-bubbles-r2",
+     "question": "4 stages, 8 microbatches. Bubble at m=8 and m=16?",
+     "answer": "27.3% at m=8, 15.8% at m=16.",
+     "anchor": "c05-bubbles-p05"
+    },
+    {
+     "id": "c05-bubbles-r3",
+     "question": "Measured bubble is 2x the formula. What is uneven?",
+     "answer": "Stage times: one stage (e.g. the embedding table) runs 2x the others.",
+     "anchor": "c05-bubbles-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c06-sharding",
+   "title": "C06: sharding",
+   "endAnchor": "c06-sharding-end",
+   "blocks": [
+    {
+     "anchor": "c06-sharding-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c06-sharding-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c06-sharding-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "shared apartment",
+     "definition": "ZeRO: params, gradients, and optimizer states split across roommates.",
+     "anchor": "c06-sharding-p03"
+    },
+    {
+     "term": "Adam states",
+     "definition": "12 bytes per param: master copy, m, v.",
+     "anchor": "c06-sharding-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c06-sharding-r1",
+     "question": "Name the three ZeRO stages.",
+     "answer": "ZeRO-1 shards optimizer states, ZeRO-2 adds gradients, ZeRO-3 adds params.",
+     "anchor": "c06-sharding-p03"
+    },
+    {
+     "id": "c06-sharding-r2",
+     "question": "10B params, 8 GPUs, Adam. Per-GPU bytes for ZeRO-3 and plain DP?",
+     "answer": "ZeRO-3: 20.0 GB/GPU. Plain DP: 160 GB/GPU (OOM).",
+     "anchor": "c06-sharding-p05"
+    },
+    {
+     "id": "c06-sharding-r3",
+     "question": "ZeRO-3 is slower than ZeRO-2 on small layers. Why?",
+     "answer": "Gather latency dominates: tiny layers pay per-layer all-gather for little memory gain.",
+     "anchor": "c06-sharding-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c07-checkpointing",
+   "title": "C07: checkpointing",
+   "endAnchor": "c07-checkpointing-end",
+   "blocks": [
+    {
+     "anchor": "c07-checkpointing-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c07-checkpointing-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c07-checkpointing-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "save points",
+     "definition": "Checkpoints: save too often and the game stutters, too rarely and a crash replays hours.",
+     "anchor": "c07-checkpointing-p03"
+    },
+    {
+     "term": "3%",
+     "definition": "Overhead at k=100: 300 s on a 10,000 s run.",
+     "anchor": "c07-checkpointing-p04"
+    },
+    {
+     "term": "data-loader state",
+     "definition": "What the broken checkpoint forgot: resume replays the wrong data order.",
+     "anchor": "c07-checkpointing-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c07-checkpointing-r1",
+     "question": "Write the overhead formula.",
+     "answer": "Overhead = (N/k) * c. Rework on crash <= k steps.",
+     "anchor": "c07-checkpointing-list01"
+    },
+    {
+     "id": "c07-checkpointing-r2",
+     "question": "1000 steps, 10 s/step, save 30 s. Overhead and max rework for k=100 and k=500?",
+     "answer": "k=100: 3% overhead, max rework 1000 s. k=500: 0.6%, max rework 5000 s.",
+     "anchor": "c07-checkpointing-p05"
+    },
+    {
+     "id": "c07-checkpointing-r3",
+     "question": "Resume diverges from the pre-crash trajectory. What was not saved?",
+     "answer": "The data-loader state.",
+     "anchor": "c07-checkpointing-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c08-resource-allocation",
+   "title": "C08: resource allocation",
+   "endAnchor": "c08-resource-allocation-end",
+   "blocks": [
+    {
+     "anchor": "c08-resource-allocation-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c08-resource-allocation-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c08-resource-allocation-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "Tetris",
+     "definition": "Scheduling: jobs are blocks, the node is the well.",
+     "anchor": "c08-resource-allocation-p03"
+    },
+    {
+     "term": "makespan",
+     "definition": "2 h for the toy FIFO schedule.",
+     "anchor": "c08-resource-allocation-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c08-resource-allocation-r1",
+     "question": "Define makespan and waste.",
+     "answer": "Makespan: total schedule length. Waste: idle GPU-hours inside it.",
+     "anchor": "c08-resource-allocation-list01"
+    },
+    {
+     "id": "c08-resource-allocation-r2",
+     "question": "Node 8 GPUs, jobs [4,4,2,2], 1 h each, FIFO. Makespan and waste?",
+     "answer": "Makespan 2 h, 4 GPU-h wasted in hour 2.",
+     "anchor": "c08-resource-allocation-p05"
+    },
+    {
+     "id": "c08-resource-allocation-r3",
+     "question": "Small jobs wait forever. What policy causes it?",
+     "answer": "Rigid FIFO without backfill: small jobs never slide into gaps.",
+     "anchor": "c08-resource-allocation-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c09-preemption",
+   "title": "C09: preemption",
+   "endAnchor": "c09-preemption-end",
+   "blocks": [
+    {
+     "anchor": "c09-preemption-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c09-preemption-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c09-preemption-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "eviction notice",
+     "definition": "Preemption: the cluster reclaims your GPUs, the job restarts from the last checkpoint.",
+     "anchor": "c09-preemption-p03"
+    },
+    {
+     "term": "5.8%",
+     "definition": "Rework at 0.1 preemptions/hr vs the 60% spot discount: spot wins.",
+     "anchor": "c09-preemption-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c09-preemption-r1",
+     "question": "Write the rework-fraction formula.",
+     "answer": "Expected preemptions = rate * hours. Rework fraction = n * (interval + resume) / run minutes.",
+     "anchor": "c09-preemption-code01"
+    },
+    {
+     "id": "c09-preemption-r2",
+     "question": "8 GPUs, 10 h run, 0.1/hr preemptions, 30-min checkpoints, 5-min resume. Expected preemptions and rework?",
+     "answer": "1 expected preemption, 5.8% rework vs 60% discount: spot wins.",
+     "anchor": "c09-preemption-p05"
+    },
+    {
+     "id": "c09-preemption-r3",
+     "question": "Spot job never finishes. What does the rate look like?",
+     "answer": "Spiky: a zone-wide reclaim takes all GPUs at once, repeatedly.",
+     "anchor": "c09-preemption-p09"
+    }
+   ],
+   "minutes": 8
+  },
+  {
+   "anchor": "c10-fairness",
+   "title": "C10: fairness",
+   "endAnchor": "c10-fairness-end",
+   "blocks": [
+    {
+     "anchor": "c10-fairness-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c10-fairness-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c10-fairness-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "Dominant Resource Fairness",
+     "definition": "Each user's share measured on the resource they want most.",
+     "anchor": "c10-fairness-p03"
+    },
+    {
+     "term": "dominant share",
+     "definition": "max over resources of demand/total.",
+     "anchor": "c10-fairness-list01"
+    },
+    {
+     "term": "strategy-proofness",
+     "definition": "Fails in practice: inflate a demand to grab more of the other resource.",
+     "anchor": "c10-fairness-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c10-fairness-r1",
+     "question": "Define the dominant share.",
+     "answer": "Dominant share = max over resources of demand/total.",
+     "anchor": "c10-fairness-list01"
+    },
+    {
+     "id": "c10-fairness-r2",
+     "question": "Cluster (8 GPUs, 64 GB). A wants (4,16), B wants (2,32), C wants (8,8). Shares?",
+     "answer": "A 0.5 (GPUs), B 0.5 (RAM), C 1.0 (GPUs).",
+     "anchor": "c10-fairness-p05"
+    },
+    {
+     "id": "c10-fairness-r3",
+     "question": "One resource only. What is DRF?",
+     "answer": "Max-min fairness on that resource.",
+     "anchor": "c10-fairness-p09"
+    }
+   ],
+   "minutes": 6
+  },
+  {
+   "anchor": "c11-utilization",
+   "title": "C11: utilization",
+   "endAnchor": "c11-utilization-end",
+   "blocks": [
+    {
+     "anchor": "c11-utilization-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c11-utilization-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c11-utilization-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "two faces",
+     "definition": "Busy (not idle) vs useful (FLOPs toward the goal).",
+     "anchor": "c11-utilization-p03"
+    },
+    {
+     "term": "MFU",
+     "definition": "Model FLOPs Utilization = achieved / peak.",
+     "anchor": "c11-utilization-list01"
+    },
+    {
+     "term": "scoreboard",
+     "definition": "MFU is the scoreboard; the unit is the playbook for raising it.",
+     "anchor": "c11-utilization-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c11-utilization-r1",
+     "question": "Define MFU.",
+     "answer": "MFU = achieved FLOP/s / peak FLOP/s.",
+     "anchor": "c11-utilization-list01"
+    },
+    {
+     "id": "c11-utilization-r2",
+     "question": "Achieved 150 TFLOP/s, peak 312. MFU? Bubble-free projection with 27% bubble?",
+     "answer": "48.1%. Killing the bubble: toward 48/(1-0.27) = 65.8%.",
+     "anchor": "c11-utilization-p05"
+    },
+    {
+     "id": "c11-utilization-r3",
+     "question": "MFU rises but the run slows. What inflated the numerator?",
+     "answer": "Recomputation: extra FLOPs that do not advance the run.",
+     "anchor": "c11-utilization-p09"
+    }
+   ],
+   "minutes": 5
+  },
+  {
+   "anchor": "c12-failure-recovery",
+   "title": "C12: failure recovery",
+   "endAnchor": "c12-failure-recovery-end",
+   "blocks": [
+    {
+     "anchor": "c12-failure-recovery-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c12-failure-recovery-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c12-failure-recovery-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "chain of 256 links",
+     "definition": "A fleet: any link breaks the run.",
+     "anchor": "c12-failure-recovery-p03"
+    },
+    {
+     "term": "4.28 days",
+     "definition": "Cluster MTBF for 256 GPUs at 3-year per-GPU MTBF.",
+     "anchor": "c12-failure-recovery-p04"
+    },
+    {
+     "term": "correlated",
+     "definition": "Rack power events: the independent-failure math understates the pain.",
+     "anchor": "c12-failure-recovery-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c12-failure-recovery-r1",
+     "question": "Write the cluster MTBF formula.",
+     "answer": "Cluster MTBF = per-GPU MTBF / n.",
+     "anchor": "c12-failure-recovery-list01"
+    },
+    {
+     "id": "c12-failure-recovery-r2",
+     "question": "Per-GPU MTBF 3 years, 256 GPUs. MTBF in hours and days? Expected failures in 30 days?",
+     "answer": "102.7 hours = 4.28 days. About 7 failures per 30-day run.",
+     "anchor": "c12-failure-recovery-p05"
+    },
+    {
+     "id": "c12-failure-recovery-r3",
+     "question": "n = 4096. What is the MTBF?",
+     "answer": "26,280 / 4096 = 6.4 hours: checkpointing dominates the design.",
+     "anchor": "c12-failure-recovery-p04"
+    }
+   ],
+   "minutes": 3
+  },
+  {
+   "anchor": "u09-chapter-plate",
+   "title": "U09 chapter plate",
+   "endAnchor": "u09-chapter-plate-end",
+   "blocks": [
+    {
+     "anchor": "u09-chapter-plate-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "cluster stack",
+     "definition": "split -> collectives -> pipeline -> schedule -> recover.",
+     "anchor": "u09-chapter-plate-p01"
+    },
+    {
+     "term": "recover",
+     "definition": "The last stage: at scale, recovery is the schedule.",
+     "anchor": "u09-chapter-plate-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "u09-chapter-plate-r1",
+     "question": "What is the U09 chapter plate?",
+     "answer": "The cluster stack: split to collectives to pipeline to schedule to recover.",
+     "anchor": "u09-chapter-plate-p01"
+    }
+   ],
+   "minutes": 1
+  },
+  {
+   "anchor": "unit-scope-replication-proposal-proposed-not-executed",
+   "title": "Unit-scope replication proposal (PROPOSED, not executed)",
+   "endAnchor": "unit-scope-replication-proposal-proposed-not-executed-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "capstones",
+     "definition": "Course-level capstones live in capstones/.",
+     "anchor": "unit-scope-replication-proposal-proposed-not-executed-p01"
+    },
+    {
+     "term": "ring slope",
+     "definition": "Measure all-reduce time vs bytes to fit the ring slope.",
+     "anchor": "unit-scope-replication-proposal-proposed-not-executed-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "unit-scope-replication-proposal-proposed-not-executed-r1",
+     "question": "What does this unit propose?",
+     "answer": "Measure all-reduce time vs bytes to fit the ring slope, then simulate pipeline bubbles vs microbatch count and compare to the formula. See lab-09.",
+     "anchor": "unit-scope-replication-proposal-proposed-not-executed-p01"
+    }
+   ],
+   "minutes": 1
+  }
+ ]
+}

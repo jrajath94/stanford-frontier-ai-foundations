@@ -150,102 +150,102 @@
   <main class="content" id="main">
     <article>
       <nav class="breadcrumb"><a href="../index.html">Home</a> / <a href="#">CS336: Language Modeling from Scratch</a> / U06 · GPU/TPU architecture and profiling</nav>
-      <h1>U06 · GPU/TPU architecture and profiling</h1>
+      <h1 id="u06_gpu_tpu-intro">U06 · GPU/TPU architecture and profiling</h1>
       <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
       <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u06-gputpu-architecture-and-profiling">U06 , GPU/TPU architecture and profiling</h1>
-<p>Prerequisites: P06, P07, P14, P16. Bridge links in <code>../prerequisites.md</code>.
+<p id="u06_gpu_tpu-intro-p01" data-kind="aside" data-term="prerequisites">Prerequisites: P06, P07, P14, P16. Bridge links in <code>../prerequisites.md</code>.
 Session: cross-cutting branch (reported as profiling in the course
 sessions, exact session mapping in <code>../course_map.md</code>).
 Claim class: REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION
 PENDING. Notation: see <code>../notation_and_shapes.md</code>.</p>
-<h2 id="standing-assumptions-stated-not-sourced">Standing assumptions (stated, not sourced)</h2>
-<p>All compute in this unit uses one reference device, stated here: peak
+<span id="u06_gpu_tpu-intro-end" data-end></span><h2 id="standing-assumptions-stated-not-sourced">Standing assumptions (stated, not sourced)</h2>
+<p id="standing-assumptions-stated-not-sourced-p01" data-kind="prose" data-term="reference device">All compute in this unit uses one reference device, stated here: peak
 bf16 dense 312 TFLOP/s, HBM bandwidth 2.0 TB/s, HBM 80 GB, 108 SMs.
 These are lesson assumptions for the toy arithmetic, not measured
 benchmarks. No GPU exists on this box, every number is numpy-computed
 from the assumptions.</p>
-<h2 id="local-remediation-latency-bandwidth-throughput">Local remediation , latency, bandwidth, throughput</h2>
-<p>Read this if diagnostic items D9 or D12 were not full marks. Latency
+<span id="standing-assumptions-stated-not-sourced-end" data-end></span><h2 id="local-remediation-latency-bandwidth-throughput">Local remediation , latency, bandwidth, throughput</h2>
+<p id="local-remediation-latency-bandwidth-throughput-p01" data-kind="aside" data-term="roofline">Read this if diagnostic items D9 or D12 were not full marks. Latency
 is the time for one operation, bandwidth is bytes per second,
 throughput is operations per second. A kernel is memory-bound when its
 arithmetic intensity (FLOP per byte) is below peak-FLOP/bandwidth, it
 is compute-bound above it. The roofline model plots attainable
 throughput as min(peak, intensity * bandwidth).</p>
-<p>Worked check: intensity 1.0 FLOP/byte on the reference device gives
+<p id="local-remediation-latency-bandwidth-throughput-p02" data-kind="example">Worked check: intensity 1.0 FLOP/byte on the reference device gives
 min(312, 1.0*2.0) = 2.0 TFLOP/s: 1 percent of peak (from
 <code>assets/compute_u06.py</code>, executed 2026-10-06).
 Assessment: at what intensity does the reference device switch from
 memory-bound to compute-bound? Key: <code>../keys/u06_answers.md</code> R1.</p>
 <hr />
 <h3 id="c01-sm-block-thread-warp-mapping">C01: SM, block, thread, warp mapping</h3>
-<p>Leaf id <code>cs336-U06-C01</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-latency-bandwidth-throughput-p03" data-kind="aside">Leaf id <code>cs336-U06-C01</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+<p id="local-remediation-latency-bandwidth-throughput-p04" data-kind="aside" data-term="occupancy"><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
    Scope: the execution hierarchy. Objectives: map work onto SMs,
    define occupancy. Depends on P06, P07.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: what runs where? Toy:
+<p id="local-remediation-latency-bandwidth-throughput-p05" data-kind="prose"><strong>Motivating question and toy.</strong> Question: what runs where? Toy:
    256 threads/block, 8 blocks/SM, 108 SMs = 221,184 active threads
    (2.0K per SM) on the reference device.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> A GPU has SMs, each SM runs thread blocks, blocks
+<p id="local-remediation-latency-bandwidth-throughput-p06" data-kind="keyIdea" data-term="warp"><strong>Mental model.</strong> A GPU has SMs, each SM runs thread blocks, blocks
    split into warps of 32 threads that execute in lockstep. Occupancy
    is the fraction of the SM&rsquo;s thread capacity that is active:
    latency hiding needs enough warps to cover memory stalls.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> SM count 108
+<p id="local-remediation-latency-bandwidth-throughput-p07" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> SM count 108
    (assumption). Warp = 32 threads. Assumption: the kernel is written
    to fill blocks.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Active threads = threads/block *
+<p id="local-remediation-latency-bandwidth-throughput-p08" data-kind="prose"><strong>Derivation / mechanism.</strong> Active threads = threads/block *
    blocks/SM * SMs. Occupancy = active / max threads per SM. More
    warps per SM means more independent work to schedule during a
    stall.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
+<p id="local-remediation-latency-bandwidth-throughput-p09" data-kind="example"><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
    2026-10-06): 221,184 threads, 2.0K per SM.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> The mapping is a
+<p id="local-remediation-latency-bandwidth-throughput-p10" data-kind="steps"><strong>Algorithm and reference implementation.</strong> The mapping is a
    launch configuration: <code>kernel&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;()</code> assigns
    blocks to SMs. No numpy model on this box, the lab checks the
    arithmetic.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Thread counts divide
+<p id="local-remediation-latency-bandwidth-throughput-p11" data-kind="example"><strong>Correctness checks and expected output.</strong> Thread counts divide
    evenly into warps (256 = 8 warps). Expected outputs in the lab
    key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> Launch overhead is microseconds, the cost that matters
+<p id="local-remediation-latency-bandwidth-throughput-p12" data-kind="prose"><strong>Costs.</strong> Launch overhead is microseconds, the cost that matters
    is idle SMs from too little work.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> CPU threads (few,
+<p id="local-remediation-latency-bandwidth-throughput-p13" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> CPU threads (few,
     heavy). GPU threads (many, light). The hierarchy is the GPU&rsquo;s
     answer to latency.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> One block of 32 threads on a
+<p id="local-remediation-latency-bandwidth-throughput-p14" data-kind="example"><strong>Failure case and counterexample.</strong> One block of 32 threads on a
     108-SM device: 107 SMs idle. The assumption &ldquo;the GPU is fast&rdquo;
     breaks when the work does not fill it, small-batch inference is
     the classic case.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: GPU
+<p id="local-remediation-latency-bandwidth-throughput-p15" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: GPU
     programming guides (primary: vendor docs). Extension: predict the
     active-thread count for 512-thread blocks, hypothesis: the formula
     scales linearly until a resource limit.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the hierarchy levels. (b) Oral ladder:
+<p id="local-remediation-latency-bandwidth-throughput-p16" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the hierarchy levels. (b) Oral ladder:
     define a warp, compute active threads, justify 32-wide lockstep,
     write the launch, compare with CPU threads, debug the idle-SM
     case, critique the fill assumption, design the 512-thread
@@ -254,84 +254,84 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     <code>../keys/u06_answers.md</code> A1.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U06 task 1 checks the thread arithmetic
+<p id="local-remediation-latency-bandwidth-throughput-p17" data-kind="aside"><strong>Lab and exercises.</strong> Lab U06 task 1 checks the thread arithmetic
     and the idle-SM computation. See <code>../labs/u06_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Figure u06_fig01: lesson plate, the SM/block/warp
+<p id="local-remediation-latency-bandwidth-throughput-p18" data-kind="aside"><strong>Visuals.</strong> Figure u06_fig01: lesson plate, the SM/block/warp
     hierarchy. Source: original. Render: <code>assets/render_u06.py</code>.</p>
 </li>
 </ol>
-<figure><img alt="u06_fig01" src="../assets/u06_fig01.png"><figcaption>lesson plate, the SM/block/warp hierarchy. Source: original.</figcaption></figure>
+<figure id="local-remediation-latency-bandwidth-throughput-fig01" data-kind="figure" data-reveal="fade"><img alt="u06_fig01" src="../assets/u06_fig01.png"><figcaption>lesson plate, the SM/block/warp hierarchy. Source: original.</figcaption></figure>
 <hr />
 <h3 id="c02-memory-hierarchy">C02: Memory hierarchy</h3>
-<p>Leaf id <code>cs336-U06-C02</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-latency-bandwidth-throughput-p19" data-kind="aside">Leaf id <code>cs336-U06-C02</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+<p id="local-remediation-latency-bandwidth-throughput-p20" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
    Scope: where data lives. Objectives: order the memories by size
    and speed, state what each is for. Depends on P06, P07.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: why not keep everything
+<p id="local-remediation-latency-bandwidth-throughput-p21" data-kind="prose"><strong>Motivating question and toy.</strong> Question: why not keep everything
    in registers? Toy: 80 GB HBM holds 1,220,703 KV tokens at 65,536
    bytes/token (GQA-8, d=2048, L=32, bf16), registers hold kilobytes
    per thread.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Registers (fastest, KB per thread) hold the
+<p id="local-remediation-latency-bandwidth-throughput-p22" data-kind="keyIdea"><strong>Mental model.</strong> Registers (fastest, KB per thread) hold the
    working set. Shared memory (tens of KB per block) is programmer-
    managed scratch. HBM (80 GB, 2 TB/s) holds the model and the
    cache. TPU: HBM plus on-chip vector/matrix units with software-
    managed memory.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Bytes and
+<p id="local-remediation-latency-bandwidth-throughput-p23" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Bytes and
    bytes/s. Assumption: the reference device numbers.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Every byte the kernel touches must
+<p id="local-remediation-latency-bandwidth-throughput-p24" data-kind="prose"><strong>Derivation / mechanism.</strong> Every byte the kernel touches must
    travel HBM -&gt; L2 -&gt; shared/registers. Arithmetic intensity
    measures how much math amortizes each byte moved, the hierarchy
    rewards reuse (tiling, U07).</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
+<p id="local-remediation-latency-bandwidth-throughput-p25" data-kind="example"><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
    2026-10-06): 65,536 bytes/token, 1,220,703 tokens fit in 80 GB.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> The lab computes the
+<p id="local-remediation-latency-bandwidth-throughput-p26" data-kind="steps"><strong>Algorithm and reference implementation.</strong> The lab computes the
    fit for other (g, d, L) choices. No device code on this box.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Doubling g halves the
+<p id="local-remediation-latency-bandwidth-throughput-p27" data-kind="example"><strong>Correctness checks and expected output.</strong> Doubling g halves the
    fit, fp16 versus bf16 identical bytes. Expected outputs in the lab
    key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> HBM capacity bounds context length (U04-C01), HBM
+<p id="local-remediation-latency-bandwidth-throughput-p28" data-kind="prose"><strong>Costs.</strong> HBM capacity bounds context length (U04-C01), HBM
    bandwidth bounds decode speed.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> CPU DRAM (larger,
+<p id="local-remediation-latency-bandwidth-throughput-p29" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> CPU DRAM (larger,
     slower), TPU HBM (same role, different chip). The hierarchy shape
     is the same.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> Register spilling: too many
+<p id="local-remediation-latency-bandwidth-throughput-p30" data-kind="example"><strong>Failure case and counterexample.</strong> Register spilling: too many
     live values push registers to slow local memory and the kernel
     slows 2-5x with no code change except variable count. The
     assumption &ldquo;more unrolling is better&rdquo; breaks at the register
     limit.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: vendor
+<p id="local-remediation-latency-bandwidth-throughput-p31" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: vendor
     architecture whitepapers (primary). Extension: fit the KV cache
     for MQA versus MHA, hypothesis: 8x more tokens for MQA.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the three levels and their roles.
+<p id="local-remediation-latency-bandwidth-throughput-p32" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the three levels and their roles.
     (b) Oral ladder: define shared memory, compute the token fit,
     justify reuse, write the fit formula, compare TPU with GPU,
     debug spilling, critique the reference numbers, design the
@@ -339,82 +339,82 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     HBM. Name two levers. Answers: <code>../keys/u06_answers.md</code> A2.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U06 task 2 computes KV fits and the
+<p id="local-remediation-latency-bandwidth-throughput-p33" data-kind="aside"><strong>Lab and exercises.</strong> Lab U06 task 2 computes KV fits and the
     spill rule. See <code>../labs/u06_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the hierarchy table (level, size, speed,
+<p id="local-remediation-latency-bandwidth-throughput-p34" data-kind="aside"><strong>Visuals.</strong> Audit row: the hierarchy table (level, size, speed,
     role). No figure, tabular claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c03-roofline-model">C03: Roofline model</h3>
-<p>Leaf id <code>cs336-U06-C03</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-latency-bandwidth-throughput-p35" data-kind="aside">Leaf id <code>cs336-U06-C03</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
+<p id="local-remediation-latency-bandwidth-throughput-p36" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> Branch.
    Scope: bounding kernel performance. Objectives: compute the
    roofline, classify kernels. Depends on P07, U02-C10.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: is this kernel slow
+<p id="local-remediation-latency-bandwidth-throughput-p37" data-kind="prose"><strong>Motivating question and toy.</strong> Question: is this kernel slow
    because of math or memory? Toy from <code>compute_u06.py</code>: attention
    scores (intensity 1.0) -&gt; 2.0 TFLOP/s, memory-bound, GEMM
    (170.7) -&gt; 312 TFLOP/s, compute-bound.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Attainable = min(peak FLOP/s, intensity *
+<p id="local-remediation-latency-bandwidth-throughput-p38" data-kind="keyIdea"><strong>Mental model.</strong> Attainable = min(peak FLOP/s, intensity *
    bandwidth). The knee is at peak/bandwidth = 156 FLOP/byte on the
    reference device. Below the knee, only bandwidth matters, above
    it, only math.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Intensity in
+<p id="local-remediation-latency-bandwidth-throughput-p39" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Intensity in
    FLOP/byte. Assumption: the reference peak and bandwidth.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Time &gt;= max(FLOP/peak, bytes/bw), so
+<p id="local-remediation-latency-bandwidth-throughput-p40" data-kind="prose"><strong>Derivation / mechanism.</strong> Time &gt;= max(FLOP/peak, bytes/bw), so
    throughput &lt;= min(peak, intensity*bw). The U02 intensities plug
    straight in.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
+<p id="local-remediation-latency-bandwidth-throughput-p41" data-kind="example"><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
    2026-10-06): 2.0 TFLOP/s (1% of peak) for scores, 312.0 (100%)
    for GEMM and FFN.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> <code>roofline(intensity)</code>:
+<p id="local-remediation-latency-bandwidth-throughput-p42" data-kind="steps"><strong>Algorithm and reference implementation.</strong> <code>roofline(intensity)</code>:
    three lines. The lab classifies a kernel list.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Intensity 156 -&gt;
+<p id="local-remediation-latency-bandwidth-throughput-p43" data-kind="example"><strong>Correctness checks and expected output.</strong> Intensity 156 -&gt;
    exactly the knee (312). Monotonic in intensity below the knee.
    Expected outputs in the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> The model is free and predicts within ~2x before any
+<p id="local-remediation-latency-bandwidth-throughput-p44" data-kind="prose"><strong>Costs.</strong> The model is free and predicts within ~2x before any
    profiling.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Full simulation
+<p id="local-remediation-latency-bandwidth-throughput-p45" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Full simulation
     (accurate, expensive). Roofline is the first-pass tool.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> A kernel at 50 percent of
+<p id="local-remediation-latency-bandwidth-throughput-p46" data-kind="example"><strong>Failure case and counterexample.</strong> A kernel at 50 percent of
     roofline with intensity 200: the model says compute-bound, but
     the real limit is occupancy or instruction overhead. The
     assumption &ldquo;only two limits exist&rdquo; breaks, the roofline is an
     upper bound, not a diagnosis.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: the
+<p id="local-remediation-latency-bandwidth-throughput-p47" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: the
     roofline paper (Williams et al., 2009, primary). Extension:
     classify the U02 intensities, hypothesis: only scores and
     softmax sit below the knee.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the formula and the knee. (b) Oral
+<p id="local-remediation-latency-bandwidth-throughput-p48" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the formula and the knee. (b) Oral
     ladder: define intensity, compute the scores bound, justify the
     min, implement, compare with simulation, debug the 50-percent
     case, critique the two-limit assumption, design the U02
@@ -422,82 +422,82 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     speed up? Answers: <code>../keys/u06_answers.md</code> A3.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U06 task 3 classifies kernels and
+<p id="local-remediation-latency-bandwidth-throughput-p49" data-kind="aside"><strong>Lab and exercises.</strong> Lab U06 task 3 classifies kernels and
     finds the knee. See <code>../labs/u06_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Figure u06_fig02: lesson plate, the roofline curve
+<p id="local-remediation-latency-bandwidth-throughput-p50" data-kind="aside"><strong>Visuals.</strong> Figure u06_fig02: lesson plate, the roofline curve
     with the toy kernels placed. Source: original. Render:
     <code>assets/render_u06.py</code>.</p>
 </li>
 </ol>
-<figure><img alt="u06_fig02" src="../assets/u06_fig02.png"><figcaption>lesson plate, the roofline curve with the toy kernels placed. Source: original. Render: assets/render_u06.py.</figcaption></figure>
+<figure id="local-remediation-latency-bandwidth-throughput-fig02" data-kind="figure" data-reveal="fade"><img alt="u06_fig02" src="../assets/u06_fig02.png"><figcaption>lesson plate, the roofline curve with the toy kernels placed. Source: original. Render: assets/render_u06.py.</figcaption></figure>
 <hr />
 <h3 id="c04-occupancy-and-latency-hiding">C04: Occupancy and latency hiding</h3>
-<p>Leaf id <code>cs336-U06-C04</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-latency-bandwidth-throughput-p51" data-kind="aside">Leaf id <code>cs336-U06-C04</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-latency-bandwidth-throughput-p52" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: keeping SMs fed. Objectives: explain why occupancy matters,
    compute it. Depends on C01.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: the math says 312
+<p id="local-remediation-latency-bandwidth-throughput-p53" data-kind="prose"><strong>Motivating question and toy.</strong> Question: the math says 312
    TFLOP/s but the kernel gets 150. Why? Toy: halving active warps
    halves the latency-hiding ability, memory stalls go uncovered.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Memory loads take hundreds of cycles. The SM
+<p id="local-remediation-latency-bandwidth-throughput-p54" data-kind="keyIdea"><strong>Mental model.</strong> Memory loads take hundreds of cycles. The SM
    hides this by switching to other warps. Occupancy is the fraction
    of maximum warps resident, low occupancy means stalls with no
    warp to switch to.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Warps per SM.
+<p id="local-remediation-latency-bandwidth-throughput-p55" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Warps per SM.
    Assumption: the workload has enough parallelism to offer.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Little&rsquo;s-law style: needed warps ~=
+<p id="local-remediation-latency-bandwidth-throughput-p56" data-kind="prose"><strong>Derivation / mechanism.</strong> Little&rsquo;s-law style: needed warps ~=
    latency * throughput. Fewer resident warps than needed leaves
    bandwidth idle.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> Lab table: occupancy versus register and
+<p id="local-remediation-latency-bandwidth-throughput-p57" data-kind="example"><strong>Computed example.</strong> Lab table: occupancy versus register and
    shared-memory usage for a toy kernel.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> The occupancy
+<p id="local-remediation-latency-bandwidth-throughput-p58" data-kind="steps"><strong>Algorithm and reference implementation.</strong> The occupancy
    calculator: given registers/thread and shared/block, compute
    resident blocks. About 10 lines.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> More registers -&gt;
+<p id="local-remediation-latency-bandwidth-throughput-p59" data-kind="example"><strong>Correctness checks and expected output.</strong> More registers -&gt;
    fewer blocks, the calculator reproduces the vendor table on the
    toy. Expected outputs in the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> Tuning occupancy is free at launch time, the cost is
+<p id="local-remediation-latency-bandwidth-throughput-p60" data-kind="prose"><strong>Costs.</strong> Tuning occupancy is free at launch time, the cost is
    engineering time.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Instruction-level
+<p id="local-remediation-latency-bandwidth-throughput-p61" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Instruction-level
     parallelism (same warp, independent ops). Occupancy is the
     thread-level answer.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> 100 percent occupancy with
+<p id="local-remediation-latency-bandwidth-throughput-p62" data-kind="example"><strong>Failure case and counterexample.</strong> 100 percent occupancy with
     low intensity: the kernel is still memory-bound, occupancy cannot
     fix a bandwidth limit. The assumption &ldquo;more occupancy is always
     better&rdquo; breaks, past enough warps there is no gain.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: CUDA
+<p id="local-remediation-latency-bandwidth-throughput-p63" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: CUDA
     occupancy documentation (primary). Extension: sweep the toy
     calculator, hypothesis: a plateau past the latency-hiding point.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the latency-hiding mechanism.
+<p id="local-remediation-latency-bandwidth-throughput-p64" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the latency-hiding mechanism.
     (b) Oral ladder: define occupancy, compute resident blocks,
     justify warp switching, implement the calculator, compare with
     ILP, debug the low-occupancy kernel, critique the plateau,
@@ -505,77 +505,77 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     full occupancy. What next? Answers: <code>../keys/u06_answers.md</code> A4.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U06 task 4 implements the occupancy
+<p id="local-remediation-latency-bandwidth-throughput-p65" data-kind="aside"><strong>Lab and exercises.</strong> Lab U06 task 4 implements the occupancy
     calculator. See <code>../labs/u06_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the occupancy table. No figure, tabular
+<p id="local-remediation-latency-bandwidth-throughput-p66" data-kind="aside"><strong>Visuals.</strong> Audit row: the occupancy table. No figure, tabular
     claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c05-measurement-methodology">C05: Measurement methodology</h3>
-<p>Leaf id <code>cs336-U06-C05</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-latency-bandwidth-throughput-p67" data-kind="aside">Leaf id <code>cs336-U06-C05</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-latency-bandwidth-throughput-p68" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: trustworthy timing. Objectives: state the warmup/sync/
    statistics rules. Depends on P06.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: the first timing says
+<p id="local-remediation-latency-bandwidth-throughput-p69" data-kind="prose"><strong>Motivating question and toy.</strong> Question: the first timing says
    10 ms, the second says 3 ms. Which is right? Toy: the lab models
    warmup effects and shows the median-of-N rule.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> GPUs execute asynchronously: time with device
+<p id="local-remediation-latency-bandwidth-throughput-p70" data-kind="keyIdea"><strong>Mental model.</strong> GPUs execute asynchronously: time with device
    sync, warm up (caches, clocks), then take the median of many
    runs. Report the setup (shapes, dtype, device state) or the
    number is meaningless.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Milliseconds,
+<p id="local-remediation-latency-bandwidth-throughput-p71" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Milliseconds,
    medians, N&gt;=30. Assumption: clocks are stable (see C11).</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Async launch returns before the work
+<p id="local-remediation-latency-bandwidth-throughput-p72" data-kind="prose"><strong>Derivation / mechanism.</strong> Async launch returns before the work
    finishes: unsynced timing measures launch overhead. Warmup fills
    caches and ramps clocks. Median rejects outliers.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> Lab model: run times [12, 3.1, 3.0, 3.2,
+<p id="local-remediation-latency-bandwidth-throughput-p73" data-kind="example"><strong>Computed example.</strong> Lab model: run times [12, 3.1, 3.0, 3.2,
    3.1] ms: first is warmup, median of the rest 3.1 ms.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> <code>time_kernel(f)</code>:
+<p id="local-remediation-latency-bandwidth-throughput-p74" data-kind="steps"><strong>Algorithm and reference implementation.</strong> <code>time_kernel(f)</code>:
    warmup loop, sync, timed loop, median. About 10 lines of pattern.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Median within 10
+<p id="local-remediation-latency-bandwidth-throughput-p75" data-kind="example"><strong>Correctness checks and expected output.</strong> Median within 10
    percent across repeats, warmup run excluded. Expected outputs in
    the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> Minutes of benchmarking save days of wrong tuning.</p>
+<p id="local-remediation-latency-bandwidth-throughput-p76" data-kind="prose"><strong>Costs.</strong> Minutes of benchmarking save days of wrong tuning.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Vendor profilers
+<p id="local-remediation-latency-bandwidth-throughput-p77" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Vendor profilers
     (nsys, ncu) for the inside view. The rules above are the floor.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> Timing without sync: every
+<p id="local-remediation-latency-bandwidth-throughput-p78" data-kind="example"><strong>Failure case and counterexample.</strong> Timing without sync: every
     kernel reports ~5 us and the &ldquo;optimization&rdquo; that launches fewer
     kernels looks like a win. The assumption &ldquo;the timer measures
     work&rdquo; breaks under asynchrony, sync is load-bearing.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: profiler
+<p id="local-remediation-latency-bandwidth-throughput-p79" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: profiler
     documentation (primary). Extension: measure with and without
     sync on the toy model, hypothesis: 10x difference.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the three rules. (b) Oral ladder:
+<p id="local-remediation-latency-bandwidth-throughput-p80" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the three rules. (b) Oral ladder:
     define async launch, compute the median, justify warmup,
     implement the pattern, compare with profiler output, debug the
     no-sync timing, critique the stable-clock assumption, design
@@ -583,78 +583,78 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     Is the difference real? Answers: <code>../keys/u06_answers.md</code> A5.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U06 task 5 implements the timing
+<p id="local-remediation-latency-bandwidth-throughput-p81" data-kind="aside"><strong>Lab and exercises.</strong> Lab U06 task 5 implements the timing
     pattern on the model. See <code>../labs/u06_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the timing checklist. No figure, tabular
+<p id="local-remediation-latency-bandwidth-throughput-p82" data-kind="aside"><strong>Visuals.</strong> Audit row: the timing checklist. No figure, tabular
     claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c06-gemm-shapes-and-batching">C06: GEMM shapes and batching</h3>
-<p>Leaf id <code>cs336-U06-C06</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-latency-bandwidth-throughput-p83" data-kind="aside">Leaf id <code>cs336-U06-C06</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-latency-bandwidth-throughput-p84" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: matrix-multiply performance. Objectives: explain why shape
    matters, use batching. Depends on C03, U02-C06.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: same FLOPs, different
+<p id="local-remediation-latency-bandwidth-throughput-p85" data-kind="prose"><strong>Motivating question and toy.</strong> Question: same FLOPs, different
    speed. Why? Toy: a skinny GEMM (M=1) is memory-bound while a
    square one is compute-bound at equal FLOP count.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> GEMM efficiency depends on the (M,N,K) shape:
+<p id="local-remediation-latency-bandwidth-throughput-p86" data-kind="keyIdea"><strong>Mental model.</strong> GEMM efficiency depends on the (M,N,K) shape:
    large K gives reuse, tiny M (decode, batch 1) gives none. Batching
    (bigger M) moves decode toward the compute-bound regime.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> M,N,K dims.
+<p id="local-remediation-latency-bandwidth-throughput-p87" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> M,N,K dims.
    Assumption: the weight matrix is the same in both cases.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Intensity ~= 2MNK/(MN+NK+MK) bytes
+<p id="local-remediation-latency-bandwidth-throughput-p88" data-kind="prose"><strong>Derivation / mechanism.</strong> Intensity ~= 2MNK/(MN+NK+MK) bytes
    scaled: for M=1 this collapses to ~2K/(K+&hellip;) per byte: the
    weight matrix streams once per token.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> Lab: intensity for (M=1,N=4096,K=4096)
+<p id="local-remediation-latency-bandwidth-throughput-p89" data-kind="example"><strong>Computed example.</strong> Lab: intensity for (M=1,N=4096,K=4096)
    versus (M=4096,N=4096,K=4096), the roofline classifies them.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> <code>gemm_intensity(M,N,K,
+<p id="local-remediation-latency-bandwidth-throughput-p90" data-kind="steps"><strong>Algorithm and reference implementation.</strong> <code>gemm_intensity(M,N,K,
    bytes)</code>: the formula. About 5 lines.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> M=1 intensity &lt;&lt; knee,
+<p id="local-remediation-latency-bandwidth-throughput-p91" data-kind="example"><strong>Correctness checks and expected output.</strong> M=1 intensity &lt;&lt; knee,
    large M intensity &gt;&gt; knee. Expected outputs in the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> Batching costs latency per request (queueing) and buys
+<p id="local-remediation-latency-bandwidth-throughput-p92" data-kind="prose"><strong>Costs.</strong> Batching costs latency per request (queueing) and buys
    throughput.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Weight-only
+<p id="local-remediation-latency-bandwidth-throughput-p93" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Weight-only
     quantization (raises intensity by shrinking bytes). Batching is
     the scheduling answer.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> Batching to M=1024 on a
+<p id="local-remediation-latency-bandwidth-throughput-p94" data-kind="example"><strong>Failure case and counterexample.</strong> Batching to M=1024 on a
     latency-sensitive serving task: throughput soars, p99 latency
     violates the SLO. The assumption &ldquo;bigger is better&rdquo; breaks
     against the latency contract.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: GEMM
+<p id="local-remediation-latency-bandwidth-throughput-p95" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: GEMM
     performance literature (primary: vendor guides). Extension:
     sweep M and plot intensity, hypothesis: knee crossing near
     M=156-ish scaled.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the shape effect. (b) Oral ladder:
+<p id="local-remediation-latency-bandwidth-throughput-p96" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the shape effect. (b) Oral ladder:
     define the intensity formula, compute the M=1 case, justify the
     collapse, implement, compare with quantization, debug the SLO
     violation, critique the equal-FLOP comparison, design the sweep.
@@ -662,79 +662,79 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     Answers: <code>../keys/u06_answers.md</code> A6.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U06 task 6 sweeps M and classifies.
+<p id="local-remediation-latency-bandwidth-throughput-p97" data-kind="aside"><strong>Lab and exercises.</strong> Lab U06 task 6 sweeps M and classifies.
     See <code>../labs/u06_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the shape table. No figure, tabular
+<p id="local-remediation-latency-bandwidth-throughput-p98" data-kind="aside"><strong>Visuals.</strong> Audit row: the shape table. No figure, tabular
     claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c07-scaling-laws-hardware-and-mfu">C07: Scaling laws hardware and MFU</h3>
-<p>Leaf id <code>cs336-U06-C07</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-latency-bandwidth-throughput-p99" data-kind="aside">Leaf id <code>cs336-U06-C07</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-latency-bandwidth-throughput-p100" data-kind="aside" data-term="MFU"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: model FLOP utilization. Objectives: compute MFU, state what
    it excludes. Depends on C03, U02-C07.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: the cluster trains at
+<p id="local-remediation-latency-bandwidth-throughput-p101" data-kind="prose"><strong>Motivating question and toy.</strong> Question: the cluster trains at
    25 TFLOP/s per GPU. Is that good? Toy from <code>compute_u06.py</code>: 25.2
    TFLOP/s on a 7B model at 1800 tok/s = 8.1 percent MFU.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> MFU = achieved model FLOPs / peak device FLOPs.
+<p id="local-remediation-latency-bandwidth-throughput-p102" data-kind="keyIdea"><strong>Mental model.</strong> MFU = achieved model FLOPs / peak device FLOPs.
    The numerator counts the math the model needs (2*params per
    token), the denominator is the device peak. 8 percent is poor,
    40-60 percent is a well-tuned large run.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Percent.
+<p id="local-remediation-latency-bandwidth-throughput-p103" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Percent.
    Assumption: the 2*params/token FLOP model (U02-C07).</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Achieved = 2 * P * tokens/s. MFU =
+<p id="local-remediation-latency-bandwidth-throughput-p104" data-kind="prose"><strong>Derivation / mechanism.</strong> Achieved = 2 * P * tokens/s. MFU =
    achieved/peak. It excludes rematerialization and communication:
    hardware FLOP utilization (HFU) includes them.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
+<p id="local-remediation-latency-bandwidth-throughput-p105" data-kind="example"><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
    2026-10-06): 25.2 TFLOP/s, 8.1 percent MFU.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> <code>mfu(params, tok_s,
+<p id="local-remediation-latency-bandwidth-throughput-p106" data-kind="steps"><strong>Algorithm and reference implementation.</strong> <code>mfu(params, tok_s,
    peak)</code>: three lines.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> MFU &lt;= 100 percent,
+<p id="local-remediation-latency-bandwidth-throughput-p107" data-kind="example"><strong>Correctness checks and expected output.</strong> MFU &lt;= 100 percent,
    doubling tok/s doubles MFU. Expected outputs in the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> MFU is a diagnostic, not a knob, the knobs are batch,
+<p id="local-remediation-latency-bandwidth-throughput-p108" data-kind="prose"><strong>Costs.</strong> MFU is a diagnostic, not a knob, the knobs are batch,
    parallelism, kernels.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> HFU (includes
+<p id="local-remediation-latency-bandwidth-throughput-p109" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> HFU (includes
     extra FLOPs), tokens/s alone (not normalized). MFU compares
     across hardware.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> MFU 55 percent with frequent
+<p id="local-remediation-latency-bandwidth-throughput-p110" data-kind="example"><strong>Failure case and counterexample.</strong> MFU 55 percent with frequent
     checkpoint restarts: the metric looks healthy while the run
     wastes a third of its wall clock. The assumption &ldquo;MFU measures
     the run&rdquo; breaks, it measures only the compute phase.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: the MFU
+<p id="local-remediation-latency-bandwidth-throughput-p111" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: the MFU
     definition (primary: large-run reports). Extension: compute MFU
     versus HFU with 30 percent rematerialization, hypothesis: HFU &gt;
     MFU by the rework factor.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the MFU formula. (b) Oral ladder:
+<p id="local-remediation-latency-bandwidth-throughput-p112" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the MFU formula. (b) Oral ladder:
     define the numerator, compute the toy, justify the 2*params,
     implement, compare with HFU, debug the restart case, critique
     the FLOP-model assumption, design the remat comparison.
@@ -742,80 +742,80 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     suspects. Answers: <code>../keys/u06_answers.md</code> A7.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U06 task 7 computes MFU and HFU.
+<p id="local-remediation-latency-bandwidth-throughput-p113" data-kind="aside"><strong>Lab and exercises.</strong> Lab U06 task 7 computes MFU and HFU.
     See <code>../labs/u06_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Figure u06_fig03: lesson plate, MFU versus HFU bars
+<p id="local-remediation-latency-bandwidth-throughput-p114" data-kind="aside"><strong>Visuals.</strong> Figure u06_fig03: lesson plate, MFU versus HFU bars
     (computed toy). Source: original. Render: <code>assets/render_u06.py</code>.</p>
 </li>
 </ol>
-<figure><img alt="u06_fig03" src="../assets/u06_fig03.png"><figcaption>lesson plate, MFU versus HFU bars (computed toy). Source: original.</figcaption></figure>
+<figure id="local-remediation-latency-bandwidth-throughput-fig03" data-kind="figure" data-reveal="fade"><img alt="u06_fig03" src="../assets/u06_fig03.png"><figcaption>lesson plate, MFU versus HFU bars (computed toy). Source: original.</figcaption></figure>
 <hr />
 <h3 id="c08-interconnect-topology">C08: Interconnect topology</h3>
-<p>Leaf id <code>cs336-U06-C08</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-latency-bandwidth-throughput-p115" data-kind="aside">Leaf id <code>cs336-U06-C08</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-latency-bandwidth-throughput-p116" data-kind="aside" data-term="all-reduce"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: multi-GPU links. Objectives: model all-reduce time, compare
    link tiers. Depends on P16, U08, U09.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: how long does a 7B
+<p id="local-remediation-latency-bandwidth-throughput-p117" data-kind="prose"><strong>Motivating question and toy.</strong> Question: how long does a 7B
    gradient sync take? Toy from <code>compute_u06.py</code>: ~0.02 s over
    600 GB/s links, ~0.07 s over 200 GB/s links (ring model, 2x data).</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> GPUs connect in tiers: fast inside the node
+<p id="local-remediation-latency-bandwidth-throughput-p118" data-kind="keyIdea"><strong>Mental model.</strong> GPUs connect in tiers: fast inside the node
    (hundreds of GB/s), slower across nodes (tens to hundreds of
    GB/s). Ring all-reduce moves ~2x the data per GPU, time ~=
    2*bytes/bandwidth.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> GB/s, seconds.
+<p id="local-remediation-latency-bandwidth-throughput-p119" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> GB/s, seconds.
    Assumption: the ring model and the two reference bandwidths.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Each of N GPUs sends and receives
+<p id="local-remediation-latency-bandwidth-throughput-p120" data-kind="prose"><strong>Derivation / mechanism.</strong> Each of N GPUs sends and receives
    2<em>(N-1)/N * bytes ~= 2</em>bytes. Time = that / link bandwidth.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
+<p id="local-remediation-latency-bandwidth-throughput-p121" data-kind="example"><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
    2026-10-06): 0.02 s and 0.07 s for 7 GB.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> <code>allreduce_time(bytes,
+<p id="local-remediation-latency-bandwidth-throughput-p122" data-kind="steps"><strong>Algorithm and reference implementation.</strong> <code>allreduce_time(bytes,
    bw)</code>: two lines. The lab compares tiers.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Time halves when
+<p id="local-remediation-latency-bandwidth-throughput-p123" data-kind="example"><strong>Correctness checks and expected output.</strong> Time halves when
    bandwidth doubles, 2x data factor present. Expected outputs in
    the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> Communication time competes with compute, overlap
+<p id="local-remediation-latency-bandwidth-throughput-p124" data-kind="prose"><strong>Costs.</strong> Communication time competes with compute, overlap
    (U08/U09) hides it.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Tree all-reduce
+<p id="local-remediation-latency-bandwidth-throughput-p125" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Tree all-reduce
     (lower latency, same bandwidth term). Ring is the bandwidth-
     optimal baseline.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> A topology-unaware mapping
+<p id="local-remediation-latency-bandwidth-throughput-p126" data-kind="example"><strong>Failure case and counterexample.</strong> A topology-unaware mapping
     puts heavy pairs across the slow tier: the 0.07 s becomes the
     step&rsquo;s critical path. The assumption &ldquo;bandwidth is uniform&rdquo;
     breaks, placement matters.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading:
+<p id="local-remediation-latency-bandwidth-throughput-p127" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading:
     collective-communication analyses (primary: paper sections).
     Extension: model 70B (140 GB) on both tiers, hypothesis: seconds,
     dominating the step without overlap.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the ring time formula. (b) Oral
+<p id="local-remediation-latency-bandwidth-throughput-p128" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the ring time formula. (b) Oral
     ladder: define the 2x factor, compute the toy, justify the ring,
     implement, compare tiers, debug the placement case, critique
     the ring assumption, design the 70B model. (c) Transfer: the
@@ -823,81 +823,81 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     Answers: <code>../keys/u06_answers.md</code> A8.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U06 task 8 models collectives and
+<p id="local-remediation-latency-bandwidth-throughput-p129" data-kind="aside"><strong>Lab and exercises.</strong> Lab U06 task 8 models collectives and
     placement. See <code>../labs/u06_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the tier comparison table. No figure,
+<p id="local-remediation-latency-bandwidth-throughput-p130" data-kind="aside"><strong>Visuals.</strong> Audit row: the tier comparison table. No figure,
     tabular claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c09-vendor-claims-as-source-verification-branches">C09: Vendor claims as source-verification branches</h3>
-<p>Leaf id <code>cs336-U06-C09</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-latency-bandwidth-throughput-p131" data-kind="aside">Leaf id <code>cs336-U06-C09</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-latency-bandwidth-throughput-p132" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: treating vendor numbers as branches. Objectives: state the
    verification protocol for a peak-FLOP claim. Depends on C05.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: the vendor says 624
+<p id="local-remediation-latency-bandwidth-throughput-p133" data-kind="prose"><strong>Motivating question and toy.</strong> Question: the vendor says 624
    TFLOP/s. Do you get it? Toy: the lab checks which conditions a
    peak claim needs (dense, right dtype, right shapes, sparsity).</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Peak numbers are ceilings under ideal
+<p id="local-remediation-latency-bandwidth-throughput-p134" data-kind="keyIdea"><strong>Mental model.</strong> Peak numbers are ceilings under ideal
    conditions: dense math, supported dtype, large shapes, sometimes
    structured sparsity. Your kernel&rsquo;s roofline (C03) is the honest
    comparison, not the vendor peak.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> TFLOP/s with
+<p id="local-remediation-latency-bandwidth-throughput-p135" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> TFLOP/s with
    conditions attached. Assumption: none, every condition is checked.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> The verification protocol: (1) quote
+<p id="local-remediation-latency-bandwidth-throughput-p136" data-kind="prose"><strong>Derivation / mechanism.</strong> The verification protocol: (1) quote
    the claim with its conditions, (2) reproduce the conditions or
    state the deviation, (3) measure per C05, (4) report achieved
    versus claimed with the gap explained.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> Lab: the fp8 624 number needs fp8 dense
+<p id="local-remediation-latency-bandwidth-throughput-p137" data-kind="example"><strong>Computed example.</strong> Lab: the fp8 624 number needs fp8 dense
    GEMM at large shapes, a skinny fp8 kernel achieves a fraction.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> A claim checklist
+<p id="local-remediation-latency-bandwidth-throughput-p138" data-kind="steps"><strong>Algorithm and reference implementation.</strong> A claim checklist
    template (markdown), filled per claim. The lab fills one.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Every claim carries
+<p id="local-remediation-latency-bandwidth-throughput-p139" data-kind="example"><strong>Correctness checks and expected output.</strong> Every claim carries
    its conditions, no bare peak number appears in a report.
    Expected outputs in the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> An hour of verification beats a week of tuning to a
+<p id="local-remediation-latency-bandwidth-throughput-p140" data-kind="prose"><strong>Costs.</strong> An hour of verification beats a week of tuning to a
    phantom target.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Third-party
+<p id="local-remediation-latency-bandwidth-throughput-p141" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Third-party
     benchmarks (same protocol applies). Vendor claims are branches
     to verify, not facts to cite.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> Tuning a memory-bound kernel
+<p id="local-remediation-latency-bandwidth-throughput-p142" data-kind="example"><strong>Failure case and counterexample.</strong> Tuning a memory-bound kernel
     against the dense peak: months of work for a ceiling the kernel
     can never touch. The assumption &ldquo;the peak is the target&rdquo; breaks,
     the roofline is the target.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: vendor
+<p id="local-remediation-latency-bandwidth-throughput-p143" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: vendor
     whitepapers as primary sources for the conditions. Extension:
     verify one claim end to end, hypothesis: the conditions explain
     the gap.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the four protocol steps. (b) Oral
+<p id="local-remediation-latency-bandwidth-throughput-p144" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the four protocol steps. (b) Oral
     ladder: define the conditions, check the fp8 claim, justify the
     roofline comparison, fill the template, compare with third-
     party, debug the phantom-target tuning, critique the checklist,
@@ -906,80 +906,80 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     <code>../keys/u06_answers.md</code> A9.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U06 task 9 fills the claim template.
+<p id="local-remediation-latency-bandwidth-throughput-p145" data-kind="aside"><strong>Lab and exercises.</strong> Lab U06 task 9 fills the claim template.
     See <code>../labs/u06_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the claim checklist. No figure, tabular
+<p id="local-remediation-latency-bandwidth-throughput-p146" data-kind="aside"><strong>Visuals.</strong> Audit row: the claim checklist. No figure, tabular
     claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c10-precision-formats-and-hardware-support">C10: Precision formats and hardware support</h3>
-<p>Leaf id <code>cs336-U06-C10</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-latency-bandwidth-throughput-p147" data-kind="aside">Leaf id <code>cs336-U06-C10</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-latency-bandwidth-throughput-p148" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: dtype support on the device. Objectives: tabulate formats,
    state the throughput ratios. Depends on P08, U02-C12.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: what does fp8 buy? Toy
+<p id="local-remediation-latency-bandwidth-throughput-p149" data-kind="prose"><strong>Motivating question and toy.</strong> Question: what does fp8 buy? Toy
    from <code>compute_u06.py</code>: 624 vs 312 TFLOP/s dense (2x), and half
    the memory traffic of bf16.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Newer devices add narrow formats (fp8) with 2x
+<p id="local-remediation-latency-bandwidth-throughput-p150" data-kind="keyIdea"><strong>Mental model.</strong> Newer devices add narrow formats (fp8) with 2x
    the dense throughput of bf16 and half the bytes. The catch: range
    and precision need scaling (per-tensor or per-block) and the
    kernels must exist.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> E4M3/E5M2 fp8
+<p id="local-remediation-latency-bandwidth-throughput-p151" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> E4M3/E5M2 fp8
    variants. Assumption: the reference 2x ratio.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Halving bytes doubles intensity at
+<p id="local-remediation-latency-bandwidth-throughput-p152" data-kind="prose"><strong>Derivation / mechanism.</strong> Halving bytes doubles intensity at
    fixed FLOPs: memory-bound kernels speed up even before the 2x
    math rate matters.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
+<p id="local-remediation-latency-bandwidth-throughput-p153" data-kind="example"><strong>Computed example.</strong> From <code>assets/compute_u06.py</code> (executed
    2026-10-06): 312 -&gt; 624 TFLOP/s, traffic halved.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> The format table with
+<p id="local-remediation-latency-bandwidth-throughput-p154" data-kind="steps"><strong>Algorithm and reference implementation.</strong> The format table with
    bits, range, and throughput ratio. The lab extends it.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Ratios multiply
+<p id="local-remediation-latency-bandwidth-throughput-p155" data-kind="example"><strong>Correctness checks and expected output.</strong> Ratios multiply
    correctly: fp8 GEMM at the roofline min. Expected outputs in the
    lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> Quantization engineering (scaling, kernels) versus free
+<p id="local-remediation-latency-bandwidth-throughput-p156" data-kind="prose"><strong>Costs.</strong> Quantization engineering (scaling, kernels) versus free
    2x on paper.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> bf16 (safe
+<p id="local-remediation-latency-bandwidth-throughput-p157" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> bf16 (safe
     default), int8 (inference). fp8 for training throughput where
     supported.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> fp8 without scaling on a
+<p id="local-remediation-latency-bandwidth-throughput-p158" data-kind="example"><strong>Failure case and counterexample.</strong> fp8 without scaling on a
     model with outlier activations: overflows, loss diverges. The
     assumption &ldquo;narrower is a free lunch&rdquo; breaks, scaling is part of
     the format.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: fp8
+<p id="local-remediation-latency-bandwidth-throughput-p159" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: fp8
     format specifications (primary). Extension: model the intensity
     doubling for the M=1 GEMM, hypothesis: still memory-bound, 2x
     faster.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the format table. (b) Oral ladder:
+<p id="local-remediation-latency-bandwidth-throughput-p160" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the format table. (b) Oral ladder:
     define E4M3, compute the ratio, justify the intensity doubling,
     extend the table, compare with int8, debug the overflow, critique
     the 2x assumption, design the M=1 model. (c) Transfer: the device
@@ -987,77 +987,77 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     <code>../keys/u06_answers.md</code> A10.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U06 task 10 extends the format table
+<p id="local-remediation-latency-bandwidth-throughput-p161" data-kind="aside"><strong>Lab and exercises.</strong> Lab U06 task 10 extends the format table
     and models the M=1 case. See <code>../labs/u06_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the format table. No figure, tabular
+<p id="local-remediation-latency-bandwidth-throughput-p162" data-kind="aside"><strong>Visuals.</strong> Audit row: the format table. No figure, tabular
     claim.</p>
 </li>
 </ol>
 <hr />
-<h3 id="c11-power-and-thermal-throttling">C11: Power and thermal throttling</h3>
-<p>Leaf id <code>cs336-U06-C11</code>. Claim class REQUESTED-BRANCH.
+<h3 id="c11-power-and-thermal-throttling" data-term="thermal throttling">C11: Power and thermal throttling</h3>
+<p id="local-remediation-latency-bandwidth-throughput-p163" data-kind="aside">Leaf id <code>cs336-U06-C11</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-latency-bandwidth-throughput-p164" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: the failure case. Objectives: explain throttling, state
    the detection. Depends on C05.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: the kernel slowed down
+<p id="local-remediation-latency-bandwidth-throughput-p165" data-kind="prose"><strong>Motivating question and toy.</strong> Question: the kernel slowed down
    overnight with no code change. Toy: the lab models a clock drop
    from 1.4 GHz to 1.0 GHz and its 29 percent throughput hit.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Devices cap power and temperature by lowering
+<p id="local-remediation-latency-bandwidth-throughput-p166" data-kind="keyIdea"><strong>Mental model.</strong> Devices cap power and temperature by lowering
    clocks. A throttled device reports the same kernel at lower
    throughput, timings drift and comparisons lie.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> GHz, watts,
+<p id="local-remediation-latency-bandwidth-throughput-p167" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> GHz, watts,
    degrees. Assumption: the toy clock numbers.</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Throughput scales with clock for
+<p id="local-remediation-latency-bandwidth-throughput-p168" data-kind="prose"><strong>Derivation / mechanism.</strong> Throughput scales with clock for
    compute-bound kernels: 1.0/1.4 = 0.71, a 29 percent hit.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> Lab: the 29 percent number and the detection
+<p id="local-remediation-latency-bandwidth-throughput-p169" data-kind="example"><strong>Computed example.</strong> Lab: the 29 percent number and the detection
    rule (repeated baseline timing drifting down).</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> The detection rule:
+<p id="local-remediation-latency-bandwidth-throughput-p170" data-kind="steps"><strong>Algorithm and reference implementation.</strong> The detection rule:
    time a fixed microbenchmark before and after the run, flag a drop
    over 5 percent.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> The rule fires on the
+<p id="local-remediation-latency-bandwidth-throughput-p171" data-kind="example"><strong>Correctness checks and expected output.</strong> The rule fires on the
    toy throttle and stays quiet on noise. Expected outputs in the
    lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> A throttled run wastes the whole allocation, detection
+<p id="local-remediation-latency-bandwidth-throughput-p172" data-kind="prose"><strong>Costs.</strong> A throttled run wastes the whole allocation, detection
    is cheap.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Power-capped
+<p id="local-remediation-latency-bandwidth-throughput-p173" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Power-capped
     scheduling (cluster-level). Detection is the user-level answer.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> Blaming the code for a
+<p id="local-remediation-latency-bandwidth-throughput-p174" data-kind="example"><strong>Failure case and counterexample.</strong> Blaming the code for a
     throttled slowdown: a week of tuning against a moving target.
     The assumption &ldquo;the device is constant&rdquo; breaks, measure the
     device first.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: device
+<p id="local-remediation-latency-bandwidth-throughput-p175" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: device
     management docs (primary). Extension: correlate the toy drift
     with temperature, hypothesis: monotonic.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the mechanism and the rule. (b) Oral
+<p id="local-remediation-latency-bandwidth-throughput-p176" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the mechanism and the rule. (b) Oral
     ladder: define throttling, compute the 29 percent, justify the
     baseline, implement the rule, compare with capping, debug the
     misattributed slowdown, critique the 5 percent threshold, design
@@ -1065,75 +1065,75 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     mid-run. What do you do? Answers: <code>../keys/u06_answers.md</code> A11.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U06 task 11 implements the detection
+<p id="local-remediation-latency-bandwidth-throughput-p177" data-kind="aside"><strong>Lab and exercises.</strong> Lab U06 task 11 implements the detection
     rule. See <code>../labs/u06_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the throttle table. No figure, tabular
+<p id="local-remediation-latency-bandwidth-throughput-p178" data-kind="aside"><strong>Visuals.</strong> Audit row: the throttle table. No figure, tabular
     claim.</p>
 </li>
 </ol>
 <hr />
 <h3 id="c12-profiling-invariants">C12: Profiling invariants</h3>
-<p>Leaf id <code>cs336-U06-C12</code>. Claim class REQUESTED-BRANCH.
+<p id="local-remediation-latency-bandwidth-throughput-p179" data-kind="aside">Leaf id <code>cs336-U06-C12</code>. Claim class REQUESTED-BRANCH.
 Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 <ol>
 <li>
-<p><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
+<p id="local-remediation-latency-bandwidth-throughput-p180" data-kind="aside"><strong>Source mapping, scope, objectives, dependencies.</strong> S-branch.
    Scope: sanity checks on any profile. Objectives: state the
    invariants, apply them. Depends on C03, C05.</p>
 </li>
 <li>
-<p><strong>Motivating question and toy.</strong> Question: the profiler says the
+<p id="local-remediation-latency-bandwidth-throughput-p181" data-kind="prose"><strong>Motivating question and toy.</strong> Question: the profiler says the
    kernel beats the roofline. Now what? Toy: the invariant &ldquo;no
    kernel exceeds its roofline&rdquo; flags a measurement error.</p>
 </li>
 <li>
-<p><strong>Mental model.</strong> Three invariants: (1) throughput &lt;= roofline,
+<p id="local-remediation-latency-bandwidth-throughput-p182" data-kind="keyIdea"><strong>Mental model.</strong> Three invariants: (1) throughput &lt;= roofline,
    (2) the profiled FLOP/byte counts match the analytic model within
    ~2x, (3) timings reproduce within 10 percent. Violations mean the
    measurement is wrong, not the model.</p>
 </li>
 <li>
-<p><strong>Objects, symbols, units, shapes, assumptions.</strong> Ratios and
+<p id="local-remediation-latency-bandwidth-throughput-p183" data-kind="definition"><strong>Objects, symbols, units, shapes, assumptions.</strong> Ratios and
    tolerances. Assumption: the analytic FLOP counts (U02).</p>
 </li>
 <li>
-<p><strong>Derivation / mechanism.</strong> Each invariant is a consistency check
+<p id="local-remediation-latency-bandwidth-throughput-p184" data-kind="prose"><strong>Derivation / mechanism.</strong> Each invariant is a consistency check
    between independent estimates: model versus measurement.</p>
 </li>
 <li>
-<p><strong>Computed example.</strong> Lab: a toy profile violating invariant 1 is
+<p id="local-remediation-latency-bandwidth-throughput-p185" data-kind="example"><strong>Computed example.</strong> Lab: a toy profile violating invariant 1 is
    traced to unsynced timing.</p>
 </li>
 <li>
-<p><strong>Algorithm and reference implementation.</strong> <code>check_invariants(
+<p id="local-remediation-latency-bandwidth-throughput-p186" data-kind="steps"><strong>Algorithm and reference implementation.</strong> <code>check_invariants(
    profile)</code>: the three asserts. About 8 lines.</p>
 </li>
 <li>
-<p><strong>Correctness checks and expected output.</strong> Passes on the sane toy,
+<p id="local-remediation-latency-bandwidth-throughput-p187" data-kind="example"><strong>Correctness checks and expected output.</strong> Passes on the sane toy,
    fails loudly on the broken one. Expected outputs in the lab key.</p>
 </li>
 <li>
-<p><strong>Costs.</strong> Seconds per profile, catches hours of confusion.</p>
+<p id="local-remediation-latency-bandwidth-throughput-p188" data-kind="prose"><strong>Costs.</strong> Seconds per profile, catches hours of confusion.</p>
 </li>
 <li>
-<p><strong>Nearest alternative and selection boundary.</strong> Expert review
+<p id="local-remediation-latency-bandwidth-throughput-p189" data-kind="prose"><strong>Nearest alternative and selection boundary.</strong> Expert review
     (slower, deeper). Invariants are the automatic first pass.</p>
 </li>
 <li>
-<p><strong>Failure case and counterexample.</strong> &ldquo;Optimizing&rdquo; past the
+<p id="local-remediation-latency-bandwidth-throughput-p190" data-kind="example"><strong>Failure case and counterexample.</strong> &ldquo;Optimizing&rdquo; past the
     roofline: the timer was wrong and the optimization was a
     measurement artifact. The assumption &ldquo;the profiler is right&rdquo;
     breaks, the invariants arbitrate.</p>
 </li>
 <li>
-<p><strong>Research reading and falsifiable extension.</strong> Reading: profiler
+<p id="local-remediation-latency-bandwidth-throughput-p191" data-kind="aside"><strong>Research reading and falsifiable extension.</strong> Reading: profiler
     methodology docs (primary). Extension: inject each violation
     into the toy, hypothesis: each trips exactly one invariant.</p>
 </li>
 <li>
-<p><strong>Assessment.</strong> (a) Recall: the three invariants. (b) Oral ladder:
+<p id="local-remediation-latency-bandwidth-throughput-p192" data-kind="aside"><strong>Assessment.</strong> (a) Recall: the three invariants. (b) Oral ladder:
     define each, trace the violation, justify the tolerances,
     implement, compare with expert review, debug the artifact,
     critique the 2x tolerance, design the injection. (c) Transfer:
@@ -1141,17 +1141,17 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
     Answers: <code>../keys/u06_answers.md</code> A12.</p>
 </li>
 <li>
-<p><strong>Lab and exercises.</strong> Lab U06 task 12 implements the invariant
+<p id="local-remediation-latency-bandwidth-throughput-p193" data-kind="aside"><strong>Lab and exercises.</strong> Lab U06 task 12 implements the invariant
     checks. See <code>../labs/u06_lab.md</code>.</p>
 </li>
 <li>
-<p><strong>Visuals.</strong> Audit row: the invariant checklist. No figure,
+<p id="local-remediation-latency-bandwidth-throughput-p194" data-kind="aside"><strong>Visuals.</strong> Audit row: the invariant checklist. No figure,
     tabular claim.</p>
 </li>
 </ol>
 <hr />
-<h2 id="unit-russian-doll-ladder-u06">Unit Russian-doll ladder (U06)</h2>
-<ul>
+<span id="local-remediation-latency-bandwidth-throughput-end" data-end></span><h2 id="unit-russian-doll-ladder-u06" data-term="Russian-doll ladder">Unit Russian-doll ladder (U06)</h2>
+<ul id="unit-russian-doll-ladder-u06-shells-1" data-term="shell">
 <li>Shell 0: where does the time go: math, memory, or links?</li>
 <li>Shell 1: one roofline, one MFU, one all-reduce time.</li>
 <li>Shell 2: SMs, warps, HBM, links, clocks.</li>
@@ -1167,7 +1167,7 @@ Status PLANNED / SOURCE ATTRIBUTION PENDING.</p>
 </ul>
       
       <nav class="pager"><a href="../keys/u05_answers.html"><span class="lbl">← Previous</span>U05 · Answers</a><a href="../keys/u06_answers.html"><span class="lbl">Next →</span>U06 · Answers</a></nav>
-    </article>
+    <span id="unit-russian-doll-ladder-u06-end" data-end></span></article>
     <footer class="pagefoot">
       <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
     </footer>

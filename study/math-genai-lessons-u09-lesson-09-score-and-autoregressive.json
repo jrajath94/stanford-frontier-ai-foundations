@@ -1,0 +1,392 @@
+{
+ "schemaVersion": 1,
+ "itemId": "math-genai-lessons-u09-lesson-09-score-and-autoregressive",
+ "itemKind": "lesson",
+ "revision": "8d3a345f7fed7e96ea558795dec3c6b425e32327a7eccba13f07b263a5783bd5",
+ "sections": [
+  {
+   "anchor": "lesson-09-score-and-autoregressive-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "lesson-09-score-and-autoregressive-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "math-genai-U09",
+     "definition": "The unit.",
+     "anchor": "lesson-09-score-and-autoregressive-intro-p01"
+    },
+    {
+     "term": "C12",
+     "definition": "The last leaf concept.",
+     "anchor": "lesson-09-score-and-autoregressive-intro-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-09-score-and-autoregressive-intro-r1",
+     "question": "What leaves does this lesson cover?",
+     "answer": "math-genai-U09-C01 to C12.",
+     "anchor": "lesson-09-score-and-autoregressive-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "source-mapping",
+   "title": "Source mapping",
+   "minutes": 1,
+   "endAnchor": "source-mapping-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "compute_run5b.py",
+     "definition": "Reproduces every number.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "numpy 1.26.4",
+     "definition": "The compute setup.",
+     "anchor": "source-mapping-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "source-mapping-r1",
+     "question": "What reproduces every number?",
+     "answer": "compute_run5b.py (numpy 1.26.4, float64, seed 0 where RNG is used).",
+     "anchor": "source-mapping-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "scope-and-objectives",
+   "title": "Scope and objectives",
+   "minutes": 1,
+   "endAnchor": "scope-and-objectives-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "Langevin",
+     "definition": "Run its steps by hand.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "perplexity",
+     "definition": "Compute it.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "scope-and-objectives-r1",
+     "question": "What can the learner do after this lesson?",
+     "answer": "Write the score of a mixture, compute a denoising score matching target, run Langevin steps by hand, state the probability-flow ODE, factor a sequence with the chain rule, compute teacher-forced and free-run losses, apply a causal mask.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "how-to-read-this-lesson",
+   "title": "How to read this lesson",
+   "minutes": 1,
+   "endAnchor": "how-to-read-this-lesson-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "0.5 N(-1.5, 0.25)",
+     "definition": "The score mixture.",
+     "anchor": "how-to-read-this-lesson-p02"
+    },
+    {
+     "term": "[a, b, c] = [0, 1, 2]",
+     "definition": "The AR sequence.",
+     "anchor": "how-to-read-this-lesson-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "how-to-read-this-lesson-r1",
+     "question": "What are the running toys?",
+     "answer": "Score: the symmetric two-mode mixture. AR: vocabulary {a, b, c, d}, bigram matrix P, sequence [a, b, c] = [0, 1, 2]. Transformer: d = 4, one head, identity QKV.",
+     "anchor": "how-to-read-this-lesson-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "mechanism-a-learning-to-point-uphill",
+   "title": "Mechanism A, learning to point uphill",
+   "minutes": 9,
+   "endAnchor": "mechanism-a-learning-to-point-uphill-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "1.999926",
+     "definition": "s(1.0).",
+     "anchor": "mechanism-a-learning-to-point-uphill-p02"
+    },
+    {
+     "term": "-5.0",
+     "definition": "The DSM target.",
+     "anchor": "mechanism-a-learning-to-point-uphill-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "mechanism-a-learning-to-point-uphill-r1",
+     "question": "What does the DSM check show?",
+     "answer": "The DSM target at the clean point is exact: (1.5 - 1.7)/0.04 = -5.0; the loss for s_hat = -4 is 1.0.",
+     "anchor": "mechanism-a-learning-to-point-uphill-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "mechanism-b-predict-next-one-token-at-a-time",
+   "title": "Mechanism B, predict next, one token at a time",
+   "minutes": 6,
+   "endAnchor": "mechanism-b-predict-next-one-token-at-a-time-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "1.73697 bits",
+     "definition": "The sequence NLL.",
+     "anchor": "mechanism-b-predict-next-one-token-at-a-time-p02"
+    },
+    {
+     "term": "1.82574",
+     "definition": "The perplexity.",
+     "anchor": "mechanism-b-predict-next-one-token-at-a-time-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "mechanism-b-predict-next-one-token-at-a-time-r1",
+     "question": "What does the bigram toy show?",
+     "answer": "NLL = -log2(0.6) - log2(0.5) = 1.73697 bits; perplexity 1.82574; teacher-forced 0.8685 bits/token, free-run expected 1.6338 bits/token.",
+     "anchor": "mechanism-b-predict-next-one-token-at-a-time-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "mechanism-c-the-transformer",
+   "title": "Mechanism C, the transformer",
+   "minutes": 4,
+   "endAnchor": "mechanism-c-the-transformer-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "d = 4",
+     "definition": "The toy width.",
+     "anchor": "mechanism-c-the-transformer-p02"
+    },
+    {
+     "term": "0.8294",
+     "definition": "A toy output entry.",
+     "anchor": "mechanism-c-the-transformer-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "mechanism-c-the-transformer-r1",
+     "question": "What does the row-0 check show?",
+     "answer": "Row 0 of O equals X row 0 exactly (only self-attention allowed); with-pos and no-pos outputs differ.",
+     "anchor": "mechanism-c-the-transformer-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "mechanism-d-likelihood-sampling-budgets-and-the-two-cultures",
+   "title": "Mechanism D, likelihood, sampling, budgets, and the two cultures",
+   "minutes": 7,
+   "endAnchor": "mechanism-d-likelihood-sampling-budgets-and-the-two-cultures-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "0.8754 bits",
+     "definition": "The T = 0.5 entropy.",
+     "anchor": "mechanism-d-likelihood-sampling-budgets-and-the-two-cultures-p02"
+    },
+    {
+     "term": "0.60 GB",
+     "definition": "The KV memory.",
+     "anchor": "mechanism-d-likelihood-sampling-budgets-and-the-two-cultures-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "mechanism-d-likelihood-sampling-budgets-and-the-two-cultures-r1",
+     "question": "What does the sampling toy show?",
+     "answer": "T = 0.5 gives entropy 0.8754 bits; T = 2.0 gives 1.9017 bits; the KV memory formula is 12 12 1024^2 4 = 0.60 GB.",
+     "anchor": "mechanism-d-likelihood-sampling-budgets-and-the-two-cultures-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "not-yet-understood-for-the-next-builder",
+   "title": "Not yet understood (for the next builder)",
+   "minutes": 1,
+   "endAnchor": "not-yet-understood-for-the-next-builder-end",
+   "blocks": [
+    {
+     "anchor": "not-yet-understood-for-the-next-builder-list01",
+     "kind": "steps",
+     "reveal": "stepwise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "SDE solver error",
+     "definition": "Error vs dt unmeasured.",
+     "anchor": "not-yet-understood-for-the-next-builder-list01"
+    },
+    {
+     "term": "The transformer never trains",
+     "definition": "One forward pass only.",
+     "anchor": "not-yet-understood-for-the-next-builder-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "not-yet-understood-for-the-next-builder-r1",
+     "question": "What stays open for the next builder?",
+     "answer": "SDE solver error vs dt is unmeasured; the transformer never trains here (one forward pass only); the exposure gap is measured on the bigram toy only.",
+     "anchor": "not-yet-understood-for-the-next-builder-list01"
+    }
+   ]
+  },
+  {
+   "anchor": "lesson-exercises-questions-keys-in-lessonsu09keysmd",
+   "title": "Lesson exercises (questions. Keys in lessons/u09/keys.md)",
+   "minutes": 2,
+   "endAnchor": "lesson-exercises-questions-keys-in-lessonsu09keysmd-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "E01",
+     "definition": "Write s(x) for the mixture.",
+     "anchor": "lesson-exercises-questions-keys-in-lessonsu09keysmd-p01"
+    },
+    {
+     "term": "1.999926",
+     "definition": "Verify s(1.0).",
+     "anchor": "lesson-exercises-questions-keys-in-lessonsu09keysmd-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-exercises-questions-keys-in-lessonsu09keysmd-r1",
+     "question": "Where are the exercise keys?",
+     "answer": "lessons/u09/keys.md.",
+     "anchor": "lesson-exercises-questions-keys-in-lessonsu09keysmd-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "deep-oral-ladders-questions-keys-in-lessonsu09keysmd",
+   "title": "Deep oral ladders (questions. Keys in lessons/u09/keys.md)",
+   "minutes": 1,
+   "endAnchor": "deep-oral-ladders-questions-keys-in-lessonsu09keysmd-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "L01",
+     "definition": "Score to samples.",
+     "anchor": "deep-oral-ladders-questions-keys-in-lessonsu09keysmd-p01"
+    },
+    {
+     "term": "Langevin",
+     "definition": "Run 5 Langevin steps.",
+     "anchor": "deep-oral-ladders-questions-keys-in-lessonsu09keysmd-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "deep-oral-ladders-questions-keys-in-lessonsu09keysmd-r1",
+     "question": "Where are the ladder keys?",
+     "answer": "lessons/u09/keys.md.",
+     "anchor": "deep-oral-ladders-questions-keys-in-lessonsu09keysmd-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "implementation-and-debug-task",
+   "title": "Implementation and debug task",
+   "minutes": 1,
+   "endAnchor": "implementation-and-debug-task-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "score_mix",
+     "definition": "Implement it from memory.",
+     "anchor": "implementation-and-debug-task-p01"
+    },
+    {
+     "term": "2000 steps",
+     "definition": "The stuck chain.",
+     "anchor": "implementation-and-debug-task-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "implementation-and-debug-task-r1",
+     "question": "What does the debug task ask?",
+     "answer": "A Langevin chain on the mixture converges to one mode and stays there over 2000 steps: name the cause and the fix.",
+     "anchor": "implementation-and-debug-task-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "changed-constraint-scenarios",
+   "title": "Changed-constraint scenarios",
+   "minutes": 1,
+   "endAnchor": "changed-constraint-scenarios-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "third mode",
+     "definition": "The S1 addition.",
+     "anchor": "changed-constraint-scenarios-p01"
+    },
+    {
+     "term": "x = 0",
+     "definition": "Its location.",
+     "anchor": "changed-constraint-scenarios-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "changed-constraint-scenarios-r1",
+     "question": "What does S1 ask?",
+     "answer": "The mixture gains a third mode at x = 0 (weight 0.2, var 0.25, renormalized): which lesson numbers change and which do not? Recompute s(0) qualitatively: zero or not?",
+     "anchor": "changed-constraint-scenarios-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "research-critique-question",
+   "title": "Research-critique question",
+   "minutes": 1,
+   "endAnchor": "research-critique-question-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "Exact likelihood",
+     "definition": "The attacked claim.",
+     "anchor": "research-critique-question-p01"
+    },
+    {
+     "term": "fixed vocab",
+     "definition": "Where likelihood buys comparison.",
+     "anchor": "research-critique-question-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "research-critique-question-r1",
+     "question": "What does the critique ask?",
+     "answer": "Attack the claim that exact likelihood makes AR models strictly better than score-based models for science.",
+     "anchor": "research-critique-question-p01"
+    }
+   ]
+  }
+ ]
+}

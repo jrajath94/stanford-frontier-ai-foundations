@@ -1,0 +1,581 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229-lessons-u12-lesson-12-diffusion-models",
+ "itemKind": "lesson",
+ "revision": "41ef50eed0859465df538e97b2ad0021c49a17ad6c5395aa5b9ac19d6f506cc4",
+ "sections": [
+  {
+   "anchor": "lesson-12-diffusion-models-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "lesson-12-diffusion-models-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229-U12",
+     "definition": "The unit code for this lesson in the Stanford CS229 foundations course.",
+     "anchor": "lesson-12-diffusion-models-intro-p02"
+    },
+    {
+     "term": "leaf concepts",
+     "definition": "The fine-grained concepts the lesson covers, labeled C01 to C12.",
+     "anchor": "lesson-12-diffusion-models-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-12-diffusion-models-intro-r1",
+     "question": "Who teaches this course?",
+     "answer": "Tengyu Ma and Andrew Ng.",
+     "anchor": "lesson-12-diffusion-models-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "source-mapping",
+   "title": "Source mapping",
+   "minutes": 1,
+   "endAnchor": "source-mapping-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "forward Markov chain",
+     "definition": "The fixed chain x_0, ..., x_T adding Gaussian noise.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "ELBO decomposition",
+     "definition": "The ELBO split into per-timestep terms.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "reverse diffusion",
+     "definition": "The continuous-time reverse process from Anderson's theorem.",
+     "anchor": "source-mapping-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "source-mapping-r1",
+     "question": "What does notes chapter 14 give?",
+     "answer": "The fixed forward Markov chain, the learned Gaussian reverse parameterization, the ELBO decomposition, the denoising reduction to weighted noise prediction, the sampling loop, and the continuous-time reverse diffusion theorem.",
+     "anchor": "source-mapping-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "scope-and-objectives",
+   "title": "Scope and objectives",
+   "minutes": 1,
+   "endAnchor": "scope-and-objectives-end",
+   "blocks": [
+    {
+     "anchor": "scope-and-objectives-p01",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "forward chain",
+     "definition": "Adds Gaussian noise on a fixed schedule.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "reverse chain",
+     "definition": "The learned chain removing noise one step at a time.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "score",
+     "definition": "grad_x log p_t: the direction of increasing density.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "scope-and-objectives-r1",
+     "question": "What is the diffusion recipe?",
+     "answer": "Generative modeling by reversing a fixed noising process: the forward chain adds Gaussian noise, the learned reverse chain removes it one step at a time, starting from white noise.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "id": "scope-and-objectives-r2",
+     "question": "What does objective 3 ask the learner to do?",
+     "answer": "Reduce the ELBO to the noise-prediction objective.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "dependencies",
+   "title": "Dependencies",
+   "minutes": 1,
+   "endAnchor": "dependencies-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "prerequisites",
+     "definition": "The shared bridge units P06, P08, and P18, plus U10 and U11, needed before this lesson.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "term": "forward process",
+     "definition": "Remediated in SL-01.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "score term",
+     "definition": "Remediated in SL-04.",
+     "anchor": "dependencies-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "dependencies-r1",
+     "question": "Which prerequisites does this lesson list?",
+     "answer": "P06, P08, P18, unit U10 (EM, ELBO), unit U11 (VI as ELBO optimization).",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "id": "dependencies-r2",
+     "question": "What does the list ask about the forward process?",
+     "answer": "Why fixing the forward process is allowed, remediated in SL-01.",
+     "anchor": "dependencies-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-01-the-forward-gaussian-chain",
+   "title": "SL-01: The forward Gaussian chain",
+   "minutes": 3,
+   "endAnchor": "sl-01-the-forward-gaussian-chain-end",
+   "blocks": [
+    {
+     "anchor": "sl-01-the-forward-gaussian-chain-p06",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-01-the-forward-gaussian-chain-p11",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "forward chain",
+     "definition": "The fixed Markov chain x_0, ..., x_T adding Gaussian noise.",
+     "anchor": "sl-01-the-forward-gaussian-chain-p02"
+    },
+    {
+     "term": "beta_t",
+     "definition": "The per-step noise levels in (0, 1), small in practice.",
+     "anchor": "sl-01-the-forward-gaussian-chain-p04"
+    },
+    {
+     "term": "alpha-bar_t",
+     "definition": "alpha_1 * ... * alpha_t: the accumulated shrinkage.",
+     "anchor": "sl-01-the-forward-gaussian-chain-p07"
+    },
+    {
+     "term": "closed form",
+     "definition": "The noisy state at any time step in closed form.",
+     "anchor": "sl-01-the-forward-gaussian-chain-p06"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-01-the-forward-gaussian-chain-r1",
+     "question": "What is the destroy-then-undestroy idea?",
+     "answer": "The forward chain turns any image into white noise through hundreds of tiny Gaussian steps. Learning becomes: given a noisy sample at time t, recover the added noise. That is noise removal, not generation, a supervised task.",
+     "anchor": "sl-01-the-forward-gaussian-chain-p06"
+    },
+    {
+     "id": "sl-01-the-forward-gaussian-chain-r2",
+     "question": "What is the closed form of x_t given x_0?",
+     "answer": "x_t = sqrt(alpha-bar_t) x_0 + sqrt(1 - alpha-bar_t) epsilon-hat_t, epsilon-hat_t ~ N(0, I).",
+     "anchor": "sl-01-the-forward-gaussian-chain-p08"
+    },
+    {
+     "id": "sl-01-the-forward-gaussian-chain-r3",
+     "question": "Why must beta_t be small?",
+     "answer": "If beta_t is too large early, one step wipes out structure and the reverse model must make huge jumps the Gaussian reverse kernel cannot represent.",
+     "anchor": "sl-01-the-forward-gaussian-chain-p13"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-02-reverse-parameterization-and-the-true-posterior",
+   "title": "SL-02: Reverse parameterization and the true posterior",
+   "minutes": 3,
+   "endAnchor": "sl-02-reverse-parameterization-and-the-true-posterior-end",
+   "blocks": [
+    {
+     "anchor": "sl-02-reverse-parameterization-and-the-true-posterior-p06",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-02-reverse-parameterization-and-the-true-posterior-p15",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "reverse chain",
+     "definition": "p_theta(x_{t-1} | x_t): the learned denoising steps.",
+     "anchor": "sl-02-reverse-parameterization-and-the-true-posterior-p02"
+    },
+    {
+     "term": "reverse posterior",
+     "definition": "q(x_{t-1} | x_t, x_0): Gaussian by the conditional-Gaussian formula.",
+     "anchor": "sl-02-reverse-parameterization-and-the-true-posterior-p12"
+    },
+    {
+     "term": "mu-tilde_t",
+     "definition": "The weighted average of x_0 and x_t.",
+     "anchor": "sl-02-reverse-parameterization-and-the-true-posterior-p08"
+    },
+    {
+     "term": "beta-tilde_t",
+     "definition": "(1 - alpha-bar_{t-1}) / (1 - alpha-bar_t) * beta_t.",
+     "anchor": "sl-02-reverse-parameterization-and-the-true-posterior-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-02-reverse-parameterization-and-the-true-posterior-r1",
+     "question": "Why is the true reverse posterior Gaussian?",
+     "answer": "Conditioning on x_0 as well as x_t, the true reverse kernel is tractable: x_1..x_T are jointly Gaussian given x_0, so q(x_{t-1} | x_t, x_0) is Gaussian by the conditional-Gaussian formula.",
+     "anchor": "sl-02-reverse-parameterization-and-the-true-posterior-p07"
+    },
+    {
+     "id": "sl-02-reverse-parameterization-and-the-true-posterior-r2",
+     "question": "What does training have to match?",
+     "answer": "One mean vector: with sigma_t^2 = beta-tilde_t the KL is half the squared Mahalanobis distance of the means. Nothing else is learned.",
+     "anchor": "sl-02-reverse-parameterization-and-the-true-posterior-p13"
+    },
+    {
+     "id": "sl-02-reverse-parameterization-and-the-true-posterior-r3",
+     "question": "In the computed example, what is mu-tilde_50?",
+     "answer": "beta-tilde_50 = 0.00960. With x_0 = 3.0 and x_50 = 3.0420, mu-tilde_50 = 3.0394.",
+     "anchor": "sl-02-reverse-parameterization-and-the-true-posterior-p15"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-03-elbo-to-the-denoising-objective",
+   "title": "SL-03: ELBO to the denoising objective",
+   "minutes": 3,
+   "endAnchor": "sl-03-elbo-to-the-denoising-objective-end",
+   "blocks": [
+    {
+     "anchor": "sl-03-elbo-to-the-denoising-objective-p07",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-03-elbo-to-the-denoising-objective-l01",
+     "kind": "steps",
+     "reveal": "stepwise"
+    },
+    {
+     "anchor": "sl-03-elbo-to-the-denoising-objective-p18",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "ELBO",
+     "definition": "The lower bound on log p_theta(x_0) with the path as latent.",
+     "anchor": "sl-03-elbo-to-the-denoising-objective-p02"
+    },
+    {
+     "term": "denoising",
+     "definition": "Reducing each ELBO term to a noise error.",
+     "anchor": "sl-03-elbo-to-the-denoising-objective-p07"
+    },
+    {
+     "term": "noise-prediction network",
+     "definition": "epsilon_theta(x_t, t): the network predicting the added noise.",
+     "anchor": "sl-03-elbo-to-the-denoising-objective-p09"
+    },
+    {
+     "term": "unweighted loss",
+     "definition": "||epsilon - epsilon_theta(x_t, t)||^2 without the ELBO weights.",
+     "anchor": "sl-03-elbo-to-the-denoising-objective-p14"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-03-elbo-to-the-denoising-objective-r1",
+     "question": "What is the denoising reduction?",
+     "answer": "Reconstructing mu-tilde_t is equivalent to reconstructing the noise epsilon-hat_t. Each ELBO term becomes a weighted noise error; in practice the weights are dropped for the unweighted loss.",
+     "anchor": "sl-03-elbo-to-the-denoising-objective-p14"
+    },
+    {
+     "id": "sl-03-elbo-to-the-denoising-objective-r2",
+     "question": "What are the five training steps?",
+     "answer": "Sample x_0; sample t uniformly; sample noise epsilon; form x_t; take a gradient step on the loss. One sample, one step, one noise vector per update.",
+     "anchor": "sl-03-elbo-to-the-denoising-objective-l01"
+    },
+    {
+     "id": "sl-03-elbo-to-the-denoising-objective-r3",
+     "question": "Why not train with the exact ELBO weights?",
+     "answer": "They put heavy weight on small t. Ho et al. found this hurts sample quality: correct for likelihood, wrong for perceptual quality.",
+     "anchor": "sl-03-elbo-to-the-denoising-objective-p20"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-04-sampling-continuous-time-and-the-score",
+   "title": "SL-04: Sampling, continuous time, and the score",
+   "minutes": 3,
+   "endAnchor": "sl-04-sampling-continuous-time-and-the-score-end",
+   "blocks": [
+    {
+     "anchor": "sl-04-sampling-continuous-time-and-the-score-p08",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-04-sampling-continuous-time-and-the-score-p14",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "sampling",
+     "definition": "Starting from x_T ~ N(0, I) and iterating t = T down to 1.",
+     "anchor": "sl-04-sampling-continuous-time-and-the-score-p02"
+    },
+    {
+     "term": "score",
+     "definition": "grad_x log p_t: the direction of increasing marginal density.",
+     "anchor": "sl-04-sampling-continuous-time-and-the-score-p06"
+    },
+    {
+     "term": "reverse SDE",
+     "definition": "The continuous-time reverse process from Anderson's theorem.",
+     "anchor": "sl-04-sampling-continuous-time-and-the-score-p08"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-04-sampling-continuous-time-and-the-score-r1",
+     "question": "What is the score relation?",
+     "answer": "The score is the negative noise, rescaled: grad_x log q(x_t | x_0) = -epsilon-hat_t / sqrt(1 - alpha-bar_t). Predicting epsilon and predicting the score are the same task up to a known scalar.",
+     "anchor": "sl-04-sampling-continuous-time-and-the-score-p12"
+    },
+    {
+     "id": "sl-04-sampling-continuous-time-and-the-score-r2",
+     "question": "In the computed example, do the score and rescaled noise match?",
+     "answer": "Score -1.7829; rescaled noise -0.8417/0.4720 = -1.7829. They match.",
+     "anchor": "sl-04-sampling-continuous-time-and-the-score-p14"
+    },
+    {
+     "id": "sl-04-sampling-continuous-time-and-the-score-r3",
+     "question": "Why must the final sampling step have xi = 0?",
+     "answer": "Extra noise at t = 1 blurs the output.",
+     "anchor": "sl-04-sampling-continuous-time-and-the-score-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-05-assumptions-and-held-out-evaluation",
+   "title": "SL-05: Assumptions and held-out evaluation",
+   "minutes": 2,
+   "endAnchor": "sl-05-assumptions-and-held-out-evaluation-end",
+   "blocks": [
+    {
+     "anchor": "sl-05-assumptions-and-held-out-evaluation-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "q(x_T)",
+     "definition": "Assumed exactly spherical Gaussian after the forward chain.",
+     "anchor": "sl-05-assumptions-and-held-out-evaluation-l01"
+    },
+    {
+     "term": "held-out ELBO",
+     "definition": "The weighted ELBO on unseen data: a comparable number across models.",
+     "anchor": "sl-05-assumptions-and-held-out-evaluation-p03"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-05-assumptions-and-held-out-evaluation-r1",
+     "question": "What are the load-bearing assumptions?",
+     "answer": "q(x_T) exactly N(0,I); beta_t small; sigma_t^2 = beta-tilde_t fixed; images continuous while pixels are discrete; the unweighted loss is not the ELBO.",
+     "anchor": "sl-05-assumptions-and-held-out-evaluation-l01"
+    },
+    {
+     "id": "sl-05-assumptions-and-held-out-evaluation-r2",
+     "question": "How do you evaluate on held-out data?",
+     "answer": "Evaluate the ELBO with the exact weights (not the unweighted training loss) on held-out data. A tighter bound means a better density model; it is a bound, not the likelihood.",
+     "anchor": "sl-05-assumptions-and-held-out-evaluation-p03"
+    },
+    {
+     "id": "sl-05-assumptions-and-held-out-evaluation-r3",
+     "question": "Why can't ELBOs be compared across protocols?",
+     "answer": "Different discretization or different T makes the numbers meaningless. Fix the evaluation protocol first.",
+     "anchor": "sl-05-assumptions-and-held-out-evaluation-p05"
+    }
+   ]
+  },
+  {
+   "anchor": "assessment",
+   "title": "Assessment",
+   "minutes": 2,
+   "endAnchor": "assessment-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "forward transition density",
+     "definition": "q(x_t | x_{t-1}) = N(x_t, sqrt(1 - beta_t) x_{t-1}, beta_t I).",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "closed form",
+     "definition": "x_t = sqrt(alpha-bar_t) x_0 + sqrt(1 - alpha-bar_t) epsilon.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "reverse parameterization",
+     "definition": "p_theta(x_{t-1} | x_t) = N(x_{t-1}, mu_theta(x_t, t), sigma_t^2 I).",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "training loss",
+     "definition": "L_t(theta) = ||epsilon - epsilon_theta(x_t, t)||^2.",
+     "anchor": "assessment-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "assessment-r1",
+     "question": "What does E04 ask?",
+     "answer": "Why the true reverse posterior q(x_{t-1} | x_t, x_0) is Gaussian.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "id": "assessment-r2",
+     "question": "What does E09 describe?",
+     "answer": "A trained model produces good samples at t near T but garbage near t = 1. Diagnose.",
+     "anchor": "assessment-p05"
+    },
+    {
+     "id": "assessment-r3",
+     "question": "What does E10 ask?",
+     "answer": "Team A trains with the exact ELBO weights. Team B trains with the unweighted loss. Which wins on likelihood, which on sample quality, and why?",
+     "anchor": "assessment-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "visual-units",
+   "title": "Visual units",
+   "minutes": 1,
+   "endAnchor": "visual-units-end",
+   "blocks": [
+    {
+     "anchor": "visual-units-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "visual-units-fig02",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "noise schedule",
+     "definition": "The visual of the noise schedule and alpha-bar decay.",
+     "anchor": "visual-units-fig01"
+    },
+    {
+     "term": "posterior mean",
+     "definition": "The visual of the two posterior-mean forms agreeing.",
+     "anchor": "visual-units-fig02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "visual-units-r1",
+     "question": "What does the first visual unit show?",
+     "answer": "The noise schedule, alpha-bar decay, and sample noising trajectories, computed.",
+     "anchor": "visual-units-l01"
+    },
+    {
+     "id": "visual-units-r2",
+     "question": "What does the second visual unit show?",
+     "answer": "The two forms of the posterior mean agree across a sweep, plus the score relation, computed.",
+     "anchor": "visual-units-l02"
+    }
+   ]
+  },
+  {
+   "anchor": "research-reading-and-extension",
+   "title": "Research reading and extension",
+   "minutes": 1,
+   "endAnchor": "research-reading-and-extension-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "falsifiable claim",
+     "definition": "A claim an experiment can disprove, here about the epsilon-predictor's samples.",
+     "anchor": "research-reading-and-extension-p01"
+    },
+    {
+     "term": "MMD",
+     "definition": "The distance between generated and true samples.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "research-reading-and-extension-r1",
+     "question": "What is the falsifiable claim?",
+     "answer": "The MMD between generated and true samples falls below the MMD of a Gaussian fit.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "role-bridges",
+   "title": "Role bridges",
+   "minutes": 1,
+   "endAnchor": "role-bridges-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "diffusion",
+     "definition": "The standard image/video generator.",
+     "anchor": "role-bridges-l01"
+    },
+    {
+     "term": "posterior-mean algebra",
+     "definition": "The template for all denoising objectives.",
+     "anchor": "role-bridges-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "role-bridges-r1",
+     "question": "What is the ML engineer bridge?",
+     "answer": "Diffusion is the standard image/video generator. The training loop is five lines, the schedule is the main hyperparameter.",
+     "anchor": "role-bridges-l01"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,392 @@
+{
+ "schemaVersion": 1,
+ "itemId": "math-genai-lessons-u10-lesson-10-llm-inference-quantization-alignment",
+ "itemKind": "lesson",
+ "revision": "1340b999a5766e7f1f06de758278a81f633bc0172d053151a44d056ccfcd5477",
+ "sections": [
+  {
+   "anchor": "lesson-10-llm-inference-quantization-alignment-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "lesson-10-llm-inference-quantization-alignment-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "math-genai-U10",
+     "definition": "The unit.",
+     "anchor": "lesson-10-llm-inference-quantization-alignment-intro-p01"
+    },
+    {
+     "term": "C12",
+     "definition": "The last leaf concept.",
+     "anchor": "lesson-10-llm-inference-quantization-alignment-intro-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-10-llm-inference-quantization-alignment-intro-r1",
+     "question": "What leaves does this lesson cover?",
+     "answer": "math-genai-U10-C01 to C12.",
+     "anchor": "lesson-10-llm-inference-quantization-alignment-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "source-mapping",
+   "title": "Source mapping",
+   "minutes": 1,
+   "endAnchor": "source-mapping-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "compute_run5b.py",
+     "definition": "Reproduces every number.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "numpy 1.26.4",
+     "definition": "The compute setup.",
+     "anchor": "source-mapping-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "source-mapping-r1",
+     "question": "What reproduces every number?",
+     "answer": "compute_run5b.py (numpy 1.26.4, float64, seed 0 where RNG is used).",
+     "anchor": "source-mapping-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "scope-and-objectives",
+   "title": "Scope and objectives",
+   "minutes": 1,
+   "endAnchor": "scope-and-objectives-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "Bradley-Terry",
+     "definition": "Write its loss.",
+     "anchor": "scope-and-objectives-p02"
+    },
+    {
+     "term": "DPO",
+     "definition": "Write its loss.",
+     "anchor": "scope-and-objectives-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "scope-and-objectives-r1",
+     "question": "What can the learner do after this lesson?",
+     "answer": "Compute decoding distributions at any temperature, do the KV cache byte arithmetic, quantize a matrix by hand, price a token with the roofline model, write the SFT, Bradley-Terry, PPO clipped, and DPO losses.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "how-to-read-this-lesson",
+   "title": "How to read this lesson",
+   "minutes": 1,
+   "endAnchor": "how-to-read-this-lesson-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "V = 4",
+     "definition": "The vocab size.",
+     "anchor": "how-to-read-this-lesson-p02"
+    },
+    {
+     "term": "d_h = 64",
+     "definition": "The head dim.",
+     "anchor": "how-to-read-this-lesson-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "how-to-read-this-lesson-r1",
+     "question": "What are the running toys?",
+     "answer": "Logits z = [2.0, 1.0, 0.5, 0.1] (V = 4). KV toy: L = 12, h = 8, d_h = 64, n = 512 tokens, fp16. Quant toy: a 4x2 W. Alignment toys: r_c = 1.2, r_r = 0.3, two PPO cases, DPO beta = 0.1.",
+     "anchor": "how-to-read-this-lesson-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "mechanism-a-from-logits-to-tokens-fast",
+   "title": "Mechanism A, from logits to tokens, fast",
+   "minutes": 5,
+   "endAnchor": "mechanism-a-from-logits-to-tokens-fast-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "12.00 MiB",
+     "definition": "The n = 512 cache.",
+     "anchor": "mechanism-a-from-logits-to-tokens-fast-p02"
+    },
+    {
+     "term": "24576 bytes",
+     "definition": "Per new token.",
+     "anchor": "mechanism-a-from-logits-to-tokens-fast-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "mechanism-a-from-logits-to-tokens-fast-r1",
+     "question": "What does the KV check show?",
+     "answer": "Cache bytes = 2 12 8 64 512 2 = 12582912 = 12.00 MiB; per-token increment 24576 bytes; prefill/decode ratio = n = 512.",
+     "anchor": "mechanism-a-from-logits-to-tokens-fast-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "mechanism-b-shrinking-the-model",
+   "title": "Mechanism B, shrinking the model",
+   "minutes": 5,
+   "endAnchor": "mechanism-b-shrinking-the-model-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "0.013725",
+     "definition": "The INT8 scale.",
+     "anchor": "mechanism-b-shrinking-the-model-p02"
+    },
+    {
+     "term": "142.9 tok/s",
+     "definition": "The roofline ceiling.",
+     "anchor": "mechanism-b-shrinking-the-model-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "mechanism-b-shrinking-the-model-r1",
+     "question": "What does the quant toy show?",
+     "answer": "INT8 affine scale 3.5/255 = 0.013725, max abs error 0.005882 <= s/2 = 0.006863; bytes 32 -> 8 (4x); 7B fp16 at 2 TB/s: 7.00 ms/token, 142.9 tok/s ceiling.",
+     "anchor": "mechanism-b-shrinking-the-model-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "mechanism-c-from-pretraining-to-preferences",
+   "title": "Mechanism C, from pretraining to preferences",
+   "minutes": 8,
+   "endAnchor": "mechanism-c-from-pretraining-to-preferences-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "0.3412 nats",
+     "definition": "The BT loss.",
+     "anchor": "mechanism-c-from-pretraining-to-preferences-p02"
+    },
+    {
+     "term": "0.6588",
+     "definition": "The DPO loss.",
+     "anchor": "mechanism-c-from-pretraining-to-preferences-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "mechanism-c-from-pretraining-to-preferences-r1",
+     "question": "What are the toy alignment numbers?",
+     "answer": "BT: P = 0.7109, loss 0.3412 nats. PPO: (1.3, 0.5) -> 0.6000, (0.5, -0.4) -> -0.3200. DPO: margin 0.07, loss 0.6588.",
+     "anchor": "mechanism-c-from-pretraining-to-preferences-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "mechanism-d-the-adversary-and-the-audit",
+   "title": "Mechanism D, the adversary and the audit",
+   "minutes": 6,
+   "endAnchor": "mechanism-d-the-adversary-and-the-audit-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "0.5834",
+     "definition": "The mean BT win-rate.",
+     "anchor": "mechanism-d-the-adversary-and-the-audit-p02"
+    },
+    {
+     "term": "4 of 12",
+     "definition": "Title-level coverage.",
+     "anchor": "mechanism-d-the-adversary-and-the-audit-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "mechanism-d-the-adversary-and-the-audit-r1",
+     "question": "What does the reward-hacking toy show?",
+     "answer": "Proxy: B wins (1.20 vs 1.00); true quality: A was better (0.9 vs 0.7). BT mean win-rate 0.5834. Audit: 4 of 12 concepts have title-level lecture coverage.",
+     "anchor": "mechanism-d-the-adversary-and-the-audit-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "not-yet-understood-for-the-next-builder",
+   "title": "Not yet understood (for the next builder)",
+   "minutes": 1,
+   "endAnchor": "not-yet-understood-for-the-next-builder-end",
+   "blocks": [
+    {
+     "anchor": "not-yet-understood-for-the-next-builder-list01",
+     "kind": "steps",
+     "reveal": "stepwise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "No real GPU timings",
+     "definition": "Authored arithmetic only.",
+     "anchor": "not-yet-understood-for-the-next-builder-list01"
+    },
+    {
+     "term": "Reward model never trained",
+     "definition": "On real preferences.",
+     "anchor": "not-yet-understood-for-the-next-builder-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "not-yet-understood-for-the-next-builder-r1",
+     "question": "What stays open for the next builder?",
+     "answer": "No real GPU timings (all C04 numbers are authored arithmetic); PPO/TRPO never run; the reward model never trained on real preferences.",
+     "anchor": "not-yet-understood-for-the-next-builder-list01"
+    }
+   ]
+  },
+  {
+   "anchor": "lesson-exercises-questions-keys-in-lessonsu10keysmd",
+   "title": "Lesson exercises (questions. Keys in lessons/u10/keys.md)",
+   "minutes": 2,
+   "endAnchor": "lesson-exercises-questions-keys-in-lessonsu10keysmd-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "E01",
+     "definition": "Compute softmax(z/T).",
+     "anchor": "lesson-exercises-questions-keys-in-lessonsu10keysmd-p01"
+    },
+    {
+     "term": "0.8282",
+     "definition": "pmax at T = 0.5.",
+     "anchor": "lesson-exercises-questions-keys-in-lessonsu10keysmd-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-exercises-questions-keys-in-lessonsu10keysmd-r1",
+     "question": "Where are the exercise keys?",
+     "answer": "lessons/u10/keys.md.",
+     "anchor": "lesson-exercises-questions-keys-in-lessonsu10keysmd-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "deep-oral-ladders-questions-keys-in-lessonsu10keysmd",
+   "title": "Deep oral ladders (questions. Keys in lessons/u10/keys.md)",
+   "minutes": 1,
+   "endAnchor": "deep-oral-ladders-questions-keys-in-lessonsu10keysmd-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "L01",
+     "definition": "Logits to tokens.",
+     "anchor": "deep-oral-ladders-questions-keys-in-lessonsu10keysmd-p01"
+    },
+    {
+     "term": "top-p",
+     "definition": "Define it.",
+     "anchor": "deep-oral-ladders-questions-keys-in-lessonsu10keysmd-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "deep-oral-ladders-questions-keys-in-lessonsu10keysmd-r1",
+     "question": "Where are the ladder keys?",
+     "answer": "lessons/u10/keys.md.",
+     "anchor": "deep-oral-ladders-questions-keys-in-lessonsu10keysmd-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "implementation-and-debug-task",
+   "title": "Implementation and debug task",
+   "minutes": 1,
+   "endAnchor": "implementation-and-debug-task-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "top-p",
+     "definition": "The debug target.",
+     "anchor": "implementation-and-debug-task-p01"
+    },
+    {
+     "term": "ascending",
+     "definition": "The wrong sort order.",
+     "anchor": "implementation-and-debug-task-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "implementation-and-debug-task-r1",
+     "question": "What is the top-p symptom?",
+     "answer": "The tail is kept and the head dropped (they sort ascending).",
+     "anchor": "implementation-and-debug-task-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "changed-constraint-scenarios",
+   "title": "Changed-constraint scenarios",
+   "minutes": 1,
+   "endAnchor": "changed-constraint-scenarios-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "2 GB RAM",
+     "definition": "The phone target.",
+     "anchor": "changed-constraint-scenarios-p01"
+    },
+    {
+     "term": "1B INT4 = 0.5 GB",
+     "definition": "A feasible config.",
+     "anchor": "changed-constraint-scenarios-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "changed-constraint-scenarios-r1",
+     "question": "What does S1 ask?",
+     "answer": "Deploy to a phone (2 GB RAM, no GPU): the 7B model cannot fit even at INT4 (3.5 GB); name three levers and compute the bytes for one feasible config (e.g. 1B INT4 = 0.5 GB + KV).",
+     "anchor": "changed-constraint-scenarios-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "research-critique-question",
+   "title": "Research-critique question",
+   "minutes": 1,
+   "endAnchor": "research-critique-question-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "Lower DPO loss",
+     "definition": "The attacked claim.",
+     "anchor": "research-critique-question-p01"
+    },
+    {
+     "term": "win-rate on held-out pairs",
+     "definition": "The deciding experiment.",
+     "anchor": "research-critique-question-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "research-critique-question-r1",
+     "question": "What decides the DPO claim?",
+     "answer": "Win-rate on held-out pairs plus human eval: the loss measures the margin on training pairs, which can rise while both log-ratios drop.",
+     "anchor": "research-critique-question-p01"
+    }
+   ]
+  }
+ ]
+}

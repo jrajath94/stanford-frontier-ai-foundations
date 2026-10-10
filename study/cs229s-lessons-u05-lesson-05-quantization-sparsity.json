@@ -1,0 +1,845 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229s-lessons-u05-lesson-05-quantization-sparsity",
+ "itemKind": "lesson",
+ "revision": "adf5e595d29bcadd40c76ea3ebd33306c28fa5231c3ec4c2391f421f0b390ff1",
+ "sections": [
+  {
+   "anchor": "lesson-05-quantization-sparsity-intro",
+   "title": "Lesson 05: Quantization and sparsity",
+   "endAnchor": "lesson-05-quantization-sparsity-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229s-U05",
+     "definition": "Unit 05 of CS229S, covering quantization and sparsity.",
+     "anchor": "lesson-05-quantization-sparsity-intro-p02"
+    },
+    {
+     "term": "claim class",
+     "definition": "The evidence label on every lesson claim, here PLANNED with source attribution pending.",
+     "anchor": "lesson-05-quantization-sparsity-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-05-quantization-sparsity-intro-r1",
+     "question": "What unit and session anchor this lesson?",
+     "answer": "Unit cs229s-U05, concepts C01 to C12, calendar-anchored to Week 4, Oct 14, Memory Efficient Neural Networks.",
+     "anchor": "lesson-05-quantization-sparsity-intro-p02"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "how-to-read-this-lesson",
+   "title": "How to read this lesson",
+   "endAnchor": "how-to-read-this-lesson-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "15-item contract",
+     "definition": "The fixed structure every concept carries, from source and scope to visual units.",
+     "anchor": "how-to-read-this-lesson-p01"
+    },
+    {
+     "term": "computed error",
+     "definition": "Quantization and sparsity are taught as algorithms with computed error.",
+     "anchor": "how-to-read-this-lesson-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "how-to-read-this-lesson-r1",
+     "question": "Do the labs need a GPU?",
+     "answer": "No: quantization and sparsity are taught as algorithms with computed error, no GPU needed for the labs.",
+     "anchor": "how-to-read-this-lesson-p01"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c01-scalezero-point",
+   "title": "C01: scale/zero point",
+   "endAnchor": "c01-scalezero-point-end",
+   "blocks": [
+    {
+     "anchor": "c01-scalezero-point-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c01-scalezero-point-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c01-scalezero-point-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "ruler",
+     "definition": "The mental model: 16 evenly spaced marks standing in for floats.",
+     "anchor": "c01-scalezero-point-p03"
+    },
+    {
+     "term": "scale",
+     "definition": "s = (max - min) / (2^b - 1): the spacing between marks.",
+     "anchor": "c01-scalezero-point-list01"
+    },
+    {
+     "term": "outliers",
+     "definition": "Stretch s and crush the small values onto one level.",
+     "anchor": "c01-scalezero-point-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c01-scalezero-point-r1",
+     "question": "Write s, z, x_q, x_hat.",
+     "answer": "s = (max - min)/(2^b - 1). z = round(-min/s). x_q = clamp(round(x/s) + z). x_hat = s*(x_q - z).",
+     "anchor": "c01-scalezero-point-list01"
+    },
+    {
+     "id": "c01-scalezero-point-r2",
+     "question": "min=-1, max=1, b=4. Quantize 0.5 and -0.25. Give x_hat and error.",
+     "answer": "0.5: x_q = 12, x_hat = 0.5333, error 0.0333. -0.25: x_q = 6, x_hat = -0.2667, error 0.0167.",
+     "anchor": "c01-scalezero-point-p05"
+    },
+    {
+     "id": "c01-scalezero-point-r3",
+     "question": "Many small values map to one level. Name the cause.",
+     "answer": "Outliers: one weight at 100 with the rest in [-1, 1] makes s = 0.396, crushing values under 0.2. Clip or use per-channel.",
+     "anchor": "c01-scalezero-point-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c02-roundingclipping",
+   "title": "C02: rounding/clipping",
+   "endAnchor": "c02-roundingclipping-end",
+   "blocks": [
+    {
+     "anchor": "c02-roundingclipping-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c02-roundingclipping-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c02-roundingclipping-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "rounding error",
+     "definition": "Bounded by s/2 for values inside [min, max].",
+     "anchor": "c02-roundingclipping-list01"
+    },
+    {
+     "term": "clipping error",
+     "definition": "Unbounded: outside the range, values snap to the edge.",
+     "anchor": "c02-roundingclipping-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c02-roundingclipping-r1",
+     "question": "Bound the rounding error.",
+     "answer": "For x in [min, max]: |x - x_hat| <= s/2.",
+     "anchor": "c02-roundingclipping-list01"
+    },
+    {
+     "id": "c02-roundingclipping-r2",
+     "question": "s = 0.1333. Max rounding error. Clipping error for x = 2.0?",
+     "answer": "Max rounding error 0.0667. x = 2.0 clips to x_hat = 0.9333, error 1.0667.",
+     "anchor": "c02-roundingclipping-p05"
+    },
+    {
+     "id": "c02-roundingclipping-r3",
+     "question": "MSE high, max error huge. Which error dominates?",
+     "answer": "Clipping: rounding is bounded by s/2, clipping grows with distance past the edge.",
+     "anchor": "c02-roundingclipping-p05"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c03-per-channelgroup-choices",
+   "title": "C03: per-channel/group choices",
+   "endAnchor": "c03-per-channelgroup-choices-end",
+   "blocks": [
+    {
+     "anchor": "c03-per-channelgroup-choices-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c03-per-channelgroup-choices-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c03-per-channelgroup-choices-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "thermostat",
+     "definition": "The mental model: one thermostat for the whole house vs one per room.",
+     "anchor": "c03-per-channelgroup-choices-p03"
+    },
+    {
+     "term": "per-channel",
+     "definition": "One (s, z) per output channel: each channel gets its own ruler.",
+     "anchor": "c03-per-channelgroup-choices-list01"
+    },
+    {
+     "term": "per-group",
+     "definition": "One (s, z) per group of g elements (e.g. g = 128).",
+     "anchor": "c03-per-channelgroup-choices-p08"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c03-per-channelgroup-choices-r1",
+     "question": "Define the three granularities.",
+     "answer": "Per-tensor: one (s, z) for the whole tensor. Per-channel: one per output channel. Per-group: one per group of g elements.",
+     "anchor": "c03-per-channelgroup-choices-list01"
+    },
+    {
+     "id": "c03-per-channelgroup-choices-r2",
+     "question": "Rows [-100,100], [-1,1], 4-bit. Per-tensor s and the fate of row 2?",
+     "answer": "s = 13.33. Row 2's values all snap to ~one level: destroyed.",
+     "anchor": "c03-per-channelgroup-choices-p04"
+    },
+    {
+     "id": "c03-per-channelgroup-choices-r3",
+     "question": "Per-tensor int8 fails quality. First change?",
+     "answer": "Go per-channel for weights (almost always the right first move).",
+     "anchor": "c03-per-channelgroup-choices-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c04-activation-versus-weight-quantization",
+   "title": "C04: activation versus weight quantization",
+   "endAnchor": "c04-activation-versus-weight-quantization-end",
+   "blocks": [
+    {
+     "anchor": "c04-activation-versus-weight-quantization-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c04-activation-versus-weight-quantization-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c04-activation-versus-weight-quantization-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "luggage",
+     "definition": "The mental model: weights packed at the factory (static), activations at the gate (dynamic).",
+     "anchor": "c04-activation-versus-weight-quantization-p03"
+    },
+    {
+     "term": "weight-only",
+     "definition": "W in int8, activations fp16: the matmul dequantizes on the fly.",
+     "anchor": "c04-activation-versus-weight-quantization-list01"
+    },
+    {
+     "term": "dynamic",
+     "definition": "Per-batch (s, z) from the batch's min/max: tracks the data.",
+     "anchor": "c04-activation-versus-weight-quantization-p06"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c04-activation-versus-weight-quantization-r1",
+     "question": "Define weight-only vs W8A8.",
+     "answer": "Weight-only: W int8, activations fp16. W8A8: both int8, integer matmul accumulating in int32.",
+     "anchor": "c04-activation-versus-weight-quantization-list01"
+    },
+    {
+     "id": "c04-activation-versus-weight-quantization-r2",
+     "question": "W (4096, 4096) fp32 vs int8. Traffic bytes?",
+     "answer": "fp32: 67,108,864 bytes. int8: 16,777,216 bytes: 4x less.",
+     "anchor": "c04-activation-versus-weight-quantization-p05"
+    },
+    {
+     "id": "c04-activation-versus-weight-quantization-r3",
+     "question": "Static int8 fails on new data. Explain and fix.",
+     "answer": "The new domain shifts activations outside the calibrated range: clipping explodes. Recalibrate or go dynamic.",
+     "anchor": "c04-activation-versus-weight-quantization-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c05-calibration",
+   "title": "C05: calibration",
+   "endAnchor": "c05-calibration-end",
+   "blocks": [
+    {
+     "anchor": "c05-calibration-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c05-calibration-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c05-calibration-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "crowd",
+     "definition": "The mental model: fit the ruler to the crowd, clip the giant.",
+     "anchor": "c05-calibration-p03"
+    },
+    {
+     "term": "percentile",
+     "definition": "Range from [p0.05, p99.95]: fits the bulk, clips outliers.",
+     "anchor": "c05-calibration-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c05-calibration-r1",
+     "question": "Name three range-picking methods.",
+     "answer": "Min/max, percentile, and MSE search over candidate ranges.",
+     "anchor": "c05-calibration-list01"
+    },
+    {
+     "id": "c05-calibration-r2",
+     "question": "9999 values in [-1,1], one at 1000. s for min/max and 99.9 percentile?",
+     "answer": "Min/max: s = 3.925. 99.9 percentile: s ~ 0.0078.",
+     "anchor": "c05-calibration-p05"
+    },
+    {
+     "id": "c05-calibration-r3",
+     "question": "Calibrated int8 fails in prod. Name the mismatch.",
+     "answer": "Calibration data does not match deployment. Monitor and recalibrate.",
+     "anchor": "c05-calibration-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c06-structuredrandom-sparsity",
+   "title": "C06: structured/random sparsity",
+   "endAnchor": "c06-structuredrandom-sparsity-end",
+   "blocks": [
+    {
+     "anchor": "c06-structuredrandom-sparsity-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c06-structuredrandom-sparsity-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c06-structuredrandom-sparsity-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "assigned seating",
+     "definition": "The mental model: unstructured zeros are free choice, 2:4 is assigned seating the usher can plan.",
+     "anchor": "c06-structuredrandom-sparsity-p03"
+    },
+    {
+     "term": "2:4",
+     "definition": "In each group of 4, exactly 2 nonzero: sparse tensor cores skip fast.",
+     "anchor": "c06-structuredrandom-sparsity-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c06-structuredrandom-sparsity-r1",
+     "question": "Define 2:4, block, unstructured.",
+     "answer": "2:4: exactly 2 nonzero per group of 4. Block: all-or-nothing bxb tiles. Unstructured: arbitrary zeros, needs indices.",
+     "anchor": "c06-structuredrandom-sparsity-list01"
+    },
+    {
+     "id": "c06-structuredrandom-sparsity-r2",
+     "question": "8 weights, 4 zeros. Which patterns are 2:4-valid?",
+     "answer": "[1,0,0,1,0,1,1,0] is valid (2 nonzeros per group). [1,1,1,1,0,0,0,0] is not.",
+     "anchor": "c06-structuredrandom-sparsity-p05"
+    },
+    {
+     "id": "c06-structuredrandom-sparsity-r3",
+     "question": "50% sparse, no speedup. Name the pattern problem.",
+     "answer": "Unstructured: index overhead eats the math saving (~1x). The pattern decides, not the count.",
+     "anchor": "c06-structuredrandom-sparsity-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c07-pruning",
+   "title": "C07: pruning",
+   "endAnchor": "c07-pruning-end",
+   "blocks": [
+    {
+     "anchor": "c07-pruning-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c07-pruning-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c07-pruning-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "magnitude pruning",
+     "definition": "Zero out the smallest |w|: cut the thinnest branches.",
+     "anchor": "c07-pruning-p03"
+    },
+    {
+     "term": "sensitivity",
+     "definition": "Loss change per weight on removal: the exact-ish pruning score.",
+     "anchor": "c07-pruning-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c07-pruning-r1",
+     "question": "Define magnitude pruning in one line.",
+     "answer": "Zero out the smallest |w| per layer or globally.",
+     "anchor": "c07-pruning-list01"
+    },
+    {
+     "id": "c07-pruning-r2",
+     "question": "W = [0.1, 2.0, -0.05, 1.5], prune 50%. Mask and pruned W?",
+     "answer": "Mask [0, 1, 0, 1]. Pruned W: [0, 2.0, 0, 1.5].",
+     "anchor": "c07-pruning-p05"
+    },
+    {
+     "id": "c07-pruning-r3",
+     "question": "90% magnitude prune collapses. Two fixes?",
+     "answer": "Sensitivity-guided pruning, or gradual pruning (prune a little, retrain, repeat).",
+     "anchor": "c07-pruning-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c08-realized-kernel-speed",
+   "title": "C08: realized kernel speed",
+   "endAnchor": "c08-realized-kernel-speed-end",
+   "blocks": [
+    {
+     "anchor": "c08-realized-kernel-speed-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c08-realized-kernel-speed-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c08-realized-kernel-speed-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "toll booths",
+     "definition": "The mental model: skipping zeros saves steps, but index lookups are tolls.",
+     "anchor": "c08-realized-kernel-speed-p03"
+    },
+    {
+     "term": "gather",
+     "definition": "The per-nonzero index lookup that costs unstructured sparsity its win.",
+     "anchor": "c08-realized-kernel-speed-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c08-realized-kernel-speed-r1",
+     "question": "Write the realized-time formula.",
+     "answer": "Time = math_time / speedup + index_overhead; realized(dense, sparsity, gather_frac) = dense * ((1 - sparsity) + gather_frac).",
+     "anchor": "c08-realized-kernel-speed-code01"
+    },
+    {
+     "id": "c08-realized-kernel-speed-r2",
+     "question": "Dense 100 us, 50% sparse, gather 45 us. Speedup?",
+     "answer": "50 + 45 = 95 us: about 1.05x.",
+     "anchor": "c08-realized-kernel-speed-p05"
+    },
+    {
+     "id": "c08-realized-kernel-speed-r3",
+     "question": "2:4 kernel at 1.0x. Name two causes.",
+     "answer": "Shapes do not qualify for tensor cores, or the gather overhead is not the 2:4 path (wrong kernel).",
+     "anchor": "c08-realized-kernel-speed-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c09-butterfly-matrices",
+   "title": "C09: butterfly matrices",
+   "endAnchor": "c09-butterfly-matrices-end",
+   "blocks": [
+    {
+     "anchor": "c09-butterfly-matrices-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c09-butterfly-matrices-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c09-butterfly-matrices-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "butterfly",
+     "definition": "B = B_1 ... B_k with k = log2(n): full mixing at O(n log n).",
+     "anchor": "c09-butterfly-matrices-p01"
+    },
+    {
+     "term": "tournament bracket",
+     "definition": "The mental model: each factor pairs up entries and mixes them.",
+     "anchor": "c09-butterfly-matrices-p03"
+    },
+    {
+     "term": "2n log n",
+     "definition": "Butterfly parameter count vs n^2 dense.",
+     "anchor": "c09-butterfly-matrices-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c09-butterfly-matrices-r1",
+     "question": "Write the parameter count.",
+     "answer": "k = log2(n) factors, 2n per factor: 2n log n total.",
+     "anchor": "c09-butterfly-matrices-list01"
+    },
+    {
+     "id": "c09-butterfly-matrices-r2",
+     "question": "n = 1024. Dense vs butterfly params?",
+     "answer": "Dense about 1M (1,048,576). Butterfly 20,480: 51x fewer.",
+     "anchor": "c09-butterfly-matrices-p05"
+    },
+    {
+     "id": "c09-butterfly-matrices-r3",
+     "question": "Butterfly fit has huge error. Explain.",
+     "answer": "Not every matrix factorizes this way: learn the factors, do not assume universality.",
+     "anchor": "c09-butterfly-matrices-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c10-monarch-matrices",
+   "title": "C10: Monarch matrices",
+   "endAnchor": "c10-monarch-matrices-end",
+   "blocks": [
+    {
+     "anchor": "c10-monarch-matrices-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c10-monarch-matrices-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c10-monarch-matrices-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "Monarch",
+     "definition": "M = P L P^T R: two block-diagonal factors plus permutations.",
+     "anchor": "c10-monarch-matrices-p01"
+    },
+    {
+     "term": "city blocks",
+     "definition": "The mental model: permute into districts, mix inside, permute back, mix across.",
+     "anchor": "c10-monarch-matrices-p03"
+    },
+    {
+     "term": "permutation",
+     "definition": "P routes information across blocks.",
+     "anchor": "c10-monarch-matrices-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c10-monarch-matrices-r1",
+     "question": "Write the Monarch form and param count.",
+     "answer": "M = P L P^T R. Block size b: O(nb) per factor, O(2nb) for the pair.",
+     "anchor": "c10-monarch-matrices-list01"
+    },
+    {
+     "id": "c10-monarch-matrices-r2",
+     "question": "n = 4096, b = 256. Params vs dense?",
+     "answer": "2 * 4096 * 256 = 2.1M vs 16.7M dense: 8x fewer.",
+     "anchor": "c10-monarch-matrices-p05"
+    },
+    {
+     "id": "c10-monarch-matrices-r3",
+     "question": "Monarch underfits. Explain.",
+     "answer": "Structured factors are harder to optimize: fewer degrees of freedom, worse conditioning. Tune the optimizer.",
+     "anchor": "c10-monarch-matrices-p09"
+    }
+   ],
+   "minutes": 8
+  },
+  {
+   "anchor": "c11-error-propagation",
+   "title": "C11: error propagation",
+   "endAnchor": "c11-error-propagation-end",
+   "blocks": [
+    {
+     "anchor": "c11-error-propagation-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c11-error-propagation-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c11-error-propagation-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "whisper down the lane",
+     "definition": "The mental model: each layer adds its error and passes previous errors along, amplified.",
+     "anchor": "c11-error-propagation-p03"
+    },
+    {
+     "term": "Lipschitz",
+     "definition": "L_i of each layer: the per-layer amplification factor.",
+     "anchor": "c11-error-propagation-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c11-error-propagation-r1",
+     "question": "Write the error bound.",
+     "answer": "Total <= sum_i e_i * prod_{j>i} L_j.",
+     "anchor": "c11-error-propagation-list01"
+    },
+    {
+     "id": "c11-error-propagation-r2",
+     "question": "errs 0.01 x2, lips 1.5, 1.0. Bound?",
+     "answer": "0.01 * 1.0 + 0.01 * 1.5 = 0.025.",
+     "anchor": "c11-error-propagation-code01"
+    },
+    {
+     "id": "c11-error-propagation-r3",
+     "question": "First-layer int8 kills quality, last-layer int8 fine. Explain.",
+     "answer": "Early-layer errors are amplified by all later layers. Keep early layers precise.",
+     "anchor": "c11-error-propagation-p09"
+    }
+   ],
+   "minutes": 6
+  },
+  {
+   "anchor": "c12-quality-validation",
+   "title": "C12: quality validation",
+   "endAnchor": "c12-quality-validation-end",
+   "blocks": [
+    {
+     "anchor": "c12-quality-validation-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c12-quality-validation-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c12-quality-validation-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "road test",
+     "definition": "The mental model: perplexity is one gauge, task evals are the road.",
+     "anchor": "c12-quality-validation-p03"
+    },
+    {
+     "term": "gates",
+     "definition": "Perplexity delta, task accuracy deltas, latency/throughput targets.",
+     "anchor": "c12-quality-validation-list01"
+    },
+    {
+     "term": "canary",
+     "definition": "Step 5 of the protocol: canary the compressed model in prod.",
+     "anchor": "c12-quality-validation-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c12-quality-validation-r1",
+     "question": "Name the three gates.",
+     "answer": "Perplexity delta, task accuracy deltas, latency/throughput targets.",
+     "anchor": "c12-quality-validation-list01"
+    },
+    {
+     "id": "c12-quality-validation-r2",
+     "question": "ppl +0.8%, task +0, lat 12 ms. Ship?",
+     "answer": "Ship: all three gates pass.",
+     "anchor": "c12-quality-validation-p05"
+    },
+    {
+     "id": "c12-quality-validation-r3",
+     "question": "ppl flat, task down. What does this prove about the gate?",
+     "answer": "Perplexity under-gates: a flat perplexity can hide a broken long-range task. Run the task suite.",
+     "anchor": "c12-quality-validation-p09"
+    }
+   ],
+   "minutes": 4
+  },
+  {
+   "anchor": "unit-chapter-plate",
+   "title": "Unit chapter plate",
+   "endAnchor": "unit-chapter-plate-end",
+   "blocks": [
+    {
+     "anchor": "unit-chapter-plate-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "Shrink the bytes",
+     "definition": "The unit's bottom line: shrink the bytes, prove the quality.",
+     "anchor": "unit-chapter-plate-p01"
+    },
+    {
+     "term": "compressed system",
+     "definition": "int8 weights, 2:4 kernels, structured layers: the right side of the plate.",
+     "anchor": "unit-chapter-plate-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "unit-chapter-plate-r1",
+     "question": "What does the unit chapter plate contrast?",
+     "answer": "Naive view (fp32 dense, full traffic) vs the compressed system (int8 weights, 2:4 kernels, structured layers). Bottom line: shrink the bytes, prove the quality.",
+     "anchor": "unit-chapter-plate-p01"
+    }
+   ],
+   "minutes": 2
+  },
+  {
+   "anchor": "russian-doll-ladder-linear-quantization-major-mechanism",
+   "title": "Russian-doll ladder: linear quantization (major mechanism)",
+   "endAnchor": "russian-doll-ladder-linear-quantization-major-mechanism-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "x_q",
+     "definition": "The Shell 3 rule: x_q = clamp(round(x/s) + z).",
+     "anchor": "russian-doll-ladder-linear-quantization-major-mechanism-list01"
+    },
+    {
+     "term": "Shell 5 invariant",
+     "definition": "Zero maps to zero, in-range error <= s/2.",
+     "anchor": "russian-doll-ladder-linear-quantization-major-mechanism-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "russian-doll-ladder-linear-quantization-major-mechanism-r1",
+     "question": "What is the Shell 3 rule of the linear-quantization ladder?",
+     "answer": "x_q = clamp(round(x/s) + z).",
+     "anchor": "russian-doll-ladder-linear-quantization-major-mechanism-list01"
+    },
+    {
+     "id": "russian-doll-ladder-linear-quantization-major-mechanism-r2",
+     "question": "What breaks the ladder (Shell 7)?",
+     "answer": "Breaking the range (outlier): the quiet channel dies.",
+     "anchor": "russian-doll-ladder-linear-quantization-major-mechanism-list01"
+    }
+   ],
+   "minutes": 1
+  },
+  {
+   "anchor": "role-bridge",
+   "title": "Role bridge",
+   "endAnchor": "role-bridge-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "three gates",
+     "definition": "C12: the deployment checklist for every compressed model.",
+     "anchor": "role-bridge-list01"
+    },
+    {
+     "term": "error propagation",
+     "definition": "C11: tells the LLM engineer which layers keep their bits.",
+     "anchor": "role-bridge-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "role-bridge-r1",
+     "question": "What are the MLOps deployment checklist items for a compressed model?",
+     "answer": "The three gates (C12): perplexity delta, task accuracy deltas, latency/throughput targets.",
+     "anchor": "role-bridge-list01"
+    }
+   ],
+   "minutes": 1
+  }
+ ]
+}

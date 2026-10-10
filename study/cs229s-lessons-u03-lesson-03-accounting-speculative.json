@@ -1,0 +1,865 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229s-lessons-u03-lesson-03-accounting-speculative",
+ "itemKind": "lesson",
+ "revision": "2ba06c998ad403915328c0fc46aaafb1f5ec3863e2a4b1a08948ec962e279bd2",
+ "sections": [
+  {
+   "anchor": "lesson-03-accounting-speculative-intro",
+   "title": "Lesson 03: Transformer accounting and speculative inference",
+   "endAnchor": "lesson-03-accounting-speculative-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229s-U03",
+     "definition": "Unit 03 of CS229S, covering transformer accounting and speculative inference.",
+     "anchor": "lesson-03-accounting-speculative-intro-p02"
+    },
+    {
+     "term": "claim class",
+     "definition": "The evidence label on every lesson claim, here PLANNED with source attribution pending.",
+     "anchor": "lesson-03-accounting-speculative-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-03-accounting-speculative-intro-r1",
+     "question": "What unit and concepts does this lesson cover?",
+     "answer": "Unit cs229s-U03, concepts C01 to C12, calendar-anchored to Week 2, Oct 04, Analyzing the Performance of Transformers.",
+     "anchor": "lesson-03-accounting-speculative-intro-p02"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "how-to-read-this-lesson",
+   "title": "How to read this lesson",
+   "endAnchor": "how-to-read-this-lesson-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "15-item contract",
+     "definition": "The fixed structure every concept carries, from source and scope to visual units.",
+     "anchor": "how-to-read-this-lesson-p01"
+    },
+    {
+     "term": "notation_and_shapes.md",
+     "definition": "The shared symbols file this lesson follows.",
+     "anchor": "how-to-read-this-lesson-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "how-to-read-this-lesson-r1",
+     "question": "What source does speculative decoding follow here?",
+     "answer": "Leviathan et al. and Chen et al. (2023), taught from the papers.",
+     "anchor": "how-to-read-this-lesson-p01"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c01-training-flops",
+   "title": "C01: training FLOPs",
+   "endAnchor": "c01-training-flops-end",
+   "blocks": [
+    {
+     "anchor": "c01-training-flops-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c01-training-flops-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c01-training-flops-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "C = 6PD",
+     "definition": "Full training FLOP count: dense term plus the attention term.",
+     "anchor": "c01-training-flops-p01"
+    },
+    {
+     "term": "attention term",
+     "definition": "12 L n T D: the quadratic-in-T part of the training FLOP count.",
+     "anchor": "c01-training-flops-list01"
+    },
+    {
+     "term": "6PD rule",
+     "definition": "The dense-only estimate that undercounts by 2.3x at T = 32768.",
+     "anchor": "c01-training-flops-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c01-training-flops-r1",
+     "question": "Write the full training FLOP formula.",
+     "answer": "C = 6PD + 12 L n T D.",
+     "anchor": "c01-training-flops-list01"
+    },
+    {
+     "id": "c01-training-flops-r2",
+     "question": "For P = 7e9, D = 1e12, L = 32, n = 4096, T = 2048, what are the two terms?",
+     "answer": "6PD = 4.2e22, attention = 3.2e21, total about 4.5e22. Attention is about 7 percent.",
+     "anchor": "c01-training-flops-p05"
+    },
+    {
+     "id": "c01-training-flops-r3",
+     "question": "At what context length does the attention term exceed the dense term?",
+     "answer": "Past T ~ 6n. At T = 32768, n = 4096, the attention term is 1.33x the dense term.",
+     "anchor": "c01-training-flops-p09"
+    }
+   ],
+   "minutes": 10
+  },
+  {
+   "anchor": "c02-decode-flops",
+   "title": "C02: decode FLOPs",
+   "endAnchor": "c02-decode-flops-end",
+   "blocks": [
+    {
+     "anchor": "c02-decode-flops-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c02-decode-flops-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c02-decode-flops-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "2P",
+     "definition": "FLOPs per decode token for the weights: one multiply-add per parameter.",
+     "anchor": "c02-decode-flops-p01"
+    },
+    {
+     "term": "KV cache",
+     "definition": "The stored keys and values that remove recompute during decode.",
+     "anchor": "c02-decode-flops-p03"
+    },
+    {
+     "term": "bandwidth-bound",
+     "definition": "Limited by bytes moved, not FLOPs: decode at batch 1.",
+     "anchor": "c02-decode-flops-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c02-decode-flops-r1",
+     "question": "Write the per-token decode FLOP formula.",
+     "answer": "2P + 4LTn per token.",
+     "anchor": "c02-decode-flops-p04"
+    },
+    {
+     "id": "c02-decode-flops-r2",
+     "question": "P = 13e9, 50 tokens. Decode FLOPs?",
+     "answer": "2 * 13e9 * 50 = 1.3e12 FLOPs.",
+     "anchor": "c02-decode-flops-p05"
+    },
+    {
+     "id": "c02-decode-flops-r3",
+     "question": "Two models have the same FLOPs but one decodes 3x faster. Explain.",
+     "answer": "The faster one moves fewer bytes: e.g. int8 weights, same 2P FLOPs, 4x less traffic. Count bytes.",
+     "anchor": "c02-decode-flops-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c03-kv-cache-memory",
+   "title": "C03: KV-cache memory",
+   "endAnchor": "c03-kv-cache-memory-end",
+   "blocks": [
+    {
+     "anchor": "c03-kv-cache-memory-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c03-kv-cache-memory-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c03-kv-cache-memory-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "KV cache",
+     "definition": "Per token per layer: 2n numbers (key + value). Total: 2BTLn numbers.",
+     "anchor": "c03-kv-cache-memory-p01"
+    },
+    {
+     "term": "O(BTLn)",
+     "definition": "The cache memory scaling in batch, tokens, layers, and width.",
+     "anchor": "c03-kv-cache-memory-p07"
+    },
+    {
+     "term": "paged attention",
+     "definition": "Finer cache allocation that reduces fragmentation waste.",
+     "anchor": "c03-kv-cache-memory-p08"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c03-kv-cache-memory-r1",
+     "question": "Write the KV byte formula.",
+     "answer": "Bytes = 2 * B * T * L * n * bytes-per-element, i.e. 4BTLn in fp16.",
+     "anchor": "c03-kv-cache-memory-p04"
+    },
+    {
+     "id": "c03-kv-cache-memory-r2",
+     "question": "B = 1, T = 32768, L = 32, n = 4096, fp16. GiB?",
+     "answer": "2 * 1 * 32768 * 32 * 4096 * 2 bytes = 1.7e13 bytes, about 16 GiB.",
+     "anchor": "c03-kv-cache-memory-p05"
+    },
+    {
+     "id": "c03-kv-cache-memory-r3",
+     "question": "Serving OOMs only on long requests. Name the term and a fix.",
+     "answer": "The KV cache: at B = 8, T = 8192 it is 34 GB, bigger than the 14 GB weights. Fix: size the cache first, or use paged attention.",
+     "anchor": "c03-kv-cache-memory-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c04-prefill",
+   "title": "C04: prefill",
+   "endAnchor": "c04-prefill-end",
+   "blocks": [
+    {
+     "anchor": "c04-prefill-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c04-prefill-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c04-prefill-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "prefill",
+     "definition": "The prompt-processing phase: forward pass on all prompt tokens at once.",
+     "anchor": "c04-prefill-p01"
+    },
+    {
+     "term": "time to first token",
+     "definition": "Dominated by prefill at long prompts.",
+     "anchor": "c04-prefill-p07"
+    },
+    {
+     "term": "chunked prefill",
+     "definition": "Splitting the prompt into pieces when its score matrix exceeds memory.",
+     "anchor": "c04-prefill-p08"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c04-prefill-r1",
+     "question": "Define prefill in one line.",
+     "answer": "Prefill reads all prompt tokens at once (parallel, like training) and builds the KV cache for the prompt.",
+     "anchor": "c04-prefill-p03"
+    },
+    {
+     "id": "c04-prefill-r2",
+     "question": "P = 7e9, T = 8192. Prefill FLOPs, dense term only?",
+     "answer": "2 * 7e9 * 8192 = 1.1e14 FLOPs.",
+     "anchor": "c04-prefill-p05"
+    },
+    {
+     "id": "c04-prefill-r3",
+     "question": "First token takes 10 s at T = 65536. Name the term.",
+     "answer": "The quadratic attention scores: naive (128K)^2 scores can hit 32 GB per head-set. Chunk or tile.",
+     "anchor": "c04-prefill-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c05-arithmetic-intensity-inference",
+   "title": "C05: arithmetic intensity (inference)",
+   "endAnchor": "c05-arithmetic-intensity-inference-end",
+   "blocks": [
+    {
+     "anchor": "c05-arithmetic-intensity-inference-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c05-arithmetic-intensity-inference-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c05-arithmetic-intensity-inference-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "arithmetic intensity",
+     "definition": "FLOPs per byte moved: prefill ~T, decode ~1 at batch 1 (fp16).",
+     "anchor": "c05-arithmetic-intensity-inference-p01"
+    },
+    {
+     "term": "prefill intensity",
+     "definition": "About T FLOP/byte: weights are reused across T tokens.",
+     "anchor": "c05-arithmetic-intensity-inference-list01"
+    },
+    {
+     "term": "decode intensity",
+     "definition": "About 1 FLOP/byte at batch 1: each weight is used once.",
+     "anchor": "c05-arithmetic-intensity-inference-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c05-arithmetic-intensity-inference-r1",
+     "question": "Write both intensities.",
+     "answer": "Prefill: I ~ T FLOP/byte. Decode: I ~ B FLOP/byte (about 1 at batch 1, fp16).",
+     "anchor": "c05-arithmetic-intensity-inference-list01"
+    },
+    {
+     "id": "c05-arithmetic-intensity-inference-r2",
+     "question": "Toy ridge 150. Classify prefill T = 64 and decode B = 200.",
+     "answer": "Prefill I ~ 64 < 150: memory-bound. Decode I ~ 200 > 150: compute-bound.",
+     "anchor": "c05-arithmetic-intensity-inference-p05"
+    },
+    {
+     "id": "c05-arithmetic-intensity-inference-r3",
+     "question": "Decode got no faster with 2x bandwidth. Explain.",
+     "answer": "At large batch decode turns compute-bound (e.g. B = 512 gives I ~ 512 > 150), so adding bandwidth does nothing.",
+     "anchor": "c05-arithmetic-intensity-inference-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c06-batching",
+   "title": "C06: batching",
+   "endAnchor": "c06-batching-end",
+   "blocks": [
+    {
+     "anchor": "c06-batching-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c06-batching-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c06-batching-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "batching",
+     "definition": "Serving many requests together to share the weight read.",
+     "anchor": "c06-batching-p01"
+    },
+    {
+     "term": "throughput",
+     "definition": "Tokens/s across the batch: rises sublinearly with B, then flattens.",
+     "anchor": "c06-batching-list01"
+    },
+    {
+     "term": "latency",
+     "definition": "Seconds per token for one request: rises with B.",
+     "anchor": "c06-batching-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c06-batching-r1",
+     "question": "Define the batching tradeoff in one line.",
+     "answer": "The bus versus the taxi: batching carries many at lower cost each, but everyone waits for boarding.",
+     "anchor": "c06-batching-p03"
+    },
+    {
+     "id": "c06-batching-r2",
+     "question": "Batch 1: 20 ms/token. With the toy model, batch 16 latency and total throughput?",
+     "answer": "lat = 0.020 * (1 + 0.05 * 15) = 35 ms/token. thr = 16 / 0.035 = 457 tok/s.",
+     "anchor": "c06-batching-code01"
+    },
+    {
+     "id": "c06-batching-r3",
+     "question": "Batch 32 throughput is flat vs batch 16 but latency doubled. Diagnose.",
+     "answer": "Past the compute roof: batching adds latency with no throughput gain. Find the knee (C05).",
+     "anchor": "c06-batching-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c07-draft-model",
+   "title": "C07: draft model",
+   "endAnchor": "c07-draft-model-end",
+   "blocks": [
+    {
+     "anchor": "c07-draft-model-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c07-draft-model-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c07-draft-model-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "draft model",
+     "definition": "A small fast model q that proposes gamma tokens per round.",
+     "anchor": "c07-draft-model-p01"
+    },
+    {
+     "term": "gamma",
+     "definition": "Draft length: tokens proposed per speculative round.",
+     "anchor": "c07-draft-model-list01"
+    },
+    {
+     "term": "acceptance rate",
+     "definition": "a: per-token probability the target keeps a draft token.",
+     "anchor": "c07-draft-model-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c07-draft-model-r1",
+     "question": "Define c, gamma, a in one line each.",
+     "answer": "c = t_draft / t_target per token, cost ratio. gamma = tokens proposed per round. a = per-token acceptance probability.",
+     "anchor": "c07-draft-model-list01"
+    },
+    {
+     "id": "c07-draft-model-r2",
+     "question": "c = 0.05, gamma = 5, a = 0.8. E[k] and speedup?",
+     "answer": "E[k] = 3.689. Cost per round 1.25. Per token 0.34 target-steps. Speedup about 2.95x.",
+     "anchor": "c07-draft-model-p05"
+    },
+    {
+     "id": "c07-draft-model-r3",
+     "question": "Speedup < 1. Name two causes with the numbers to check.",
+     "answer": "Slow draft (c ~ 0.5) or low acceptance (a ~ 0.3): c = 0.5, gamma = 5, a = 0.3 gives 2.46x slower than baseline. Measure a and c first.",
+     "anchor": "c07-draft-model-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c08-verification",
+   "title": "C08: verification",
+   "endAnchor": "c08-verification-end",
+   "blocks": [
+    {
+     "anchor": "c08-verification-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c08-verification-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c08-verification-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "verification",
+     "definition": "The target's one parallel pass over the gamma draft tokens.",
+     "anchor": "c08-verification-p01"
+    },
+    {
+     "term": "bonus position",
+     "definition": "The extra distribution the target computes after the last draft token.",
+     "anchor": "c08-verification-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c08-verification-r1",
+     "question": "Why is verification one step, not gamma?",
+     "answer": "Grading a quiz versus taking it: the drafts are known tokens, so the target computes all gamma+1 distributions in parallel, like a prefill.",
+     "anchor": "c08-verification-p03"
+    },
+    {
+     "id": "c08-verification-r2",
+     "question": "gamma = 8, slope 0.05. Verification steps?",
+     "answer": "1 + 0.05 * 8 = 1.4 steps.",
+     "anchor": "c08-verification-code01"
+    },
+    {
+     "id": "c08-verification-r3",
+     "question": "Verification takes 4 steps at gamma = 5. Name the cause.",
+     "answer": "At large gamma the pass becomes compute-heavy and exceeds 1 step. Model it as 1 + slope*gamma.",
+     "anchor": "c08-verification-p09"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c09-rejectioncorrection",
+   "title": "C09: rejection/correction",
+   "endAnchor": "c09-rejectioncorrection-end",
+   "blocks": [
+    {
+     "anchor": "c09-rejectioncorrection-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c09-rejectioncorrection-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c09-rejectioncorrection-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "rejection sampling",
+     "definition": "The acceptance rule that makes speculative output exactly p-distributed.",
+     "anchor": "c09-rejectioncorrection-p04"
+    },
+    {
+     "term": "bouncer",
+     "definition": "The mental model: the target admits a draft token with probability min(1, p/q).",
+     "anchor": "c09-rejectioncorrection-p03"
+    },
+    {
+     "term": "accept probability",
+     "definition": "min(1, p(x_i)/q(x_i)) per draft token.",
+     "anchor": "c09-rejectioncorrection-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c09-rejectioncorrection-r1",
+     "question": "Write the accept probability.",
+     "answer": "Accept x_i with probability min(1, p(x_i)/q(x_i)).",
+     "anchor": "c09-rejectioncorrection-list01"
+    },
+    {
+     "id": "c09-rejectioncorrection-r2",
+     "question": "q(cat) = 0.7, p(cat) = 0.2. Accept prob?",
+     "answer": "0.2/0.7 = 0.286. On reject, resample from the positive part of (p - q).",
+     "anchor": "c09-rejectioncorrection-p05"
+    },
+    {
+     "id": "c09-rejectioncorrection-r3",
+     "question": "q = p exactly. What is a?",
+     "answer": "a = 1: every draft accepts.",
+     "anchor": "c10-exactness-assumptions-p06"
+    }
+   ],
+   "minutes": 9
+  },
+  {
+   "anchor": "c10-exactness-assumptions",
+   "title": "C10: exactness assumptions",
+   "endAnchor": "c10-exactness-assumptions-end",
+   "blocks": [
+    {
+     "anchor": "c10-exactness-assumptions-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c10-exactness-assumptions-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c10-exactness-assumptions-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "exactness",
+     "definition": "The output distribution is exactly p, not approximately: a photocopy, not a sketch.",
+     "anchor": "c10-exactness-assumptions-p01"
+    },
+    {
+     "term": "same tokenizer",
+     "definition": "A1: draft and target share the vocabulary and tokenization.",
+     "anchor": "c10-exactness-assumptions-list01"
+    },
+    {
+     "term": "photocopy",
+     "definition": "The mental model: rejection sampling is a mathematical identity.",
+     "anchor": "c10-exactness-assumptions-p03"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c10-exactness-assumptions-r1",
+     "question": "Name the two exactness assumptions.",
+     "answer": "A1: draft and target share the vocabulary and tokenization. A2: the resample distribution is norm(max(0, p-q)), computed exactly.",
+     "anchor": "c10-exactness-assumptions-list01"
+    },
+    {
+     "id": "c10-exactness-assumptions-r2",
+     "question": "Outputs look off after a tokenizer change. Explain.",
+     "answer": "Mismatched tokenizers put the distributions over different spaces and the proof breaks. Same tokenizer is mandatory.",
+     "anchor": "c10-exactness-assumptions-p09"
+    },
+    {
+     "id": "c10-exactness-assumptions-r3",
+     "question": "Resample skipped on reject (just drop). Is output still p?",
+     "answer": "No: the residual mass max(0, p - q) must be covered by the resample for the total to equal p.",
+     "anchor": "c10-exactness-assumptions-p04"
+    }
+   ],
+   "minutes": 8
+  },
+  {
+   "anchor": "c11-acceptance-rate",
+   "title": "C11: acceptance rate",
+   "endAnchor": "c11-acceptance-rate-end",
+   "blocks": [
+    {
+     "anchor": "c11-acceptance-rate-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c11-acceptance-rate-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c11-acceptance-rate-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "acceptance rate",
+     "definition": "alpha: per-token probability the target keeps a draft token.",
+     "anchor": "c11-acceptance-rate-p01"
+    },
+    {
+     "term": "E[k]",
+     "definition": "Expected tokens per round: (1 - a^{gamma+1}) / (1 - a).",
+     "anchor": "c11-acceptance-rate-list01"
+    },
+    {
+     "term": "free-throw streak",
+     "definition": "The mental model: each draft token is a free throw with make probability a.",
+     "anchor": "c11-acceptance-rate-p03"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c11-acceptance-rate-r1",
+     "question": "Write the E[k] formula.",
+     "answer": "E[k] = (1 - a^{gamma+1}) / (1 - a).",
+     "anchor": "c11-acceptance-rate-list01"
+    },
+    {
+     "id": "c11-acceptance-rate-r2",
+     "question": "a = 0.6, gamma = 4. E[k]?",
+     "answer": "(1 - 0.0778)/0.4 = 2.31.",
+     "anchor": "c11-acceptance-rate-p05"
+    },
+    {
+     "id": "c11-acceptance-rate-r3",
+     "question": "Formula says 3.7, measured 2.1. Explain.",
+     "answer": "Constant a is a simplification: real acceptance falls with position (later drafts condition on earlier drafts). Fit per-position a_i.",
+     "anchor": "c11-acceptance-rate-p09"
+    }
+   ],
+   "minutes": 6
+  },
+  {
+   "anchor": "c12-latency-tradeoff",
+   "title": "C12: latency tradeoff",
+   "endAnchor": "c12-latency-tradeoff-end",
+   "blocks": [
+    {
+     "anchor": "c12-latency-tradeoff-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "c12-latency-tradeoff-p07",
+     "kind": "summary",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "c12-latency-tradeoff-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "break-even",
+     "definition": "E[k] = gamma*c + 1: the point where speculative decoding pays.",
+     "anchor": "c12-latency-tradeoff-p01"
+    },
+    {
+     "term": "speedup",
+     "definition": "E[k] / (gamma*c + 1).",
+     "anchor": "c12-latency-tradeoff-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "c12-latency-tradeoff-r1",
+     "question": "Write the speedup formula.",
+     "answer": "Speedup = E[k] / (gamma*c + 1).",
+     "anchor": "c12-latency-tradeoff-list01"
+    },
+    {
+     "id": "c12-latency-tradeoff-r2",
+     "question": "a = 0.9, gamma = 7, c = 0.1. Speedup?",
+     "answer": "E[k] = (1 - 0.9^8)/0.1 = 5.70. Cost = 1.7. Speedup = 3.35x.",
+     "anchor": "c12-latency-tradeoff-p05"
+    },
+    {
+     "id": "c12-latency-tradeoff-r3",
+     "question": "Measured 1.2x, formula 2.9x. Name two causes.",
+     "answer": "Verification slope larger than modeled, or acceptance rate lower on the real workload. Measure a and the verification slope.",
+     "anchor": "c12-latency-tradeoff-p09"
+    }
+   ],
+   "minutes": 4
+  },
+  {
+   "anchor": "unit-chapter-plate",
+   "title": "Unit chapter plate",
+   "endAnchor": "unit-chapter-plate-end",
+   "blocks": [
+    {
+     "anchor": "unit-chapter-plate-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "bytes per token",
+     "definition": "The unit's bottom line: count the bytes per token, then buy back latency.",
+     "anchor": "unit-chapter-plate-p01"
+    },
+    {
+     "term": "managed system",
+     "definition": "Cached decode, batched prefill, speculative rounds.",
+     "anchor": "unit-chapter-plate-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "unit-chapter-plate-r1",
+     "question": "What does the unit chapter plate contrast?",
+     "answer": "Naive serving (recompute, no batching, serial verify) vs the managed system (cached decode, batched prefill, speculative rounds). Bottom line: count the bytes per token, then buy back latency.",
+     "anchor": "unit-chapter-plate-p01"
+    }
+   ],
+   "minutes": 2
+  },
+  {
+   "anchor": "russian-doll-ladder-speculative-decoding-major-mechanism",
+   "title": "Russian-doll ladder: speculative decoding (major mechanism)",
+   "endAnchor": "russian-doll-ladder-speculative-decoding-major-mechanism-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "tokens per target step",
+     "definition": "The Shell 0 observable: more than one token per target step without changing the distribution.",
+     "anchor": "russian-doll-ladder-speculative-decoding-major-mechanism-list01"
+    },
+    {
+     "term": "Shell 3 rule",
+     "definition": "Accept with min(1, p/q), resample from norm(max(0, p-q)).",
+     "anchor": "russian-doll-ladder-speculative-decoding-major-mechanism-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "russian-doll-ladder-speculative-decoding-major-mechanism-r1",
+     "question": "What is the Shell 3 rule of the speculative-decoding ladder?",
+     "answer": "Accept with min(1, p/q), resample from norm(max(0, p-q)).",
+     "anchor": "russian-doll-ladder-speculative-decoding-major-mechanism-list01"
+    },
+    {
+     "id": "russian-doll-ladder-speculative-decoding-major-mechanism-r2",
+     "question": "What breaks exactness (Shell 7)?",
+     "answer": "Breaking the same-tokenizer assumption: exactness fails.",
+     "anchor": "russian-doll-ladder-speculative-decoding-major-mechanism-list01"
+    }
+   ],
+   "minutes": 1
+  },
+  {
+   "anchor": "role-bridge",
+   "title": "Role bridge",
+   "endAnchor": "role-bridge-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "pre-flight check",
+     "definition": "The speedup formula and its break-even, checked before any speculative serving work.",
+     "anchor": "role-bridge-list01"
+    },
+    {
+     "term": "prefill/decode intensity split",
+     "definition": "C05: designs the serving stack for the LLM engineer.",
+     "anchor": "role-bridge-list01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "role-bridge-r1",
+     "question": "What is the research engineer's pre-flight check before speculative serving?",
+     "answer": "The speedup formula and its break-even.",
+     "anchor": "role-bridge-list01"
+    }
+   ],
+   "minutes": 1
+  }
+ ]
+}

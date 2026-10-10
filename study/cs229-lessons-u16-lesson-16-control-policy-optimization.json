@@ -1,0 +1,936 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229-lessons-u16-lesson-16-control-policy-optimization",
+ "itemKind": "lesson",
+ "revision": "c1eb7d04832f6f48eb8717db96f8c921fc04eae1a3dad6e934b5d5075f644a74",
+ "sections": [
+  {
+   "anchor": "lesson-16-control-policy-optimization-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "lesson-16-control-policy-optimization-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229-U16",
+     "definition": "The unit code for this lesson in the Stanford CS229 foundations course.",
+     "anchor": "lesson-16-control-policy-optimization-intro-p02"
+    },
+    {
+     "term": "leaf concepts",
+     "definition": "The fine-grained concepts the lesson covers, labeled C01 to C12.",
+     "anchor": "lesson-16-control-policy-optimization-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-16-control-policy-optimization-intro-r1",
+     "question": "Who teaches this course?",
+     "answer": "Tengyu Ma and Andrew Ng.",
+     "anchor": "lesson-16-control-policy-optimization-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "source-mapping",
+   "title": "Source mapping",
+   "minutes": 1,
+   "endAnchor": "source-mapping-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "LQR",
+     "definition": "Linear quadratic regulator: the tractable finite-horizon special case.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "DDP",
+     "definition": "Differential dynamic programming: iterates local linearizations.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "policy gradient",
+     "definition": "REINFORCE, baselines, and PPO.",
+     "anchor": "source-mapping-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "source-mapping-r1",
+     "question": "What do notes chapters 20 and 21 give?",
+     "answer": "Chapter 20: finite-horizon MDPs and backward recursion (20.1), LQR with discrete Riccati equations (20.2), linearization (20.3.1), DDP (20.3.2), LQG with Kalman predict/update (20.4). Chapter 21: policy gradient and variants.",
+     "anchor": "source-mapping-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "scope-and-objectives",
+   "title": "Scope and objectives",
+   "minutes": 1,
+   "endAnchor": "scope-and-objectives-end",
+   "blocks": [
+    {
+     "anchor": "scope-and-objectives-p01",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "backward dynamic programming",
+     "definition": "Finite-horizon MDPs solved by backward dynamic programming.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "Riccati solution",
+     "definition": "The closed-form LQR solution via the discrete Riccati equations.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "REINFORCE",
+     "definition": "Model-free gradient estimator via the log-derivative trick.",
+     "anchor": "scope-and-objectives-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "scope-and-objectives-r1",
+     "question": "What does the scope cover?",
+     "answer": "The control half: finite-horizon MDPs by backward dynamic programming, LQR with closed-form Riccati, linearization and DDP for nonlinear systems, LQG for partial observation. Then the learning half: REINFORCE, baselines, PPO.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "id": "scope-and-objectives-r2",
+     "question": "What does objective 6 ask the learner to do?",
+     "answer": "Derive the REINFORCE gradient.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "dependencies",
+   "title": "Dependencies",
+   "minutes": 1,
+   "endAnchor": "dependencies-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "prerequisites",
+     "definition": "The shared bridge units P04, P05, P09, P17, plus U15, needed before this lesson.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "term": "LQR policy",
+     "definition": "Remediated in SL-04.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "on-policy",
+     "definition": "Why PPO reuses old data yet stays almost on-policy, remediated in SL-11.",
+     "anchor": "dependencies-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "dependencies-r1",
+     "question": "Which prerequisites does this lesson list?",
+     "answer": "P04, P05, P09, P17, unit U15 (MDP, Bellman, value iteration).",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "id": "dependencies-r2",
+     "question": "What does the list ask about the LQR policy?",
+     "answer": "Why the LQR policy ignores the noise, remediated in SL-04.",
+     "anchor": "dependencies-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-01-finite-horizon-mdps",
+   "title": "SL-01: Finite-horizon MDPs",
+   "minutes": 2,
+   "endAnchor": "sl-01-finite-horizon-mdps-end",
+   "blocks": [
+    {
+     "anchor": "sl-01-finite-horizon-mdps-p05",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-01-finite-horizon-mdps-p12",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "finite-horizon MDP",
+     "definition": "(S, A, P_sa, T, R) with T > 0; no discount.",
+     "anchor": "sl-01-finite-horizon-mdps-p02"
+    },
+    {
+     "term": "non-stationary",
+     "definition": "The optimal policy depends on time: pi^(t): S -> A.",
+     "anchor": "sl-01-finite-horizon-mdps-p05"
+    },
+    {
+     "term": "backward recursion",
+     "definition": "Compute V*_T, then t = T-1 down to 0.",
+     "anchor": "sl-01-finite-horizon-mdps-p11"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-01-finite-horizon-mdps-r1",
+     "question": "Why does the finite-horizon MDP need no discount?",
+     "answer": "Gamma existed to keep the infinite sum finite. A finite sum needs no discount.",
+     "anchor": "sl-01-finite-horizon-mdps-p04"
+    },
+    {
+     "id": "sl-01-finite-horizon-mdps-r2",
+     "question": "Why is the optimal policy non-stationary?",
+     "answer": "The optimal policy depends on time: early on aim for the +10 goal; with few steps left, switch to +1. The time left is part of the decision.",
+     "anchor": "sl-01-finite-horizon-mdps-p05"
+    },
+    {
+     "id": "sl-01-finite-horizon-mdps-r3",
+     "question": "What is the backward recursion?",
+     "answer": "V*_T(s) = max_a R^(T)(s, a). V*_t(s) = max_a [R^(t)(s,a) + E[V*_{t+1}(s')]]. Solve backward from t = T down to 0.",
+     "anchor": "sl-01-finite-horizon-mdps-p10"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-02-the-lqr-objective",
+   "title": "SL-02: The LQR objective",
+   "minutes": 2,
+   "endAnchor": "sl-02-the-lqr-objective-end",
+   "blocks": [
+    {
+     "anchor": "sl-02-the-lqr-objective-p07",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "LQR",
+     "definition": "The tractable special case of the finite-horizon MDP.",
+     "anchor": "sl-02-the-lqr-objective-p02"
+    },
+    {
+     "term": "linear dynamics",
+     "definition": "s_{t+1} = A_t s_t + B_t a_t + w_t, w_t ~ N(0, Sigma_t).",
+     "anchor": "sl-02-the-lqr-objective-p03"
+    },
+    {
+     "term": "quadratic rewards",
+     "definition": "R^(t)(s_t, a_t) = -s_t^T U_t s_t - a_t^T W_t a_t.",
+     "anchor": "sl-02-the-lqr-objective-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-02-the-lqr-objective-r1",
+     "question": "What are the LQR assumptions?",
+     "answer": "Linear dynamics with Gaussian noise, quadratic rewards with U_t, W_t positive definite (so rewards are always negative costs). Continuous states and actions.",
+     "anchor": "sl-02-the-lqr-objective-p05"
+    },
+    {
+     "id": "sl-02-the-lqr-objective-r2",
+     "question": "Why is LQR tractable?",
+     "answer": "Linear dynamics plus quadratic costs keep the value function quadratic at every step. That closure reduces the backward recursion to matrix algebra.",
+     "anchor": "sl-02-the-lqr-objective-p07"
+    },
+    {
+     "id": "sl-02-the-lqr-objective-r3",
+     "question": "What are the two steps of LQR?",
+     "answer": "Step 1: estimate A, B, Sigma from data. Step 2: dynamic programming on the known model.",
+     "anchor": "sl-02-the-lqr-objective-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-03-linearization",
+   "title": "SL-03: Linearization",
+   "minutes": 2,
+   "endAnchor": "sl-03-linearization-end",
+   "blocks": [
+    {
+     "anchor": "sl-03-linearization-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-03-linearization-p06",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "linearization",
+     "definition": "First-order Taylor around a nominal point (sbar, abar).",
+     "anchor": "sl-03-linearization-p02"
+    },
+    {
+     "term": "Taylor",
+     "definition": "The first-order approximation of the dynamics.",
+     "anchor": "sl-03-linearization-p03"
+    },
+    {
+     "term": "kappa",
+     "definition": "kappa = F(sbar, abar) - A sbar - B abar; absorbed via a ones dimension.",
+     "anchor": "sl-03-linearization-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-03-linearization-r1",
+     "question": "How do you linearize dynamics?",
+     "answer": "First-order Taylor around (sbar_t, abar_t): s_{t+1} ~= A s_t + B a_t + kappa. Absorb kappa by adding a ones dimension, like a bias term.",
+     "anchor": "sl-03-linearization-p05"
+    },
+    {
+     "id": "sl-03-linearization-r2",
+     "question": "In the scalar example, what is the error?",
+     "answer": "s_{t+1} = s_t^2 + a_t at sbar = 1: linear model 2 s_t + a_t - 1. At 1.1: true 1.21, linear 1.2, error 0.01: second order in the deviation.",
+     "anchor": "sl-03-linearization-p06"
+    },
+    {
+     "id": "sl-03-linearization-r3",
+     "question": "What is the linearization failure?",
+     "answer": "Linearizing a pendulum at the downward equilibrium and asking LQR to drive it up: the model is valid near down, the task lives far from down.",
+     "anchor": "sl-03-linearization-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-04-the-riccati-recursion",
+   "title": "SL-04: The Riccati recursion",
+   "minutes": 3,
+   "endAnchor": "sl-04-the-riccati-recursion-end",
+   "blocks": [
+    {
+     "anchor": "sl-04-the-riccati-recursion-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-04-the-riccati-recursion-p16",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "Riccati equations",
+     "definition": "The backward matrix equations for Phi_t and Psi_t.",
+     "anchor": "sl-04-the-riccati-recursion-p11"
+    },
+    {
+     "term": "cost-to-go matrix",
+     "definition": "Phi_t: how much future cost each state direction carries.",
+     "anchor": "sl-04-the-riccati-recursion-p15"
+    },
+    {
+     "term": "noise independence",
+     "definition": "The LQR policy uses only A_t, B_t, Phi_{t+1}; noise affects only Psi_t.",
+     "anchor": "sl-04-the-riccati-recursion-p14"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-04-the-riccati-recursion-r1",
+     "question": "What is the source erratum?",
+     "answer": "The notes print the LQR gain without the leading minus sign. The derivation and numeric check require it: a*_t = -(B^T Phi B - W)^{-1} B^T Phi A s_t.",
+     "anchor": "sl-04-the-riccati-recursion-p10"
+    },
+    {
+     "id": "sl-04-the-riccati-recursion-r2",
+     "question": "What is Fact 3 (noise independence)?",
+     "answer": "Phi_t depends on neither Psi nor Sigma_t. The optimal policy is independent of the noise; noise enters only Psi_t, hence only the value, not the policy.",
+     "anchor": "sl-04-the-riccati-recursion-p14"
+    },
+    {
+     "id": "sl-04-the-riccati-recursion-r3",
+     "question": "In the 1d toy, what are the gains?",
+     "answer": "T = 2, A = B = U = W = 1: L_1 = -0.5, L_0 = -0.6, policy a*_0 = -0.6 s_0. From s_0 = 5: s_1 = 2, s_2 = 1.",
+     "anchor": "sl-04-the-riccati-recursion-p16"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-05-ddp",
+   "title": "SL-05: DDP",
+   "minutes": 2,
+   "endAnchor": "sl-05-ddp-end",
+   "blocks": [
+    {
+     "anchor": "sl-05-ddp-p07",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "DDP",
+     "definition": "Iterates local linearizations to follow a trajectory.",
+     "anchor": "sl-05-ddp-p02"
+    },
+    {
+     "term": "nominal trajectory",
+     "definition": "The trajectory each iteration linearizes around.",
+     "anchor": "sl-05-ddp-p03"
+    },
+    {
+     "term": "reward shaping",
+     "definition": "Keeps the DDP iterates close to the linearized trajectory.",
+     "anchor": "sl-05-ddp-p07"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-05-ddp-r1",
+     "question": "What is the DDP loop?",
+     "answer": "Step 1: build a nominal trajectory. Step 2: linearize around each point, expand reward to second order. Step 3: run LQR on the time-varying problem. Step 4: roll out the new policy on the true nonlinear dynamics F. Repeat.",
+     "anchor": "sl-05-ddp-p03"
+    },
+    {
+     "id": "sl-05-ddp-r2",
+     "question": "What is the step-4 rule?",
+     "answer": "The rollout must use the true F, not the linearization. Rolling out the linear model proves nothing.",
+     "anchor": "sl-05-ddp-p06"
+    },
+    {
+     "id": "sl-05-ddp-r3",
+     "question": "What is the DDP failure mode?",
+     "answer": "The LQR solution deviates far from the linearized trajectory, or the nominal trajectory leaves the valid region. Track deviation between successive trajectories.",
+     "anchor": "sl-05-ddp-p07"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-06-lqg-and-the-kalman-filter",
+   "title": "SL-06: LQG and the Kalman filter",
+   "minutes": 2,
+   "endAnchor": "sl-06-lqg-and-the-kalman-filter-end",
+   "blocks": [
+    {
+     "anchor": "sl-06-lqg-and-the-kalman-filter-p05",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-06-lqg-and-the-kalman-filter-p11",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "LQG",
+     "definition": "Linear Gaussian dynamics and observations, quadratic reward: tractable POMDP.",
+     "anchor": "sl-06-lqg-and-the-kalman-filter-p03"
+    },
+    {
+     "term": "Kalman filter",
+     "definition": "Maintains the Gaussian belief s_t | y_1..y_t.",
+     "anchor": "sl-06-lqg-and-the-kalman-filter-p05"
+    },
+    {
+     "term": "Kalman gain",
+     "definition": "K_t weighting the innovation in the update.",
+     "anchor": "sl-06-lqg-and-the-kalman-filter-p10"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-06-lqg-and-the-kalman-filter-r1",
+     "question": "What is the LQG separation strategy?",
+     "answer": "Step 1: maintain the Gaussian belief with the Kalman filter. Step 2: use the mean s_{t|t} as the state estimate. Step 3: act with a_t = L_t s_{t|t} from plain LQR.",
+     "anchor": "sl-06-lqg-and-the-kalman-filter-p05"
+    },
+    {
+     "id": "sl-06-lqg-and-the-kalman-filter-r2",
+     "question": "In the 1d Kalman example, what happens?",
+     "answer": "A = C = 1, Sigma_s = Sigma_y = 1: predict s_{1|0} = 0, Sigma = 2. Observe y_1 = 1.5, K = 2/3: s_{1|1} = 1.0, Sigma = 2/3. Variance drops from 2 to 0.67.",
+     "anchor": "sl-06-lqg-and-the-kalman-filter-p11"
+    },
+    {
+     "id": "sl-06-lqg-and-the-kalman-filter-r3",
+     "question": "Why is the naive marginal computation expensive?",
+     "answer": "It would invert t x t matrices at O(t^4) total. The filter updates in constant time per step.",
+     "anchor": "sl-06-lqg-and-the-kalman-filter-p10"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-07-reinforce",
+   "title": "SL-07: REINFORCE",
+   "minutes": 2,
+   "endAnchor": "sl-07-reinforce-end",
+   "blocks": [
+    {
+     "anchor": "sl-07-reinforce-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-07-reinforce-p13",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "REINFORCE",
+     "definition": "Model-free policy gradient: no value function, no model.",
+     "anchor": "sl-07-reinforce-p02"
+    },
+    {
+     "term": "log-derivative trick",
+     "definition": "grad P = P grad log P: gradients through expectations without grad f.",
+     "anchor": "sl-07-reinforce-p04"
+    },
+    {
+     "term": "score",
+     "definition": "grad log P_theta(tau): the direction that increases the sampled trajectory's log-probability.",
+     "anchor": "sl-07-reinforce-p12"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-07-reinforce-r1",
+     "question": "What is the REINFORCE gradient estimator?",
+     "answer": "grad_theta eta = E[(sum_t grad log pi_theta(a_t|s_t)) f(tau)]. Sample n trajectories, average, take a gradient ascent step. Unbiased.",
+     "anchor": "sl-07-reinforce-p10"
+    },
+    {
+     "id": "sl-07-reinforce-r2",
+     "question": "Why do the unknown transitions vanish?",
+     "answer": "log P_theta(tau) expands into initial state, policy, and transition terms. The gradient kills every term not depending on theta: the unknown transitions vanish.",
+     "anchor": "sl-07-reinforce-p08"
+    },
+    {
+     "id": "sl-07-reinforce-r3",
+     "question": "In the bandit example, what is the estimate?",
+     "answer": "theta = 0, pi = [0.5, 0.5]: a_1 contributes 0.5*1 = 0.5, a_2 contributes 0. Estimate (0.5+0)/2 = 0.25, matches the true gradient.",
+     "anchor": "sl-07-reinforce-p13"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-08-baselines",
+   "title": "SL-08: Baselines",
+   "minutes": 2,
+   "endAnchor": "sl-08-baselines-end",
+   "blocks": [
+    {
+     "anchor": "sl-08-baselines-p09",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-08-baselines-p11",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "baseline",
+     "definition": "B(s_t) subtracted from R_{>=t}: changes variance, not the mean.",
+     "anchor": "sl-08-baselines-p06"
+    },
+    {
+     "term": "reward-to-go",
+     "definition": "Drop past rewards (j < t) from the weight of step t.",
+     "anchor": "sl-08-baselines-p04"
+    },
+    {
+     "term": "Algorithm 7",
+     "definition": "Vanilla policy gradient with baseline: fit B, then update theta.",
+     "anchor": "sl-08-baselines-p10"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-08-baselines-r1",
+     "question": "Why does a baseline keep the estimator unbiased?",
+     "answer": "E[grad log pi(a_t|s_t) B(s_t)] = 0 for any B depending only on the state. Subtracting changes the variance, not the mean.",
+     "anchor": "sl-08-baselines-p06"
+    },
+    {
+     "id": "sl-08-baselines-r2",
+     "question": "In the variance example, what changes?",
+     "answer": "Without baseline: values 1001 z and -998 z. With baseline 1000: z and 2z. Same expectation, far smaller variance.",
+     "anchor": "sl-08-baselines-p09"
+    },
+    {
+     "id": "sl-08-baselines-r3",
+     "question": "In the bandit example, what does baseline B = 0.5 give?",
+     "answer": "a_1: 0.5*(1-0.5) = 0.25, a_2: -0.5*(0-0.5) = 0.25. Both samples give 0.25: variance zero, mean still 0.25.",
+     "anchor": "sl-08-baselines-p11"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-09-ppo-likelihood-ratios",
+   "title": "SL-09: PPO likelihood ratios",
+   "minutes": 2,
+   "endAnchor": "sl-09-ppo-likelihood-ratios-end",
+   "blocks": [
+    {
+     "anchor": "sl-09-ppo-likelihood-ratios-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-09-ppo-likelihood-ratios-p08",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "likelihood ratio",
+     "definition": "r_t(theta) = pi_theta(a_t|s_t) / pi_{theta_old}(a_t|s_t).",
+     "anchor": "sl-09-ppo-likelihood-ratios-p04"
+    },
+    {
+     "term": "local surrogate",
+     "definition": "J_IS(theta): importance-weighted surrogate, valid near theta_old.",
+     "anchor": "sl-09-ppo-likelihood-ratios-p06"
+    },
+    {
+     "term": "on-policy",
+     "definition": "Each batch of trajectories supports exactly one gradient update.",
+     "anchor": "sl-09-ppo-likelihood-ratios-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-09-ppo-likelihood-ratios-r1",
+     "question": "What is the PPO local surrogate?",
+     "answer": "J_IS(theta) = sum_t E_{s~d_old, a~pi_old}[r_t(theta) R_{>=t}]. The ratio fixes the action expectation; the state distribution stays d_old. Valid near theta_old.",
+     "anchor": "sl-09-ppo-likelihood-ratios-p06"
+    },
+    {
+     "id": "sl-09-ppo-likelihood-ratios-r2",
+     "question": "In the ratio example, what is r?",
+     "answer": "pi_old(a_1) = 0.5, pi(a_1) = 0.6: r = 1.2. With R = 1, the surrogate contribution is 1.2.",
+     "anchor": "sl-09-ppo-likelihood-ratios-p08"
+    },
+    {
+     "id": "sl-09-ppo-likelihood-ratios-r3",
+     "question": "What is the unclipped failure?",
+     "answer": "Many updates on one batch without clipping: r_t explodes on rare actions, the surrogate claims huge gains, the policy jumps somewhere the samples do not support.",
+     "anchor": "sl-09-ppo-likelihood-ratios-p10"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-10-clipping",
+   "title": "SL-10: Clipping",
+   "minutes": 2,
+   "endAnchor": "sl-10-clipping-end",
+   "blocks": [
+    {
+     "anchor": "sl-10-clipping-p06",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-10-clipping-p08",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "clipping",
+     "definition": "r_t clamped to [1-eps, 1+eps] inside the min.",
+     "anchor": "sl-10-clipping-p02"
+    },
+    {
+     "term": "advantage estimate",
+     "definition": "Ahat_t = R_{>=t} - V_old(s_t).",
+     "anchor": "sl-10-clipping-p02"
+    },
+    {
+     "term": "TRPO",
+     "definition": "A hard KL constraint instead of the clipped surrogate.",
+     "anchor": "sl-10-clipping-p09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-10-clipping-r1",
+     "question": "What is the PPO clipped objective?",
+     "answer": "C_t = min(r_t Ahat_t, clip_{[1-eps,1+eps]}(r_t) Ahat_t). Minimize J_PPO = -sum_t E[C_t], i.e. maximize the clipped sum.",
+     "anchor": "sl-10-clipping-p04"
+    },
+    {
+     "id": "sl-10-clipping-r2",
+     "question": "How do the two cases work?",
+     "answer": "Ahat > 0: gain caps at (1+eps) Ahat when r_t > 1+eps. Ahat < 0: the min picks the less negative value, capping at (1-eps) Ahat when r_t < 1-eps. Stops overshooting both ways.",
+     "anchor": "sl-10-clipping-p07"
+    },
+    {
+     "id": "sl-10-clipping-r3",
+     "question": "What are the four clip cases at eps = 0.2?",
+     "answer": "Ahat = 1, r = 1.3: 1.2 capped. r = 0.5: 0.5 uncapped. Ahat = -1, r = 1.3: -1.3 uncapped. r = 0.5: -0.8 capped.",
+     "anchor": "sl-10-clipping-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-11-on-policy-and-off-policy",
+   "title": "SL-11: On-policy and off-policy",
+   "minutes": 2,
+   "endAnchor": "sl-11-on-policy-and-off-policy-end",
+   "blocks": [
+    {
+     "anchor": "sl-11-on-policy-and-off-policy-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "on-policy",
+     "definition": "The data comes from the policy being updated.",
+     "anchor": "sl-11-on-policy-and-off-policy-p03"
+    },
+    {
+     "term": "off-policy",
+     "definition": "Replay buffer data reuse with stronger corrections.",
+     "anchor": "sl-11-on-policy-and-off-policy-p06"
+    },
+    {
+     "term": "trust region",
+     "definition": "The region where theta stays near theta_old and the surrogate holds.",
+     "anchor": "sl-11-on-policy-and-off-policy-p07"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-11-on-policy-and-off-policy-r1",
+     "question": "What is the line between on- and off-policy?",
+     "answer": "On-policy: data comes from the policy being updated; one batch, one update. PPO: mostly on-policy with a controlled excursion; the ratio corrects actions, the state distribution stays d_old.",
+     "anchor": "sl-11-on-policy-and-off-policy-p04"
+    },
+    {
+     "id": "sl-11-on-policy-and-off-policy-r2",
+     "question": "Why does the distinction matter?",
+     "answer": "Off-policy data with no correction biases the gradient. PPO's ratio corrects only the action factor; state-distribution shift is uncorrected by design.",
+     "anchor": "sl-11-on-policy-and-off-policy-p05"
+    },
+    {
+     "id": "sl-11-on-policy-and-off-policy-r3",
+     "question": "What is the many-epochs failure?",
+     "answer": "Reusing a batch across too many epochs: theta leaves the trust region, the clipped surrogate optimizes a fiction, true returns fall while the surrogate improves.",
+     "anchor": "sl-11-on-policy-and-off-policy-p07"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-12-stability",
+   "title": "SL-12: Stability",
+   "minutes": 2,
+   "endAnchor": "sl-12-stability-end",
+   "blocks": [
+    {
+     "anchor": "sl-12-stability-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "clipping",
+     "definition": "Bounds the per-step incentive per token.",
+     "anchor": "sl-12-stability-p03"
+    },
+    {
+     "term": "KL penalty",
+     "definition": "Bounds the global drift from a reference or the old policy.",
+     "anchor": "sl-12-stability-p03"
+    },
+    {
+     "term": "GAE",
+     "definition": "The standard advantage improvement named in the notes.",
+     "anchor": "sl-12-stability-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-12-stability-r1",
+     "question": "What does each stability device do?",
+     "answer": "Clipping bounds the per-step incentive. The KL penalty bounds global drift from a reference. The baseline bounds gradient noise.",
+     "anchor": "sl-12-stability-p03"
+    },
+    {
+     "id": "sl-12-stability-r2",
+     "question": "What failure do they share?",
+     "answer": "All three are local. None fixes a misspecified objective: if the reward is wrong, a stable optimizer reaches the wrong answer reliably.",
+     "anchor": "sl-12-stability-p04"
+    },
+    {
+     "id": "sl-12-stability-r3",
+     "question": "What should you monitor?",
+     "answer": "Three curves: clipped fraction, KL from the old policy, gradient norm.",
+     "anchor": "sl-12-stability-p04"
+    }
+   ]
+  },
+  {
+   "anchor": "assessment",
+   "title": "Assessment",
+   "minutes": 2,
+   "endAnchor": "assessment-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "finite-horizon MDP",
+     "definition": "(S, A, P_sa, T, R): no discount, non-stationary policy.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "LQR assumptions",
+     "definition": "Linear Gaussian dynamics, quadratic rewards with U, W positive definite.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "Riccati recursion",
+     "definition": "Propagates cost-to-go matrices backward; yields Phi_t, Psi_t, linear gains L_t.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "REINFORCE gradient",
+     "definition": "E[(sum_t grad log pi(a_t|s_t)) f(tau)].",
+     "anchor": "assessment-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "assessment-r1",
+     "question": "What does E04 ask?",
+     "answer": "Why the LQR policy ignores the noise.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "id": "assessment-r2",
+     "question": "What does E09 describe?",
+     "answer": "PPO improves the clipped surrogate every epoch but true returns fall. Diagnose with the notes' own 'local surrogate' statement.",
+     "anchor": "assessment-p05"
+    },
+    {
+     "id": "assessment-r3",
+     "question": "What does E10 ask?",
+     "answer": "Team A runs DDP from a hovering nominal trajectory for a perching maneuver. Team B runs LQR on one linearization at hover. Where does each fail, and what single rollout check decides?",
+     "anchor": "assessment-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "visual-units",
+   "title": "Visual units",
+   "minutes": 1,
+   "endAnchor": "visual-units-end",
+   "blocks": [
+    {
+     "anchor": "visual-units-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "visual-units-fig02",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "1d LQR closed-loop",
+     "definition": "The visual of the 1d LQR closed-loop trajectory and Riccati values.",
+     "anchor": "visual-units-fig01"
+    },
+    {
+     "term": "baseline variance",
+     "definition": "The visual of REINFORCE estimates with and without baseline.",
+     "anchor": "visual-units-fig02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "visual-units-r1",
+     "question": "What does the first visual unit show?",
+     "answer": "The 1d LQR closed-loop trajectory and the Riccati values, computed.",
+     "anchor": "visual-units-l01"
+    },
+    {
+     "id": "visual-units-r2",
+     "question": "What does the second visual unit show?",
+     "answer": "REINFORCE gradient estimates with and without baseline, computed.",
+     "anchor": "visual-units-l02"
+    }
+   ]
+  },
+  {
+   "anchor": "research-reading-and-extension",
+   "title": "Research reading and extension",
+   "minutes": 1,
+   "endAnchor": "research-reading-and-extension-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "DDP",
+     "definition": "The loop tested on a 1d nonlinear toy against a single linearization.",
+     "anchor": "research-reading-and-extension-p01"
+    },
+    {
+     "term": "falsifiable claim",
+     "definition": "A claim an experiment can disprove, here about DDP iterations.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "research-reading-and-extension-r1",
+     "question": "What is the falsifiable claim?",
+     "answer": "Three DDP iterations reach lower closed-loop cost than one LQR solve on the initial linearization, measured over 10 random starts.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "role-bridges",
+   "title": "Role bridges",
+   "minutes": 1,
+   "endAnchor": "role-bridges-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "Riccati sign check",
+     "definition": "Phi negative semidefinite belongs in every LQR pipeline's unit tests.",
+     "anchor": "role-bridges-l01"
+    },
+    {
+     "term": "clipped fraction",
+     "definition": "The two dials to log from the first run.",
+     "anchor": "role-bridges-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "role-bridges-r1",
+     "question": "What is the FDE bridge?",
+     "answer": "A controller stable in simulation but untested on the true dynamics is a demo, not a deployment. The DDP step-4 rollout rule is the acceptance gate.",
+     "anchor": "role-bridges-l01"
+    }
+   ]
+  }
+ ]
+}

@@ -154,7 +154,7 @@
       <p class="meta-line">2026-10-06 · Instructor: Prof. Christopher Manning</p>
       <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="u02-interview-key">U02 interview key</h1>
 <h2 id="b1-b6">B1-B6</h2>
-<p>B1. (&hellip;,M,K)@(&hellip;,K,N)-&gt;(&hellip;,M,N). Read right to left: the last two
+<p id="b1-b6-p01" data-kind="prose" data-term="shape contract">B1. (&hellip;,M,K)@(&hellip;,K,N)-&gt;(&hellip;,M,N). Read right to left: the last two
 axes multiply, leading axes batch and broadcast.
 B2. Attention scores per head: queries (b,h,i,d) against keys (b,h,j,d),
 output (b,h,i,j).
@@ -167,8 +167,9 @@ B5. 2MNK per matmul (MNK mults + MNK adds). One toy layer: 8.858 GFLOP
 forward (qkv 1.611, scores 0.268, out 0.537, ffn 6.443).
 B6. FLOPs per byte. 1.0 FLOP/byte is deeply memory-bound: buy bandwidth
 or cut traffic, not FLOPs.</p>
+<span id="b1-b6-end" data-end></span>
 <h2 id="l1">L1</h2>
-<p>L1.1 Rows: parameters, gradients, optimizer state, activations,
+<p id="l1-p01" data-kind="prose" data-term="resource ledger">L1.1 Rows: parameters, gradients, optimizer state, activations,
 workspace/input batch.
 L1.2 41.55M * 16 = 664.8 MB.
 L1.3 Mixed keeps the fp32 master and moments (4+4+4) and only shrinks
@@ -180,8 +181,9 @@ L1.5 Snapshot: allocator ground truth after a run. Debug: add NCCL
 buffers and loader workers, the single-device ledger undercounts them.
 Critique: one device, no fragmentation. Experiment: extend with NCCL
 rows, validate on 2 GPUs within margin.</p>
+<span id="l1-end" data-end></span>
 <h2 id="l2">L2</h2>
-<p>L2.1 MFU = achieved model FLOP/s over peak FLOP/s, with the honest model
+<p id="l2-p01" data-kind="prose" data-term="MFU">L2.1 MFU = achieved model FLOP/s over peak FLOP/s, with the honest model
 count as denominator.
 L2.2 min(100, 50*1) = 50 TFLOP/s, memory-bound.
 L2.3 Cap = min(peak, intensity * bandwidth), balance = peak/bandwidth =
@@ -193,8 +195,9 @@ Debug: 90 percent of peak on a memory-bound shape is impossible, the
 denominator is wrong. Critique: the count must be the model count.
 Experiment: MFU versus batch size, expect rise then plateau at the
 roofline.</p>
+<span id="l2-end" data-end></span>
 <h2 id="e1">E1</h2>
-<p>(a) Per layer 12<em>d^2 = 12</em>1024^2 = 12,582,912. x24 = 301,989,888.
+<p id="e1-p01" data-kind="prose" data-term="parameter count">(a) Per layer 12<em>d^2 = 12</em>1024^2 = 12,582,912. x24 = 301,989,888.
 Embeddings 32000<em>1024 = 32,768,000. Total 334,757,888 ≈ 334.8M params.
 (b) 16 bytes/param * 334.76M = 5.36 GB.
 (c) qkv = 3</em>2<em>8</em>512<em>1024^2 = 12.88 GFLOP. scores =
@@ -202,35 +205,41 @@ Embeddings 32000<em>1024 = 32,768,000. Total 334,757,888 ≈ 334.8M params.
 ffn = 3<em>2</em>8<em>512</em>1024*4096 = 103.08 GFLOP. Total ≈ 128.85 GFLOP.
 Rubric: 2 pts per part, the method carries partial credit.
 Red flag: counting 2 FFN maps instead of 3.</p>
+<span id="e1-end" data-end></span>
 <h2 id="e2">E2</h2>
-<p>One token: (1,4096)@(4096,12288). FLOPs = 2<em>12288</em>4096 ≈ 1.01e8. Bytes
+<p id="e2-p01" data-kind="prose" data-term="arithmetic intensity">One token: (1,4096)@(4096,12288). FLOPs = 2<em>12288</em>4096 ≈ 1.01e8. Bytes
 fp16 ≈ 2<em>(4096 + 12288</em>4096 + 12288) ≈ 1.01e8. Intensity ≈ 1.0
 FLOP/byte: memory-bound. First lever: shrink weight traffic
 (quantization) or raise batch size. Red flag: &ldquo;optimize the matmul
 kernel&rdquo;.</p>
+<span id="e2-end" data-end></span>
 <h2 id="d1">D1</h2>
-<p>Bug: SwiGLU FFN has three linear maps (gate, up, down), not two, the
+<p id="d1-p01" data-kind="prose" data-term="SwiGLU FFN">Bug: SwiGLU FFN has three linear maps (gate, up, down), not two, the
 line must read <code>3 * 2 * B * T * d * dff</code>. Changed claim: per-layer
 forward is 8.858 GFLOP with 72.7 percent FFN share (not 6.711/64
 percent). Rubric: find 2 pts, fix 1 pt, claim update 1 pt.</p>
+<span id="d1-end" data-end></span>
 <h2 id="s1">S1</h2>
-<p>(1) Optimizer state: ZeRO sharding, cost is communication. (2)
+<p id="s1-p01" data-kind="prose" data-term="ZeRO sharding">(1) Optimizer state: ZeRO sharding, cost is communication. (2)
 Activations: checkpointing, cost is ~33 percent throughput. (3) Batch:
 smaller microbatch, cost is throughput. Order by cost: shard, then
 checkpoint, then shrink. Red flag: &ldquo;use fp16&rdquo; as if it shrinks Adam
 state (it does not).</p>
+<span id="s1-end" data-end></span>
 <h2 id="s2">S2</h2>
-<p>Activations row explodes (T^2 attention term, 64x). The score term
+<p id="s2-p01" data-kind="prose" data-term="crossover">Activations row explodes (T^2 attention term, 64x). The score term
 crosses the FFN term (crossover near T = 3*dff). Mitigations in order:
 (1) activation checkpointing for the attention block, (2) a
 subquadratic attention variant (U04) or sequence parallelism (U09).</p>
+<span id="s2-end" data-end></span>
 <h2 id="r1">R1</h2>
-<p>Gaps: (1) no stated FLOP count, close by publishing the counted ops.
+<p id="r1-p01" data-kind="prose" data-term="FLOP count">Gaps: (1) no stated FLOP count, close by publishing the counted ops.
 (2) no intensity or roofline position, close with the roofline plot.
 (3) no baseline, close with the unfused baseline on the same hardware.
 Red flag: accepting &ldquo;percent of peak&rdquo; without the denominator.</p>
       
-      <nav class="pager"><a href="../labs/u12_lab.html"><span class="lbl">← Previous</span>Lab 12 · Evaluation and measurement validity</a><a href="../labs/u12_lab_key.html"><span class="lbl">Next →</span>Lab 12 · Keys</a></nav>
+      <span id="r1-end" data-end></span>
+<nav class="pager"><a href="../labs/u12_lab.html"><span class="lbl">← Previous</span>Lab 12 · Evaluation and measurement validity</a><a href="../labs/u12_lab_key.html"><span class="lbl">Next →</span>Lab 12 · Keys</a></nav>
     </article>
     <footer class="pagefoot">
       <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
