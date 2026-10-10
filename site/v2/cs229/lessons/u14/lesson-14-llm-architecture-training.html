@@ -108,21 +108,21 @@
 <li><a href="../../capstones/capstone-b-applied.html" data-page="cs229-cap-b">Capstone B · Applied</a></li>
 </ul>
   </nav>
-  <main class="content" id="main">
+  <main class="content" id="main"><span id="lesson-14-llm-architecture-training-intro" data-start></span>
     <article>
       <nav class="breadcrumb"><a href="../../index.html">Home</a> / <a href="#">Machine Learning (Stanford CS229)</a> / Lesson 14 · LLM architecture, training</nav>
       <h1>Lesson 14 · LLM architecture, training</h1>
-      <p class="meta-line">2026-10-06 · Instructor: Tengyu Ma and Andrew Ng</p>
+      <p id="lesson-14-llm-architecture-training-intro-p01" class="meta-line" data-kind="prose">2026-10-06 · Instructor: Tengyu Ma and Andrew Ng</p>
       <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="lesson-14-llm-architecture-and-training">Lesson 14, LLM architecture and training</h1>
-<p>Unit: cs229-U14. Leaf concepts: cs229-U14-C01 to C12
+<p id="lesson-14-llm-architecture-training-intro-p02" data-kind="prose" data-term="cs229-U14">Unit: cs229-U14. Leaf concepts: cs229-U14-C01 to C12
 (tokenization, autoregressive factorization,
 next-token loss, transformer, positional/mask
 structure, attention variants, MoE, in-context
 learning, zero-shot prompts, SFT, train/infer
 mismatch, resource accounting bridge).
 Date: 2026-10-06. Baseline: October 6, 2026.</p>
-<h2 id="source-mapping">Source mapping</h2>
-<p>Chapter 17 (SRC-01, PDF pages 203-219) was read
+<span id="lesson-14-llm-architecture-training-intro-end" data-end></span><h2 id="source-mapping">Source mapping</h2>
+<p id="source-mapping-p01" data-kind="prose" data-term="tokenization">Chapter 17 (SRC-01, PDF pages 203-219) was read
 in full on 2026-10-06: tokenization (17.1),
 autoregressive modeling and the next-token
 loss (17.2), the transformer interface (17.2),
@@ -146,14 +146,14 @@ are taught as standard-background bridges
 from the notes&rsquo; own complexity statements).
 Leaf rows carry SOURCE ATTRIBUTION PENDING
 until the RUN 6 pass.</p>
-<h2 id="scope-and-objectives">Scope and objectives</h2>
-<p>Scope: how a modern autoregressive LLM is
+<span id="source-mapping-end" data-end></span><h2 id="scope-and-objectives">Scope and objectives</h2>
+<p id="scope-and-objectives-p01" data-kind="keyIdea" data-reveal="rise" data-term="next-token loss">Scope: how a modern autoregressive LLM is
 built and trained: tokens in, next-token loss,
 transformer blocks, attention and its
 variants, MoE, and the post-training
 adaptations (ICL, prompting, SFT), plus the
 train/inference gap and the resource ledger.</p>
-<p>Objectives: the learner can (1) explain BPE
+<p id="scope-and-objectives-p02" data-kind="prose">Objectives: the learner can (1) explain BPE
 tokenization, (2) write the autoregressive
 factorization and the training loss, (3)
 compute single-head causal attention by hand,
@@ -163,22 +163,22 @@ attention compute, (5) compare MHA/GQA/MQA,
 zero-shot prompting, and SFT, and (8) state
 the train/infer mismatch and the resource
 costs.</p>
-<h2 id="dependencies">Dependencies</h2>
-<p>Prerequisites: P12, P13, P14 (shared bridges,
+<span id="scope-and-objectives-end" data-end></span><h2 id="dependencies">Dependencies</h2>
+<p id="dependencies-p01" data-kind="prose" data-term="prerequisites">Prerequisites: P12, P13, P14 (shared bridges,
 linked). Unit U07 (neural nets), Unit U13
 (pretraining/transfer).</p>
-<p>Not-yet-understood list:</p>
-<ol>
+<p id="dependencies-p02" data-kind="prose">Not-yet-understood list:</p>
+<ol id="dependencies-l01" data-kind="prose" data-term="mask">
 <li>Why attention needs a mask (remediated in
    SL-04).</li>
 <li>What SFT changes versus prompting
    (remediated in SL-08).</li>
 </ol>
 <hr />
-<h2 id="sl-01-tokenization">SL-01: Tokenization</h2>
-<p>Covers C01 (tokenization).</p>
+<span id="dependencies-end" data-end></span><h2 id="sl-01-tokenization">SL-01: Tokenization</h2>
+<p id="sl-01-tokenization-p01" data-kind="prose">Covers C01 (tokenization).</p>
 <h3 id="source-anchor">Source anchor</h3>
-<p>SRC-01 section 17.1, pages 202-203. A language
+<p id="sl-01-tokenization-p02" data-kind="prose" data-term="tokenization">SRC-01 section 17.1, pages 202-203. A language
 model does not read raw strings. Text is
 broken into tokens: whole words, word pieces,
 punctuation, whitespace, bytes, or special
@@ -188,7 +188,7 @@ the vocabulary V. Modern models use subword
 tokenization, usually byte-pair encoding
 (BPE) [Sennrich et al., 2016].</p>
 <h3 id="bpe-intuition">BPE intuition</h3>
-<p>Start from tiny pieces (bytes or characters).
+<p id="sl-01-tokenization-p03" data-kind="prose">Start from tiny pieces (bytes or characters).
 Repeatedly add a new token for the adjacent
 pair that occurs most often in the corpus.
 After many merges, common strings (&ldquo;ing&rdquo;,
@@ -198,7 +198,7 @@ The notes&rsquo; examples: &ldquo;glioblastoma&rdquo; becomes
 glio+blast+oma, &ldquo;LLMification&rdquo; becomes
 LL+M+ification.</p>
 <h3 id="the-compromise">The compromise</h3>
-<p>Character-level: tiny vocabulary, long
+<p id="sl-01-tokenization-p04" data-kind="keyIdea" data-reveal="rise">Character-level: tiny vocabulary, long
 sequences. Word-level: short sequences for
 common text, but rare words collapse to an
 unknown token. Subword sits between: the
@@ -208,7 +208,7 @@ sequence length T stays manageable. The
 tokenizer is fixed before pretraining, and it
 shapes both |V| and T for everything after.</p>
 <h3 id="correctness-checks">Correctness checks</h3>
-<ul>
+<ul id="sl-01-tokenization-l01" data-kind="prose">
 <li>The tokenizer must be fixed before
   training and identical at inference. A
   different segmentation is a different
@@ -217,49 +217,49 @@ shapes both |V| and T for everything after.</p>
   pieces), never as unknown, for BPE.</li>
 </ul>
 <h3 id="nearest-alternative">Nearest alternative</h3>
-<p>Character-level modeling: no tokenizer at
+<p id="sl-01-tokenization-p05" data-kind="prose">Character-level modeling: no tokenizer at
 all. Simpler pipeline, much longer
 sequences, harder long-range modeling.</p>
 <h3 id="failure-case">Failure case</h3>
-<p>Training with one tokenizer and serving with
+<p id="sl-01-tokenization-p06" data-kind="prose">Training with one tokenizer and serving with
 another: token ids shift meaning and the
 model&rsquo;s learned embeddings misalign. Silent
 and catastrophic.</p>
 <hr />
-<h2 id="sl-02-autoregressive-factorization-and-the-loss">SL-02: Autoregressive factorization and the loss</h2>
-<p>Covers C02 (autoregressive factorization),
+<span id="sl-01-tokenization-end" data-end></span><h2 id="sl-02-autoregressive-factorization-and-the-loss">SL-02: Autoregressive factorization and the loss</h2>
+<p id="sl-02-autoregressive-factorization-and-the-loss-p01" data-kind="prose" data-term="autoregressive">Covers C02 (autoregressive factorization),
 C03 (next-token loss).</p>
 <h3 id="source-anchor_1">Source anchor</h3>
-<p>SRC-01 section 17.2, pages 203-207. A language
+<p id="sl-02-autoregressive-factorization-and-the-loss-p02" data-kind="prose" data-term="chain rule">SRC-01 section 17.2, pages 203-207. A language
 model represents p(x_1, &hellip;, x_T). The
 support has size |V|^T: astronomical. The
 chain rule factors it:</p>
-<p>p(x_1, &hellip;, x_T) = p(x_1) p(x_2 | x_1) &hellip;
+<p id="sl-02-autoregressive-factorization-and-the-loss-p03" data-kind="prose">p(x_1, &hellip;, x_T) = p(x_1) p(x_2 | x_1) &hellip;
 p(x_T | x_1, &hellip;, x_{T-1}). (17.1)</p>
-<p>Each conditional has support |V|: one
+<p id="sl-02-autoregressive-factorization-and-the-loss-p04" data-kind="prose">Each conditional has support |V|: one
 distribution over the vocabulary per
 position.</p>
 <h3 id="the-training-loss">The training loss</h3>
-<p>Maximum likelihood, normalized by length:</p>
-<p>loss = -(1/T) log p_theta(x_1, &hellip;, x_T)
+<p id="sl-02-autoregressive-factorization-and-the-loss-p05" data-kind="prose" data-term="next-token loss">Maximum likelihood, normalized by length:</p>
+<p id="sl-02-autoregressive-factorization-and-the-loss-p06" data-kind="prose">loss = -(1/T) log p_theta(x_1, &hellip;, x_T)
      = (1/T) sum_t l_ce(f_theta(x_0, &hellip;,
        x_{t-1}), x_t), (17.12-17.13)</p>
-<p>the cross-entropy between the logits and the
+<p id="sl-02-autoregressive-factorization-and-the-loss-p07" data-kind="prose">the cross-entropy between the logits and the
 true next token, averaged over positions and
 then over sequences. The standard optimizer
 is AdamW [Loshchilov and Hutter, 2019] on
 mini-batches of sequences.</p>
 <h3 id="motivating-question">Motivating question</h3>
-<p>How do you train on raw text with no labels?</p>
+<p id="sl-02-autoregressive-factorization-and-the-loss-p08" data-kind="prose">How do you train on raw text with no labels?</p>
 <h3 id="mental-model">Mental model</h3>
-<p>Every position is a classification problem
+<p id="sl-02-autoregressive-factorization-and-the-loss-p09" data-kind="keyIdea" data-reveal="rise">Every position is a classification problem
 with |V| classes, and the label is free: it
 is the next token. One long document yields T
 training examples. The model learns &ldquo;which
 sentences are plausible&rdquo; by learning to
 continue them.</p>
 <h3 id="correctness-checks_1">Correctness checks</h3>
-<ul>
+<ul id="sl-02-autoregressive-factorization-and-the-loss-l01" data-kind="prose">
 <li>The loss at position t may only use
   x_0, &hellip;, x_{t-1}. Using x_t as input is
   label leakage (the mask of SL-04 enforces
@@ -269,33 +269,33 @@ continue them.</p>
   pretraining.</li>
 </ul>
 <h3 id="nearest-alternative_1">Nearest alternative</h3>
-<p>Masked language modeling (BERT): predict
+<p id="sl-02-autoregressive-factorization-and-the-loss-p10" data-kind="prose">Masked language modeling (BERT): predict
 hidden tokens from both sides. Not
 autoregressive, different loss, different
 use (the notes flag this explicitly).</p>
 <h3 id="failure-case_1">Failure case</h3>
-<p>Training on packed documents without
+<p id="sl-02-autoregressive-factorization-and-the-loss-p11" data-kind="prose">Training on packed documents without
 boundary tokens or masks: the model learns
 to continue across document boundaries and
 blends unrelated contexts.</p>
 <hr />
-<h2 id="sl-03-the-transformer-interface">SL-03: The transformer interface</h2>
-<p>Covers C04 (transformer).</p>
+<span id="sl-02-autoregressive-factorization-and-the-loss-end" data-end></span><h2 id="sl-03-the-transformer-interface">SL-03: The transformer interface</h2>
+<p id="sl-03-the-transformer-interface-p01" data-kind="prose">Covers C04 (transformer).</p>
 <h3 id="source-anchor_2">Source anchor</h3>
-<p>SRC-01 sections 17.2-17.3, pages 204-208.
+<p id="sl-03-the-transformer-interface-p02" data-kind="prose" data-term="transformer">SRC-01 sections 17.2-17.3, pages 204-208.
 Tokens become row-vector embeddings e_i in
 R^{1 x d}, stacked into E in R^{|V| x d}
 (17.2). A special beginning token x_0 is
 prepended. The transformer f_theta maps the
 embedding sequence to logit vectors
 (u_1, &hellip;, u_{T+1}) with u_t in R^{|V|}:</p>
-<p>p_theta(x_t | x_1, &hellip;, x_{t-1}) =
+<p id="sl-03-the-transformer-interface-p03" data-kind="prose">p_theta(x_t | x_1, &hellip;, x_{t-1}) =
 softmax(f_theta(x_0, &hellip;, x_{t-1})). (17.3)</p>
-<p>Crucially, u_t depends only on x_0, &hellip;,
+<p id="sl-03-the-transformer-interface-p04" data-kind="prose">Crucially, u_t depends only on x_0, &hellip;,
 x_{t-1}: the autoregressive property, built
 into the architecture by the mask.</p>
 <h3 id="blocks">Blocks</h3>
-<p>A transformer stacks blocks of multi-head
+<p id="sl-03-the-transformer-interface-p05" data-kind="keyIdea" data-reveal="rise" data-term="PreNorm">A transformer stacks blocks of multi-head
 self-attention and position-wise MLPs
 (GELU or SwiGLU activations, from section
 7.3). Two wirings: PreNorm applies layer
@@ -307,7 +307,7 @@ acts per position with shared weights,
 attention is the only cross-position
 mixing.</p>
 <h3 id="positional-boundary">Positional boundary</h3>
-<p>Self-attention is permutation-equivariant:
+<p id="sl-03-the-transformer-interface-p06" data-kind="prose">Self-attention is permutation-equivariant:
 without extra signal it cannot tell token
 order. The notes state positional
 embeddings (learned absolute, sinusoidal,
@@ -317,7 +317,7 @@ notes teach the mask fully, positional
 schemes are standard background, not
 note-sourced.</p>
 <h3 id="correctness-checks_2">Correctness checks</h3>
-<ul>
+<ul id="sl-03-the-transformer-interface-l01" data-kind="prose">
 <li>u_t must not depend on x_t or later.
   Test: perturb x_{t+1} and check u_t is
   unchanged (the mask test).</li>
@@ -326,34 +326,34 @@ note-sourced.</p>
   intent.</li>
 </ul>
 <h3 id="nearest-alternative_2">Nearest alternative</h3>
-<p>Recurrent models: sequential state instead
+<p id="sl-03-the-transformer-interface-p07" data-kind="prose">Recurrent models: sequential state instead
 of attention. No quadratic cost, but no
 parallel training over positions.</p>
 <h3 id="failure-case_2">Failure case</h3>
-<p>Forgetting the causal mask in training:
+<p id="sl-03-the-transformer-interface-p08" data-kind="prose" data-term="causal mask">Forgetting the causal mask in training:
 the model reads the answer from the future,
 training loss collapses to near zero, and
 the model is useless at generation. The
 mask test above catches it.</p>
 <hr />
-<h2 id="sl-04-attention-scaling-masking">SL-04: Attention, scaling, masking</h2>
-<p>Covers C05 (positional/mask structure).</p>
+<span id="sl-03-the-transformer-interface-end" data-end></span><h2 id="sl-04-attention-scaling-masking">SL-04: Attention, scaling, masking</h2>
+<p id="sl-04-attention-scaling-masking-p01" data-kind="prose">Covers C05 (positional/mask structure).</p>
 <h3 id="source-anchor_3">Source anchor</h3>
-<p>SRC-01 section 17.3, pages 208-211.
+<p id="sl-04-attention-scaling-masking-p02" data-kind="prose" data-term="attention">SRC-01 section 17.3, pages 208-211.
 Single-head attention maps an input matrix
 H^in in R^{T x d} to H^out in R^{T x d_h}.
 Parameters: W^Q, W^K, W^V in R^{d x d_h}.
 Queries ask &ldquo;what am I looking for&rdquo;, keys
 advertise &ldquo;what I have&rdquo;, values carry the
 payload:</p>
-<p>q_t = h^in_t W^Q, k_t = h^in_t W^K,
+<p id="sl-04-attention-scaling-masking-p03" data-kind="prose">q_t = h^in_t W^Q, k_t = h^in_t W^K,
 v_t = h^in_t W^V. (17.14-17.16)</p>
-<p>Scores: softmax over q_t k_j^T / c
+<p id="sl-04-attention-scaling-masking-p04" data-kind="prose">Scores: softmax over q_t k_j^T / c
 (17.17). Output: h^out_t = sum_j p_{t,j}
 v_j (17.18). Matrix form: H^out =
 softmax_row(Q K^T / c) V (17.20).</p>
 <h3 id="the-scaling">The scaling</h3>
-<p>c = sqrt(d_h) [Vaswani et al., 2017].
+<p id="sl-04-attention-scaling-masking-p05" data-kind="keyIdea" data-reveal="rise" data-term="scaling">c = sqrt(d_h) [Vaswani et al., 2017].
 Intuition from the notes: at initialization,
 q and k coordinates behave like independent
 mean-zero variance-1 variables, so their dot
@@ -364,12 +364,12 @@ by sqrt(d_h) keeps logit variance near 1.
 The notes flag this as a heuristic: real
 queries and keys are not independent.</p>
 <h3 id="the-causal-mask">The causal mask</h3>
-<p>For autoregression, position t must not see
+<p id="sl-04-attention-scaling-masking-p06" data-kind="prose" data-term="causal mask">For autoregression, position t must not see
 j &gt; t. Add a mask M in R^{T x T} before the
 softmax:</p>
-<p>H^out = softmax_row(Q K^T / c + M) V.
+<p id="sl-04-attention-scaling-masking-p07" data-kind="prose">H^out = softmax_row(Q K^T / c + M) V.
 (17.21)</p>
-<p>Causal mask: M_{t,j} = 0 for j &lt;= t,
+<p id="sl-04-attention-scaling-masking-p08" data-kind="prose">Causal mask: M_{t,j} = 0 for j &lt;= t,
 M_{t,j} = -infinity for j &gt; t. The -infinity
 entries make softmax probabilities exactly
 zero (17.22-17.23), so h^out_t = sum_{j=1}^{t}
@@ -380,7 +380,7 @@ left-to-right rule. Other uses: padding
 tokens in batches, block-structured
 visibility.</p>
 <h3 id="computed-example">Computed example</h3>
-<p>T = 3, d_h = 2. Q rows: [1, 0], [0, 1],
+<p id="sl-04-attention-scaling-masking-p09" data-kind="example">T = 3, d_h = 2. Q rows: [1, 0], [0, 1],
 [1, 1]. K rows: [1, 0], [0, 1], [1, -1].
 Scores q_t k_j^T / sqrt(2), causal mask
 applied. Row 1: softmax([0.7071, -inf,
@@ -391,7 +391,7 @@ softmax([0.7071, 0.7071, 0]) = [0.4011,
 values and that each row sums to 1 with
 zeros above the diagonal.</p>
 <h3 id="correctness-checks_3">Correctness checks</h3>
-<ul>
+<ul id="sl-04-attention-scaling-masking-l01" data-kind="prose">
 <li>Row sums are 1, entries above the diagonal
   are exactly 0. If not, the mask is wrong.</li>
 <li>Without the /sqrt(d_h) scaling, initial
@@ -399,21 +399,21 @@ zeros above the diagonal.</p>
   vanish. Check gradient norms early.</li>
 </ul>
 <h3 id="nearest-alternative_3">Nearest alternative</h3>
-<p>Unmasked (bidirectional) attention: for
+<p id="sl-04-attention-scaling-masking-p10" data-kind="prose">Unmasked (bidirectional) attention: for
 encoders, not for autoregressive
 generation.</p>
 <h3 id="failure-case_3">Failure case</h3>
-<p>Mask applied after softmax instead of
+<p id="sl-04-attention-scaling-masking-p11" data-kind="prose">Mask applied after softmax instead of
 before: the -infinity never enters the
 normalization and future positions leak.
 The row-sum/zero-upper-triangle test
 catches it only if you check exact zeros,
 check both.</p>
 <hr />
-<h2 id="sl-05-multi-head-kv-cache-costs">SL-05: Multi-head, KV cache, costs</h2>
-<p>Covers C06 (attention variants: the base).</p>
+<span id="sl-04-attention-scaling-masking-end" data-end></span><h2 id="sl-05-multi-head-kv-cache-costs">SL-05: Multi-head, KV cache, costs</h2>
+<p id="sl-05-multi-head-kv-cache-costs-p01" data-kind="prose">Covers C06 (attention variants: the base).</p>
 <h3 id="source-anchor_4">Source anchor</h3>
-<p>SRC-01 sections 17.3, pages 211-214. Multi-
+<p id="sl-05-multi-head-kv-cache-costs-p02" data-kind="prose" data-term="multi-head attention">SRC-01 sections 17.3, pages 211-214. Multi-
 head attention runs n_h single-head modules
 in parallel (n_h * d_h = d in practice),
 concatenates the per-head outputs z_t, and
@@ -422,7 +422,7 @@ R^{(n_h d_h) x d} (17.25). Different heads
 learn different token-interaction rules,
 the projection recombines them.</p>
 <h3 id="kv-cache">KV cache</h3>
-<p>Generation is sequential: each new token
+<p id="sl-05-multi-head-kv-cache-costs-p03" data-kind="keyIdea" data-reveal="rise" data-term="KV cache">Generation is sequential: each new token
 feeds back as input (17.4-17.7). Keys and
 values of the prefix are recomputed at every
 step unless cached. The KV cache stores
@@ -430,7 +430,7 @@ K_{1:t} and V_{1:t}, at step t the output is
 softmax(q_t K_{1:t}^T / c) V_{1:t} (17.27).
 New rows append, old rows never recompute.</p>
 <h3 id="memory-and-compute">Memory and compute</h3>
-<p>Per head, training/prefill attention costs
+<p id="sl-05-multi-head-kv-cache-costs-p04" data-kind="prose" data-term="FlashAttention">Per head, training/prefill attention costs
 O(T^2 d_h) operations, n_h heads give
 O(T^2 d_h n_h). Quadratic in T: the main
 difficulty past 10K tokens, up to 1M in
@@ -443,7 +443,7 @@ streams it for O(T) memory. Decoding stores
 the KV cache: O(T d_h) per head in GPU
 memory (CPU offload is possible but slow).</p>
 <h3 id="computed-example_1">Computed example</h3>
-<p>d = 4096, n_h = 32, d_h = 128, fp16 (2
+<p id="sl-05-multi-head-kv-cache-costs-p05" data-kind="example">d = 4096, n_h = 32, d_h = 128, fp16 (2
 bytes). Per layer KV cache = 2 (K and V) *
 T * d * 2 bytes. T = 8192: 2 * 8192 * 4096
 * 2 = 134,217,728 bytes = 128.0 MiB per
@@ -452,7 +452,7 @@ cache of one sequence. The script tabulates
 T in {2048, 8192, 32768} for MHA, GQA
 (n_g = 8), and MQA.</p>
 <h3 id="correctness-checks_4">Correctness checks</h3>
-<ul>
+<ul id="sl-05-multi-head-kv-cache-costs-l01" data-kind="prose">
 <li>Cache shapes: per head (T, d_h) for K and
   V. A (T, d) cache on a GQA model is a
   shape bug.</li>
@@ -461,23 +461,23 @@ T in {2048, 8192, 32768} for MHA, GQA
   match the prefill logits.</li>
 </ul>
 <h3 id="nearest-alternative_4">Nearest alternative</h3>
-<p>No cache (recompute): correct, slow.
+<p id="sl-05-multi-head-kv-cache-costs-p06" data-kind="prose">No cache (recompute): correct, slow.
 Cache offload to CPU: correct, PCIe-bound.</p>
 <h3 id="failure-case_4">Failure case</h3>
-<p>Cache not updated on a sliding window or
+<p id="sl-05-multi-head-kv-cache-costs-p07" data-kind="prose">Cache not updated on a sliding window or
 wrong n_g: the model attends to stale or
 missing keys and generation degrades
 silently. Shape asserts on append catch it.</p>
 <hr />
-<h2 id="sl-06-attention-variants">SL-06: Attention variants</h2>
-<p>Covers C06 (attention variants).</p>
+<span id="sl-05-multi-head-kv-cache-costs-end" data-end></span><h2 id="sl-06-attention-variants">SL-06: Attention variants</h2>
+<p id="sl-06-attention-variants-p01" data-kind="prose">Covers C06 (attention variants).</p>
 <h3 id="source-anchor_5">Source anchor</h3>
-<p>SRC-01 section 17.4, pages 214-215. Three
+<p id="sl-06-attention-variants-p02" data-kind="prose">SRC-01 section 17.4, pages 214-215. Three
 variants reduce KV-cache memory or stabilize
 training.</p>
-<p>MQA [Shazeer, 2019]: many query heads share
+<p id="sl-06-attention-variants-p03" data-kind="prose" data-term="MQA">MQA [Shazeer, 2019]: many query heads share
 one key head and one value head.</p>
-<p>GQA [Ainslie et al., 2023]: query heads are
+<p id="sl-06-attention-variants-p04" data-kind="keyIdea" data-reveal="rise" data-term="GQA">GQA [Ainslie et al., 2023]: query heads are
 partitioned into groups, each group shares
 one key/value head. With n_h queries, n_g
 key/value heads, and tau = n_h / n_g, query
@@ -486,25 +486,25 @@ head j uses group g(j) = floor((j-1)/tau) +
 n_h. MQA is n_g = 1. A spectrum trading
 quality against decoding efficiency: fewer
 KV heads, smaller cache.</p>
-<p>Sliding-window attention: each token attends
+<p id="sl-06-attention-variants-p05" data-kind="prose" data-term="sliding-window attention">Sliding-window attention: each token attends
 only to the last w tokens. The mask is
 M_{t,j} = 0 for max(1, t-w+1) &lt;= j &lt;= t,
 -infinity otherwise (17.35). Old keys leave
 the active cache.</p>
-<p>QK-Norm [Henry et al., 2020]: normalize
+<p id="sl-06-attention-variants-p06" data-kind="prose" data-term="QK-Norm">QK-Norm [Henry et al., 2020]: normalize
 queries and keys (for example with RMSNorm)
 before the dot product, replacing q_t k_j^T
 with a scaled cosine similarity. Controls
 logit scale and training stability, adopted
 in Qwen3 and OLMo2 (cited in the notes).</p>
 <h3 id="computed-example_2">Computed example</h3>
-<p>Same dimensions as SL-05, T = 8192, fp16,
+<p id="sl-06-attention-variants-p07" data-kind="example">Same dimensions as SL-05, T = 8192, fp16,
 per layer: MHA (n_g = 32) 128.0 MiB. GQA
 (n_g = 8) 32.0 MiB. MQA (n_g = 1) 4.0 MiB.
 The cache scales with n_g, not n_h. The
 script prints the table.</p>
 <h3 id="correctness-checks_5">Correctness checks</h3>
-<ul>
+<ul id="sl-06-attention-variants-l01" data-kind="prose">
 <li>n_g must divide n_h. If not, the group
   assignment (17.32) is ill-defined.</li>
 <li>With a sliding window, positions older
@@ -513,20 +513,20 @@ script prints the table.</p>
   cache size.</li>
 </ul>
 <h3 id="nearest-alternative_5">Nearest alternative</h3>
-<p>Full MHA with FlashAttention: keeps quality,
+<p id="sl-06-attention-variants-p08" data-kind="prose">Full MHA with FlashAttention: keeps quality,
 pays the cache. The variant choice is a
 quality-vs-memory trade, not a free win.</p>
 <h3 id="failure-case_5">Failure case</h3>
-<p>Aggressive MQA on a quality-sensitive task:
+<p id="sl-06-attention-variants-p09" data-kind="prose">Aggressive MQA on a quality-sensitive task:
 the shared key head bottlenecks distinct
 query behaviors and quality drops. The
 notes frame it as a spectrum, pick the
 point by measurement.</p>
 <hr />
-<h2 id="sl-07-mixture-of-experts">SL-07: Mixture of Experts</h2>
-<p>Covers C07 (MoE).</p>
+<span id="sl-06-attention-variants-end" data-end></span><h2 id="sl-07-mixture-of-experts">SL-07: Mixture of Experts</h2>
+<p id="sl-07-mixture-of-experts-p01" data-kind="prose">Covers C07 (MoE).</p>
 <h3 id="source-anchor_6">Source anchor</h3>
-<p>SRC-01 section 17.5, pages 215-216. MoE
+<p id="sl-07-mixture-of-experts-p02" data-kind="prose" data-term="MoE">SRC-01 section 17.5, pages 215-216. MoE
 makes some layers sparse. Instead of one
 dense MLP per block, the layer holds m
 expert MLPs E_1, &hellip;, E_m and a router.
@@ -542,10 +542,10 @@ top 8 per token, plus one shared expert
 applied to every token [DeepSeek-AI,
 2024].</p>
 <h3 id="motivating-question_1">Motivating question</h3>
-<p>How do you grow parameters without growing
+<p id="sl-07-mixture-of-experts-p03" data-kind="prose">How do you grow parameters without growing
 per-token compute?</p>
 <h3 id="mental-model_1">Mental model</h3>
-<p>Each token consults a few specialists.
+<p id="sl-07-mixture-of-experts-p04" data-kind="keyIdea" data-reveal="rise">Each token consults a few specialists.
 Total parameters grow with m, per-token
 compute grows with k. The shared expert is
 the common feedforward path, routed experts
@@ -553,7 +553,7 @@ specialize by token and context. The router
 is a tiny classifier: which experts fit
 this token?</p>
 <h3 id="correctness-checks_6">Correctness checks</h3>
-<ul>
+<ul id="sl-07-mixture-of-experts-l01" data-kind="prose">
 <li>Exactly k experts active per token (plus
   shared). If the count varies silently,
   compute accounting is wrong.</li>
@@ -562,23 +562,23 @@ this token?</p>
   the output scale.</li>
 </ul>
 <h3 id="nearest-alternative_6">Nearest alternative</h3>
-<p>Dense MLP: every token uses all
+<p id="sl-07-mixture-of-experts-p05" data-kind="prose">Dense MLP: every token uses all
 parameters. Simpler, no routing dynamics,
 more compute per token at the same
 capacity.</p>
 <h3 id="failure-case_6">Failure case</h3>
-<p>Router collapse: every token routes to the
+<p id="sl-07-mixture-of-experts-p06" data-kind="prose">Router collapse: every token routes to the
 same few experts and the rest starve.
 Capacity is then wasted, load-balancing
 losses exist to prevent this (standard
 background beyond the notes).</p>
 <hr />
-<h2 id="sl-08-icl-zero-shot-sft">SL-08: ICL, zero-shot, SFT</h2>
-<p>Covers C08 (in-context learning), C09
+<span id="sl-07-mixture-of-experts-end" data-end></span><h2 id="sl-08-icl-zero-shot-sft">SL-08: ICL, zero-shot, SFT</h2>
+<p id="sl-08-icl-zero-shot-sft-p01" data-kind="prose">Covers C08 (in-context learning), C09
 (zero-shot prompts), C10 (SFT).</p>
 <h3 id="source-anchor_7">Source anchor</h3>
-<p>SRC-01 sections 17.6-17.8, pages 216-219.</p>
-<p>In-context learning: for few-shot settings,
+<p id="sl-08-icl-zero-shot-sft-p02" data-kind="prose">SRC-01 sections 17.6-17.8, pages 216-219.</p>
+<p id="sl-08-icl-zero-shot-sft-p03" data-kind="prose" data-term="in-context learning">In-context learning: for few-shot settings,
 concatenate labeled examples and the test
 input into one prompt and let the
 pretrained model generate the continuation.
@@ -589,18 +589,18 @@ task, the label space, and the output
 format [Min et al., 2022], showing
 intermediate steps can help reasoning
 tasks [Wei et al., 2022].</p>
-<p>Zero-shot prompting: no examples, just a
+<p id="sl-08-icl-zero-shot-sft-p04" data-kind="prose" data-term="zero-shot prompting">Zero-shot prompting: no examples, just a
 natural-language task description (&ldquo;Answer
 yes or no.&rdquo;). No training data, no
 gradient updates. Performance depends on
 the pretrained model and the wording.</p>
-<p>SFT: update parameters on prompt-completion
+<p id="sl-08-icl-zero-shot-sft-p05" data-kind="prose" data-term="SFT">SFT: update parameters on prompt-completion
 pairs (x^(i), y^(i)), initialized at
 theta-hat, minimizing the conditional
 next-token loss</p>
-<p>min_theta -(1/n) sum_i sum_t log p_theta(
+<p id="sl-08-icl-zero-shot-sft-p06" data-kind="prose">min_theta -(1/n) sum_i sum_t log p_theta(
 y_t^(i) | x^(i), y_{&lt;t}^(i)). (17.36)</p>
-<p>Implementation: concatenate prompt and
+<p id="sl-08-icl-zero-shot-sft-p07" data-kind="prose" data-term="loss mask">Implementation: concatenate prompt and
 answer into one causal sequence z^(i) but
 apply the loss only at answer positions via
 a loss mask m_r (0 on prompt tokens, 1 on
@@ -610,11 +610,11 @@ tokens still attend to the prompt, but
 prompt tokens do not contribute to the
 objective.</p>
 <h3 id="motivating-question_2">Motivating question</h3>
-<p>Three ways to adapt without full
+<p id="sl-08-icl-zero-shot-sft-p08" data-kind="prose">Three ways to adapt without full
 pretraining. What changes in each: the
 text, or the weights?</p>
 <h3 id="mental-model_2">Mental model</h3>
-<p>Prompting (ICL, zero-shot) changes the
+<p id="sl-08-icl-zero-shot-sft-p09" data-kind="keyIdea" data-reveal="rise">Prompting (ICL, zero-shot) changes the
 text, not the weights. SFT changes the
 weights, not the text format: it teaches
 the model the desired conditional
@@ -622,7 +622,7 @@ distribution p(y | x). The loss mask is
 the key detail: the model learns to
 produce answers, not to predict prompts.</p>
 <h3 id="correctness-checks_7">Correctness checks</h3>
-<ul>
+<ul id="sl-08-icl-zero-shot-sft-l01" data-kind="prose">
 <li>The loss mask must be 0 on prompt
   tokens. If prompt tokens contribute,
   the model wastes capacity predicting
@@ -632,20 +632,20 @@ produce answers, not to predict prompts.</p>
   changes are a different experiment.</li>
 </ul>
 <h3 id="nearest-alternative_7">Nearest alternative</h3>
-<p>Full finetuning with a new head (U13):
+<p id="sl-08-icl-zero-shot-sft-p10" data-kind="prose">Full finetuning with a new head (U13):
 adds parameters. SFT reuses the LM head.</p>
 <h3 id="failure-case_7">Failure case</h3>
-<p>SFT on a narrow answer style: the model
+<p id="sl-08-icl-zero-shot-sft-p11" data-kind="prose">SFT on a narrow answer style: the model
 learns the format but forgets the
 pretraining distribution (format
 overfitting). Mix SFT data with
 pretraining-style data to hold the base.</p>
 <hr />
-<h2 id="sl-09-traininfer-mismatch-and-resource-accounting">SL-09: Train/infer mismatch and resource accounting</h2>
-<p>Covers C11 (train/infer mismatch), C12
+<span id="sl-08-icl-zero-shot-sft-end" data-end></span><h2 id="sl-09-traininfer-mismatch-and-resource-accounting">SL-09: Train/infer mismatch and resource accounting</h2>
+<p id="sl-09-traininfer-mismatch-and-resource-accounting-p01" data-kind="prose">Covers C11 (train/infer mismatch), C12
 (resource accounting bridge).</p>
 <h3 id="source-anchor_8">Source anchor</h3>
-<p>Notes sections 17.2-17.3 (decoding
+<p id="sl-09-traininfer-mismatch-and-resource-accounting-p02" data-kind="prose">Notes sections 17.2-17.3 (decoding
 heuristics 17.8-17.11, compute/memory
 analysis pages 213-214). &ldquo;Train/infer
 mismatch&rdquo; and &ldquo;resource accounting&rdquo; are
@@ -653,7 +653,7 @@ not named in the notes, taught here as
 standard-background bridges built on the
 notes&rsquo; own statements.</p>
 <h3 id="traininfer-mismatch">Train/infer mismatch</h3>
-<p>Training feeds ground-truth prefixes
+<p id="sl-09-traininfer-mismatch-and-resource-accounting-p03" data-kind="keyIdea" data-reveal="rise" data-term="exposure bias">Training feeds ground-truth prefixes
 (teacher forcing): every position predicts
 the next token given the true history.
 Inference feeds the model&rsquo;s own outputs:
@@ -673,7 +673,7 @@ sampling distribution, not the model or
 the training loss. Common setting from the
 notes: top-p 0.9 with temperature 0.7-1.0.</p>
 <h3 id="computed-example_3">Computed example</h3>
-<p>Logits [2.0, 1.0, 0.5, 0.1]. Softmax at
+<p id="sl-09-traininfer-mismatch-and-resource-accounting-p04" data-kind="example" data-term="top-p">Logits [2.0, 1.0, 0.5, 0.1]. Softmax at
 tau = 1: [0.5745, 0.2114, 0.1282, 0.0859].
 At tau = 0.5: [0.8282, 0.1121, 0.0412,
 0.0185] (sharper). At tau = 2.0: [0.4056,
@@ -683,7 +683,7 @@ tokens (cumulative 0.9141) and
 renormalizes to [0.6285, 0.2312, 0.1402].
 The script verifies these values.</p>
 <h3 id="resource-accounting">Resource accounting</h3>
-<p>Per layer, per sequence: attention compute
+<p id="sl-09-traininfer-mismatch-and-resource-accounting-p05" data-kind="prose">Per layer, per sequence: attention compute
 O(T^2 d) (d = n_h d_h). KV cache 2 * T *
 d * bytes-per-element (fp16: 2 bytes).
 Generation is sequential: T steps, each
@@ -698,7 +698,7 @@ term. FlashAttention cuts the training
 memory term, none cut the quadratic
 compute term.</p>
 <h3 id="correctness-checks_8">Correctness checks</h3>
-<ul>
+<ul id="sl-09-traininfer-mismatch-and-resource-accounting-l01" data-kind="prose">
 <li>Prefill and decode accounting must use
   the same d and n_g. Mixing MHA numbers
   into a GQA deployment overprovisions
@@ -708,19 +708,19 @@ compute term.</p>
   training-loss computation.</li>
 </ul>
 <h3 id="nearest-alternative_8">Nearest alternative</h3>
-<p>Speculative decoding / assisted generation:
+<p id="sl-09-traininfer-mismatch-and-resource-accounting-p06" data-kind="prose">Speculative decoding / assisted generation:
 draft tokens with a small model, verify
 with the large one. Cuts latency, not the
 ledger above.</p>
 <h3 id="failure-case_8">Failure case</h3>
-<p>Provisioning KV cache for the max context
+<p id="sl-09-traininfer-mismatch-and-resource-accounting-p07" data-kind="prose">Provisioning KV cache for the max context
 on every request: memory exhaustion under
 concurrency. Account per sequence at its
 actual length, or cap and evict.</p>
 <hr />
-<h2 id="assessment">Assessment</h2>
+<span id="sl-09-traininfer-mismatch-and-resource-accounting-end" data-end></span><h2 id="assessment">Assessment</h2>
 <h3 id="breadth-recall">Breadth recall</h3>
-<p>E01: What is a token, and what does BPE do?
+<p id="assessment-p01" data-kind="prose" data-term="BPE">E01: What is a token, and what does BPE do?
 E02: Write the autoregressive factorization.
 E03: Write the next-token training loss.
 E04: Write single-head attention (scores and
@@ -729,7 +729,7 @@ E05: Why divide by sqrt(d_h)?
 E06: State the causal mask and what it
 guarantees.</p>
 <h3 id="deep-oral-ladders">Deep oral ladders</h3>
-<p>L01 (attention): (1) Write (17.14)-(17.18).
+<p id="assessment-p02" data-kind="prose">L01 (attention): (1) Write (17.14)-(17.18).
 (2) Toy: the T = 3 hand computation. (3)
 Derive the matrix form (17.20) from the
 per-position rule. (4) Implement masked
@@ -741,7 +741,7 @@ cause (mask missing/misplaced). (7)
 Critique: the sqrt(d_h) scaling heuristic.
 (8) Design: a mask test for a new
 attention kernel.</p>
-<p>L02 (costs and variants): (1) State the
+<p id="assessment-p03" data-kind="prose">L02 (costs and variants): (1) State the
 O(T^2 d_h) compute and O(T d_h) cache per
 head. (2) Toy: the KV-cache table. (3)
 Derive the GQA cache saving from n_g. (4)
@@ -754,7 +754,7 @@ strictly better.&rdquo; (8) Design: choose the
 attention variant for a 128k-context
 serving system.</p>
 <h3 id="analytical-exercises">Analytical exercises</h3>
-<p>E07: From the row-vector definitions, show
+<p id="assessment-p04" data-kind="prose">E07: From the row-vector definitions, show
 that the t-th row of softmax_row(Q K^T / c)
 is the score vector of (17.17). Answer in
 keys.
@@ -762,41 +762,41 @@ E08: Compute the softmax of [2.0, 1.0, 0.5,
 0.1] at tau = 0.5, 1.0, 2.0, and the top-p
 0.9 kept set at tau = 1.0. Answer in keys.</p>
 <h3 id="failure-diagnosis">Failure diagnosis</h3>
-<p>E09: Training loss is near zero after one
+<p id="assessment-p05" data-kind="prose">E09: Training loss is near zero after one
 epoch but generated text is incoherent.
 Diagnose.</p>
 <h3 id="counterfactual-comparison">Counterfactual comparison</h3>
-<p>E10: Team A adapts with zero-shot prompting.
+<p id="assessment-p06" data-kind="prose">E10: Team A adapts with zero-shot prompting.
 Team B adapts with SFT on 5,000 pairs.
 When does each win, and what does the loss
 mask buy B?</p>
 <h3 id="research-question">Research question</h3>
-<p>E11: Measure quality vs n_g (KV heads) at
+<p id="assessment-p07" data-kind="prose">E11: Measure quality vs n_g (KV heads) at
 fixed n_h on long-context tasks. State the
 falsifiable claim about where quality
 drops.</p>
 <h3 id="implementation-task">Implementation task</h3>
-<p>E12: Implement single-head causal attention
+<p id="assessment-p08" data-kind="prose">E12: Implement single-head causal attention
 from the equations, verify against the
 hand-computed toy, implement the KV-cache
 calculator, and verify the temperature /
 top-p numbers.</p>
-<h2 id="visual-units">Visual units</h2>
-<ul>
+<span id="assessment-end" data-end></span><h2 id="visual-units">Visual units</h2>
+<ul id="visual-units-l01" data-kind="prose">
 <li><code>visuals/u14/u14_causal_attention.png</code>:
   the causal mask and the computed
   attention scores, computed.</li>
 </ul>
-<figure><img alt="u14_causal_attention.png" src="../../assets/u14/u14_causal_attention.png"><figcaption>the causal mask and the computed attention scores, computed</figcaption></figure>
-<ul>
+<figure id="visual-units-fig01" data-kind="figure" data-reveal="fade" data-term="causal attention"><img alt="u14_causal_attention.png" src="../../assets/u14/u14_causal_attention.png"><figcaption>the causal mask and the computed attention scores, computed</figcaption></figure>
+<ul id="visual-units-l02" data-kind="prose">
 <li><code>visuals/u14/u14_kv_cache.png</code>: KV-cache
   memory vs context length for MHA/GQA/MQA
   and the quadratic compute curve,
   computed.</li>
 </ul>
-<figure><img alt="u14_kv_cache.png" src="../../assets/u14/u14_kv_cache.png"><figcaption>KV-cache memory vs context length for MHA/GQA/MQA and the quadratic compute curve, computed</figcaption></figure>
-<h2 id="research-reading-and-extension">Research reading and extension</h2>
-<p>Read: SRC-01 chapter 17 in full. Vaswani et
+<figure id="visual-units-fig02" data-kind="figure" data-reveal="fade" data-term="KV-cache memory"><img alt="u14_kv_cache.png" src="../../assets/u14/u14_kv_cache.png"><figcaption>KV-cache memory vs context length for MHA/GQA/MQA and the quadratic compute curve, computed</figcaption></figure>
+<span id="visual-units-end" data-end></span><h2 id="research-reading-and-extension">Research reading and extension</h2>
+<p id="research-reading-and-extension-p01" data-kind="prose" data-term="falsifiable claim">Read: SRC-01 chapter 17 in full. Vaswani et
 al. [2017] sections 1-3. Dao et al. [2022]
 sections 1-2. Extension: implement a tiny
 character-level transformer and verify the
@@ -805,8 +805,8 @@ perturbation). Falsifiable claim: removing
 the mask drops the loss to near zero on
 training data while generation coherence
 collapses.</p>
-<h2 id="role-bridges">Role bridges</h2>
-<ul>
+<span id="research-reading-and-extension-end" data-end></span><h2 id="role-bridges">Role bridges</h2>
+<ul id="role-bridges-l01" data-kind="prose" data-term="causal mask">
 <li>ML engineer: the causal mask and the KV
   cache are the two things that must be
   right in every serving stack. Test both.</li>
@@ -819,7 +819,7 @@ collapses.</p>
   any finetune pipeline.</li>
 </ul>
       
-      <nav class="pager"><a href="../../lessons/u13/keys.html"><span class="lbl">← Previous</span>Lesson 13 · Keys</a><a href="../../lessons/u14/keys.html"><span class="lbl">Next →</span>Lesson 14 · Keys</a></nav>
+      <span id="role-bridges-end" data-end></span><nav class="pager"><a href="../../lessons/u13/keys.html"><span class="lbl">← Previous</span>Lesson 13 · Keys</a><a href="../../lessons/u14/keys.html"><span class="lbl">Next →</span>Lesson 14 · Keys</a></nav>
     </article>
     <footer class="pagefoot">
       <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>

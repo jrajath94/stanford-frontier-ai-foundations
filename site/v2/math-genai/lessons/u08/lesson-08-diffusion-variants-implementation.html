@@ -122,15 +122,18 @@
 </ul>
   </nav>
   <main class="content" id="main">
-    <article>
+    <span id="lesson-08-diffusion-variants-implementation-intro"></span>
+<article>
       <nav class="breadcrumb"><a href="../../README.html">Home</a> / <a href="#">Mathematical Foundations of Generative AI</a> / U08 · Diffusion variants and implementation</nav>
       <h1>U08 · Diffusion variants and implementation</h1>
       <p class="meta-line">2026-10-06 · Instructor: Prof. Prathosh A P</p>
       <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="lesson-08-diffusion-variants-and-implementation">Lesson 08, Diffusion variants and implementation</h1>
-<p>Unit: math-genai-U08. Leaf concepts: math-genai-U08-C01 to C12.
+<p data-term="math-genai-U08" id="lesson-08-diffusion-variants-implementation-intro-p01" data-kind="prose">Unit: math-genai-U08. Leaf concepts: math-genai-U08-C01 to C12.
 Date: 2026-10-06. Baseline: October 6, 2026.</p>
+<span id="lesson-08-diffusion-variants-implementation-intro-end" data-end></span>
+
 <h2 id="source-mapping">Source mapping</h2>
-<p>This lesson is locally authored bridge content for prerequisite
+<p data-term="compute_run5b.py" id="source-mapping-p01" data-kind="prose">This lesson is locally authored bridge content for prerequisite
 modules P09 (optimization), P11 (neural networks), P12
 (tensors), and P18 (Bayesian inference and sampling). It does
 not claim to reproduce the instructor&rsquo;s lectures. Source
@@ -148,15 +151,17 @@ titles at the title boundary. All numbers below are computed
 (compute_run5b.py reproduces every one). Natural log inside
 the Gaussian algebra. Bits (log base 2) for likelihood
 statements.</p>
+<span id="source-mapping-end" data-end></span>
+
 <h2 id="scope-and-objectives">Scope and objectives</h2>
-<p>Scope: the DDIM non-Markovian construction, stochastic
+<p data-term="DDIM" id="scope-and-objectives-p01" data-kind="prose">Scope: the DDIM non-Markovian construction, stochastic
 versus deterministic sampling, step schedules, the U-Net
 noise predictor, timestep embeddings, loss weighting, the
 mean and score estimates, conditional models, classifier
 and classifier-free guidance, the quality/diversity
 tradeoff, runtime arithmetic, and the parameterization
 check battery.</p>
-<p>Objectives: after this lesson the learner can write the
+<p id="scope-and-objectives-p02" data-kind="prose">Objectives: after this lesson the learner can write the
 DDIM update for any eta, prove the marginals match the
 DDPM marginals, run a deterministic 10-step trajectory by
 hand, compare step schedules, count U-Net parameters and
@@ -168,12 +173,14 @@ estimates, write both guidance formulas, explain the
 quality/diversity tradeoff with the overshoot mechanism,
 do the serving-cost arithmetic, and run the six-assert
 check battery.</p>
-<p>Dependencies: U07 (forward chain, posterior, ELBO terms,
+<p id="scope-and-objectives-p03" data-kind="prose">Dependencies: U07 (forward chain, posterior, ELBO terms,
 epsilon loss, the scalar toy), U05 (Gaussian KL, the
 reparameterization habit), R25 (Gaussian facts), R27
 (tensor shapes, the P12 local bridge).</p>
+<span id="scope-and-objectives-end" data-end></span>
+
 <h2 id="how-to-read-this-lesson">How to read this lesson</h2>
-<p>Each mechanism opens with shells 0 to 10, then each leaf
+<p id="how-to-read-this-lesson-p01" data-kind="prose">Each mechanism opens with shells 0 to 10, then each leaf
 concept gets its own section with the full contract:
 motivating question, toy from zero, mental model,
 variables and shapes, derivation, computed numbers, code,
@@ -181,15 +188,17 @@ checks, costs, alternatives with selection boundaries, a
 failure case, a research extension, and assessment
 pointers. Figures carry one claim each. The audit table
 lives in visual_audit.md.</p>
-<p>The running toy. The U07 scalar toy continues: T = 100,
+<p data-term="x_50 = 1.99917538" id="how-to-read-this-lesson-p02" data-kind="prose">The running toy. The U07 scalar toy continues: T = 100,
 linear betas from 1e-4 to 0.02, x_0 = 2.0, drawn noise
 eps = 0.5, network prediction eps_hat = 0.4 (constant).
 alpha_bar_50 = 0.77718008, x_50 = 1.99917538. The DDIM
 subsequence tau = [10, 20, &hellip;, 100] (10 steps). New toys
 enter per section and are defined there.</p>
+<span id="how-to-read-this-lesson-end" data-end></span>
+
 <hr />
 <h2 id="mechanism-a-fewer-steps-with-the-same-marginals">Mechanism A, fewer steps with the same marginals</h2>
-<p>Shell 0. The question: DDPM needs 100 network
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p01" data-kind="prose">Shell 0. The question: DDPM needs 100 network
 evaluations per sample. Can 10 evaluations reach the
 same distribution? What would change if the reverse
 chain skipped steps? The observable result that would
@@ -198,57 +207,57 @@ breaks the small-step Gaussian approximation and the
 samples degrade. The DDIM answer: change the forward
 process, not just the step count, so that big jumps
 stay exact.</p>
-<p>Shell 1. The toy: tau = [10, 20, 30, &hellip;, 100].
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p02" data-kind="prose">Shell 1. The toy: tau = [10, 20, 30, &hellip;, 100].
 alpha_bar at the subsequence: 0.989998, 0.960553,
 0.913363, 0.851104, 0.777180, 0.695412, 0.609714,
 0.523788, 0.440873, 0.363563. One deterministic jump
 100 -&gt; 90: x_100 = 1.60480905, x0_hat = 2.13230847,
 x_90 = 1.71491474. Ten such jumps reach x_0.</p>
-<p>Shell 2. Objects: tau, the subsequence of timesteps.
+<p data-term="eta" id="mechanism-a-fewer-steps-with-the-same-marginals-p03" data-kind="prose">Shell 2. Objects: tau, the subsequence of timesteps.
 eta, the stochasticity knob in [0, 1]. sigma_t(eta),
 the per-jump noise scale. x0_hat, the implied clean
 prediction. eps_hat, the network output. Units:
 unit-free (scalar toy). Shapes: scalars here, data
 shaped in practice.</p>
-<p>Shell 3. One rule: choose any forward process whose
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p04" data-kind="prose">Shell 3. One rule: choose any forward process whose
 marginals q(x_t | x_0) match the DDPM marginals, then
 any reverse consistent with those marginals is valid.
 The DDIM family does this with a non-Markovian
 forward. Justified assumption: the network was
 trained on the marginals q(x_t | x_0), so only the
 marginals matter for reusing it.</p>
-<p>Shell 4. Derive the algorithm: the DDIM reverse step
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p05" data-kind="prose">Shell 4. Derive the algorithm: the DDIM reverse step
 x_{t-1} = sqrt(ab_{t-1}) x0_hat + sqrt(1 - ab_{t-1}
 - sigma^2) eps_hat + sigma z. With sigma = 0 the
 step is deterministic (C01, C02).</p>
-<p>Shell 5. Check the invariant: for any sigma, the
+<p data-term="0.15405473" id="mechanism-a-fewer-steps-with-the-same-marginals-p06" data-kind="prose">Shell 5. Check the invariant: for any sigma, the
 marginal variance sums right: sigma^2 + (1 -
 ab_{t-1} - sigma^2) = 1 - ab_{t-1}. Verified:
 0.15405473 + 0.40507252 = 0.55912725 = 1 -
 ab_90. The marginals hold for every eta.</p>
-<p>Shell 6. Change ONE factor: eta 0 -&gt; 1 on the fixed
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p07" data-kind="prose">Shell 6. Change ONE factor: eta 0 -&gt; 1 on the fixed
 x_T. Predict: eta = 0 gives bit-identical
 trajectories across seeds, eta = 1 differs.
 Measured: max |diff| &lt; 1e-12 for eta = 0, &gt;
 1e-6 for eta = 1. Controls: same x_T, same net.</p>
-<p>Shell 7. Counterexample: skip steps with the plain
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p08" data-kind="prose">Shell 7. Counterexample: skip steps with the plain
 DDPM reverse kernel (no DDIM construction). The
 kernel assumes small steps, a 10x jump breaks the
 Gaussian posterior approximation and the marginals
 drift. Skipping steps without changing the process
 is the broken assumption.</p>
-<p>Shell 8. Compare: DDIM-10 versus DDPM-100 at equal
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p09" data-kind="prose">Shell 8. Compare: DDIM-10 versus DDPM-100 at equal
 network quality. DDIM-10 uses 10 evals, DDPM-100
 uses 100. The tradeoff is discretization error
 versus compute. Neither dominates, the schedule
 and eta choose the operating point.</p>
-<p>Shell 9. Falsifiable extension: on the toy,
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p10" data-kind="prose">Shell 9. Falsifiable extension: on the toy,
 measure the endpoint error |x_0 - 2.0| for
 subsequence lengths S in {5, 10, 20, 50, 100}
 at eta = 0 with the constant net. Predict:
 error falls as S grows, with diminishing
 returns past S = 20.</p>
-<p>Shell 10. Production: the sampler is a deployable
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p11" data-kind="prose">Shell 10. Production: the sampler is a deployable
 choice separate from the trained net. The
 stakeholder decision: pick S and eta by the
 latency budget and a fixed sample-quality
@@ -256,9 +265,9 @@ metric, then freeze all three (net, schedule,
 sampler). Changing one after launch changes
 the product.</p>
 <h3 id="c01-ddim-and-the-non-markovian-construction">C01, DDIM and the non-Markovian construction</h3>
-<p>Motivating question: how can a diffusion model
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p12" data-kind="prose">Motivating question: how can a diffusion model
 skip timesteps without retraining?</p>
-<p>Start from zero. The DDPM forward process is
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p13" data-kind="prose">Start from zero. The DDPM forward process is
 Markov: x_t depends on x_{t-1}. The DDIM
 construction drops the Markov requirement and
 keeps only the marginals: q(x_t | x_0) =
@@ -267,19 +276,19 @@ DDPM. Any joint process with those marginals
 trains the same epsilon network, because the
 training loss only ever sees (x_0, x_t, t)
 triples drawn from the marginals.</p>
-<p>Mental model: the marginals are the contract
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p14" data-kind="prose">Mental model: the marginals are the contract
 between training and sampling. The Markov
 chain was one implementation of the contract.
 DDIM is another implementation of the same
 contract, designed so that big jumps stay
 exact.</p>
-<p>Variables and shapes: tau_1 &lt; &hellip; &lt; tau_S, the
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p15" data-kind="prose">Variables and shapes: tau_1 &lt; &hellip; &lt; tau_S, the
 subsequence (S = 10 here). eta in [0, 1].
 sigma_t(eta) = eta sqrt((1 - ab_{t-1})/(1 -
 ab_t)) sqrt(1 - ab_t/ab_{t-1}). x0_hat =
 (x_t - sqrt(1 - ab_t) eps_hat)/sqrt(ab_t).
 All scalars in the toy.</p>
-<p>Derivation. Define the DDIM forward posterior
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p16" data-kind="prose">Derivation. Define the DDIM forward posterior
 q(x_{t-1} | x_t, x_0) = N(sqrt(ab_{t-1}) x_0
 + sqrt(1 - ab_{t-1} - sigma_t^2) (x_t -
 sqrt(ab_t) x_0)/sqrt(1 - ab_t), sigma_t^2).
@@ -291,7 +300,7 @@ sigma_t^2 = 1 - ab_{t-1}. The marginal
 q(x_{t-1} | x_0) matches DDPM for every
 sigma_t. The reverse step replaces x_0 by
 x0_hat and eps by eps_hat.</p>
-<p>Computed numbers. Jump 100 -&gt; 90. sigma(eta =
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p17" data-kind="prose">Computed numbers. Jump 100 -&gt; 90. sigma(eta =
 0) = 0. sigma(eta = 1) = 0.39249806, and
 sigma^2 = 0.15405473 equals the jump posterior
 variance (1 - ab_90)/(1 - ab_100) (1 -
@@ -303,8 +312,8 @@ recovers. Deterministic jump: x_100 =
 1.60480905, x0_hat = 2.13230847, x_90 =
 sqrt(0.440873) 2.13230847 + sqrt(0.559127)
 0.4 = 1.71491474.</p>
-<p>Code. Minimal reference:</p>
-<pre><code class="language-python">import numpy as np
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p18" data-kind="prose">Code. Minimal reference:</p>
+<pre id="mechanism-a-fewer-steps-with-the-same-marginals-code01"><code class="language-python">import numpy as np
 def ddim_sigma(ab_t, ab_prev, eta):
     return eta * np.sqrt((1 - ab_prev) / (1 - ab_t)) * np.sqrt(1 - ab_t / ab_prev)
 def ddim_step(x_t, eps_hat, ab_t, ab_prev, eta, z):
@@ -314,14 +323,14 @@ def ddim_step(x_t, eps_hat, ab_t, ab_prev, eta, z):
             + np.sqrt(max(1 - ab_prev - s ** 2, 0.0)) * eps_hat
             + s * z)
 </code></pre>
-<p>Checks. (1) eta = 0 gives s = 0 exactly.
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p19" data-kind="prose">Checks. (1) eta = 0 gives s = 0 exactly.
 (2) The marginal variance identity holds to
 1e-12. (3) Round-trip: eps -&gt; x0_hat -&gt; eps
 recovers 0.4 to 1e-12 (C12 battery).</p>
-<p>Costs. Per jump: one network evaluation plus
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p20" data-kind="prose">Costs. Per jump: one network evaluation plus
 O(d) algebra. S jumps cost S evals. Memory:
 two states (x_t, x0_hat), O(d).</p>
-<p>Alternatives. DDPM reverse kernel on the
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p21" data-kind="prose">Alternatives. DDPM reverse kernel on the
 subsequence: valid only for small jumps,
 breaks the Gaussian approximation on 10x
 jumps. Ancestral sampling with the full
@@ -330,21 +339,21 @@ boundary: use DDIM when evals are the
 bottleneck and the net is fixed, use the
 full chain when eval budget allows and
 maximum fidelity matters.</p>
-<p>Failure case. eta &gt; 1: sigma exceeds the
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p22" data-kind="prose">Failure case. eta &gt; 1: sigma exceeds the
 marginal budget, 1 - ab_{t-1} - sigma^2
 turns negative, the square root fails. The
 C12 battery asserts sigma &lt;= sqrt(1 -
 ab_{t-1}) for eta in [0, 1].</p>
-<p>Research extension. The subsequence itself
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p23" data-kind="prose">Research extension. The subsequence itself
 is a design choice (C03). Open: learn tau
 by minimizing endpoint error on a validation
 set, with S fixed. Falsifiable: a learned
 tau beats uniform tau on the toy by a
 measured margin.</p>
 <h3 id="c02-stochastic-versus-deterministic-sampling">C02, stochastic versus deterministic sampling</h3>
-<p>Motivating question: when the noise knob eta
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p24" data-kind="prose">Motivating question: when the noise knob eta
 is 0, is the sampler still random?</p>
-<p>Start from zero. The only randomness in the
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p25" data-kind="prose">Start from zero. The only randomness in the
 DDIM reverse step is sigma z. Set eta = 0:
 sigma = 0, the z term vanishes, and the whole
 trajectory from x_T to x_0 is a deterministic
@@ -353,14 +362,14 @@ x_T ~ N(0, I) is still random: different
 seeds draw different x_T and give different
 samples. Deterministic means reproducible
 given x_T, not constant.</p>
-<p>Mental model: eta = 0 turns the sampler into
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p26" data-kind="prose">Mental model: eta = 0 turns the sampler into
 an ODE solver (the probability-flow ODE at
 U09-C04). eta = 1 keeps it an SDE sampler.
 The knob interpolates between solving and
 sampling.</p>
-<p>Variables: eta in [0, 1], z ~ N(0, 1) per
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p27" data-kind="prose">Variables: eta in [0, 1], z ~ N(0, 1) per
 jump, x_T fixed across the comparison.</p>
-<p>Computed numbers. Fixed x_T (built from eps
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p28" data-kind="prose">Computed numbers. Fixed x_T (built from eps
 draw 0.7). eta = 0, seeds 0 vs 1: max
 |diff| over the 10-step trajectories &lt;
 1e-12, bit-identical. eta = 1, seeds 0 vs 1:
@@ -372,16 +381,16 @@ x_0 = 2.408479&hellip; (mid-trajectory points
 2.0 because the constant net (eps_hat = 0.4
 vs true 0.5) errs on every step and the
 deterministic path accumulates the bias.</p>
-<p>Code: the ddim_step above, loop over tau
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p29" data-kind="prose">Code: the ddim_step above, loop over tau
 reversed.</p>
-<p>Checks. (1) Two runs, same seed, eta = 0:
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p30" data-kind="prose">Checks. (1) Two runs, same seed, eta = 0:
 identical. (2) eta in (0, 1): partial noise,
 trajectories differ but less than eta = 1.
 (3) x_T redrawn: different sample even at
 eta = 0.</p>
-<p>Costs. Same as C01 per jump. Determinism
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p31" data-kind="prose">Costs. Same as C01 per jump. Determinism
 costs nothing extra, it removes the z draws.</p>
-<p>Alternatives. Full SDE sampling (eta = 1):
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p32" data-kind="prose">Alternatives. Full SDE sampling (eta = 1):
 more diverse samples, less reproducible.
 ODE solving (eta = 0): reproducible,
 invertible in principle, enables editing by
@@ -389,21 +398,21 @@ latent manipulation. Selection boundary:
 use eta = 0 for reproducibility, inversion,
 and interpolation, eta = 1 when maximum
 sample diversity matters.</p>
-<p>Failure case. Deterministic sampling with a
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p33" data-kind="prose">Failure case. Deterministic sampling with a
 biased net accumulates bias: the toy
 endpoint 2.408479 vs true 2.0 is the
 demonstration. Stochasticity can mask a
 biased net, determinism exposes it. Debug
 rule: test a new net at eta = 0 first.</p>
-<p>Research extension. Measure the bias-variance
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p34" data-kind="prose">Research extension. Measure the bias-variance
 split of the endpoint error across eta in
 {0, 0.5, 1} on the toy with a noisy net.
 Predict: eta = 0 minimizes variance, eta =
 1 minimizes bias accumulation.</p>
 <h3 id="c03-step-schedules">C03, step schedules</h3>
-<p>Motivating question: given 10 evaluations,
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p35" data-kind="prose">Motivating question: given 10 evaluations,
 which 10 timesteps?</p>
-<p>Start from zero. Uniform tau = [10, 20, &hellip;,
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p36" data-kind="prose">Start from zero. Uniform tau = [10, 20, &hellip;,
 100] spends evals evenly. But the signal
 changes fastest where alpha_bar moves
 fastest, which is at small t on this
@@ -411,13 +420,13 @@ schedule (ab drops 0.989998 -&gt; 0.960553 in
 the first jump, only 0.440873 -&gt; 0.363563
 in the last). A late-dense schedule puts
 more steps where the chain moves most.</p>
-<p>Mental model: evals are a budget. Spend
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p37" data-kind="prose">Mental model: evals are a budget. Spend
 them where alpha_bar has the steepest
 slope, the same way quadrature puts points
 where the integrand varies.</p>
-<p>Variables: tau, length S. ab_tau, the
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p38" data-kind="prose">Variables: tau, length S. ab_tau, the
 cumulative alphas at the subsequence.</p>
-<p>Computed numbers. Uniform tau: [10, 20, 30,
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p39" data-kind="prose">Computed numbers. Uniform tau: [10, 20, 30,
 40, 50, 60, 70, 80, 90, 100], ab from
 0.989998 down to 0.363563. Late-dense tau:
 [1, 20, 39, 55, 69, 80, 88, 95, 98, 100],
@@ -427,52 +436,54 @@ the last 10% of the chain (95 -&gt; 98 -&gt;
 100) where the uniform schedule takes one.
 Eval counts: DDPM 100, DDIM-10 10, a 10x
 reduction either way.</p>
-<p>Code: build tau by np.linspace for uniform,
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p40" data-kind="prose">Code: build tau by np.linspace for uniform,
 by 100 - linspace(0, 10, S)^2 rounded for
 late-dense.</p>
-<p>Checks. (1) tau is strictly increasing and
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p41" data-kind="prose">Checks. (1) tau is strictly increasing and
 ends at T. (2) ab_tau is strictly
 decreasing. (3) The DDIM sigma formula
 never divides by zero because ab_t &lt; 1 for
 t &gt;= 1.</p>
-<p>Costs. Schedule choice is free at sampling
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p42" data-kind="prose">Costs. Schedule choice is free at sampling
 time, it only changes which ab values the
 loop reads.</p>
-<p>Alternatives. Quadratic (early-dense),
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p43" data-kind="prose">Alternatives. Quadratic (early-dense),
 uniform, learned. Selection boundary: match
 the schedule to where the net is most
 accurate, the toy has a constant net, so
 the comparison needs a t-dependent net to
 be meaningful (lab task).</p>
-<p>Failure case. tau with a repeated value:
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p44" data-kind="prose">Failure case. tau with a repeated value:
 ab_t = ab_{t-1} makes sigma divide by zero
 and the jump a no-op that still costs an
 eval. Assert strict increase.</p>
-<p>Research extension. The falsifiable
+<p id="mechanism-a-fewer-steps-with-the-same-marginals-p45" data-kind="prose">Research extension. The falsifiable
 experiment from shell 9: endpoint error vs
 S on the toy. Predict diminishing returns
 past S = 20.</p>
+<span id="mechanism-a-fewer-steps-with-the-same-marginals-end" data-end></span>
+
 <hr />
 <h2 id="mechanism-b-the-network-that-knows-what-time-it-is">Mechanism B, the network that knows what time it is</h2>
-<p>Shell 0. The question: the epsilon network takes
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p01" data-kind="prose">Shell 0. The question: the epsilon network takes
 (x_t, t) and returns eps_hat. What architecture
 handles images at many noise levels, and how does
 t enter the computation? What would change if t
 never entered? The observable result: a time-blind
 net predicts the same eps_hat at t = 10 and t =
 90, which is wrong at one of them.</p>
-<p>Shell 1. The toy: a tiny U-Net on 1x8x8 input.
+<p data-term="6025" id="mechanism-b-the-network-that-knows-what-time-it-is-p02" data-kind="prose">Shell 1. The toy: a tiny U-Net on 1x8x8 input.
 Block params: d1 80, d2 1168, bottleneck 2320,
 u1 2312, u2 145. Total 6025. One forward:
 156672 FLOPs. Timestep embedding at t = 50, d =
 8: [-0.262375, 0.964966, -0.958924, 0.283662,
 0.479426, 0.877583, 0.049979, 0.99875].</p>
-<p>Shell 2. Objects: the U-Net (down path,
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p03" data-kind="prose">Shell 2. Objects: the U-Net (down path,
 bottleneck, up path, skip connections). The
 sinusoidal embedding PE(t). Units: params are
 counts, FLOPs are multiply-adds x2. Shapes: the
 toy uses (C, H, W) feature maps.</p>
-<p>Shell 3. One rule: the net must see t, because
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p04" data-kind="prose">Shell 3. One rule: the net must see t, because
 the denoising task at t = 10 (fine detail) and
 t = 90 (global structure) are different tasks.
 The embedding gives t a vector form the net can
@@ -480,49 +491,49 @@ use. Justified assumption: nearby t need
 similar embeddings (cos(emb49, emb50) =
 0.8838), distant t need different ones
 (cos(emb10, emb90) = 0.3594).</p>
-<p>Shell 4. Derive the algorithm: sinusoidal
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p05" data-kind="prose">Shell 4. Derive the algorithm: sinusoidal
 PE(t, 2i) = sin(t / 10000^{2i/d}), PE(t, 2i+1)
 = cos(&hellip;). The U-Net: conv-down, conv-down,
 bottleneck, up-concat-conv, up-concat-conv.
 Skip connections concatenate encoder maps
 with decoder maps at matching resolution.</p>
-<p>Shell 5. Check the invariant: skip-connection
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p06" data-kind="prose">Shell 5. Check the invariant: skip-connection
 shapes must match spatially: d1 out is 8x8x8,
 u2 sees 8x8 after upsampling. Concat channel
 counts: 16 + 16 = 32 into u1, 8 + 8 = 16
 into u2. Param count 6025 verified by the
 audit script.</p>
-<p>Shell 6. Change ONE factor: remove the
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p07" data-kind="prose">Shell 6. Change ONE factor: remove the
 timestep embedding (zeros). Predict: the net
 output no longer depends on t. Measured on
 the toy embedding: cos(emb50, emb90) drops
 from its true value to undefined (zero
 vector). The net becomes time-blind by
 construction.</p>
-<p>Shell 7. Counterexample: concat with
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p08" data-kind="prose">Shell 7. Counterexample: concat with
 mismatched spatial dims (7x7 encoder map
 into 8x8 decoder map). The concat fails with
 a shape error. Skip connections require the
 down path and up path to mirror each other.</p>
-<p>Shell 8. Compare: U-Net versus a plain conv
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p09" data-kind="prose">Shell 8. Compare: U-Net versus a plain conv
 stack with the same 6025 params but no
 skips. The skips carry fine detail past the
 bottleneck. Equal budget: the skips change
 where capacity goes, not how much.</p>
-<p>Shell 9. Falsifiable extension: train the toy
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p10" data-kind="prose">Shell 9. Falsifiable extension: train the toy
 U-Net on two noise levels only (t = 10, 90)
 with and without the embedding. Predict: the
 no-embedding net cannot beat the average of
 the two tasks.</p>
-<p>Shell 10. Production: the U-Net dominates
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p11" data-kind="prose">Shell 10. Production: the U-Net dominates
 serving cost (C11). The stakeholder decision:
 a smaller net with more DDIM steps versus a
 bigger net with fewer steps, at fixed total
 FLOPs.</p>
 <h3 id="c04-the-u-net-noise-predictor">C04, the U-Net noise predictor</h3>
-<p>Motivating question: what does eps_theta(x_t,
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p12" data-kind="prose">Motivating question: what does eps_theta(x_t,
 t) look like inside?</p>
-<p>Start from zero. The input is a noisy image
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p13" data-kind="prose">Start from zero. The input is a noisy image
 x_t plus a timestep t. The output is the
 predicted noise, same shape as the input. The
 U-Net does this with an encoder that shrinks
@@ -531,12 +542,12 @@ bottleneck, and a decoder that grows the
 image back, with skip connections copying
 encoder feature maps into the decoder at each
 resolution.</p>
-<p>Mental model: the encoder asks &ldquo;what is the
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p14" data-kind="prose">Mental model: the encoder asks &ldquo;what is the
 global structure&rdquo;, the bottleneck holds the
 compressed answer, the decoder asks &ldquo;where
 exactly&rdquo;, and the skips hand the decoder the
 fine detail the bottleneck dropped.</p>
-<p>Variables and shapes (toy): input 1x8x8.
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p15" data-kind="prose">Variables and shapes (toy): input 1x8x8.
 d1: conv 1-&gt;8, k3, out 8x8x8. Pool to 4x4.
 d2: conv 8-&gt;16, k3, out 16x4x4. Pool to
 2x2. Bottleneck: conv 16-&gt;16, k3, out
@@ -544,7 +555,7 @@ d2: conv 8-&gt;16, k3, out 16x4x4. Pool to
 (16+16=32). u1: conv 32-&gt;8, k3, out 8x4x4.
 Upsample to 8x8, concat with d1 (8+8=16).
 u2: conv 16-&gt;1, k3, out 1x8x8.</p>
-<p>Derivation of the counts. Conv params =
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p16" data-kind="prose">Derivation of the counts. Conv params =
 C_in C_out k^2 + C_out (bias). d1: 1 8 9 +
 8 = 80. d2: 8 16 9 + 16 = 1168.
 Bottleneck: 16 16 9 + 16 = 2320. u1: 32 8 9
@@ -552,47 +563,47 @@ Bottleneck: 16 16 9 + 16 = 2320. u1: 32 8 9
 6025. FLOPs per conv = 2 C_in C_out k^2 H
 W: 9216 + 36864 + 18432 + 73728 + 18432 =
 156672 per forward.</p>
-<p>Computed numbers: the per-block table above,
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p17" data-kind="prose">Computed numbers: the per-block table above,
 total 6025 params, 156672 FLOPs. DDPM-100
 sampling: 15.6672 MFLOP. DDIM-10: 1.56672
 MFLOP.</p>
-<p>Code. Shape-check reference:</p>
-<pre><code class="language-python">def unet_shapes():
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p18" data-kind="prose">Code. Shape-check reference:</p>
+<pre id="mechanism-b-the-network-that-knows-what-time-it-is-code01"><code class="language-python">def unet_shapes():
     # (name, C_in, C_out, H, W, params)
     return [(&quot;d1&quot;, 1, 8, 8, 8, 80), (&quot;d2&quot;, 8, 16, 4, 4, 1168),
             (&quot;bn&quot;, 16, 16, 2, 2, 2320), (&quot;u1&quot;, 32, 8, 4, 4, 2312),
             (&quot;u2&quot;, 16, 1, 8, 8, 145)]
 </code></pre>
-<p>Checks. (1) Param sum = 6025. (2) Skip
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p19" data-kind="prose">Checks. (1) Param sum = 6025. (2) Skip
 spatial match: d1 H = u2 in-H = 8, d2 H =
 u1 in-H = 4. (3) Output shape = input shape
 (1x8x8).</p>
-<p>Costs. 156672 FLOPs per eval, all in the
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p20" data-kind="prose">Costs. 156672 FLOPs per eval, all in the
 convs. Memory: the largest map is 16x4x4 =
 256 floats, the toy is tiny by design.</p>
-<p>Alternatives. Plain conv stack (no skips):
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p21" data-kind="prose">Alternatives. Plain conv stack (no skips):
 same params, loses fine detail. Vision
 transformer denoiser: no resolution pyramid,
 different inductive bias. Selection
 boundary: U-Net when multi-scale structure
 matters (images), alternatives when the
 data has no natural resolution pyramid.</p>
-<p>Failure case. Forgetting the skip concat
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p22" data-kind="prose">Failure case. Forgetting the skip concat
 channel doubling: u1 built as 16-&gt;8
 instead of 32-&gt;8 gives params 16 8 9 + 8 =
 1160, and the forward fails at runtime with
 a channel mismatch. Count channels before
 building.</p>
-<p>Research extension. The toy U-Net never
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p23" data-kind="prose">Research extension. The toy U-Net never
 trains here. Open: train it on the scalar
 toy at 4 noise levels and measure the
 denoising MSE per level. Falsifiable: the
 trained net beats the constant eps_hat =
 0.4 baseline at every level.</p>
 <h3 id="c05-the-timestep-embedding">C05, the timestep embedding</h3>
-<p>Motivating question: how does an integer t
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p24" data-kind="prose">Motivating question: how does an integer t
 become something a conv net can use?</p>
-<p>Start from zero. Convs take tensors, not
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p25" data-kind="prose">Start from zero. Convs take tensors, not
 integers. The sinusoidal embedding maps t to
 a vector: PE(t, 2i) = sin(t / 10000^{2i/d}),
 PE(t, 2i+1) = cos(t / 10000^{2i/d}). Low
@@ -601,21 +612,21 @@ resolution), high indices vary slowly
 (coarse). The net adds or concatenates this
 vector into its feature maps, usually after
 a small MLP.</p>
-<p>Mental model: the embedding is a clock face
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p26" data-kind="prose">Mental model: the embedding is a clock face
 with many hands. Fast hands tell nearby
 timesteps apart, slow hands give the rough
 position in the chain.</p>
-<p>Variables: t integer in [0, T], d the
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p27" data-kind="prose">Variables: t integer in [0, T], d the
 embedding dim (8 in the toy).</p>
-<p>Computed numbers. emb(50) = [-0.262375,
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p28" data-kind="prose">Computed numbers. emb(50) = [-0.262375,
 0.964966, -0.958924, 0.283662, 0.479426,
 0.877583, 0.049979, 0.99875]. emb(0) = [0,
 1, 0, 1, 0, 1, 0, 1]: at t = 0 all sines
 are 0, all cosines 1. cos(emb49, emb50) =
 0.8838 (nearby t agree). cos(emb10, emb90)
 = 0.3594 (distant t differ).</p>
-<p>Code:</p>
-<pre><code class="language-python">import numpy as np
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p29" data-kind="prose">Code:</p>
+<pre id="mechanism-b-the-network-that-knows-what-time-it-is-code02"><code class="language-python">import numpy as np
 def temb(t, d=8):
     i = np.arange(d // 2)
     ang = t / (10000.0 ** (2.0 * i / d))
@@ -624,35 +635,37 @@ def temb(t, d=8):
     out[1::2] = np.cos(ang)
     return out
 </code></pre>
-<p>Checks. (1) emb(0) = [0,1,0,1,&hellip;]
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p30" data-kind="prose">Checks. (1) emb(0) = [0,1,0,1,&hellip;]
 exactly. (2) Nearby t have high cosine
 similarity. (3) The embedding is
 deterministic: same t gives the same
 vector (no RNG inside).</p>
-<p>Costs. O(d) to compute, negligible next to
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p31" data-kind="prose">Costs. O(d) to compute, negligible next to
 156672 conv FLOPs. Usually precomputed for
 all T once.</p>
-<p>Alternatives. Learned embedding table (T x
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p32" data-kind="prose">Alternatives. Learned embedding table (T x
 d params): more flexible, costs T d
 params, cannot extrapolate past T. One-hot
 t: T-dim, wasteful. Selection boundary:
 sinusoidal when T is fixed and
 extrapolation matters, learned when the
 schedule is fixed and capacity is free.</p>
-<p>Failure case. Embedding computed in
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p33" data-kind="prose">Failure case. Embedding computed in
 float32 with t as a large int: t /
 10000^{2i/d} is fine, but casting a huge t
 to float32 loses integer precision and two
 different large t collide. Keep t in
 int64 or float64 until the division.</p>
-<p>Research extension. Measure the net&rsquo;s
+<p id="mechanism-b-the-network-that-knows-what-time-it-is-p34" data-kind="prose">Research extension. Measure the net&rsquo;s
 t-sensitivity: the norm of d eps_hat / d
 emb(t) at several t on a trained toy net.
 Predict: sensitivity peaks where the
 denoising task changes fastest.</p>
+<span id="mechanism-b-the-network-that-knows-what-time-it-is-end" data-end></span>
+
 <hr />
 <h2 id="mechanism-c-steering-the-reverse-process">Mechanism C, steering the reverse process</h2>
-<p>Shell 0. The question: training minimizes one
+<p id="mechanism-c-steering-the-reverse-process-p01" data-kind="prose">Shell 0. The question: training minimizes one
 loss, but sampling quality is what ships. How
 do the loss weights, the prediction target,
 and the conditioning signal change what comes
@@ -660,7 +673,7 @@ out? What would change if the loss weighted
 all timesteps equally? The observable result:
 the net spends capacity where the weight is
 high, and sampling follows the net.</p>
-<p>Shell 1. The toy: ELBO weight w(t) =
+<p data-term="17.41" id="mechanism-c-steering-the-reverse-process-p02" data-kind="prose">Shell 1. The toy: ELBO weight w(t) =
 beta_t/(2 ab_t (1 - ab_t)). w(1) = 0.50005,
 w(50) = 0.02873, w(100) = 0.04322.
 Normalized: w(1)/w(50) = 17.41,
@@ -670,13 +683,13 @@ everywhere. Score estimate at t = 50:
 -0.84738932. Guidance: w = 0..3 moves
 x0_hat 2.080317 -&gt; 2.026772 -&gt; 1.973228 -&gt;
 1.919683.</p>
-<p>Shell 2. Objects: w(t), the per-timestep
+<p id="mechanism-c-steering-the-reverse-process-p03" data-kind="prose">Shell 2. Objects: w(t), the per-timestep
 loss weight. s_hat, the score estimate.
 x0_hat, the Tweedie mean. eps_u, eps_c, the
 unconditional and conditional predictions.
 g (guidance scale), the CFG weight. Units:
 weights unit-free, scores 1/x-units.</p>
-<p>Shell 3. One rule: the training weight
+<p id="mechanism-c-steering-the-reverse-process-p04" data-kind="prose">Shell 3. One rule: the training weight
 decides where capacity goes, the sampling
 rule decides how the prediction is used.
 They are separate choices. The ELBO weight
@@ -685,52 +698,52 @@ simplified weight ignores this. Justified
 assumption: with sigma_t^2 = beta_t the
 ELBO weight has the closed form above
 (U07-C07 derivation).</p>
-<p>Shell 4. Derive the algorithm: L_{t-1} =
+<p id="mechanism-c-steering-the-reverse-process-p05" data-kind="prose">Shell 4. Derive the algorithm: L_{t-1} =
 E[w(t) ||eps - eps_hat||^2] + const, with
 w(t) = beta_t^2/(2 sigma_t^2 ab_t (1 -
 ab_t)). Tweedie: x0_hat = (x_t + (1 -
 ab_t) s_hat)/sqrt(ab_t), s_hat = -eps_hat
 / sqrt(1 - ab_t). CFG: eps_tilde = eps_u
 + g (eps_c - eps_u).</p>
-<p>Shell 5. Check the invariant: Tweedie-x0
+<p data-term="2.05354466" id="mechanism-c-steering-the-reverse-process-p06" data-kind="prose">Shell 5. Check the invariant: Tweedie-x0
 equals eps-x0 to 1e-12 (2.05354466 both
 ways). The two formulas are the same
 object, not two approximations.</p>
-<p>Shell 6. Change ONE factor: replace the
+<p id="mechanism-c-steering-the-reverse-process-p07" data-kind="prose">Shell 6. Change ONE factor: replace the
 ELBO weight by the uniform weight. Predict:
 capacity moves from low-t to high-t. The
 toy cannot train, so this stays a
 prediction with the weight ratio 17.74 as
 the evidence for its size.</p>
-<p>Shell 7. Counterexample: guidance scale g =
+<p id="mechanism-c-steering-the-reverse-process-p08" data-kind="prose">Shell 7. Counterexample: guidance scale g =
 10 on the toy blend. The linear formula
 gives x0_hat far outside the data range
 (overshoot, C10). The blend is linear, so
 large g extrapolates, not interpolates.</p>
-<p>Shell 8. Compare: classifier guidance needs
+<p id="mechanism-c-steering-the-reverse-process-p09" data-kind="prose">Shell 8. Compare: classifier guidance needs
 a separate classifier on noisy inputs,
 classifier-free guidance trains one net
 with conditioning dropout. Equal budget:
 CFG costs one extra forward pass per step
 (two evals), classifier guidance costs a
 classifier plus its gradients.</p>
-<p>Shell 9. Falsifiable extension: on the toy
+<p id="mechanism-c-steering-the-reverse-process-p10" data-kind="prose">Shell 9. Falsifiable extension: on the toy
 with a t-dependent net, train with ELBO
 weights versus uniform weights and measure
 the low-t denoising error. Predict: ELBO
 weights win at low t, uniform wins at high
 t.</p>
-<p>Shell 10. Production: guidance scale is a
+<p id="mechanism-c-steering-the-reverse-process-p11" data-kind="prose">Shell 10. Production: guidance scale is a
 product knob (quality vs diversity). The
 stakeholder decision: fix g by A/B on the
 shipped metric, not by vibes. The loss
 weight is frozen at train time, g stays
 tunable at serve time.</p>
 <h3 id="c06-loss-weighting">C06, loss weighting</h3>
-<p>Motivating question: why does DDPM train
+<p id="mechanism-c-steering-the-reverse-process-p12" data-kind="prose">Motivating question: why does DDPM train
 with a uniform weight when the ELBO says
 otherwise?</p>
-<p>Start from zero. The ELBO decomposes into
+<p id="mechanism-c-steering-the-reverse-process-p13" data-kind="prose">Start from zero. The ELBO decomposes into
 per-timestep KL terms. Each middle term is
 a weighted squared error: w(t) ||eps -
 eps_hat||^2 with w(t) = beta_t^2/(2
@@ -739,13 +752,13 @@ sigma_t^2 = beta_t choice, w(t) =
 beta_t/(2 ab_t (1 - ab_t)). The simplified
 DDPM loss drops w(t) and uses weight 1 at
 every t.</p>
-<p>Mental model: w(t) is a budget sheet. It
+<p id="mechanism-c-steering-the-reverse-process-p14" data-kind="prose">Mental model: w(t) is a budget sheet. It
 says which timesteps the bound cares about.
 Uniform weight rewrites the budget sheet
 to &ldquo;every timestep equal&rdquo;. The net obeys
 the sheet it is given.</p>
-<p>Variables: t in 1..T, w(t) unit-free.</p>
-<p>Derivation sketch. L_{t-1} = E_q[KL(q(x_
+<p id="mechanism-c-steering-the-reverse-process-p15" data-kind="prose">Variables: t in 1..T, w(t) unit-free.</p>
+<p id="mechanism-c-steering-the-reverse-process-p16" data-kind="prose">Derivation sketch. L_{t-1} = E_q[KL(q(x_
 {t-1} | x_t, x_0) || p(x_{t-1} | x_t))].
 Both Gaussians share the variance
 sigma_t^2, so the KL is ||mu_q - mu_p||^2
@@ -754,7 +767,7 @@ x_0 (true vs predicted), converting x_0
 to eps introduces the factor beta_t^2 /
 (ab_t (1 - ab_t)). Collect: w(t) as
 above. (Full algebra in U07-C07.)</p>
-<p>Computed numbers. w(1) = 0.50005, w(50) =
+<p id="mechanism-c-steering-the-reverse-process-p17" data-kind="prose">Computed numbers. w(1) = 0.50005, w(50) =
 0.02873, w(100) = 0.04322. Normalized by
 w(50): 17.41, 1.00, 1.50. Max over min:
 17.74. The ELBO cares 17x more about t =
@@ -762,37 +775,37 @@ w(50): 17.41, 1.00, 1.50. Max over min:
 simplified loss treats them equally. This
 curve is the item the U07 lesson left
 stated-not-plotted, figure f02 plots it.</p>
-<p>Code: w = betas / (2 * ab * (1 - ab)).</p>
-<p>Checks. (1) w(t) &gt; 0 for all t. (2)
+<p id="mechanism-c-steering-the-reverse-process-p18" data-kind="prose">Code: w = betas / (2 * ab * (1 - ab)).</p>
+<p id="mechanism-c-steering-the-reverse-process-p19" data-kind="prose">Checks. (1) w(t) &gt; 0 for all t. (2)
 w(1)/w(50) = 17.41 matches the hand
 ratio. (3) At t = T the weight rises
 again (1.50): the prior end matters more
 than the middle.</p>
-<p>Costs. Weighting is free: multiply the
+<p id="mechanism-c-steering-the-reverse-process-p20" data-kind="prose">Costs. Weighting is free: multiply the
 per-t loss by a precomputed scalar.</p>
-<p>Alternatives. Uniform (simplified): best
+<p id="mechanism-c-steering-the-reverse-process-p21" data-kind="prose">Alternatives. Uniform (simplified): best
 sample quality in practice, weaker
 likelihood. ELBO weights: best likelihood,
 worse samples. SNR-based weights:
 compromise. Selection boundary: uniform
 for generation, ELBO weights when the
 likelihood number is the product metric.</p>
-<p>Failure case. Weighting by 1/ab_t without
+<p id="mechanism-c-steering-the-reverse-process-p22" data-kind="prose">Failure case. Weighting by 1/ab_t without
 the (1 - ab_t): blows up at t = T where
 ab_t is small, training diverges on the
 noisiest steps. The full denominator
 matters.</p>
-<p>Research extension. The coefficient-ratio
+<p id="mechanism-c-steering-the-reverse-process-p23" data-kind="prose">Research extension. The coefficient-ratio
 curve is the open question from U07 shell
 9. Measure sample quality vs likelihood
 across five weighting schemes on one
 dataset, fixed net size. Falsifiable: no
 single weighting wins both metrics.</p>
 <h3 id="c07-the-mean-and-score-estimates">C07, the mean and score estimates</h3>
-<p>Motivating question: the net predicts
+<p id="mechanism-c-steering-the-reverse-process-p24" data-kind="prose">Motivating question: the net predicts
 noise. How do you get a clean-image
 estimate and a score estimate from it?</p>
-<p>Start from zero. Three views of one
+<p id="mechanism-c-steering-the-reverse-process-p25" data-kind="prose">Start from zero. Three views of one
 object. Epsilon: eps_hat, the predicted
 noise. Mean: x0_hat = (x_t - sqrt(1 -
 ab_t) eps_hat)/sqrt(ab_t), the implied
@@ -801,15 +814,15 @@ sqrt(1 - ab_t), the estimated gradient of
 log p(x_t). Tweedie&rsquo;s formula connects the
 mean and the score: x0_hat = (x_t + (1 -
 ab_t) s_hat)/sqrt(ab_t).</p>
-<p>Mental model: eps_hat points from the
+<p id="mechanism-c-steering-the-reverse-process-p26" data-kind="prose">Mental model: eps_hat points from the
 noisy image toward the noise that was
 added. Flip its sign and scale it, and it
 points uphill on the noisy density (the
 score). Subtract it, and the noise comes
 off (the mean).</p>
-<p>Variables: x_t, eps_hat, ab_t scalars in
+<p id="mechanism-c-steering-the-reverse-process-p27" data-kind="prose">Variables: x_t, eps_hat, ab_t scalars in
 the toy. s_hat in 1/x units.</p>
-<p>Derivation. From x_t = sqrt(ab_t) x_0 +
+<p id="mechanism-c-steering-the-reverse-process-p28" data-kind="prose">Derivation. From x_t = sqrt(ab_t) x_0 +
 sqrt(1 - ab_t) eps, solve for x_0 with
 eps_hat in place of eps: the x0_hat
 formula. The score of N(sqrt(ab_t) x_0,
@@ -818,99 +831,99 @@ x_0)/(1 - ab_t) = -eps/sqrt(1 - ab_t),
 replace eps by eps_hat. Tweedie follows
 by substituting s_hat into the x0_hat
 expression.</p>
-<p>Computed numbers. At t = 50: s_hat =
+<p id="mechanism-c-steering-the-reverse-process-p29" data-kind="prose">Computed numbers. At t = 50: s_hat =
 -0.4/0.4720356 = -0.84738932. x0_hat via
 Tweedie: 2.05354466. x0_hat via eps:
 2.05354466. Match to 1e-12. This is the
 score-based reading of epsilon prediction
 that U07 forwarded to U09: the DDPM net
 is a score model in disguise.</p>
-<p>Code:</p>
-<pre><code class="language-python">s_hat = -eps_hat / np.sqrt(1 - ab_t)
+<p id="mechanism-c-steering-the-reverse-process-p30" data-kind="prose">Code:</p>
+<pre id="mechanism-c-steering-the-reverse-process-code01"><code class="language-python">s_hat = -eps_hat / np.sqrt(1 - ab_t)
 x0_hat = (x_t + (1 - ab_t) * s_hat) / np.sqrt(ab_t)
 </code></pre>
-<p>Checks. (1) The two x0_hat formulas
+<p id="mechanism-c-steering-the-reverse-process-p31" data-kind="prose">Checks. (1) The two x0_hat formulas
 agree. (2) s_hat has the sign opposite
 eps_hat. (3) At ab_t -&gt; 1 (t -&gt; 0),
 s_hat -&gt; -eps_hat/0 diverges: the score
 of a near-delta is steep. Guard the
 division.</p>
-<p>Costs. O(d) algebra, no extra network
+<p id="mechanism-c-steering-the-reverse-process-p32" data-kind="prose">Costs. O(d) algebra, no extra network
 call.</p>
-<p>Alternatives. v-prediction: v = sqrt(ab_t)
+<p id="mechanism-c-steering-the-reverse-process-p33" data-kind="prose">Alternatives. v-prediction: v = sqrt(ab_t)
 eps - sqrt(1 - ab_t) x_0, better behaved
 at the endpoints. x0-prediction: direct,
 worse at high noise. Selection boundary:
 eps for standard training, v when the
 schedule hits ab near 0 or 1.</p>
-<p>Failure case. Using s_hat at t = 0 in a
+<p id="mechanism-c-steering-the-reverse-process-p34" data-kind="prose">Failure case. Using s_hat at t = 0 in a
 Langevin corrector: division by sqrt(1 -
 ab_0) = 0. Start corrector steps at t &gt;=
 1.</p>
-<p>Research extension. The three
+<p id="mechanism-c-steering-the-reverse-process-p35" data-kind="prose">Research extension. The three
 parameterizations give different gradient
 noise. Measure Var(grad) per
 parameterization on the toy net.
 Falsifiable: v-prediction has the lowest
 variance at the schedule endpoints.</p>
 <h3 id="c08-conditional-models">C08, conditional models</h3>
-<p>Motivating question: how does the model
+<p id="mechanism-c-steering-the-reverse-process-p36" data-kind="prose">Motivating question: how does the model
 know which class to draw?</p>
-<p>Start from zero. Add a label y to the
+<p id="mechanism-c-steering-the-reverse-process-p37" data-kind="prose">Start from zero. Add a label y to the
 net: eps_hat(x_t, t, y). During training,
 pairs (x_0, y) give the supervision. At
 sampling, fix y and the reverse chain
 draws from p(x | y). The unconditional
 net eps_hat(x_t, t) is the special case
 where y is dropped (or a null token).</p>
-<p>Mental model: conditioning splits one
+<p id="mechanism-c-steering-the-reverse-process-p38" data-kind="prose">Mental model: conditioning splits one
 denoiser into many, one per class, that
 share all weights except the y pathway.</p>
-<p>Variables: y in {0, 1} in the toy.
+<p id="mechanism-c-steering-the-reverse-process-p39" data-kind="prose">Variables: y in {0, 1} in the toy.
 eps_hat(x, t, y) = eps_hat_uncond +
 delta_y, delta_0 = -0.05, delta_1 =
 +0.05.</p>
-<p>Computed numbers. At t = 50, x_50 =
+<p id="mechanism-c-steering-the-reverse-process-p40" data-kind="prose">Computed numbers. At t = 50, x_50 =
 1.99917538: unconditional x0_hat =
 2.05354466 (from C07). y = 1: eps_hat =
 0.45, x0_hat = (1.99917538 - 0.4720356
 0.45)/0.8815753 = 2.02677249. The label
 shifts the implied clean image by
 -0.0268.</p>
-<p>Code: pass y through the embedding and
+<p id="mechanism-c-steering-the-reverse-process-p41" data-kind="prose">Code: pass y through the embedding and
 add it to the timestep embedding before
 the U-Net blocks.</p>
-<p>Checks. (1) y = null recovers the
+<p id="mechanism-c-steering-the-reverse-process-p42" data-kind="prose">Checks. (1) y = null recovers the
 unconditional output. (2) Different y
 give different eps_hat. (3) The label
 path has nonzero gradient.</p>
-<p>Costs. One extra embedding lookup per
+<p id="mechanism-c-steering-the-reverse-process-p43" data-kind="prose">Costs. One extra embedding lookup per
 forward, negligible.</p>
-<p>Alternatives. Concatenate y as an input
+<p id="mechanism-c-steering-the-reverse-process-p44" data-kind="prose">Alternatives. Concatenate y as an input
 channel: simple, weaker. Cross-attention
 on y: stronger, costs attention. AdaGN
 (shift/scale norms by y+temb): the
 standard choice. Selection boundary:
 AdaGN for class labels, cross-attention
 for text.</p>
-<p>Failure case. Train conditional but
+<p id="mechanism-c-steering-the-reverse-process-p45" data-kind="prose">Failure case. Train conditional but
 sample with y = null without dropout
 training: the null path never trained
 and outputs garbage. Train with
 conditioning dropout (drop y 10-20% of
 the time) so the null path works (this
 is what CFG needs).</p>
-<p>Research extension. Measure the
+<p id="mechanism-c-steering-the-reverse-process-p46" data-kind="prose">Research extension. Measure the
 per-class sample quality vs the number
 of training examples per class on the
 toy mixture. Falsifiable: rare classes
 need the guidance of C09 to reach the
 hit rate of common classes.</p>
 <h3 id="c09-classifier-and-classifier-free-guidance">C09, classifier and classifier-free guidance</h3>
-<p>Motivating question: how do you push
+<p id="mechanism-c-steering-the-reverse-process-p47" data-kind="prose">Motivating question: how do you push
 samples toward the label without
 retraining?</p>
-<p>Start from zero. Two methods. Classifier
+<p id="mechanism-c-steering-the-reverse-process-p48" data-kind="prose">Start from zero. Two methods. Classifier
 guidance: train a classifier p(y | x_t)
 on noisy images, then tilt the reverse
 step along its gradient: eps_tilde =
@@ -919,7 +932,7 @@ p(y | x_t). The score of p(x_t | y) is
 the score of p(x_t) plus the score of
 p(y | x_t) (Bayes), and the classifier
 supplies the second term.</p>
-<p>Classifier-free guidance: train one net
+<p id="mechanism-c-steering-the-reverse-process-p49" data-kind="prose">Classifier-free guidance: train one net
 with conditioning dropout, giving both
 eps_c = eps_hat(x, t, y) and eps_u =
 eps_hat(x, t, null). Extrapolate: eps_
@@ -927,15 +940,15 @@ tilde = eps_u + g (eps_c - eps_u). At g
 = 1 this is the conditional prediction,
 g &gt; 1 pushes past it toward stronger
 conditioning.</p>
-<p>Mental model: classifier guidance steers
+<p id="mechanism-c-steering-the-reverse-process-p50" data-kind="prose">Mental model: classifier guidance steers
 with an external critic. CFG steers by
 exaggerating the difference between the
 conditional and unconditional
 predictions, no critic needed.</p>
-<p>Variables: s the classifier scale, g the
+<p id="mechanism-c-steering-the-reverse-process-p51" data-kind="prose">Variables: s the classifier scale, g the
 CFG weight (usually 1..8 in practice, 0..3
 in the toy).</p>
-<p>Computed numbers. Classifier guidance
+<p id="mechanism-c-steering-the-reverse-process-p52" data-kind="prose">Computed numbers. Classifier guidance
 toy: grad = 0.3, s = 1.0: eps_tilde =
 0.4 - 1.0 0.4720356 0.3 = 0.25838859.
 CFG toy: eps_u = 0.35, eps_c = 0.45.
@@ -950,105 +963,107 @@ observation noise the toy cannot resolve
 the diversity claim, it resolves the
 mean-shift mechanism. The lesson states
 this limit openly.</p>
-<p>Code:</p>
-<pre><code class="language-python">def cfg(eps_u, eps_c, g):
+<p id="mechanism-c-steering-the-reverse-process-p53" data-kind="prose">Code:</p>
+<pre id="mechanism-c-steering-the-reverse-process-code02"><code class="language-python">def cfg(eps_u, eps_c, g):
     return eps_u + g * (eps_c - eps_u)
 </code></pre>
-<p>Checks. (1) g = 0 gives eps_u, g = 1
+<p id="mechanism-c-steering-the-reverse-process-p54" data-kind="prose">Checks. (1) g = 0 gives eps_u, g = 1
 gives eps_c. (2) The blend is linear in
 g. (3) Classifier guidance with grad = 0
 recovers eps_hat.</p>
-<p>Costs. CFG doubles the evals per step
+<p id="mechanism-c-steering-the-reverse-process-p55" data-kind="prose">Costs. CFG doubles the evals per step
 (two forwards). Classifier guidance adds
 a classifier forward plus a backward pass
 per step.</p>
-<p>Alternatives. No guidance (g = 1 plain
+<p id="mechanism-c-steering-the-reverse-process-p56" data-kind="prose">Alternatives. No guidance (g = 1 plain
 conditional): maximum diversity, weaker
 class adherence. Selection boundary: CFG
 when one net must serve both modes,
 classifier guidance when a strong
 pretrained classifier exists and the
 diffusion net is frozen.</p>
-<p>Failure case. g = 10: x0_hat extrapolates
+<p id="mechanism-c-steering-the-reverse-process-p57" data-kind="prose">Failure case. g = 10: x0_hat extrapolates
 far past the data (C10 overshoot). The
 blend is linear, so large g is
 extrapolation. Cap g by watching samples,
 not by theory.</p>
-<p>Research extension. The quality/diversity
+<p id="mechanism-c-steering-the-reverse-process-p58" data-kind="prose">Research extension. The quality/diversity
 curve over g on a real dataset with FID
 and recall. Falsifiable: the FID-optimal
 g differs from the recall-optimal g.</p>
+<span id="mechanism-c-steering-the-reverse-process-end" data-end></span>
+
 <hr />
 <h2 id="mechanism-d-shipping-it-cost-and-correctness">Mechanism D, shipping it: cost and correctness</h2>
-<p>Shell 0. The question: the math works on
+<p id="mechanism-d-shipping-it-cost-and-correctness-p01" data-kind="prose">Shell 0. The question: the math works on
 the toy. What breaks at serving time, and
 what checks catch it before users see it?
 What would change if nobody checked the
 parameterization? The observable result
 that would change: silent wrong samples
 with a green loss curve.</p>
-<p>Shell 1. The toy: guidance hit-rate over
+<p data-term="15.6672 MFLOP" id="mechanism-d-shipping-it-cost-and-correctness-p02" data-kind="prose">Shell 1. The toy: guidance hit-rate over
 g in {0, 1, 2, 3}: means 0.30, 2.00, 3.70,
 5.40, hit-rates 0.000, 1.000, 0.000,
 0.000. Runtime: 156672 FLOPs per eval,
 DDPM-100 15.6672 MFLOP, DDIM-10 1.56672
 MFLOP per sample. Check battery: six
 asserts, all green.</p>
-<p>Shell 2. Objects: the hit-rate (toy
+<p id="mechanism-d-shipping-it-cost-and-correctness-p03" data-kind="prose">Shell 2. Objects: the hit-rate (toy
 quality proxy), g (guidance scale), the
 FLOP count, the six-assert battery.
 Units: FLOPs, hit-rate unit-free.</p>
-<p>Shell 3. One rule: quality is measured on
+<p id="mechanism-d-shipping-it-cost-and-correctness-p04" data-kind="prose">Shell 3. One rule: quality is measured on
 samples, not on the loss. The loss can
 fall while samples worsen (wrong
 weighting, broken parameterization, bad
 g). The battery checks the
 parameterization, the hit-rate checks the
 product.</p>
-<p>Shell 4. Derive the algorithm: the
+<p id="mechanism-d-shipping-it-cost-and-correctness-p05" data-kind="prose">Shell 4. Derive the algorithm: the
 battery: (1) ab in (0, 1] decreasing.
 (2) sigma in [0, sqrt(1 - ab_{t-1})].
 (3) eta = 0 deterministic. (4)
 round-trip eps -&gt; x0 -&gt; eps. (5) Tweedie
 = eps formula. (6) marginal variance
 identity.</p>
-<p>Shell 5. Check the invariant: the
+<p id="mechanism-d-shipping-it-cost-and-correctness-p06" data-kind="prose">Shell 5. Check the invariant: the
 round-trip recovers eps_hat = 0.4 to
 1e-12. If it does not, the x0_hat and
 sigma code disagree and every later
 number is suspect.</p>
-<p>Shell 6. Change ONE factor: g 1 -&gt; 3.
+<p id="mechanism-d-shipping-it-cost-and-correctness-p07" data-kind="prose">Shell 6. Change ONE factor: g 1 -&gt; 3.
 Predict: hit-rate falls (overshoot).
 Measured: 1.000 -&gt; 0.000. The mechanism
 (C09 linear blend) predicts the direction,
 the toy measures the size.</p>
-<p>Shell 7. Counterexample: a sampler that
+<p id="mechanism-d-shipping-it-cost-and-correctness-p08" data-kind="prose">Shell 7. Counterexample: a sampler that
 passes the loss check but indexes ab[t]
 instead of ab[t-1] (the U07 E-018 bug
 class). The battery assert (1) still
 passes, assert (4) fails because x0_hat
 uses the wrong level. The battery needs
 all six.</p>
-<p>Shell 8. Compare: DDIM-10 vs DDPM-100
+<p id="mechanism-d-shipping-it-cost-and-correctness-p09" data-kind="prose">Shell 8. Compare: DDIM-10 vs DDPM-100
 serving cost at equal net: 10x fewer
 FLOPs. The quality side needs a real
 model, the cost side is exact arithmetic.</p>
-<p>Shell 9. Falsifiable extension: measure
+<p id="mechanism-d-shipping-it-cost-and-correctness-p10" data-kind="prose">Shell 9. Falsifiable extension: measure
 the hit-rate curve over g in finer steps
 {0, 0.5, &hellip;, 4} on the toy. Predict:
 the peak stays at g = 1, the curve is
 asymmetric (overshoot hurts more than
 undershoot).</p>
-<p>Shell 10. Production: freeze net +
+<p id="mechanism-d-shipping-it-cost-and-correctness-p11" data-kind="prose">Shell 10. Production: freeze net +
 schedule + sampler + g as one versioned
 artifact. The stakeholder decision: any
 change re-runs the quality gate. The
 battery runs in CI on every sampler
 change.</p>
 <h3 id="c10-quality-versus-diversity">C10, quality versus diversity</h3>
-<p>Motivating question: why does turning up
+<p id="mechanism-d-shipping-it-cost-and-correctness-p12" data-kind="prose">Motivating question: why does turning up
 guidance first help, then hurt?</p>
-<p>Start from zero. Define a toy quality
+<p id="mechanism-d-shipping-it-cost-and-correctness-p13" data-kind="prose">Start from zero. Define a toy quality
 proxy: the hit-rate, P(|x0_hat - 2.0| &lt;
 0.5) over 500 draws with observation
 noise 0.15. The guidance blend moves the
@@ -1057,16 +1072,16 @@ At g = 0 the mean sits at 0.3 (misses).
 At g = 1 it sits at 2.0 (hits). At g =
 2, 3 it sits at 3.7, 5.4 (overshoots and
 misses).</p>
-<p>Mental model: guidance is a volume knob
+<p id="mechanism-d-shipping-it-cost-and-correctness-p14" data-kind="prose">Mental model: guidance is a volume knob
 with a sweet spot. Too low: the condition
 is ignored. Too high: linear
 extrapolation overshoots the data
 manifold. The inverted-U is the
 mechanism behind the observed
 quality/diversity tradeoff.</p>
-<p>Variables: g in {0, 1, 2, 3}, hit-rate
+<p id="mechanism-d-shipping-it-cost-and-correctness-p15" data-kind="prose">Variables: g in {0, 1, 2, 3}, hit-rate
 unit-free.</p>
-<p>Computed numbers. g=0: mean 0.30,
+<p id="mechanism-d-shipping-it-cost-and-correctness-p16" data-kind="prose">Computed numbers. g=0: mean 0.30,
 hit-rate 0.000. g=1: mean 2.00,
 hit-rate 1.000. g=2: mean 3.70,
 hit-rate 0.000. g=3: mean 5.40,
@@ -1074,33 +1089,33 @@ hit-rate 0.000. Seed 2, 500 draws each.
 The curve is the inverted-U: the peak is
 sharp because the blend is linear and
 the noise is small.</p>
-<p>Code: the loop in compute_run5b.py.</p>
-<p>Checks. (1) Hit-rate in [0, 1]. (2) g =
+<p id="mechanism-d-shipping-it-cost-and-correctness-p17" data-kind="prose">Code: the loop in compute_run5b.py.</p>
+<p id="mechanism-d-shipping-it-cost-and-correctness-p18" data-kind="prose">Checks. (1) Hit-rate in [0, 1]. (2) g =
 1 hits by construction (the conditional
 target). (3) Monotone mean in g.</p>
-<p>Costs. The sweep costs S draws per g
+<p id="mechanism-d-shipping-it-cost-and-correctness-p19" data-kind="prose">Costs. The sweep costs S draws per g
 value, trivial on the toy.</p>
-<p>Alternatives. FID/recall on real data:
+<p id="mechanism-d-shipping-it-cost-and-correctness-p20" data-kind="prose">Alternatives. FID/recall on real data:
 the honest metrics, unavailable on the
 toy. Human eval: the gold standard,
 expensive. Selection boundary: toy
 hit-rate for mechanism debugging, FID
 for model selection, humans for ship
 decisions.</p>
-<p>Failure case. Tuning g on the training
+<p id="mechanism-d-shipping-it-cost-and-correctness-p21" data-kind="prose">Failure case. Tuning g on the training
 set: the hit-rate is 1.000 at g = 1 by
 construction there too. Tune on held-out
 prompts.</p>
-<p>Research extension. The diversity half
+<p id="mechanism-d-shipping-it-cost-and-correctness-p22" data-kind="prose">Research extension. The diversity half
 of the tradeoff needs a real class
 distribution. Measure per-class recall
 vs g on a labeled dataset. Falsifiable:
 recall falls monotonically in g while
 precision peaks then falls.</p>
 <h3 id="c11-runtime">C11, runtime</h3>
-<p>Motivating question: what does one
+<p id="mechanism-d-shipping-it-cost-and-correctness-p23" data-kind="prose">Motivating question: what does one
 sample cost?</p>
-<p>Start from zero. One reverse step costs
+<p id="mechanism-d-shipping-it-cost-and-correctness-p24" data-kind="prose">Start from zero. One reverse step costs
 one network forward plus O(d) algebra.
 The toy U-Net forward costs 156672
 FLOPs. DDPM-100: 100 evals = 15.6672
@@ -1108,50 +1123,50 @@ MFLOP per sample. DDIM-10: 10 evals =
 1.56672 MFLOP. CFG doubles the evals
 (two forwards per step): DDIM-10 with
 CFG = 3.13344 MFLOP.</p>
-<p>Mental model: sampling cost = evals x
+<p id="mechanism-d-shipping-it-cost-and-correctness-p25" data-kind="prose">Mental model: sampling cost = evals x
 cost-per-eval. DDIM cuts evals, the U-Net
 sets cost-per-eval, CFG multiplies by 2.</p>
-<p>Variables: S evals, F FLOPs per eval.</p>
-<p>Computed numbers. F = 156672. DDPM-100:
+<p id="mechanism-d-shipping-it-cost-and-correctness-p26" data-kind="prose">Variables: S evals, F FLOPs per eval.</p>
+<p id="mechanism-d-shipping-it-cost-and-correctness-p27" data-kind="prose">Computed numbers. F = 156672. DDPM-100:
 15.6672 MFLOP. DDIM-10: 1.56672 MFLOP
 (10x less). DDIM-10 + CFG: 3.13344
 MFLOP. Memory per step: two scalar
 states on the toy, on real nets the
 activations of the largest feature map
 dominate.</p>
-<p>Code: total = S * F (exact arithmetic,
+<p id="mechanism-d-shipping-it-cost-and-correctness-p28" data-kind="prose">Code: total = S * F (exact arithmetic,
 not a benchmark).</p>
-<p>Checks. (1) F &gt; 0. (2) Ratio DDIM/DDPM
+<p id="mechanism-d-shipping-it-cost-and-correctness-p29" data-kind="prose">Checks. (1) F &gt; 0. (2) Ratio DDIM/DDPM
 = S_ddim/S_ddpm exactly. (3) CFG factor
 exactly 2.</p>
-<p>Costs. This section is the cost model.</p>
-<p>Alternatives. Fewer steps (S = 5): half
+<p id="mechanism-d-shipping-it-cost-and-correctness-p30" data-kind="prose">Costs. This section is the cost model.</p>
+<p id="mechanism-d-shipping-it-cost-and-correctness-p31" data-kind="prose">Alternatives. Fewer steps (S = 5): half
 the cost, more discretization error.
 Distillation (one-step student): 1 eval,
 needs extra training. Selection
 boundary: DDIM when the net is frozen,
 distillation when serving cost dominates
 everything and retraining is allowed.</p>
-<p>Failure case. Counting only the network
+<p id="mechanism-d-shipping-it-cost-and-correctness-p32" data-kind="prose">Failure case. Counting only the network
 and forgetting the O(d) algebra per step
 at huge d: the algebra is negligible
 next to 156672 FLOPs here, but at d =
 1M pixels the memory traffic of the
 algebra matters. Count bytes, not just
 FLOPs (U10-C04 extends this).</p>
-<p>Research extension. The net-size vs
+<p id="mechanism-d-shipping-it-cost-and-correctness-p33" data-kind="prose">Research extension. The net-size vs
 step-count tradeoff at fixed total
 FLOPs: a 2x bigger net with half the
 steps. Falsifiable: on the toy, the
 split does not matter (constant net),
 on real data it does.</p>
 <h3 id="c12-parameterization-checks">C12, parameterization checks</h3>
-<p>Motivating question: what is the
+<p id="mechanism-d-shipping-it-cost-and-correctness-p34" data-kind="prose">Motivating question: what is the
 minimal battery that catches a broken
 sampler?</p>
-<p>Start from zero. Six asserts, each
+<p id="mechanism-d-shipping-it-cost-and-correctness-p35" data-kind="prose">Start from zero. Six asserts, each
 catching one bug class:</p>
-<ol>
+<ol id="mechanism-d-shipping-it-cost-and-correctness-list01" data-kind="steps">
 <li>Schedule: ab strictly decreasing in
 (0, 1]. Catches repeated or unordered
 tau.</li>
@@ -1172,38 +1187,40 @@ mistakes in the score conversion.</li>
 ab_{t-1} - sigma^2) = 1 - ab_{t-1} to
 1e-12. Catches wrong sigma formulas.</li>
 </ol>
-<p>Mental model: the battery is a contract
+<p id="mechanism-d-shipping-it-cost-and-correctness-p36" data-kind="prose">Mental model: the battery is a contract
 test for the sampler. The loss cannot
 catch these: a sampler bug leaves
 training untouched and corrupts only
 samples.</p>
-<p>Computed numbers. All six green on the
+<p id="mechanism-d-shipping-it-cost-and-correctness-p37" data-kind="prose">Computed numbers. All six green on the
 toy: (1) ab_tau decreasing 0.989998 -&gt;
 0.363563. (2) holds for eta in {0, 0.5,
 1}. (3) max |diff| &lt; 1e-12. (4)
 eps_rec = 0.40000000000000024. (5)
 2.05354466 both ways. (6) 0.55912725 =
 0.55912725.</p>
-<p>Code: the asserts in compute_run5b.py.</p>
-<p>Checks: the battery is the check.</p>
-<p>Costs. Six asserts, microseconds.</p>
-<p>Alternatives. Full distribution tests
+<p id="mechanism-d-shipping-it-cost-and-correctness-p38" data-kind="prose">Code: the asserts in compute_run5b.py.</p>
+<p id="mechanism-d-shipping-it-cost-and-correctness-p39" data-kind="prose">Checks: the battery is the check.</p>
+<p id="mechanism-d-shipping-it-cost-and-correctness-p40" data-kind="prose">Costs. Six asserts, microseconds.</p>
+<p id="mechanism-d-shipping-it-cost-and-correctness-p41" data-kind="prose">Alternatives. Full distribution tests
 (two-sample tests on many draws):
 stronger, slower, flaky. The battery is
 the fast gate, distribution tests are
 the slow gate.</p>
-<p>Failure case. Assert (4) passes but
+<p id="mechanism-d-shipping-it-cost-and-correctness-p42" data-kind="prose">Failure case. Assert (4) passes but
 samples look wrong: the bug is in the
 net or the schedule, not the sampler
 algebra. The battery localizes, not
 solves.</p>
-<p>Research extension. None: this is
+<p id="mechanism-d-shipping-it-cost-and-correctness-p43" data-kind="prose">Research extension. None: this is
 engineering hygiene. The open item is
 extending the battery to the latent
 diffusion case (encode/decode round
 trip), forwarded to the capstone.</p>
+<span id="mechanism-d-shipping-it-cost-and-correctness-end" data-end></span>
+
 <h2 id="not-yet-understood-for-the-next-builder">Not yet understood (for the next builder)</h2>
-<ol>
+<ol data-term="toy U-Net" data-reveal="stepwise" id="not-yet-understood-for-the-next-builder-list01" data-kind="steps">
 <li>The toy U-Net never trains: params
 and FLOPs are counted, no denoising MSE
 measured. A trained toy net would close
@@ -1221,8 +1238,10 @@ encode-diffuse-decode loop is
 title-level only, the battery extension
 to latents is open.</li>
 </ol>
+<span id="not-yet-understood-for-the-next-builder-end" data-end></span>
+
 <h2 id="lesson-exercises-questions-keys-in-lessonsu08keysmd">Lesson exercises (questions. Keys in lessons/u08/keys.md)</h2>
-<p>E01. Write the DDIM reverse step for a
+<p data-term="E01" id="lesson-exercises-questions-keys-in-lessonsu08keysmd-p01" data-kind="prose">E01. Write the DDIM reverse step for a
 jump t -&gt; t-1 with general eta. Name
 every symbol.
 E02. Compute sigma for the 100 -&gt; 90
@@ -1281,8 +1300,10 @@ own ddim_step implementation. Report
 which assert fails first on a version
 with ab[t] instead of ab[t-1] in
 x0_hat.</p>
+<span id="lesson-exercises-questions-keys-in-lessonsu08keysmd-end" data-end></span>
+
 <h2 id="deep-oral-ladders-questions-keys-in-lessonsu08keysmd">Deep oral ladders (questions. Keys in lessons/u08/keys.md)</h2>
-<p>L01. Marginals to sampler: define the
+<p data-term="L01" id="deep-oral-ladders-questions-keys-in-lessonsu08keysmd-p01" data-kind="prose">L01. Marginals to sampler: define the
 DDIM contract, derive the reverse step,
 implement one jump, check the marginal
 identity, compare eta = 0 vs 1, debug a
@@ -1313,8 +1334,10 @@ jumps at eta = 0 by hand (two jumps
 fully, the rest stated), name every
 assumption used, break one, and say
 what the samples would look like.</p>
+<span id="deep-oral-ladders-questions-keys-in-lessonsu08keysmd-end" data-end></span>
+
 <h2 id="implementation-and-debug-task">Implementation and debug task</h2>
-<p>Implement ddim_step and the six-assert
+<p data-term="ddim_step" id="implementation-and-debug-task-p01" data-kind="prose">Implement ddim_step and the six-assert
 battery from memory. Then debug this:
 a colleague&rsquo;s deterministic sampler
 gives different trajectories on
@@ -1322,8 +1345,10 @@ identical seeds. Name the two likeliest
 causes (RNG inside the eta = 0 path,
 x_T redrawn between runs) and the
 assert that catches each.</p>
+<span id="implementation-and-debug-task-end" data-end></span>
+
 <h2 id="changed-constraint-scenarios">Changed-constraint scenarios</h2>
-<p>S1. The schedule changes to cosine with
+<p data-term="cosine" id="changed-constraint-scenarios-p01" data-kind="prose">S1. The schedule changes to cosine with
 the same T. Which lesson numbers change
 (ab_tau, w(t), sigma) and which do not
 (the formulas, the battery)? Recompute
@@ -1335,8 +1360,10 @@ toy U-Net. You may change S, eta, g,
 but not the net. Name the exact FLOP
 cost of three candidate configs and
 pick one with reasons.</p>
+<span id="changed-constraint-scenarios-end" data-end></span>
+
 <h2 id="research-critique-question">Research-critique question</h2>
-<p>&ldquo;The DDIM marginal-matching argument
+<p data-term="DDIM-10" id="research-critique-question-p01" data-kind="prose">&ldquo;The DDIM marginal-matching argument
 proves DDIM-10 samples equal DDPM-100
 samples.&rdquo; Attack this claim: name what
 the argument actually proves (equal
@@ -1345,6 +1372,8 @@ objective), what it does not prove
 (equal joint samples, equal quality at
 10 vs 100 steps), and the experiment
 that would test the strong claim.</p>
+<span id="research-critique-question-end" data-end></span>
+
       
       <nav class="pager"><a href="../../lessons/u07/role-bridges-u07.html"><span class="lbl">← Previous</span>U07 · Role bridges</a><a href="../../lessons/u08/keys.html"><span class="lbl">Next →</span>U08 · Keys</a></nav>
     </article>

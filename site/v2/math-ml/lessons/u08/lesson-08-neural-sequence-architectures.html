@@ -104,14 +104,14 @@
     <article>
       <nav class="breadcrumb"><a href="../../index.html">Home</a> / <a href="#">Mathematical Foundations of Machine Learning</a> / U08 · Neural and sequence architectures</nav>
       <h1>U08 · Neural and sequence architectures</h1>
-      <p class="meta-line">2026-10-06 · Instructor: Prof. Prathosh A P</p>
+      <p class="meta-line" id="lesson-08-neural-sequence-architectures-intro-p01" data-kind="prose">2026-10-06 · Instructor: Prof. Prathosh A P</p>
       <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="lesson-08-neural-and-sequence-architectures">Lesson 08, Neural and sequence architectures</h1>
-<p>Date: 2026-10-06. Unit: math-ml-U08. Leaf concepts C01-C12.
+<p id="lesson-08-neural-sequence-architectures-intro-p02" data-kind="prose">Date: 2026-10-06. Unit: math-ml-U08. Leaf concepts C01-C12.
 Prerequisites: P11, P12, P13, P14. Local remediation R58-R69 in
 prerequisites.md. Source attribution PENDING on all rows (G2 open:
 no transcript inspected).</p>
-<h2 id="source-mapping">Source mapping</h2>
-<p>Title map: Lec 41 Neural Networks and Universal Approximation,
+<span id="lesson-08-neural-sequence-architectures-intro-end" data-end></span><h2 id="source-mapping">Source mapping</h2>
+<p id="source-mapping-p01" data-kind="prose" data-term="source mapping">Title map: Lec 41 Neural Networks and Universal Approximation,
 Lec 42 ERM on Neural Networks and Error Backpropagation,
 Lec 43 Local Receptive Field and Parameter Sharing, Lec 44 CNNs
 as Regularized MLP, Lec 45 RNNs, Lec 46 Backprop in RNNs and
@@ -122,8 +122,8 @@ Distillation, Lec 53 SGD RMSProp ADAM Optimizers, Tutorials
 11-15 PyTorch and CNN/RNN labs (titles only, SRC-04). No
 spoken content inspected. Original toys with computed numbers.
 Figure ids f01-f04 in assets/u08/ and visual_audit.md.</p>
-<h2 id="scope-and-objectives">Scope and objectives</h2>
-<p>After this lesson the learner can: run a forward pass by hand
+<span id="source-mapping-end" data-end></span><h2 id="scope-and-objectives">Scope and objectives</h2>
+<p id="scope-and-objectives-p01" data-kind="prose" data-term="prerequisites">After this lesson the learner can: run a forward pass by hand
 with shapes. derive backprop for a scalar net and check it
 against finite differences. compute a convolution. count
 parameters for dense versus shared weights. apply the CNN
@@ -132,532 +132,532 @@ explosion as a product. run one LSTM step. compute attention
 weights and outputs. trace shapes through a transformer
 block. contrast layer and batch normalization. and execute
 one Adam update next to one SGD step.</p>
-<h2 id="how-to-read-this-lesson">How to read this lesson</h2>
-<p>Shell numbers (0-10) mark the Russian-doll ladder position.
+<span id="scope-and-objectives-end" data-end></span><h2 id="how-to-read-this-lesson">How to read this lesson</h2>
+<p id="how-to-read-this-lesson-p01" data-kind="prose" data-term="shells">Shell numbers (0-10) mark the Russian-doll ladder position.
 Numbers marked &ldquo;computed 2026-10-06&rdquo; came from
 compute_completion.py (numpy 1.26.4, float64, seed 7). All
 code is numpy only. no framework is installed on this box.</p>
-<h2 id="c01-mlp">C01, MLP</h2>
-<p>Shell 0: the question is what the network outputs for one
+<span id="how-to-read-this-lesson-end" data-end></span><h2 id="c01-mlp">C01, MLP</h2>
+<p id="c01-mlp-p01" data-kind="prose">Shell 0: the question is what the network outputs for one
 input. The toy: x = [1, 2], shape (2,). W1 shape (3, 2),
 b1 shape (3,), W2 shape (1, 3), b2 scalar.</p>
-<pre><code>W1 = [[1, 0], [0, 1], [-1, 1]]   b1 = [0, -1, 0.5]
+<pre data-kind="example"><code>W1 = [[1, 0], [0, 1], [-1, 1]]   b1 = [0, -1, 0.5]
 W2 = [[1, -2, 0.5]]              b2 = 0.25
 </code></pre>
-<p>Shell 1, mental model: a layer is an affine map plus a
+<p id="c01-mlp-p02" data-kind="prose" data-term="layer">Shell 1, mental model: a layer is an affine map plus a
 bend. Stack two and the bends compose into curves the
 single layer cannot draw.</p>
-<p>Shell 2, objects: z1 = W1 x + b1 shape (3,), a1 = relu(z1),
+<p id="c01-mlp-p03" data-kind="prose">Shell 2, objects: z1 = W1 x + b1 shape (3,), a1 = relu(z1),
 out = W2 a1 + b2 scalar. Assumption: relu acts per item.</p>
-<p>Shell 3, computed numbers. z1 = [1, 1, 1.5]. a1 = [1, 1,
+<p id="c01-mlp-p04" data-kind="prose">Shell 3, computed numbers. z1 = [1, 1, 1.5]. a1 = [1, 1,
 1.5]. out = 1(1) - 2(1) + 0.5(1.5) + 0.25 = 0.0. Computed
 2026-10-06. The exact zero is luck of the toy, not a law.</p>
-<p>Shell 4, code:</p>
-<pre><code>z1 = W1 @ x + b1
+<p id="c01-mlp-p05" data-kind="prose">Shell 4, code:</p>
+<pre data-kind="example"><code>z1 = W1 @ x + b1
 a1 = np.maximum(z1, 0)
 out = W2 @ a1 + b2
 </code></pre>
-<p>Shell 5, check: shapes compose: (3,2)(2,) -&gt; (3,).
+<p id="c01-mlp-p06" data-kind="prose" data-term="shape contract">Shell 5, check: shapes compose: (3,2)(2,) -&gt; (3,).
 (1,3)(3,) -&gt; (1,). The three z1 items each equal a row
 dot x plus bias: row 3 gives -1(1) + 1(2) + 0.5 = 1.5.</p>
-<p>Shell 6, costs: forward pass costs O(sum of weight item
+<p id="c01-mlp-p07" data-kind="prose">Shell 6, costs: forward pass costs O(sum of weight item
 counts). Memory holds the activations for the backward
 pass of C02.</p>
-<p>Shell 8, alternative: no hidden layer (linear model). It
+<p id="c01-mlp-p08" data-kind="prose">Shell 8, alternative: no hidden layer (linear model). It
 cannot bend. the C01 toy with its exact zero is still a
 flat map. Selection boundary: linear when the relation
 is linear. hidden layers when it bends.</p>
-<p>Shell 7, failure case: stack two linear layers with no
+<p id="c01-mlp-p09" data-kind="prose">Shell 7, failure case: stack two linear layers with no
 relu: (W2 W1) x + (W2 b1 + b2) is one linear layer.
 Depth without nonlinearity is decoration. The bend is
 the whole point.</p>
-<p>Shell 9, research: width versus depth at fixed parameter
+<p id="c01-mlp-p10" data-kind="prose">Shell 9, research: width versus depth at fixed parameter
 count. Question: on a fixed toy regression task, does a
 wide shallow net beat a narrow deep one? Baseline: the
 C01 shapes scaled up, matched parameter budgets.</p>
-<p>Figure f03 draws the three boxes with every shape and
+<p id="c01-mlp-p11" data-kind="prose">Figure f03 draws the three boxes with every shape and
 value on the plate. Shell 5 reuses the shape tuple in
 C10.</p>
-<h2 id="c02-backprop">C02, backprop</h2>
-<p>Shell 0: the question is how each weight should move to
+<span id="c01-mlp-end" data-end></span><h2 id="c02-backprop">C02, backprop</h2>
+<p id="c02-backprop-p01" data-kind="prose">Shell 0: the question is how each weight should move to
 cut the loss. The toy is a scalar net: o = w2 relu(w1 x
 + b1) + b2, loss L = 0.5 (o - y)^2, with w1 = 0.5,
 b1 = -0.2, w2 = 1.5, b2 = 0.1, x = 2.0, y = 3.0.</p>
-<p>Shell 1, mental model: the chain rule walks the error
+<p id="c02-backprop-p02" data-kind="prose" data-term="chain rule">Shell 1, mental model: the chain rule walks the error
 backward. Each link multiplies by its local slope.
 Reverse-mode differentiation computes all weight
 gradients in one backward walk.</p>
-<p>Shell 2, objects: z = w1 x + b1 = 0.8, a = relu(z) =
+<p id="c02-backprop-p03" data-kind="prose">Shell 2, objects: z = w1 x + b1 = 0.8, a = relu(z) =
 0.8, o = 1.3, L = 1.445. do = o - y = -1.7.</p>
-<p>Shell 3, derivation: dw2 = do a = -1.36. db2 = do =
+<p id="c02-backprop-p04" data-kind="prose">Shell 3, derivation: dw2 = do a = -1.36. db2 = do =
 -1.7. da = do w2 = -2.55. dz = da (z &gt; 0) = -2.55.
 dw1 = dz x = -5.1. db1 = dz = -2.55. Computed
 2026-10-06.</p>
-<p>Shell 4, code: one forward pass storing z, then the
+<p id="c02-backprop-p05" data-kind="prose">Shell 4, code: one forward pass storing z, then the
 backward walk above. Six lines.</p>
-<p>Shell 5, check: central finite differences with
+<p id="c02-backprop-p06" data-kind="prose" data-term="finite differences">Shell 5, check: central finite differences with
 h = 1e-7 give dw1 = -5.1000000012 and dw2 =
 -1.3600000015, matching the analytic values to 8
 digits. The check is the contract: never trust a
 backward pass without it.</p>
-<p>Shell 6, costs: one forward plus one backward pass,
+<p id="c02-backprop-p07" data-kind="prose">Shell 6, costs: one forward plus one backward pass,
 about twice the forward cost, for all parameters at
 once. Memory holds every activation.</p>
-<p>Shell 8, alternative: forward-mode differentiation
+<p id="c02-backprop-p08" data-kind="prose">Shell 8, alternative: forward-mode differentiation
 pushes one input direction forward. it costs O(n)
 passes for n parameters. Selection boundary: reverse
 mode when parameters outnumber outputs (always in
 deep learning).</p>
-<p>Shell 7, failure case: the silent wrong gradient. A
+<p id="c02-backprop-p09" data-kind="prose">Shell 7, failure case: the silent wrong gradient. A
 sign error in dz passes every shape check and only
 the finite-difference check catches it. See interview
 T1 for the kink variant.</p>
-<p>Shell 9, research: gradient noise scale across batch
+<p id="c02-backprop-p10" data-kind="prose">Shell 9, research: gradient noise scale across batch
 sizes. Question: does the C09 batch experiment of U10
 predict the largest useful batch for this toy?
 Falsifiable by measuring loss curves at B = 4, 16, 64.</p>
-<p>Figure: the C02 plate is a table (weight, analytic,
+<p id="c02-backprop-p11" data-kind="prose">Figure: the C02 plate is a table (weight, analytic,
 finite-difference, digits that agree). Numbers are
 the claim.</p>
-<h2 id="c03-convolution">C03, convolution</h2>
-<p>Shell 0: the question is what a filter sees. The toy:
+<span id="c02-backprop-end" data-end></span><h2 id="c03-convolution">C03, convolution</h2>
+<p id="c03-convolution-p01" data-kind="prose">Shell 0: the question is what a filter sees. The toy:
 signal s = [1, 2, 3, 4], kernel k = [1, 0, -1], valid
 mode (no padding).</p>
-<p>Shell 1, mental model: slide the kernel along the
+<p id="c03-convolution-p02" data-kind="prose" data-term="slide">Shell 1, mental model: slide the kernel along the
 signal. at each stop, take the dot product. The
 output marks where the signal changes the way the
 kernel likes.</p>
-<p>Shell 2, objects: output length n - k + 1 = 2.
+<p id="c03-convolution-p03" data-kind="prose">Shell 2, objects: output length n - k + 1 = 2.
 Position 0: 1(1) + 2(0) + 3(-1) = -2. Position 1:
 2(1) + 3(0) + 4(-1) = -2. Output [-2, -2]. The kernel
 [1, 0, -1] is a difference detector. the constant
 slope gives a constant response.</p>
-<p>Shell 3, note on convention: deep learning uses
+<p id="c03-convolution-p04" data-kind="prose" data-term="cross-correlation">Shell 3, note on convention: deep learning uses
 cross-correlation (no kernel flip). With learned
 kernels the flip is irrelevant. with hand kernels
 the sign convention matters and must be stated.</p>
-<p>Shell 4, code: np.convolve(s, k[::-1], mode=&rdquo;valid&rdquo;)
+<p id="c03-convolution-p05" data-kind="prose">Shell 4, code: np.convolve(s, k[::-1], mode=&rdquo;valid&rdquo;)
 or the explicit loop. Both give [-2, -2]. Computed
 2026-10-06.</p>
-<p>Shell 5, check: output length 4 - 3 + 1 = 2. A
+<p id="c03-convolution-p06" data-kind="prose">Shell 5, check: output length 4 - 3 + 1 = 2. A
 constant signal [c, c, c, c] gives [0, 0]: the
 difference detector ignores level, sees change.</p>
-<p>Shell 6, costs: O(n k) per channel. Small kernels
+<p id="c03-convolution-p07" data-kind="prose">Shell 6, costs: O(n k) per channel. Small kernels
 keep it cheap. that is the whole economy of CNNs.</p>
-<p>Shell 8, alternative: a dense layer on the 4 inputs
+<p id="c03-convolution-p08" data-kind="prose">Shell 8, alternative: a dense layer on the 4 inputs
 with 2 outputs (8 weights + 2 biases vs 3 kernel
 weights). Dense sees everything everywhere. conv
 sees local patterns anywhere. Selection boundary:
 locality in the signal.</p>
-<p>Shell 7, failure case: kernel longer than the signal
+<p id="c03-convolution-p09" data-kind="prose">Shell 7, failure case: kernel longer than the signal
 in valid mode: empty output, silent shape 0. Pad or
 shrink the kernel. never let the shape go negative.</p>
-<p>Shell 9, research: learned versus hand kernels on a
+<p id="c03-convolution-p10" data-kind="prose">Shell 9, research: learned versus hand kernels on a
 tiny edge task. Question: does training from random
 init recover [1, 0, -1] up to scale and sign?
 Falsifiable by inspecting the learned kernel.</p>
-<p>Figure: the C03 plate is an ASCII slide diagram with
+<p id="c03-convolution-p11" data-kind="prose">Figure: the C03 plate is an ASCII slide diagram with
 the two dot products. The kernel symbol k is reused
 in C05.</p>
-<h2 id="c04-locality-and-weight-sharing">C04, locality and weight sharing</h2>
-<p>Shell 0: the question is what sharing buys. The toy:
+<span id="c03-convolution-end" data-end></span><h2 id="c04-locality-and-weight-sharing">C04, locality and weight sharing</h2>
+<p id="c04-locality-and-weight-sharing-p01" data-kind="prose">Shell 0: the question is what sharing buys. The toy:
 32x32 image, 100 hidden units.</p>
-<p>Shell 1, mental model: a dense layer gives every
+<p id="c04-locality-and-weight-sharing-p02" data-kind="prose">Shell 1, mental model: a dense layer gives every
 input pixel its own weight per hidden unit. A conv
 layer uses one small kernel everywhere. Same image,
 two parameter bills.</p>
-<p>Shell 2, objects: dense count = 32(32)(100) + 100 =
+<p id="c04-locality-and-weight-sharing-p03" data-kind="prose" data-term="sharing">Shell 2, objects: dense count = 32(32)(100) + 100 =
 102,500. Conv count for eight 5x5 filters = 5(5)(8)
 + 8 = 208. Ratio about 493 to 1. Computed 2026-10-06.</p>
-<p>Shell 3, derivation: sharing ties the weights across
+<p id="c04-locality-and-weight-sharing-p04" data-kind="prose">Shell 3, derivation: sharing ties the weights across
 positions, so the count is per filter, not per
 position. The assumption is translation invariance:
 an edge is an edge wherever it sits.</p>
-<p>Shell 4, code: count parameters by summing p.size
+<p id="c04-locality-and-weight-sharing-p05" data-kind="prose">Shell 4, code: count parameters by summing p.size
 over layers. assert dense == 102500 and conv == 208.</p>
-<p>Shell 5, check: the +100 and +8 are the biases, one
+<p id="c04-locality-and-weight-sharing-p06" data-kind="prose">Shell 5, check: the +100 and +8 are the biases, one
 per output. Forgetting them is the classic off-by-
 few error.</p>
-<p>Shell 6, costs: fewer parameters means less memory,
+<p id="c04-locality-and-weight-sharing-p07" data-kind="prose">Shell 6, costs: fewer parameters means less memory,
 faster steps, and a stronger inductive bias. The
 price is expressivity at fixed positions.</p>
-<p>Shell 8, alternative: locally connected layers keep
+<p id="c04-locality-and-weight-sharing-p08" data-kind="prose">Shell 8, alternative: locally connected layers keep
 locality but drop sharing (one kernel per position).
 More parameters than conv, fewer than dense.
 Selection boundary: conv by default. local when the
 task rule is position-dependent.</p>
-<p>Shell 7, failure case: the task &ldquo;is the dot in the
+<p id="c04-locality-and-weight-sharing-p09" data-kind="prose">Shell 7, failure case: the task &ldquo;is the dot in the
 top-left corner&rdquo; depends on absolute position.
 Sharing forces the net to relearn the detector at
 every location from data. The bias is wrong for the
 task. a dense or local layer fits it directly.</p>
-<p>Shell 9, research: sharing across scale as well as
+<p id="c04-locality-and-weight-sharing-p10" data-kind="prose">Shell 9, research: sharing across scale as well as
 position. Question: do multi-scale kernels beat a
 single 5x5 on a tiny scale-varying toy at matched
 parameter count? Falsifiable by construction.</p>
-<p>Figure: the C04 plate is a table (layer, count).
+<p id="c04-locality-and-weight-sharing-p11" data-kind="prose">Figure: the C04 plate is a table (layer, count).
 Two rows. the ratio is the claim.</p>
-<h2 id="c05-cnn-shape">C05, CNN shape</h2>
-<p>Shell 0: the question is how big the feature map is.
+<span id="c04-locality-and-weight-sharing-end" data-end></span><h2 id="c05-cnn-shape">C05, CNN shape</h2>
+<p id="c05-cnn-shape-p01" data-kind="prose">Shell 0: the question is how big the feature map is.
 The toy: 28x28 input, 5x5 kernel, stride 1, no
 padding. then 2x2 max-pool, stride 2.</p>
-<p>Shell 1, mental model: the kernel must fit inside the
+<p id="c05-cnn-shape-p02" data-kind="prose" data-term="formula">Shell 1, mental model: the kernel must fit inside the
 image. Each placement is one output pixel. Pooling
 then takes the max of each 2x2 block.</p>
-<p>Shell 2, formula: out = floor((W - K + 2P)/S) + 1.</p>
-<p>Shell 3, computed numbers. Conv: (28 - 5)/1 + 1 = 24.
+<p id="c05-cnn-shape-p03" data-kind="prose">Shell 2, formula: out = floor((W - K + 2P)/S) + 1.</p>
+<p id="c05-cnn-shape-p04" data-kind="prose">Shell 3, computed numbers. Conv: (28 - 5)/1 + 1 = 24.
 Pool: (24 - 2)/2 + 1 = 12. Feature map 24x24, then
 12x12. Computed 2026-10-06.</p>
-<p>Shell 4, code: assert (28 - 5)//1 + 1 == 24 and
+<p id="c05-cnn-shape-p05" data-kind="prose">Shell 4, code: assert (28 - 5)//1 + 1 == 24 and
 (24 - 2)//2 + 1 == 12.</p>
-<p>Shell 5, check: the formula must give an integer. If
+<p id="c05-cnn-shape-p06" data-kind="prose" data-term="silent drop">Shell 5, check: the formula must give an integer. If
 (W - K + 2P) is not divisible by S, frameworks floor
 it and silently drop the last column. The check is
 the divisibility test before the run.</p>
-<p>Shell 6, costs: the 24x24x8 activation map dwarfs the
+<p id="c05-cnn-shape-p07" data-kind="prose">Shell 6, costs: the 24x24x8 activation map dwarfs the
 208 parameters in memory. Activations, not weights,
 dominate CNN memory.</p>
-<p>Shell 8, alternative: stride-2 convolution instead of
+<p id="c05-cnn-shape-p08" data-kind="prose">Shell 8, alternative: stride-2 convolution instead of
 pooling. Learned downsampling versus fixed max.
 Selection boundary: pooling for a cheap baseline,
 strided conv when the downsampling should be
 learned.</p>
-<p>Shell 7, failure case: the silent drop. A 27-wide
+<p id="c05-cnn-shape-p09" data-kind="prose">Shell 7, failure case: the silent drop. A 27-wide
 input with K = 5, S = 2 gives (27-5)/2 + 1 = 12 with
 one column discarded. The model trains fine and the
 user never notices the lost edge pixels. Assert the
 shape. do not assume it.</p>
-<p>Shell 9, research: the memory-accuracy trade of
+<p id="c05-cnn-shape-p10" data-kind="prose">Shell 9, research: the memory-accuracy trade of
 early downsampling. Question: does stride-2 in the
 first layer hurt a tiny object-detection toy more
 than late pooling? Falsifiable with matched FLOPs.</p>
-<p>Figure: the C05 plate is an equation block with the
+<p id="c05-cnn-shape-p11" data-kind="prose">Figure: the C05 plate is an equation block with the
 two applications of the formula. The shape tuple is
 reused in C10.</p>
-<h2 id="c06-recurrence">C06, recurrence</h2>
-<p>Shell 0: the question is how a net reads a sequence.
+<span id="c05-cnn-shape-end" data-end></span><h2 id="c06-recurrence">C06, recurrence</h2>
+<p id="c06-recurrence-p01" data-kind="prose">Shell 0: the question is how a net reads a sequence.
 The toy: h_t = tanh(W_h h_{t-1} + W_x x_t), with W_h
 = [[0.8,-0.2],[0.1,0.5]], W_x = [[1.0],[0.5]],
 h_{-1} = [0, 0], inputs x_0 = 1.0, x_1 = -0.5.</p>
-<p>Shell 1, mental model: the hidden state is a running
+<p id="c06-recurrence-p02" data-kind="prose" data-term="hidden state">Shell 1, mental model: the hidden state is a running
 note. Each step mixes the old note with the new
 input through the same weights. Same weights at
 every step: sharing across time.</p>
-<p>Shell 2, objects: h_t shape (2,). W_h (2,2), W_x
+<p id="c06-recurrence-p03" data-kind="prose">Shell 2, objects: h_t shape (2,). W_h (2,2), W_x
 (2,1). Assumption: tanh keeps the state bounded in
 (-1, 1).</p>
-<p>Shell 3, computed numbers. t = 0: pre = [1.0, 0.5],
+<p id="c06-recurrence-p04" data-kind="prose">Shell 3, computed numbers. t = 0: pre = [1.0, 0.5],
 h_0 = [0.7616, 0.4621]. t = 1: pre = W_h h_0 + W_x
 (-0.5) = [0.0169, 0.0572] after tanh: h_1 =
 [0.0169, 0.0572]. Computed 2026-10-06.</p>
-<p>Shell 4, code: the two-line loop above, unrolled for
+<p id="c06-recurrence-p05" data-kind="prose">Shell 4, code: the two-line loop above, unrolled for
 the toy.</p>
-<p>Shell 5, check: h_0 recomputed by hand: tanh(1.0) =
+<p id="c06-recurrence-p06" data-kind="prose">Shell 5, check: h_0 recomputed by hand: tanh(1.0) =
 0.7616, tanh(0.5) = 0.4621. The second step nearly
 erased the first input&rsquo;s trace: 0.7616 -&gt; 0.0169.
 That erasure is the memory problem of C07/C08.</p>
-<p>Shell 6, costs: O(T) time, O(1) extra memory per
+<p id="c06-recurrence-p07" data-kind="prose">Shell 6, costs: O(T) time, O(1) extra memory per
 step if only the last state is kept. O(T) to keep
 all states for backprop through time.</p>
-<p>Shell 8, alternative: 1D convolution over time sees
+<p id="c06-recurrence-p08" data-kind="prose">Shell 8, alternative: 1D convolution over time sees
 a fixed window with no state. Cheaper and parallel.
 cannot carry information past its window. Selection
 boundary: recurrence for unbounded context, conv
 for fixed windows.</p>
-<p>Shell 7, failure case: the vanishing trace above.
+<p id="c06-recurrence-p09" data-kind="prose">Shell 7, failure case: the vanishing trace above.
 With W_h near zero the state forgets in one step.
 with W_h large it saturates tanh and the gradient
 dies anyway. Plain recurrence is fragile. C08 gates
 it.</p>
-<p>Shell 9, research: the erasure rate as a function of
+<p id="c06-recurrence-p10" data-kind="prose">Shell 9, research: the erasure rate as a function of
 the spectral radius of W_h. Question: does the
 measured half-life of an input&rsquo;s trace match the
 radius prediction on random W_h? Falsifiable by
 simulation.</p>
-<p>Figure: the C06 plate is a table (t, pre, h_t). Two
+<p id="c06-recurrence-p11" data-kind="prose">Figure: the C06 plate is a table (t, pre, h_t). Two
 rows. the erasure is visible.</p>
-<h2 id="c07-gradient-decay-and-explosion">C07, gradient decay and explosion</h2>
-<p>Shell 0: the question is what happens to the gradient
+<span id="c06-recurrence-end" data-end></span><h2 id="c07-gradient-decay-and-explosion">C07, gradient decay and explosion</h2>
+<p id="c07-gradient-decay-and-explosion-p01" data-kind="prose">Shell 0: the question is what happens to the gradient
 across ten time steps. The toy is the scalar case:
 dh_t/dh_{t-1} = w, so the ten-step factor is w^10.</p>
-<p>Shell 1, mental model: backprop through time
+<p id="c07-gradient-decay-and-explosion-p02" data-kind="prose" data-term="product">Shell 1, mental model: backprop through time
 multiplies the same local slope ten times. Below 1
 the product dies. above 1 it explodes. The boundary
 is exactly 1.</p>
-<p>Shell 2, objects: w = 0.5 gives 0.5^10 = 9.7656e-4.
+<p id="c07-gradient-decay-and-explosion-p03" data-kind="prose">Shell 2, objects: w = 0.5 gives 0.5^10 = 9.7656e-4.
 w = 1.5 gives 1.5^10 = 57.665. Computed 2026-10-06.
 In the matrix case the spectral radius plays the
 role of |w|.</p>
-<p>Shell 3, derivation: dh_10/dh_0 = prod_{t=1..10}
+<p id="c07-gradient-decay-and-explosion-p04" data-kind="prose">Shell 3, derivation: dh_10/dh_0 = prod_{t=1..10}
 dh_t/dh_{t-1} = w^10. Each tanh&rsquo; &lt;= 1 can only
 shrink it further.</p>
-<p>Shell 4, code: np.power(0.5, np.arange(11)) and the
+<p id="c07-gradient-decay-and-explosion-p05" data-kind="prose">Shell 4, code: np.power(0.5, np.arange(11)) and the
 1.5 version. assert the endpoints.</p>
-<p>Shell 5, check: log scale: log10(9.7656e-4) = -3.01,
+<p id="c07-gradient-decay-and-explosion-p06" data-kind="prose">Shell 5, check: log scale: log10(9.7656e-4) = -3.01,
 ten multiplications by 0.5. The check is the
 exponent: 10 log10(w).</p>
-<p>Shell 6, costs: none at the toy level. In real nets
+<p id="c07-gradient-decay-and-explosion-p07" data-kind="prose">Shell 6, costs: none at the toy level. In real nets
 the cost is failed training runs.</p>
-<p>Shell 8, alternatives: gradient clipping caps the
+<p id="c07-gradient-decay-and-explosion-p08" data-kind="prose">Shell 8, alternatives: gradient clipping caps the
 norm (treats the symptom). gating (C08) fixes the
 multiplication itself. careful init sets the radius
 near 1. Selection boundary: clip as a safety net
 always. gates when long memory is the goal.</p>
-<p>Shell 7, failure case: clipping hides the explosion
+<p id="c07-gradient-decay-and-explosion-p09" data-kind="prose">Shell 7, failure case: clipping hides the explosion
 but keeps the direction wrong. A clipped gradient of
 norm 1.0 from a true norm of 1e6 still points
 somewhere the loss surface never asked for. Clip
 and investigate. never clip and ignore.</p>
-<p>Shell 9, research: the radius schedule. Question:
+<p id="c07-gradient-decay-and-explosion-p10" data-kind="prose">Shell 9, research: the radius schedule. Question:
 does starting with radius slightly above 1 and
 annealing beat a fixed radius-1 init on a
 long-memory toy? Falsifiable with matched seeds.</p>
-<p>Figure f02 plots both powers on a log scale. The
+<p id="c07-gradient-decay-and-explosion-p11" data-kind="prose">Figure f02 plots both powers on a log scale. The
 two curves are the claim.</p>
-<h2 id="c08-gates">C08, gates</h2>
-<p>Shell 0: the question is how a net keeps a memory for
+<span id="c07-gradient-decay-and-explosion-end" data-end></span><h2 id="c08-gates">C08, gates</h2>
+<p id="c08-gates-p01" data-kind="prose">Shell 0: the question is how a net keeps a memory for
 ten steps. The toy is one LSTM step: x = 0.7,
 h = [0.2], c = [0.3], weights Wf = 0.5, Wi = -0.4,
 Wg = 0.9, Wo = 0.6, biases bf = 0.1, bi = -0.1,
 bg = 0.0, bo = 0.2.</p>
-<p>Shell 1, mental model: three gates guard the cell.
+<p id="c08-gates-p02" data-kind="prose" data-term="gates">Shell 1, mental model: three gates guard the cell.
 The forget gate decides what to erase, the input
 gate what to write, the output gate what to show.
 All are sigmoids in (0, 1): soft switches.</p>
-<p>Shell 2, objects: f = sigmoid(0.5(0.7) + 0.1) =
+<p id="c08-gates-p03" data-kind="prose">Shell 2, objects: f = sigmoid(0.5(0.7) + 0.1) =
 0.6106. i = sigmoid(-0.4(0.7) - 0.1) = 0.4061.
 g = tanh(0.9(0.7)) = 0.5581. o = sigmoid(0.6(0.7) +
 0.2) = 0.6502. c_new = f c + i g = 0.6106(0.3) +
 0.4061(0.5581) = 0.4098. h_new = o tanh(c_new) =
 0.6502(0.3885) = 0.2525. Computed 2026-10-06.</p>
-<p>Shell 3, derivation: the cell update is additive:
+<p id="c08-gates-p04" data-kind="prose" data-term="carousel">Shell 3, derivation: the cell update is additive:
 c_new = f c + i g. When f = 1 and i = 0, the cell
 copies itself exactly and the gradient flows
 unchanged: that is the constant error carousel.</p>
-<p>Shell 4, code: the six lines above, in order f, i,
+<p id="c08-gates-p05" data-kind="prose">Shell 4, code: the six lines above, in order f, i,
 g, o, c, h.</p>
-<p>Shell 5, check: c_new recomputed term by term:
+<p id="c08-gates-p06" data-kind="prose">Shell 5, check: c_new recomputed term by term:
 0.1832 + 0.2266 = 0.4098. h_new in (-1, 1). Each
 gate in (0, 1).</p>
-<p>Shell 6, costs: four times the parameters of a plain
+<p id="c08-gates-p07" data-kind="prose">Shell 6, costs: four times the parameters of a plain
 RNN step. The price of memory.</p>
-<p>Shell 8, alternative: GRU merges the cell and hidden
+<p id="c08-gates-p08" data-kind="prose">Shell 8, alternative: GRU merges the cell and hidden
 state with two gates instead of three. Fewer
 parameters, similar behavior. Selection boundary:
 LSTM by default, GRU for a cheaper sweep.</p>
-<p>Shell 7, failure case: forget bias at 0 gives
+<p id="c08-gates-p09" data-kind="prose">Shell 7, failure case: forget bias at 0 gives
 f = 0.5 at init, so the cell halves its memory each
 step before training starts. The standard fix sets
 the forget bias to 1.0, so f starts near 0.73 and
 the net begins life remembering.</p>
-<p>Shell 9, research: gate saturation in trained nets.
+<p id="c08-gates-p10" data-kind="prose">Shell 9, research: gate saturation in trained nets.
 Question: do the forget gates of a trained toy LSTM
 sit at 0/1 extremes or in the middle? Falsifiable
 by histogramming gate activations on the C06 data.</p>
-<p>Figure: the C08 plate is a table (gate, formula,
+<p id="c08-gates-p11" data-kind="prose">Figure: the C08 plate is a table (gate, formula,
 value). Six rows. the additive cell update is the
 claim.</p>
-<h2 id="c09-attention">C09, attention</h2>
-<p>Shell 0: the question is how a query picks its
+<span id="c08-gates-end" data-end></span><h2 id="c09-attention">C09, attention</h2>
+<p id="c09-attention-p01" data-kind="prose">Shell 0: the question is how a query picks its
 sources. The toy: two queries, three keys, d = 4.
 Q rows [1,0,0,0] and [0,1,0,0]. K rows [1,0,0,0],
 [0,1,0,0], [1,1,0,0]. V rows [1,2], [3,4], [5,6].</p>
-<p>Shell 1, mental model: attention is a soft lookup.
+<p id="c09-attention-p02" data-kind="prose" data-term="attention">Shell 1, mental model: attention is a soft lookup.
 Score each key against the query, softmax the
 scores into weights, return the weighted sum of
 values. Differentiable dictionary lookup.</p>
-<p>Shell 2, objects: scores S = Q K^T / sqrt(d).
+<p id="c09-attention-p03" data-kind="prose">Shell 2, objects: scores S = Q K^T / sqrt(d).
 sqrt(4) = 2. S row 0 = [0.5, 0, 0.5]. row 1 = [0,
 0.5, 0.5]. Weights: softmax of [0.5, 0, 0.5] =
 [0.3837, 0.2327, 0.3837]. of [0, 0.5, 0.5] =
 [0.2327, 0.3837, 0.3837]. Outputs: row 0 = [3.0,
 4.0]. row 1 = [3.3019, 4.3019]. Computed 2026-10-06.</p>
-<p>Shell 3, derivation: softmax with max subtraction
+<p id="c09-attention-p04" data-kind="prose">Shell 3, derivation: softmax with max subtraction
 is exact: subtract the row max before exp. Row 0:
 exp([0, -0.5, 0]) = [1, 0.6065, 1], sum 2.6065,
 weights as above.</p>
-<p>Shell 4, code:</p>
-<pre><code>S = Q @ K.T / np.sqrt(d)
+<p id="c09-attention-p05" data-kind="prose">Shell 4, code:</p>
+<pre data-kind="example"><code>S = Q @ K.T / np.sqrt(d)
 S = S - S.max(axis=1, keepdims=True)
 A = np.exp(S)
 A /= A.sum(axis=1, keepdims=True)
 out = A @ V
 </code></pre>
-<p>Shell 5, check: each weight row sums to 1.0.
+<p id="c09-attention-p06" data-kind="prose">Shell 5, check: each weight row sums to 1.0.
 Output row 0 equals V row mix: 0.3837[1,2] +
 0.2327[3,4] + 0.3837[5,6] = [3.0003, 4.0004].</p>
-<p>Shell 6, costs: O(n^2 d) time and O(n^2) memory
+<p id="c09-attention-p07" data-kind="prose">Shell 6, costs: O(n^2 d) time and O(n^2) memory
 for n queries and keys. The quadratic term is the
 transformer tax.</p>
-<p>Shell 8, alternative: linear attention rewrites the
+<p id="c09-attention-p08" data-kind="prose">Shell 8, alternative: linear attention rewrites the
 softmax as a kernel feature map for O(n d^2).
 Approximate, cheaper at long n. Selection boundary:
 exact attention below ~4k tokens, linear above.</p>
-<p>Shell 7, failure case: drop the 1/sqrt(d) scale.
+<p id="c09-attention-p09" data-kind="prose">Shell 7, failure case: drop the 1/sqrt(d) scale.
 Dot products grow with d. at d = 512 a typical
 score is tens of units and the softmax saturates to
 a one-hot. Gradients through a saturated softmax
 are ~0 and the keys stop learning. The scale is
 load-bearing.</p>
-<p>Shell 9, research: the temperature of attention.
+<p id="c09-attention-p10" data-kind="prose">Shell 9, research: the temperature of attention.
 Question: does a learned per-head scale beat the
 fixed 1/sqrt(d) on the C09 toy scaled to d = 64?
 Falsifiable with matched training budgets.</p>
-<p>Figure f01 shows the weight heatmap. Shell 5 reuses
+<p id="c09-attention-p11" data-kind="prose">Figure f01 shows the weight heatmap. Shell 5 reuses
 the weight matrix in C10.</p>
-<h2 id="c10-transformer">C10, transformer</h2>
-<p>Shell 0: the question is what shape flows where in
+<span id="c09-attention-end" data-end></span><h2 id="c10-transformer">C10, transformer</h2>
+<p id="c10-transformer-p01" data-kind="prose">Shell 0: the question is what shape flows where in
 one block. The toy: sequence length n = 5, model
 dim d = 8, heads H = 2, per-head dim 4, feedforward
 8 -&gt; 16 -&gt; 8.</p>
-<p>Shell 1, mental model: a block is attention plus a
+<p id="c10-transformer-p02" data-kind="prose" data-term="block">Shell 1, mental model: a block is attention plus a
 per-position feedforward net, each wrapped in a
 residual skip and a normalization. The shapes must
 line up at every addition.</p>
-<p>Shell 2, shape trace. Input X: (5, 8). Per head:
+<p id="c10-transformer-p03" data-kind="prose" data-term="contract">Shell 2, shape trace. Input X: (5, 8). Per head:
 Q, K, V: (5, 4). Scores: (5, 5). Head output:
 (5, 4). Concat heads: (5, 8). Output projection:
 (5, 8). Residual add: (5, 8) + (5, 8). Norm: (5,
 8). FFN: (5, 8) -&gt; (5, 16) -&gt; (5, 8). Residual add
 again: (5, 8).</p>
-<p>Shell 3, derivation: per-head dim = d / H = 4 must
+<p id="c10-transformer-p04" data-kind="prose">Shell 3, derivation: per-head dim = d / H = 4 must
 divide evenly. The residual X + sublayer(X) needs
 identical shapes. that constraint designs the
 whole block.</p>
-<p>Shell 4, code: assert every intermediate shape in
+<p id="c10-transformer-p05" data-kind="prose">Shell 4, code: assert every intermediate shape in
 the trace above with a comment per line.</p>
-<p>Shell 5, check: 8/2 = 4 exact. Scores (5,5): each
+<p id="c10-transformer-p06" data-kind="prose">Shell 5, check: 8/2 = 4 exact. Scores (5,5): each
 of 5 queries attends to 5 keys. The two residual
 adds both see (5, 8).</p>
-<p>Shell 6, costs: attention O(n^2 d), FFN O(n d^2).
+<p id="c10-transformer-p07" data-kind="prose">Shell 6, costs: attention O(n^2 d), FFN O(n d^2).
 At n = 5, d = 8 both are trivial. at n = 4096 the
 n^2 term rules.</p>
-<p>Shell 8, alternative: a stacked RNN with the same
+<p id="c10-transformer-p08" data-kind="prose">Shell 8, alternative: a stacked RNN with the same
 (5, 8) interface. Sequential in n, O(n d^2), no
 quadratic memory. Selection boundary: transformer
 for parallel training and long-range links, RNN
 for streaming inference.</p>
-<p>Shell 7, failure case: no position information.
+<p id="c10-transformer-p09" data-kind="prose">Shell 7, failure case: no position information.
 Attention is permutation invariant: shuffle the 5
 rows and the outputs permute identically. Without
 position codes the block cannot tell order. The
 fix (position vectors, Lec 51) is not optional.</p>
-<p>Shell 9, research: the residual stream as shared
+<p id="c10-transformer-p10" data-kind="prose">Shell 9, research: the residual stream as shared
 memory. Question: do heads write to disjoint
 subspaces of the (5, 8) stream on a tiny trained
 toy? Falsifiable by probing head outputs.</p>
-<p>Figure: the C10 plate is a table (stage, shape).
+<p id="c10-transformer-p11" data-kind="prose">Figure: the C10 plate is a table (stage, shape).
 Nine rows. the two (5,8) adds are the checks.</p>
-<h2 id="c11-normalization">C11, normalization</h2>
-<p>Shell 0: the question is how to tame activations.
+<span id="c10-transformer-end" data-end></span><h2 id="c11-normalization">C11, normalization</h2>
+<p id="c11-normalization-p01" data-kind="prose">Shell 0: the question is how to tame activations.
 The toy vector: [1, 2, 3].</p>
-<p>Shell 1, mental model: subtract the mean, divide by
+<p id="c11-normalization-p02" data-kind="prose" data-term="recipe">Shell 1, mental model: subtract the mean, divide by
 the standard deviation, then restore scale and
 shift with learned gamma and beta. Same recipe,
 different axis: layer norm over features, batch
 norm over the batch.</p>
-<p>Shell 2, objects: mean 2.0, std 0.8165. Normalized:
+<p id="c11-normalization-p03" data-kind="prose">Shell 2, objects: mean 2.0, std 0.8165. Normalized:
 [-1.2247, 0.0, 1.2247]. Computed 2026-10-06. Layer
 norm: statistics over the feature axis, per item.
 Batch norm: statistics over the batch axis, per
 feature.</p>
-<p>Shell 3, derivation: mean(x) = 0 and var(x) = 1
+<p id="c11-normalization-p04" data-kind="prose">Shell 3, derivation: mean(x) = 0 and var(x) = 1
 after the transform, by construction. Gamma and
 beta then reintroduce the scale the next layer
 wants.</p>
-<p>Shell 4, code:</p>
-<pre><code>m = v.mean()
+<p id="c11-normalization-p05" data-kind="prose">Shell 4, code:</p>
+<pre data-kind="example"><code>m = v.mean()
 s = v.std()
 n = (v - m) / s
 </code></pre>
-<p>Shell 5, check: n.mean() = 0.0, n.std() = 1.0.
+<p id="c11-normalization-p06" data-kind="prose">Shell 5, check: n.mean() = 0.0, n.std() = 1.0.
 The middle item maps to exactly 0.</p>
-<p>Shell 6, costs: O(d) per item. Negligible.</p>
-<p>Shell 8, alternative: no normalization with
+<p id="c11-normalization-p07" data-kind="prose">Shell 6, costs: O(d) per item. Negligible.</p>
+<p id="c11-normalization-p08" data-kind="prose">Shell 8, alternative: no normalization with
 careful init. Works for shallow nets. deep nets
 usually need the stabilization. Selection
 boundary: layer norm for sequences and small
 batches, batch norm for vision with big batches.</p>
-<p>Shell 7, failure case: batch norm with batch size
+<p id="c11-normalization-p09" data-kind="prose">Shell 7, failure case: batch norm with batch size
 1: the batch std is 0 (or noise), and train/test
 use different statistics. The model trains and
 then behaves differently at inference. Layer norm
 has no batch axis and no such mismatch.</p>
-<p>Shell 9, research: the norm placement debate
+<p id="c11-normalization-p10" data-kind="prose">Shell 9, research: the norm placement debate
 (pre-norm vs post-norm). Question: on a tiny deep
 MLP, which placement trains at higher learning
 rates without divergence? Falsifiable with a
 learning-rate sweep.</p>
-<p>Figure: the C11 plate is a table (statistic, raw,
+<p id="c11-normalization-p11" data-kind="prose">Figure: the C11 plate is a table (statistic, raw,
 normalized). The zero mean is the check.</p>
-<h2 id="c12-optimization">C12, optimization</h2>
-<p>Shell 0: the question is what one update does. The
+<span id="c11-normalization-end" data-end></span><h2 id="c12-optimization">C12, optimization</h2>
+<p id="c12-optimization-p01" data-kind="prose">Shell 0: the question is what one update does. The
 toy gradient: g = [0.5, -0.3], from zero state,
 beta1 = 0.9, beta2 = 0.999, eta = 0.01, eps = 1e-8.</p>
-<p>Shell 1, mental model: SGD steps along the raw
+<p id="c12-optimization-p02" data-kind="prose" data-term="Adam">Shell 1, mental model: SGD steps along the raw
 slope. Adam tracks a moving average of the
 gradient (m) and of its square (v), corrects both
 for the zero start, and steps eta times their
 ratio: each coordinate moves about eta, with the
 sign of its recent gradient.</p>
-<p>Shell 2, objects: m = 0.1 g = [0.05, -0.03].
+<p id="c12-optimization-p03" data-kind="prose">Shell 2, objects: m = 0.1 g = [0.05, -0.03].
 v = 0.001 g^2 = [2.5e-4, 9e-5]. Bias-corrected:
 m_hat = m/0.1 = [0.5, -0.3], v_hat = v/0.001 =
 [0.25, 0.09]. Update = eta m_hat/(sqrt(v_hat) +
 eps) = [0.01, -0.01]. SGD update = -eta g =
 [-0.005, 0.003]. Computed 2026-10-06.</p>
-<p>Shell 3, derivation: at step 1 the bias correction
+<p id="c12-optimization-p04" data-kind="prose" data-term="first step">Shell 3, derivation: at step 1 the bias correction
 divides out the (1 - beta) factors exactly, so
 m_hat/sqrt(v_hat) = sign(g) per coordinate. Adam&rsquo;s
 first step is a signed step of size eta.</p>
-<p>Shell 4, code:</p>
-<pre><code>m = b1*m + (1-b1)*g
+<p id="c12-optimization-p05" data-kind="prose">Shell 4, code:</p>
+<pre data-kind="example"><code>m = b1*m + (1-b1)*g
 v = b2*v + (1-b2)*g*g
 mh = m/(1-b1**t)
 vh = v/(1-b2**t)
 w -= eta * mh/(np.sqrt(vh) + eps)
 </code></pre>
-<p>Shell 5, check: update equals [0.01, -0.01] =
+<p id="c12-optimization-p06" data-kind="prose">Shell 5, check: update equals [0.01, -0.01] =
 eta * sign(g). SGD keeps the 5:3 ratio of the
 gradient. Adam erases it.</p>
-<p>Shell 6, costs: Adam stores m and v: twice the
+<p id="c12-optimization-p07" data-kind="prose">Shell 6, costs: Adam stores m and v: twice the
 parameter memory. SGD stores nothing (or one
 velocity with momentum).</p>
-<p>Shell 8, alternative: SGD with momentum. Keeps the
+<p id="c12-optimization-p08" data-kind="prose">Shell 8, alternative: SGD with momentum. Keeps the
 gradient&rsquo;s relative scales. often generalizes
 better in vision. Selection boundary: Adam for a
 fast default, SGD+momentum when the last point of
 test accuracy matters.</p>
-<p>Shell 7, failure case: Adam&rsquo;s adaptivity can sprint
+<p id="c12-optimization-p09" data-kind="prose">Shell 7, failure case: Adam&rsquo;s adaptivity can sprint
 into sharp minima that generalize worse. Also the
 classic bug: eps inside vs outside the sqrt
 changes the step by orders of magnitude at small
 v. State the convention. test it.</p>
-<p>Shell 9, research: the signed-step view. Question:
+<p id="c12-optimization-p10" data-kind="prose">Shell 9, research: the signed-step view. Question:
 does sign-SGD (Adam&rsquo;s first-step behavior frozen)
 match Adam on the C02 toy? Falsifiable with
 matched eta and seeds.</p>
-<p>Figure f04 draws one SGD arrow and one Adam arrow
+<p id="c12-optimization-p11" data-kind="prose">Figure f04 draws one SGD arrow and one Adam arrow
 on the quadratic contours. The two arrows are the
 claim.</p>
-<h2 id="rendered-figures">Rendered figures</h2>
-<p>Each figure below is an original PNG rendered with matplotlib 3.6.3
+<span id="c12-optimization-end" data-end></span><h2 id="rendered-figures">Rendered figures</h2>
+<p id="rendered-figures-p01" data-kind="prose" data-term="rendered figure">Each figure below is an original PNG rendered with matplotlib 3.6.3
 (Agg) at dpi 150, opened and read on 2026-10-06. The caption names the
 source and the russian-doll shell. The alt text describes the image.</p>
 <h3 id="figure-f01-u08-c09">Figure f01 (u08-c09)</h3>
-<p><img alt="Two-by-three attention weight heatmap for the soft lookup" src="../../assets/u08/f01_attention.png" /></p>
-<p>Caption: Two-by-three attention weight heatmap for the soft lookup. Source: original. Shell: 3 (computed before/after).</p>
+<p id="rendered-figures-p02" data-kind="prose"><img alt="Two-by-three attention weight heatmap for the soft lookup" src="../../assets/u08/f01_attention.png" /></p>
+<p id="rendered-figures-p03" data-kind="prose">Caption: Two-by-three attention weight heatmap for the soft lookup. Source: original. Shell: 3 (computed before/after).</p>
 <h3 id="figure-f02-u08-c07">Figure f02 (u08-c07)</h3>
-<p><img alt="Log-scale curves of 0.5 to the t and 1.5 to the t across ten steps" src="../../assets/u08/f02_grad_powers.png" /></p>
-<p>Caption: Log-scale curves of 0.5 to the t and 1.5 to the t across ten steps. Source: original. Shell: 3 (computed before/after).</p>
+<p id="rendered-figures-p04" data-kind="prose" data-term="f01"><img alt="Log-scale curves of 0.5 to the t and 1.5 to the t across ten steps" src="../../assets/u08/f02_grad_powers.png" /></p>
+<p id="rendered-figures-p05" data-kind="prose">Caption: Log-scale curves of 0.5 to the t and 1.5 to the t across ten steps. Source: original. Shell: 3 (computed before/after).</p>
 <h3 id="figure-f03-u08-c01">Figure f03 (u08-c01)</h3>
-<p><img alt="Three boxes trace shapes from x with shape 2 to output 0.0" src="../../assets/u08/f03_mlp_forward.png" /></p>
-<p>Caption: Three boxes trace shapes from x with shape 2 to output 0.0. Source: original. Shell: 3 (computed before/after).</p>
+<p id="rendered-figures-p06" data-kind="prose"><img alt="Three boxes trace shapes from x with shape 2 to output 0.0" src="../../assets/u08/f03_mlp_forward.png" /></p>
+<p id="rendered-figures-p07" data-kind="prose">Caption: Three boxes trace shapes from x with shape 2 to output 0.0. Source: original. Shell: 3 (computed before/after).</p>
 <h3 id="figure-f04-u08-c12">Figure f04 (u08-c12)</h3>
-<p><img alt="One SGD arrow and one Adam arrow on the quadratic contours" src="../../assets/u08/f04_adam_sgd.png" /></p>
-<p>Caption: One SGD arrow and one Adam arrow on the quadratic contours. Source: original. Shell: 3 (computed before/after).</p>
-<h2 id="not-yet-understood-dependency-list">Not yet understood, dependency list</h2>
-<ol>
+<p id="rendered-figures-p08" data-kind="prose"><img alt="One SGD arrow and one Adam arrow on the quadratic contours" src="../../assets/u08/f04_adam_sgd.png" /></p>
+<p id="rendered-figures-p09" data-kind="prose">Caption: One SGD arrow and one Adam arrow on the quadratic contours. Source: original. Shell: 3 (computed before/after).</p>
+<span id="rendered-figures-end" data-end></span><h2 id="not-yet-understood-dependency-list" data-term="R58-R64">Not yet understood, dependency list</h2>
+<ol data-kind="prose">
 <li>R58 linear layer and activation: local bridge in
    prerequisites.md (P11).</li>
 <li>R59 reverse-mode differentiation: local bridge
@@ -678,8 +678,8 @@ source and the russian-doll shell. The alt text describes the image.</p>
    correction past step 1: open. the lesson covers
    step 1 exactly.</li>
 </ol>
-<h2 id="exercises-e01-e30">Exercises E01-E30</h2>
-<p>E01. On the C01 toy, recompute z1 by hand, one row at
+<span id="not-yet-understood-dependency-list-end" data-end></span><h2 id="exercises-e01-e30">Exercises E01-E30</h2>
+<p id="exercises-e01-e30-p01" data-kind="prose" data-term="answer key">E01. On the C01 toy, recompute z1 by hand, one row at
 a time. Confirm [1.0, 1.0, 1.5].
 E02. Change b2 to 0.5. What is the new output? What
 does that say about the exact zero?
@@ -749,55 +749,55 @@ the C09 toy and assert row sums of 1.0.
 E30. Research: pick one Shell 9 question from
 C01-C12 and write a falsifiable hypothesis with a
 baseline and a metric. One paragraph.</p>
-<h2 id="deep-ladders-l01-l10">Deep ladders L01-L10</h2>
-<p>L01. Shapes as contracts. (1) Define the MLP
+<span id="exercises-e01-e30-end" data-end></span><h2 id="deep-ladders-l01-l10">Deep ladders L01-L10</h2>
+<p id="deep-ladders-l01-l10-p01" data-kind="prose" data-term="transfer">L01. Shapes as contracts. (1) Define the MLP
 forward shapes. (2) Toy: the C01 trace. (3)
 Derive why (3,2)(2,) -&gt; (3,) is the only legal
 composition. (4) Implement the forward pass with
 a shape assert per line. (5) Changed constraint:
 x is (4,) now. Which line breaks first?</p>
-<p>L02. The backward walk. (1) Define reverse-mode
+<p id="deep-ladders-l01-l10-p02" data-kind="prose">L02. The backward walk. (1) Define reverse-mode
 differentiation. (2) Toy: the six gradient
 numbers. (3) Derive dw1 = do w2 x from the chain
 rule. (4) Implement the backward pass. check with
 finite differences. (5) Debug: see interview T1.</p>
-<p>L03. Filters that see change. (1) Define valid
+<p id="deep-ladders-l01-l10-p03" data-kind="prose">L03. Filters that see change. (1) Define valid
 convolution. (2) Toy: [-2,-2]. (3) Derive the
 output length formula. (4) Implement the slide
 loop. (5) Changed constraint: stride 2. What is
 the new output?</p>
-<p>L04. The sharing economy. (1) Define weight
+<p id="deep-ladders-l01-l10-p04" data-kind="prose">L04. The sharing economy. (1) Define weight
 sharing. (2) Toy: 102,500 vs 208. (3) Derive the
 conv count from the filter shape. (4) Implement
 a parameter counter. (5) Critique: name a task
 where sharing is the wrong bias.</p>
-<p>L05. Shape arithmetic. (1) State the CNN shape
+<p id="deep-ladders-l01-l10-p05" data-kind="prose">L05. Shape arithmetic. (1) State the CNN shape
 formula. (2) Toy: 28 -&gt; 24 -&gt; 12. (3) Derive it
 from the fit-inside argument. (4) Implement a
 shape assert helper. (5) Failure: the silent
 column drop. How do you catch it?</p>
-<p>L06. State as memory. (1) Define the RNN hidden
+<p id="deep-ladders-l01-l10-p06" data-kind="prose">L06. State as memory. (1) Define the RNN hidden
 state. (2) Toy: the two h values. (3) Derive the
 unroll. (4) Implement the loop. (5) Changed
 constraint: the sequence has length 1000. What
 breaks first, memory or gradient?</p>
-<p>L07. The product that decides. (1) State the
+<p id="deep-ladders-l01-l10-p07" data-kind="prose">L07. The product that decides. (1) State the
 w^T law. (2) Toy: 9.77e-4 vs 57.67. (3) Derive
 the product form. (4) Plot both curves. (5)
 Compare fixes: clipping vs gating. Which treats
 the cause?</p>
-<p>L08. Guarded memory. (1) Define the three gates.
+<p id="deep-ladders-l01-l10-p08" data-kind="prose">L08. Guarded memory. (1) Define the three gates.
 (2) Toy: the six numbers. (3) Derive the
 constant error carousel. (4) Implement one LSTM
 step. (5) Failure: forget bias 0. What is f at
 init and what does the cell do?</p>
-<p>L09. Soft lookup. (1) Define attention weights.
+<p id="deep-ladders-l01-l10-p09" data-kind="prose">L09. Soft lookup. (1) Define attention weights.
 (2) Toy: the 2x3 matrix and outputs. (3) Derive
 the max-subtraction trick. (4) Implement stable
 softmax. (5) Changed constraint: n = 100k.
 What is the memory cost, and what is the
 alternative?</p>
-<p>L10. The block as a contract. (1) List the
+<p id="deep-ladders-l01-l10-p10" data-kind="prose">L10. The block as a contract. (1) List the
 transformer block stages. (2) Toy: the shape
 trace. (3) Derive why the residual needs equal
 shapes. (4) Implement the shape asserts. (5)
@@ -809,7 +809,7 @@ Attack with the C06 vs C09 cost comparison.</p>
     <footer class="pagefoot">
       <p>Reconstructed from official Stanford course material. Sources are listed above. Content is study material, not affiliated with Stanford University.</p>
     </footer>
-  </main>
+  </main><span id="deep-ladders-l01-l10-end" data-end></span>
 </div>
 <script src="../../assets/vendor/katex.min.js"></script>
 <script src="../../assets/vendor/mermaid.min.js"></script>

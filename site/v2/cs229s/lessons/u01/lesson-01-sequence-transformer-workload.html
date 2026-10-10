@@ -103,46 +103,46 @@
   <main class="content" id="main">
     <article>
       <nav class="breadcrumb"><a href="../../index.html">Home</a> / <a href="#">Systems for Machine Learning (Stanford CS229S)</a> / Unit 01 · Sequence models and transformer workload</nav>
-      <h1>Unit 01 · Sequence models and transformer workload</h1>
-      <p class="meta-line">2026-10-06</p>
+      <h1 id="lesson-01-sequence-transformer-workload-intro">Unit 01 · Sequence models and transformer workload</h1>
+      <p class="meta-line" id="lesson-01-sequence-transformer-workload-intro-p01" data-kind="prose">2026-10-06</p>
       <div class="progress-row"><button class="mark-done">☐ <span>Mark as complete</span></button><div class="progress-bar"><i></i></div><span class="pct"></span></div><h1 id="lesson-01-sequence-models-and-transformer-workload">Lesson 01: Sequence models and transformer workload</h1>
-<p>Unit: cs229s-U01. Concepts: cs229s-U01-C01 to C12.
+<p id="lesson-01-sequence-transformer-workload-intro-p02" data-kind="prose">Unit: cs229s-U01. Concepts: cs229s-U01-C01 to C12.
 Date: 2026-10-06. Baseline: October 6, 2026.
 Claim class for every leaf: PLANNED / SOURCE ATTRIBUTION PENDING.
 Family anchor: CALENDAR-ANCHORED, Week 1, Sep 27, &ldquo;Transformer
 Architecture&rdquo; (Sequence Modeling, RNNs, Transformers,
-Pretraining and Fine-Tuning).</p>
+Pretraining and Fine-Tuning).</p><span id="lesson-01-sequence-transformer-workload-intro-end" data-end></span>
 <h2 id="how-to-read-this-lesson">How to read this lesson</h2>
-<p>Each concept carries the 15-item contract in compact form:
+<p id="how-to-read-this-lesson-p01" data-kind="prose">Each concept carries the 15-item contract in compact form:
 source and scope, motivating question and toy, mental model,
 objects and shapes, derivation, computed example, implementation
 and checks, costs, nearest alternative with a selection
 boundary, failure case, research reading with a falsifiable
 extension, exercises (keys in <code>keys.md</code>), and visual units.
-Shared symbols follow <code>notation_and_shapes.md</code>.</p>
+Shared symbols follow <code>notation_and_shapes.md</code>.</p><span id="how-to-read-this-lesson-end" data-end></span>
 <hr />
 <h2 id="c01-rnntransformer-comparison">C01: RNN/transformer comparison</h2>
 <h3 id="source-scope-objectives-dependencies">Source, scope, objectives, dependencies</h3>
-<p>Calendar anchor: Week 1, Sep 27, session topics &ldquo;RNNs&rdquo; and
+<p id="c01-rnntransformer-comparison-p01" data-kind="prose" data-term="sequential bottleneck">Calendar anchor: Week 1, Sep 27, session topics &ldquo;RNNs&rdquo; and
 &ldquo;Transformers&rdquo; under &ldquo;Sequence Modeling&rdquo;. Scope: why the field
 moved from recurrence to attention for long sequences.
 Objective: state the sequential bottleneck of an RNN and the
 parallel path of a transformer, with shapes. Depends on P11,
 P13.</p>
 <h3 id="motivating-question-and-tiny-toy">Motivating question and tiny toy</h3>
-<p>Question: a sentence has 8 tokens. The model must connect token
+<p id="c01-rnntransformer-comparison-p02" data-kind="prose">Question: a sentence has 8 tokens. The model must connect token
 1 to token 8. How many steps does each architecture force?
 Toy: tokens <code>t1..t8</code>, hidden size 4. RNN state <code>h</code> has shape
 <code>(4,)</code>. Transformer works on the full matrix <code>X</code> of shape
 <code>(8, 4)</code>.</p>
 <h3 id="mental-model">Mental model</h3>
-<p>An RNN is a relay runner. Each runner reads one token and the
+<p id="c01-rnntransformer-comparison-p03" data-kind="keyIdea" data-reveal="rise" data-term="attention scores">An RNN is a relay runner. Each runner reads one token and the
 note from the previous runner, then passes a new note on. The
 note must survive every handoff. A transformer is a meeting:
 every token looks directly at every other token through
 attention scores, so token 8 reads token 1 in one hop.</p>
 <h3 id="objects-shapes-assumptions">Objects, shapes, assumptions</h3>
-<ul>
+<ul id="c01-rnntransformer-comparison-list01" data-term="path length">
 <li>RNN: <code>h_t = f(h_{t-1}, x_t)</code>. <code>h_t</code> shape <code>(n,)</code>.
   Assumption: one shared function <code>f</code> for all positions.</li>
 <li>Transformer: <code>A = softmax(QK^T / sqrt(d))</code>, <code>A</code> shape
@@ -152,20 +152,20 @@ attention scores, so token 8 reads token 1 in one hop.</p>
   to token <code>T</code>. Attention needs 1 step.</li>
 </ul>
 <h3 id="derivation">Derivation</h3>
-<p>RNN step <code>t</code> needs <code>h_{t-1}</code>, so steps run in order. Total
+<p id="c01-rnntransformer-comparison-p04" data-kind="prose" data-term="O(T^2 d)">RNN step <code>t</code> needs <code>h_{t-1}</code>, so steps run in order. Total
 sequential steps for length <code>T</code> equal <code>T</code>. Attention computes
 all <code>T^2</code> query-key pairs at once. The longest dependency path
 has length 1, but the work per layer is <code>O(T^2 d)</code> and all of
 it runs in parallel.</p>
 <h3 id="computed-example">Computed example</h3>
-<p>Toy: <code>T = 8</code>, <code>n = 4</code>. RNN: 8 sequential steps, each a
+<p id="c01-rnntransformer-comparison-p05" data-kind="example">Toy: <code>T = 8</code>, <code>n = 4</code>. RNN: 8 sequential steps, each a
 <code>(4,)</code>-to-<code>(4,)</code> update. Longest path: 7 handoffs. Transformer:
 one parallel attention step, <code>8 x 8 = 64</code> scores, longest
 path: 1 hop. Same toy as the lab (lab-01 checks the path
 length count).</p>
 <h3 id="implementation-and-checks">Implementation and checks</h3>
-<p>Reference in numpy (also lab-01):</p>
-<pre><code class="language-python">import numpy as np
+<p id="c01-rnntransformer-comparison-p06" data-kind="prose">Reference in numpy (also lab-01):</p>
+<pre id="c01-rnntransformer-comparison-code01"><code class="language-python">import numpy as np
 
 def rnn_steps(T):
     # count sequential steps: one per token
@@ -178,30 +178,30 @@ def attn_path_length(T):
 assert rnn_steps(8) == 8
 assert attn_path_length(8) == 1
 </code></pre>
-<p>Check: change <code>T</code> to 16. RNN steps double to 16. Attention
+<p id="c01-rnntransformer-comparison-p07" data-kind="prose">Check: change <code>T</code> to 16. RNN steps double to 16. Attention
 path stays 1. The invariant is path length, not work.</p>
 <h3 id="complexity-and-costs">Complexity and costs</h3>
-<p>RNN: <code>O(T)</code> sequential steps, <code>O(T)</code> total work, constant
+<p id="c01-rnntransformer-comparison-p08" data-kind="summary" data-reveal="fade">RNN: <code>O(T)</code> sequential steps, <code>O(T)</code> total work, constant
 memory in <code>T</code> for inference state. Transformer: <code>O(1)</code>
 sequential steps per layer, <code>O(T^2)</code> work, <code>O(T^2)</code> memory for
 the score matrix in the naive form. The trade is parallelism
 for memory.</p>
 <h3 id="nearest-alternative-and-selection-boundary">Nearest alternative and selection boundary</h3>
-<p>Nearest alternative: keep the RNN and fight the bottleneck
+<p id="c01-rnntransformer-comparison-p09" data-kind="prose">Nearest alternative: keep the RNN and fight the bottleneck
 with gating (LSTM/GRU). Selection boundary: choose attention
 when training hardware is parallel and sequences are long
 enough that <code>T^2</code> memory fits. Choose recurrence when memory
 is tiny or generation must stream with constant state. SSMs
 revisit this boundary in U07 (second builder).</p>
 <h3 id="failure-case-and-counterexample">Failure case and counterexample</h3>
-<p>Broken assumption: &ldquo;attention always trains faster.&rdquo; At very
+<p id="c01-rnntransformer-comparison-p10" data-kind="prose">Broken assumption: &ldquo;attention always trains faster.&rdquo; At very
 long <code>T</code>, the <code>T^2</code> memory term dominates and the transformer
 fails to fit in memory while the RNN still runs. The toy
 counterexample: <code>T = 100000</code>, <code>n = 64</code> on a small GPU. The
 score matrix needs <code>100000^2 x 2</code> bytes, far beyond memory.
 Speed claims must name the <code>T</code> regime.</p>
 <h3 id="research-reading-and-falsifiable-extension">Research reading and falsifiable extension</h3>
-<p>Reading: the calendar session pairs RNNs with Transformers,
+<p id="c01-rnntransformer-comparison-p11" data-kind="prose">Reading: the calendar session pairs RNNs with Transformers,
 the reference architecture paper is &ldquo;Attention Is All You
 Need&rdquo; (2017). Falsifiable extension: fix a parameter budget
 and a <code>T</code> grid, then measure wall-clock time to a target loss
@@ -209,7 +209,7 @@ for a gated RNN versus a transformer. Hypothesis: the
 transformer wins below a crossover <code>T*</code> and loses above it.
 Report <code>T*</code> with hardware named.</p>
 <h3 id="exercises">Exercises</h3>
-<ul>
+<ul id="c01-rnntransformer-comparison-list02" data-kind="exercise">
 <li>E01 (recall): define path length. Give the RNN and
   attention values for <code>T = 32</code>.</li>
 <li>E02 (numerical): <code>T = 512</code>, <code>n = 64</code>. Count the naive
@@ -223,38 +223,38 @@ Report <code>T*</code> with hardware named.</p>
   Name the control that keeps the comparison fair.</li>
 </ul>
 <h3 id="visual-units">Visual units</h3>
-<ul>
+<ul id="c01-rnntransformer-comparison-list03">
 <li>Figure <code>u01_c01_paths.png</code>: two panels. Left: 8-step relay
   chain, note passed along. Right: 8 tokens with direct
   edges to token 8. Source: original toy. Shell 3 (one rule:
   path length).</li>
 </ul>
-<figure><img alt="u01_c01_paths.png" src="../../assets/u01/u01_c01_paths.png"><figcaption>two panels. Left: 8-step relay chain, note passed along. Right: 8 tokens with direct edges to token 8. (one rule: path length)</figcaption></figure>
-<ul>
+<figure id="c01-rnntransformer-comparison-fig01" data-kind="figure" data-reveal="fade"><img alt="u01_c01_paths.png" src="../../assets/u01/u01_c01_paths.png"><figcaption>two panels. Left: 8-step relay chain, note passed along. Right: 8 tokens with direct edges to token 8. (one rule: path length)</figcaption></figure>
+<ul id="c01-rnntransformer-comparison-list04">
 <li>Audit: unit <code>u01c01</code> maps to <code>f01</code>. Before: sequential
   handoffs. After: one-hop access. Claim changes state
   (count of steps).</li>
-</ul>
+</ul><span id="c01-rnntransformer-comparison-end" data-end></span>
 <hr />
 <h2 id="c02-pretrainingfine-tuning">C02: pretraining/fine-tuning</h2>
 <h3 id="source-scope-objectives-dependencies_1">Source, scope, objectives, dependencies</h3>
-<p>Calendar anchor: Week 1, Sep 27, &ldquo;Pretraining and Fine-Tuning&rdquo;.
+<p id="c02-pretrainingfine-tuning-p01" data-kind="prose" data-term="pretraining">Calendar anchor: Week 1, Sep 27, &ldquo;Pretraining and Fine-Tuning&rdquo;.
 Scope: the two-phase recipe and why it works. Objective:
 state the pretraining objective and what fine-tuning changes.
 Depends on P10, P13.</p>
 <h3 id="motivating-question-and-tiny-toy_1">Motivating question and tiny toy</h3>
-<p>Question: labeled data is scarce but raw text is abundant.
+<p id="c02-pretrainingfine-tuning-p02" data-kind="prose" data-term="next-token prediction">Question: labeled data is scarce but raw text is abundant.
 How does the model learn from text with no labels? Toy:
 corpus of 4 sentences, vocabulary of 16 tokens. The label
 for each position is the next token. No human labels exist.</p>
 <h3 id="mental-model_1">Mental model</h3>
-<p>Pretraining is school: the model reads a library and learns
+<p id="c02-pretrainingfine-tuning-p03" data-kind="keyIdea" data-reveal="rise">Pretraining is school: the model reads a library and learns
 to predict each next word, which forces it to learn grammar,
 facts, and reasoning patterns. Fine-tuning is job training:
 a small labeled set steers the general graduate toward one
 task. The school phase needs scale. The job phase needs care.</p>
 <h3 id="objects-shapes-assumptions_1">Objects, shapes, assumptions</h3>
-<ul>
+<ul id="c02-pretrainingfine-tuning-list01">
 <li>Pretraining loss: next-token cross-entropy,
   <code>L = -mean(log p(x_t | x_&lt;t)))</code>.</li>
 <li>Fine-tuning: same architecture, new data mix, usually a
@@ -263,21 +263,21 @@ task. The school phase needs scale. The job phase needs care.</p>
   target task. This is an empirical claim, not a theorem.</li>
 </ul>
 <h3 id="derivation_1">Derivation</h3>
-<p>Next-token prediction on a corpus of <code>D</code> tokens gives <code>D</code>
+<p id="c02-pretrainingfine-tuning-p04" data-kind="prose">Next-token prediction on a corpus of <code>D</code> tokens gives <code>D</code>
 training examples for free: every position is one example.
 The gradient of the log-likelihood pushes probability mass
 toward observed continuations. Fine-tuning continues the
 same gradient descent from the pretrained weights, so the
 start point already encodes language structure.</p>
 <h3 id="computed-example_1">Computed example</h3>
-<p>Toy corpus: 4 sentences x 8 tokens = 32 tokens, so 31
+<p id="c02-pretrainingfine-tuning-p05" data-kind="example" data-term="perplexity">Toy corpus: 4 sentences x 8 tokens = 32 tokens, so 31
 next-token examples (the last token of each sentence has no
 next token inside the toy). Vocabulary 16. A uniform model
 has loss <code>log(16) = 2.77</code> nats. After pretraining, suppose
 mean loss drops to 1.20 nats. Perplexity falls from 16.0 to
 <code>exp(1.20) = 3.32</code>. Same objects as lab-01.</p>
 <h3 id="implementation-and-checks_1">Implementation and checks</h3>
-<pre><code class="language-python">import numpy as np
+<pre id="c02-pretrainingfine-tuning-code01"><code class="language-python">import numpy as np
 
 def perplexity(mean_nll):
     return float(np.exp(mean_nll))
@@ -285,24 +285,24 @@ def perplexity(mean_nll):
 assert abs(perplexity(np.log(16.0)) - 16.0) &lt; 1e-9
 assert abs(perplexity(1.2) - 3.3201) &lt; 1e-3
 </code></pre>
-<p>Check: perplexity of a uniform model equals vocabulary size.
+<p id="c02-pretrainingfine-tuning-p06" data-kind="prose">Check: perplexity of a uniform model equals vocabulary size.
 This invariant tests any perplexity implementation.</p>
 <h3 id="complexity-and-costs_1">Complexity and costs</h3>
-<p>Pretraining cost dominates: <code>6PD</code> FLOPs for <code>P</code> parameters
+<p id="c02-pretrainingfine-tuning-p07" data-kind="summary" data-reveal="fade" data-term="catastrophic forgetting">Pretraining cost dominates: <code>6PD</code> FLOPs for <code>P</code> parameters
 and <code>D</code> tokens (derived in C04). Fine-tuning costs a small
 fraction, often under 1 percent of pretraining, but it
 decides task behavior. The risk is reversed: pretraining
 risks wasted compute, fine-tuning risks destroying general
 ability (catastrophic forgetting).</p>
 <h3 id="nearest-alternative-and-selection-boundary_1">Nearest alternative and selection boundary</h3>
-<p>Nearest alternative: train from scratch on the task data
+<p id="c02-pretrainingfine-tuning-p08" data-kind="prose">Nearest alternative: train from scratch on the task data
 only. Selection boundary: fine-tune when the task has
 limited labels and resembles language in the pretraining
 corpus. Train from scratch when the domain is far from the
 corpus (for example, a new modality) or when data is
 plentiful enough to support it.</p>
 <h3 id="failure-case-and-counterexample_1">Failure case and counterexample</h3>
-<p>Broken assumption: &ldquo;fine-tuning only adds skill.&rdquo; Too large
+<p id="c02-pretrainingfine-tuning-p09" data-kind="prose">Broken assumption: &ldquo;fine-tuning only adds skill.&rdquo; Too large
 a learning rate or too many steps erases pretraining
 knowledge. Counterexample: fine-tune the toy model on 31
 examples of one repetitive sentence with a high learning
@@ -310,7 +310,7 @@ rate. Validation perplexity on general text rises while
 task loss falls. The fix is a smaller rate and early
 stopping on a held-out set.</p>
 <h3 id="research-reading-and-falsifiable-extension_1">Research reading and falsifiable extension</h3>
-<p>Reading: standard pretraining references from the calendar
+<p id="c02-pretrainingfine-tuning-p10" data-kind="prose">Reading: standard pretraining references from the calendar
 family, scaling-law literature sits in U06. Falsifiable
 extension: freeze the base model and train only a linear
 probe versus full fine-tuning on a small task. Hypothesis:
@@ -318,7 +318,7 @@ full fine-tuning wins when the task needs new features,
 probe wins when the features already exist. Measure the gap
 as a function of task distance from the corpus.</p>
 <h3 id="exercises_1">Exercises</h3>
-<ul>
+<ul id="c02-pretrainingfine-tuning-list02" data-kind="exercise">
 <li>E06 (recall): write the pretraining objective in one
   line. Name what supplies the labels.</li>
 <li>E07 (numerical): corpus of 10M tokens, vocab 32000.
@@ -334,37 +334,37 @@ as a function of task distance from the corpus.</p>
   with a measurable task-distance proxy.</li>
 </ul>
 <h3 id="visual-units_1">Visual units</h3>
-<ul>
+<ul id="c02-pretrainingfine-tuning-list03">
 <li>Figure <code>u01_c02_phases.png</code>: loss curve with two
   segments. Left: long pretraining descent on a large
   corpus. Right: short fine-tuning descent on a small set.
   Source: original toy curve. Shell 3.</li>
 </ul>
-<figure><img alt="u01_c02_phases.png" src="../../assets/u01/u01_c02_phases.png"><figcaption>loss curve with two segments. Left: long pretraining descent on a large corpus. Right: short fine-tuning descent on a small set. curve</figcaption></figure>
-<ul>
+<figure id="c02-pretrainingfine-tuning-fig01" data-kind="figure" data-reveal="fade"><img alt="u01_c02_phases.png" src="../../assets/u01/u01_c02_phases.png"><figcaption>loss curve with two segments. Left: long pretraining descent on a large corpus. Right: short fine-tuning descent on a small set. curve</figcaption></figure>
+<ul id="c02-pretrainingfine-tuning-list04">
 <li>Audit: <code>u01c02</code> to <code>f02</code>. Before: general loss. After:
   task loss. One rule: continue descent on new data.</li>
-</ul>
+</ul><span id="c02-pretrainingfine-tuning-end" data-end></span>
 <hr />
 <h2 id="c03-attention-dimensions">C03: attention dimensions</h2>
 <h3 id="source-scope-objectives-dependencies_2">Source, scope, objectives, dependencies</h3>
-<p>Calendar anchor: Week 1, Sep 27, &ldquo;Transformers&rdquo;. Scope: the
+<p id="c03-attention-dimensions-p01" data-kind="prose">Calendar anchor: Week 1, Sep 27, &ldquo;Transformers&rdquo;. Scope: the
 shapes of Q, K, V and what each dimension means. Objective:
 write every attention shape from <code>n, h, d, T</code> without a
 reference. Depends on P12, P14.</p>
 <h3 id="motivating-question-and-tiny-toy_2">Motivating question and tiny toy</h3>
-<p>Question: the model width is 8 and there are 2 heads. What
+<p id="c03-attention-dimensions-p02" data-kind="prose" data-term="head">Question: the model width is 8 and there are 2 heads. What
 shape is each head&rsquo;s query matrix for a 4-token input? Toy:
 <code>n = 8</code>, <code>h = 2</code>, <code>d = 4</code>, <code>T = 4</code>, batch <code>B = 1</code>.</p>
 <h3 id="mental-model_2">Mental model</h3>
-<p>Think of attention as <code>h</code> parallel librarians. Each
+<p id="c03-attention-dimensions-p03" data-kind="keyIdea" data-reveal="rise">Think of attention as <code>h</code> parallel librarians. Each
 librarian reads the same shelf of <code>T</code> books but asks a
 different question. Librarian <code>i</code> holds a query card of size
 <code>d</code> per token and compares it against <code>d</code>-sized key cards.
 The model width <code>n</code> splits evenly into <code>h</code> cards of size
 <code>d = n / h</code>.</p>
 <h3 id="objects-shapes-assumptions_2">Objects, shapes, assumptions</h3>
-<ul>
+<ul id="c03-attention-dimensions-list01" data-term="scores">
 <li>Input <code>X</code>: <code>(B, T, n)</code>.</li>
 <li>Per head: <code>Q, K, V</code>: <code>(B, h, T, d)</code> after reshape.</li>
 <li>Projections <code>W_q, W_k, W_v, W_o</code>: <code>(n, n)</code>.</li>
@@ -373,7 +373,7 @@ The model width <code>n</code> splits evenly into <code>h</code> cards of size
   is undefined and code must raise.</li>
 </ul>
 <h3 id="derivation_2">Derivation</h3>
-<p><code>Q = X W_q</code> has shape <code>(B, T, n)</code>. Reshape to
+<p id="c03-attention-dimensions-p04" data-kind="prose" data-term="softmax"><code>Q = X W_q</code> has shape <code>(B, T, n)</code>. Reshape to
 <code>(B, T, h, d)</code>, transpose to <code>(B, h, T, d)</code>. Then
 <code>QK^T</code> contracts the <code>d</code> axis: <code>(B, h, T, d)</code> times
 <code>(B, h, d, T)</code> gives <code>(B, h, T, T)</code>. Softmax runs over the
@@ -381,12 +381,12 @@ last axis (keys). Multiply by <code>V</code>, <code>(B, h, T, T)</code> times
 <code>(B, h, T, d)</code> gives <code>(B, h, T, d)</code>. Merge heads back to
 <code>(B, T, n)</code>, apply <code>W_o</code>.</p>
 <h3 id="computed-example_2">Computed example</h3>
-<p>Toy: <code>B = 1</code>, <code>T = 4</code>, <code>n = 8</code>, <code>h = 2</code>, <code>d = 4</code>. <code>Q</code> shape:
+<p id="c03-attention-dimensions-p05" data-kind="example">Toy: <code>B = 1</code>, <code>T = 4</code>, <code>n = 8</code>, <code>h = 2</code>, <code>d = 4</code>. <code>Q</code> shape:
 <code>(1, 2, 4, 4)</code>. Scores <code>A</code> shape: <code>(1, 2, 4, 4)</code> = 32
 numbers. Output: <code>(1, 4, 8)</code>. <code>W_q</code> has <code>8 x 8 = 64</code>
 parameters. Lab-01 asserts every shape in numpy.</p>
 <h3 id="implementation-and-checks_2">Implementation and checks</h3>
-<pre><code class="language-python">import numpy as np
+<pre id="c03-attention-dimensions-code01"><code class="language-python">import numpy as np
 
 B, T, n, h = 1, 4, 8, 2
 d = n // h
@@ -399,33 +399,33 @@ A = Q @ K.transpose(0, 1, 3, 2)
 assert Q.shape == (B, h, T, d)
 assert A.shape == (B, h, T, T)
 </code></pre>
-<p>Checks: softmax rows of <code>A</code> sum to 1 (lab asserts this).
+<p id="c03-attention-dimensions-p06" data-kind="prose">Checks: softmax rows of <code>A</code> sum to 1 (lab asserts this).
 Head merge round-trips to <code>(B, T, n)</code>.</p>
 <h3 id="complexity-and-costs_2">Complexity and costs</h3>
-<p>Scores cost <code>O(T^2 d)</code> per head, <code>O(T^2 n)</code> total. With the
+<p id="c03-attention-dimensions-p07" data-kind="summary" data-reveal="fade">Scores cost <code>O(T^2 d)</code> per head, <code>O(T^2 n)</code> total. With the
 toy: <code>2 heads x 4^2 x 4 = 128</code> multiply-adds for scores.
 The <code>T^2</code> term is the scaling pain of C10.</p>
 <h3 id="nearest-alternative-and-selection-boundary_2">Nearest alternative and selection boundary</h3>
-<p>Nearest alternative: one head with <code>d = n</code>. Selection
+<p id="c03-attention-dimensions-p08" data-kind="prose">Nearest alternative: one head with <code>d = n</code>. Selection
 boundary: multiple heads let different heads learn different
 relations (position vs content) at the same total width.
 Single-head attention is a valid baseline for ablations, not
 a production choice at scale.</p>
 <h3 id="failure-case-and-counterexample_2">Failure case and counterexample</h3>
-<p>Broken assumption: &ldquo;heads are independent.&rdquo; They share the
+<p id="c03-attention-dimensions-p09" data-kind="prose">Broken assumption: &ldquo;heads are independent.&rdquo; They share the
 input and the output projection mixes them. Counterexample:
 zero out <code>W_o</code> rows for head 2 in the toy. The output still
 changes because softmax denominators couple nothing across
 heads, but the merge does. Diagnose shape bugs by checking
 <code>A</code> rows sum to 1 per head.</p>
 <h3 id="research-reading-and-falsifiable-extension_2">Research reading and falsifiable extension</h3>
-<p>Reading: the original transformer paper&rsquo;s multi-head
+<p id="c03-attention-dimensions-p10" data-kind="prose">Reading: the original transformer paper&rsquo;s multi-head
 section. Falsifiable extension: vary <code>h</code> at fixed <code>n</code> on a
 toy copying task. Hypothesis: too many heads (tiny <code>d</code>)
 hurt because each head&rsquo;s key space is too small to separate
 tokens. Measure accuracy versus <code>d</code>.</p>
 <h3 id="exercises_2">Exercises</h3>
-<ul>
+<ul id="c03-attention-dimensions-list02" data-kind="exercise">
 <li>E11 (recall): from <code>n = 12</code>, <code>h = 3</code>, <code>T = 5</code>, write the
   shapes of <code>Q</code>, <code>A</code>, and the merged output.</li>
 <li>E12 (numerical): count score-matrix numbers for
@@ -438,31 +438,31 @@ tokens. Measure accuracy versus <code>d</code>.</p>
   measurable separation metric.</li>
 </ul>
 <h3 id="visual-units_2">Visual units</h3>
-<ul>
+<ul id="c03-attention-dimensions-list03">
 <li>Figure <code>u01_c03_shapes.png</code>: blocks for <code>X (T,n)</code>,
   split into <code>h</code> head cards <code>(T,d)</code>, scores <code>(T,T)</code>, merge
   back to <code>(T,n)</code>. One rule: split, score, merge. Source:
   original. Shell 2 (count the toy).</li>
 </ul>
-<figure><img alt="u01_c03_shapes.png" src="../../assets/u01/u01_c03_shapes.png"><figcaption>blocks for X (T,n), split into h head cards (T,d), scores (T,T), merge back to (T,n). One rule: split, score, merge. Source: original. (count the toy)</figcaption></figure>
-<ul>
+<figure id="c03-attention-dimensions-fig01" data-kind="figure" data-reveal="fade"><img alt="u01_c03_shapes.png" src="../../assets/u01/u01_c03_shapes.png"><figcaption>blocks for X (T,n), split into h head cards (T,d), scores (T,T), merge back to (T,n). One rule: split, score, merge. Source: original. (count the toy)</figcaption></figure>
+<ul id="c03-attention-dimensions-list04">
 <li>Audit: <code>u01c03</code> to <code>f03</code>. Architecture nouns: X, heads,
   scores, merge. Every block has an edge label.</li>
-</ul>
+</ul><span id="c03-attention-dimensions-end" data-end></span>
 <hr />
 <h2 id="c04-forwardbackward">C04: forward/backward</h2>
 <h3 id="source-scope-objectives-dependencies_3">Source, scope, objectives, dependencies</h3>
-<p>Calendar anchor: Week 2, Oct 04, &ldquo;Measuring the FLOPs of MLP
+<p id="c04-forwardbackward-p01" data-kind="prose" data-term="FLOPs">Calendar anchor: Week 2, Oct 04, &ldquo;Measuring the FLOPs of MLP
 and Transformer Training and Inference (Intro to
 Backpropagation)&rdquo;. Scope: what the forward pass stores and
 what the backward pass costs. Objective: derive the 2x/4x
 FLOP ratio. Depends on P11.</p>
 <h3 id="motivating-question-and-tiny-toy_3">Motivating question and tiny toy</h3>
-<p>Question: training costs about 3x inference per token. Where
+<p id="c04-forwardbackward-p02" data-kind="prose">Question: training costs about 3x inference per token. Where
 does the factor of 3 come from? Toy: one linear layer,
 <code>y = Wx</code>, <code>W</code> shape <code>(8, 8)</code>, <code>x</code> shape <code>(8,)</code>.</p>
 <h3 id="mental-model_3">Mental model</h3>
-<p>The forward pass is a recipe: you follow it and produce the
+<p id="c04-forwardbackward-p03" data-kind="keyIdea" data-reveal="rise">The forward pass is a recipe: you follow it and produce the
 dish. Backward is the health inspector: it walks the kitchen
 in reverse, and at every station it needs the ingredients
 that were present (the activations) to assign blame to each
@@ -470,7 +470,7 @@ step. The inspector visits each station twice: once to pass
 blame backward, once to blame the station&rsquo;s own dials. That
 is the factor of 2 inside the backward pass.</p>
 <h3 id="objects-shapes-assumptions_3">Objects, shapes, assumptions</h3>
-<ul>
+<ul id="c04-forwardbackward-list01" data-term="6P rule">
 <li>Forward per token: <code>2P</code> FLOPs for <code>P</code> parameters (one
   multiply-add per parameter, counted as 2).</li>
 <li>Backward per token: <code>4P</code> FLOPs (2P for activation
@@ -481,57 +481,57 @@ is the factor of 2 inside the backward pass.</p>
   (C09, C10).</li>
 </ul>
 <h3 id="derivation_3">Derivation</h3>
-<p>Linear layer <code>y = Wx</code> with <code>W</code> <code>(m, n)</code>: forward needs <code>mn</code>
+<p id="c04-forwardbackward-p04" data-kind="prose">Linear layer <code>y = Wx</code> with <code>W</code> <code>(m, n)</code>: forward needs <code>mn</code>
 multiplies and <code>mn</code> adds = <code>2mn</code> FLOPs. Backward: gradient
 w.r.t. <code>x</code> is <code>W^T dy</code>, another <code>2mn</code>. Gradient w.r.t. <code>W</code>
 is <code>dy x^T</code>, another <code>2mn</code>. Total <code>6mn</code>. For a transformer,
 <code>P</code> parameters give <code>6P</code> per token plus the attention term
 <code>12 L n T</code> per token (derived in C09).</p>
 <h3 id="computed-example_3">Computed example</h3>
-<p>Toy layer: <code>m = n = 8</code>, so <code>mn = 64</code> parameters. Forward:
+<p id="c04-forwardbackward-p05" data-kind="example">Toy layer: <code>m = n = 8</code>, so <code>mn = 64</code> parameters. Forward:
 128 FLOPs. Backward: 256 FLOPs. Total: 384 FLOPs = <code>6 x 64</code>.
 Real scale: <code>P = 7B</code>, <code>D = 1T</code> tokens. Training FLOPs =
 <code>6 x 7e9 x 1e12 = 4.2e22</code>. At 1e15 FLOP/s sustained, that
 is <code>4.2e7</code> seconds, about 1.3 years on one device. Same
 arithmetic as lab-01.</p>
 <h3 id="implementation-and-checks_3">Implementation and checks</h3>
-<pre><code class="language-python">def train_flops(P, D_tokens):
+<pre id="c04-forwardbackward-code01"><code class="language-python">def train_flops(P, D_tokens):
     return 6 * P * D_tokens
 
 assert train_flops(64, 1) == 384
 F = train_flops(7e9, 1e12)
 assert abs(F - 4.2e22) / 4.2e22 &lt; 1e-9
 </code></pre>
-<p>Check: ratio of backward to forward is exactly 2 for dense
+<p id="c04-forwardbackward-p06" data-kind="prose">Check: ratio of backward to forward is exactly 2 for dense
 layers. Lab-01 verifies the 6P rule against a tiny
 autograd-free manual gradient.</p>
 <h3 id="complexity-and-costs_3">Complexity and costs</h3>
-<p>Training is compute-bound at large batch: the <code>6P</code> term
+<p id="c04-forwardbackward-p07" data-kind="summary" data-reveal="fade" data-term="compute-bound">Training is compute-bound at large batch: the <code>6P</code> term
 dominates. Memory cost is separate: the backward pass needs
 activations for every layer (C06). Recomputation trades the
 <code>4P</code> backward FLOPs for less memory (U04 C11).</p>
 <h3 id="nearest-alternative-and-selection-boundary_3">Nearest alternative and selection boundary</h3>
-<p>Nearest alternative: forward-only methods (inference,
+<p id="c04-forwardbackward-p08" data-kind="prose">Nearest alternative: forward-only methods (inference,
 forward-gradient estimators). Selection boundary: use
 backprop when exact gradients are affordable. Forward-only
 methods apply when memory cannot hold activations, at the
 price of noisy gradients.</p>
 <h3 id="failure-case-and-counterexample_3">Failure case and counterexample</h3>
-<p>Broken assumption: &ldquo;backward is always 2x forward.&rdquo; With
+<p id="c04-forwardbackward-p09" data-kind="prose" data-term="activation checkpointing">Broken assumption: &ldquo;backward is always 2x forward.&rdquo; With
 activation checkpointing, the backward pass recomputes the
 forward, so the ratio rises toward 3x. Counterexample: a
 training run with full checkpointing shows backward time at
 2.8x forward, not 2x. The 6P rule then undercounts. Name the
 recompute policy before quoting FLOPs.</p>
 <h3 id="research-reading-and-falsifiable-extension_3">Research reading and falsifiable extension</h3>
-<p>Reading: the Oct 04 calendar session introduces
+<p id="c04-forwardbackward-p10" data-kind="prose">Reading: the Oct 04 calendar session introduces
 backpropagation for FLOP measurement. Falsifiable
 extension: measure forward/backward time ratio on a real
 GPU for a small transformer with and without
 checkpointing. Hypothesis: the ratio moves from ~2.0 to
 ~2.8. Report the recompute granularity.</p>
 <h3 id="exercises_3">Exercises</h3>
-<ul>
+<ul id="c04-forwardbackward-list02" data-kind="exercise">
 <li>E16 (recall): state the 6P rule and its two parts.</li>
 <li>E17 (numerical): <code>P = 1.3B</code>, <code>D = 300B</code> tokens. Training
   FLOPs. Days on 1000 devices at 2e14 FLOP/s each.</li>
@@ -543,36 +543,36 @@ checkpointing. Hypothesis: the ratio moves from ~2.0 to
   experiment. Name the control.</li>
 </ul>
 <h3 id="visual-units_3">Visual units</h3>
-<ul>
+<ul id="c04-forwardbackward-list03">
 <li>Figure <code>u01_c04_flop_bars.png</code>: three bars for the toy
   layer (forward 128, backward 256, total 384) and three
   bars for the 7B/1T scale in log height. Source: original
   toy. Shell 2.</li>
 </ul>
-<figure><img alt="u01_c04_flop_bars.png" src="../../assets/u01/u01_c04_flop_bars.png"><figcaption>three bars for the toy layer (forward 128, backward 256, total 384) and three bars for the 7B/1T scale in log height</figcaption></figure>
-<ul>
+<figure id="c04-forwardbackward-fig01" data-kind="figure" data-reveal="fade"><img alt="u01_c04_flop_bars.png" src="../../assets/u01/u01_c04_flop_bars.png"><figcaption>three bars for the toy layer (forward 128, backward 256, total 384) and three bars for the 7B/1T scale in log height</figcaption></figure>
+<ul id="c04-forwardbackward-list04">
 <li>Audit: <code>u01c04</code> to <code>f04</code>. Before: forward only. After:
   forward plus backward. One rule: blame assignment needs
   two passes.</li>
-</ul>
+</ul><span id="c04-forwardbackward-end" data-end></span>
 <hr />
 <h2 id="c05-parameter-count">C05: parameter count</h2>
 <h3 id="source-scope-objectives-dependencies_4">Source, scope, objectives, dependencies</h3>
-<p>Calendar anchor: Week 1, Sep 27, &ldquo;Transformers&rdquo;. Scope:
+<p id="c05-parameter-count-p01" data-kind="prose" data-term="12n^2">Calendar anchor: Week 1, Sep 27, &ldquo;Transformers&rdquo;. Scope:
 counting parameters of a transformer from shapes. Objective:
 derive <code>12 n^2</code> per layer and the full model total. Depends
 on P12.</p>
 <h3 id="motivating-question-and-tiny-toy_4">Motivating question and tiny toy</h3>
-<p>Question: a model card says 7B parameters. How is that
+<p id="c05-parameter-count-p02" data-kind="prose">Question: a model card says 7B parameters. How is that
 number built from the architecture? Toy: <code>n = 8</code>, <code>L = 2</code>,
 <code>V = 16</code>, <code>d_ff = 32</code>.</p>
 <h3 id="mental-model_4">Mental model</h3>
-<p>Count bricks, not the building. Each layer has two rooms:
+<p id="c05-parameter-count-p03" data-kind="keyIdea" data-reveal="rise" data-term="embedding">Count bricks, not the building. Each layer has two rooms:
 attention with 4 square matrices of size <code>n x n</code>, and the
 MLP with two rectangles <code>n x d_ff</code> and <code>d_ff x n</code>. Add the
 embedding table <code>V x n</code>. Multiply rooms by layers.</p>
 <h3 id="objects-shapes-assumptions_4">Objects, shapes, assumptions</h3>
-<ul>
+<ul id="c05-parameter-count-list01">
 <li>Attention: <code>W_q, W_k, W_v, W_o</code>, each <code>(n, n)</code>: <code>4n^2</code>.</li>
 <li>MLP: <code>W_1 (n, d_ff)</code>, <code>W_2 (d_ff, n)</code>: <code>2 n d_ff</code>.
   With <code>d_ff = 4n</code>: <code>8n^2</code>.</li>
@@ -582,12 +582,12 @@ embedding table <code>V x n</code>. Multiply rooms by layers.</p>
   matrices) change the constant.</li>
 </ul>
 <h3 id="derivation_4">Derivation</h3>
-<p>Per layer: <code>4n^2 + 2 n (4n) = 12n^2</code>. Total:
+<p id="c05-parameter-count-p04" data-kind="prose" data-term="tied embeddings">Per layer: <code>4n^2 + 2 n (4n) = 12n^2</code>. Total:
 <code>P = 12 L n^2 + V n</code>. Embedding often tied to the output
 head, so some counts add <code>V n</code> once, some twice. State the
 choice.</p>
 <h3 id="computed-example_4">Computed example</h3>
-<p>Toy: <code>n = 8</code>, <code>L = 2</code>, <code>V = 16</code>. Per layer: <code>12 x 64 =
+<p id="c05-parameter-count-p05" data-kind="example">Toy: <code>n = 8</code>, <code>L = 2</code>, <code>V = 16</code>. Per layer: <code>12 x 64 =
 768</code>. Two layers: 1536. Embeddings: <code>16 x 8 = 128</code>.
 Total: 1664 parameters. Real scale: <code>n = 4096</code>, <code>L = 32</code>,
 <code>V = 32000</code>. Per layer: <code>12 x 4096^2 = 201,326,592</code>. Times
@@ -595,7 +595,7 @@ Total: 1664 parameters. Real scale: <code>n = 4096</code>, <code>L = 32</code>,
 131,072,000</code>. Total about 6.57B. This is the &ldquo;7B class&rdquo;
 number. Lab-01 recomputes both.</p>
 <h3 id="implementation-and-checks_4">Implementation and checks</h3>
-<pre><code class="language-python">def param_count(n, L, V, d_ff=None):
+<pre id="c05-parameter-count-code01"><code class="language-python">def param_count(n, L, V, d_ff=None):
     d_ff = d_ff or 4 * n
     per_layer = 4 * n * n + 2 * n * d_ff
     return L * per_layer + V * n
@@ -604,33 +604,33 @@ assert param_count(8, 2, 16, 32) == 1664
 P = param_count(4096, 32, 32000)
 assert 6.5e9 &lt; P &lt; 6.6e9
 </code></pre>
-<p>Check: per-layer count divisible by 12 when
+<p id="c05-parameter-count-p06" data-kind="prose">Check: per-layer count divisible by 12 when
 <code>d_ff = 4n</code>. Embedding term linear in <code>V</code>.</p>
 <h3 id="complexity-and-costs_4">Complexity and costs</h3>
-<p>Parameters set the memory floor: <code>2P</code> bytes in fp16,
+<p id="c05-parameter-count-p07" data-kind="summary" data-reveal="fade">Parameters set the memory floor: <code>2P</code> bytes in fp16,
 <code>4P</code> in fp32. They also set the per-token FLOP floor via
 the 6P rule. Count before provisioning hardware.</p>
 <h3 id="nearest-alternative-and-selection-boundary_4">Nearest alternative and selection boundary</h3>
-<p>Nearest alternative: count with torch.numel() on a real
+<p id="c05-parameter-count-p08" data-kind="prose">Nearest alternative: count with torch.numel() on a real
 model. Selection boundary: the formula is for planning and
 cross-checks. The code count is the truth for a built
 model. Use the formula when the model does not exist yet.</p>
 <h3 id="failure-case-and-counterexample_4">Failure case and counterexample</h3>
-<p>Broken assumption: &ldquo;12n^2 always holds.&rdquo; SwiGLU MLPs use
+<p id="c05-parameter-count-p09" data-kind="prose" data-term="SwiGLU">Broken assumption: &ldquo;12n^2 always holds.&rdquo; SwiGLU MLPs use
 three matrices (<code>8/3</code> style sizing), MoE layers multiply
 by expert count, tied embeddings halve the embedding term.
 Counterexample: a SwiGLU model with <code>d_ff = 11008</code>,
 <code>n = 4096</code> has MLP params <code>3 x 4096 x 11008</code>, not
 <code>8n^2</code>. Quote the variant before the count.</p>
 <h3 id="research-reading-and-falsifiable-extension_4">Research reading and falsifiable extension</h3>
-<p>Reading: architecture papers state their counts, the
+<p id="c05-parameter-count-p10" data-kind="prose">Reading: architecture papers state their counts, the
 calendar family covers the transformer block. Falsifiable
 extension: predict the parameter count of three public
 model cards from <code>(n, L, V)</code> and compare to the card.
 Hypothesis: the formula matches within 1 percent once the
 MLP variant and tying are identified.</p>
 <h3 id="exercises_4">Exercises</h3>
-<ul>
+<ul id="c05-parameter-count-list02" data-kind="exercise">
 <li>E21 (recall): write the per-layer formula and name the
   two rooms.</li>
 <li>E22 (numerical): <code>n = 2048</code>, <code>L = 24</code>, <code>V = 32000</code>.
@@ -643,34 +643,34 @@ MLP variant and tying are identified.</p>
   with the tolerance.</li>
 </ul>
 <h3 id="visual-units_4">Visual units</h3>
-<ul>
+<ul id="c05-parameter-count-list03">
 <li>Figure <code>u01_c05_param_stack.png</code>: stacked bars for the
   toy model (attention, MLP, embeddings per layer) and the
   6.57B scale. Source: original toy. Shell 2.</li>
 </ul>
-<figure><img alt="u01_c05_param_stack.png" src="../../assets/u01/u01_c05_param_stack.png"><figcaption>stacked bars for the toy model (attention, MLP, embeddings per layer) and the 6.57B scale</figcaption></figure>
-<ul>
+<figure id="c05-parameter-count-fig01" data-kind="figure" data-reveal="fade"><img alt="u01_c05_param_stack.png" src="../../assets/u01/u01_c05_param_stack.png"><figcaption>stacked bars for the toy model (attention, MLP, embeddings per layer) and the 6.57B scale</figcaption></figure>
+<ul id="c05-parameter-count-list04">
 <li>Audit: <code>u01c05</code> to <code>f05</code>. Before: shapes. After: counts.
   One rule: multiply and add.</li>
-</ul>
+</ul><span id="c05-parameter-count-end" data-end></span>
 <hr />
 <h2 id="c06-activation-memory">C06: activation memory</h2>
 <h3 id="source-scope-objectives-dependencies_5">Source, scope, objectives, dependencies</h3>
-<p>Calendar anchor: Week 2, Oct 04, KV-cache efficiency
+<p id="c06-activation-memory-p01" data-kind="prose" data-term="activation memory">Calendar anchor: Week 2, Oct 04, KV-cache efficiency
 session (memory measurement theme). Scope: activation
 memory in training versus inference. Objective: compute
 bytes from shapes. Depends on P12, P15.</p>
 <h3 id="motivating-question-and-tiny-toy_5">Motivating question and tiny toy</h3>
-<p>Question: the model fits in memory, but training runs out
+<p id="c06-activation-memory-p02" data-kind="prose">Question: the model fits in memory, but training runs out
 of memory. What else consumes memory? Toy: <code>B = 2</code>,
 <code>T = 4</code>, <code>n = 8</code>, <code>L = 2</code>, fp16.</p>
 <h3 id="mental-model_5">Mental model</h3>
-<p>Parameters are the factory. Activations are the goods on
+<p id="c06-activation-memory-p03" data-kind="keyIdea" data-reveal="rise">Parameters are the factory. Activations are the goods on
 the conveyor belt. Training keeps every item at every
 station (for the backward pass). Inference keeps only the
 current item. The belt, not the factory, causes most OOMs.</p>
 <h3 id="objects-shapes-assumptions_5">Objects, shapes, assumptions</h3>
-<ul>
+<ul id="c06-activation-memory-list01" data-term="residual stream">
 <li>Per layer input <code>X</code>: <code>(B, T, n)</code> numbers.</li>
 <li>Bytes per number: 2 for fp16.</li>
 <li>Training stores all <code>L</code> layers: <code>2 B T n L</code> bytes for
@@ -679,12 +679,12 @@ current item. The belt, not the factory, causes most OOMs.</p>
   at extra compute cost (U04 C11).</li>
 </ul>
 <h3 id="derivation_5">Derivation</h3>
-<p>One layer input: <code>B T n</code> numbers. Times 2 bytes (fp16).
+<p id="c06-activation-memory-p04" data-kind="prose">One layer input: <code>B T n</code> numbers. Times 2 bytes (fp16).
 Times <code>L</code> layers: <code>2 B T n L</code>. Attention scores add
 <code>2 B h T^2</code> bytes per layer in the naive form. MLP
 intermediate adds <code>2 B T d_ff</code> per layer.</p>
 <h3 id="computed-example_5">Computed example</h3>
-<p>Toy: <code>B = 2</code>, <code>T = 4</code>, <code>n = 8</code>, <code>L = 2</code>, fp16. Residual
+<p id="c06-activation-memory-p05" data-kind="example">Toy: <code>B = 2</code>, <code>T = 4</code>, <code>n = 8</code>, <code>L = 2</code>, fp16. Residual
 stream: <code>2 x 2 x 4 x 8 x 2 = 256</code> bytes. Scores per layer:
 <code>2 x 2 x 16 x 2 = 128</code> bytes (h = 2). Real scale: <code>B = 8</code>,
 <code>T = 2048</code>, <code>n = 4096</code>, <code>L = 32</code>, fp16. Residual:
@@ -693,7 +693,7 @@ stream: <code>2 x 2 x 4 x 8 x 2 = 256</code> bytes. Scores per layer:
 16384 = 536,870,912</code> bytes per layer,
 times 32 is 16 GiB. Activations exceed parameters.</p>
 <h3 id="implementation-and-checks_5">Implementation and checks</h3>
-<pre><code class="language-python">def activation_bytes(B, T, n, L, d_ff, h, bytes_per=2):
+<pre id="c06-activation-memory-code01"><code class="language-python">def activation_bytes(B, T, n, L, d_ff, h, bytes_per=2):
     resid = bytes_per * B * T * n * L
     mlp = bytes_per * B * T * d_ff * L
     scores = bytes_per * B * h * T * T * L
@@ -703,35 +703,35 @@ r, m, s = activation_bytes(2, 4, 8, 2, 32, 2)
 assert r == 256
 assert s == 256  # 2 layers x 128
 </code></pre>
-<p>Check: scores scale with <code>T^2</code>, the rest with <code>T</code>. Double
+<p id="c06-activation-memory-p06" data-kind="prose">Check: scores scale with <code>T^2</code>, the rest with <code>T</code>. Double
 <code>T</code> in the toy and confirm the ratio.</p>
 <h3 id="complexity-and-costs_5">Complexity and costs</h3>
-<p>Activation memory grows with <code>B x T x L</code>. This is why
+<p id="c06-activation-memory-p07" data-kind="summary" data-reveal="fade" data-term="KV cache">Activation memory grows with <code>B x T x L</code>. This is why
 long-context training needs sequence parallelism or
 checkpointing. Inference with KV cache keeps <code>O(T)</code> per
 layer instead (C07, U03 C03).</p>
 <h3 id="nearest-alternative-and-selection-boundary_5">Nearest alternative and selection boundary</h3>
-<p>Nearest alternative: activation checkpointing (store a
+<p id="c06-activation-memory-p08" data-kind="prose">Nearest alternative: activation checkpointing (store a
 subset, recompute the rest). Selection boundary: checkpoint
 when activation memory exceeds device memory at the target
 <code>B x T</code>. Keep full activations when the backward pass is
 the bottleneck and memory allows.</p>
 <h3 id="failure-case-and-counterexample_5">Failure case and counterexample</h3>
-<p>Broken assumption: &ldquo;fp16 halves all memory.&rdquo; Master
+<p id="c06-activation-memory-p09" data-kind="prose" data-term="optimizer states">Broken assumption: &ldquo;fp16 halves all memory.&rdquo; Master
 weights, optimizer states, and some activations stay in
 fp32. Counterexample: Adam keeps 8 bytes per parameter
 (m, v in fp32) plus the fp32 master copy. A 7B model needs
 about 14 GB for fp16 weights but over 80 GB with Adam
 states. Count the optimizer before provisioning.</p>
 <h3 id="research-reading-and-falsifiable-extension_5">Research reading and falsifiable extension</h3>
-<p>Reading: the Oct 04 session on efficiency measurement.
+<p id="c06-activation-memory-p10" data-kind="prose">Reading: the Oct 04 session on efficiency measurement.
 Falsifiable extension: measure peak allocated memory
 versus <code>T</code> for a fixed small model on one GPU.
 Hypothesis: peak memory grows linearly in <code>T</code> once scores
 are tiled (FlashAttention), quadratically with naive
 attention. The slope identifies the regime.</p>
 <h3 id="exercises_5">Exercises</h3>
-<ul>
+<ul id="c06-activation-memory-list02" data-kind="exercise">
 <li>E26 (recall): write the residual-stream byte formula.</li>
 <li>E27 (numerical): <code>B = 4</code>, <code>T = 4096</code>, <code>n = 4096</code>,
   <code>L = 32</code>, fp16. Residual bytes in GiB.</li>
@@ -743,35 +743,35 @@ attention. The slope identifies the regime.</p>
   the slope test.</li>
 </ul>
 <h3 id="visual-units_5">Visual units</h3>
-<ul>
+<ul id="c06-activation-memory-list03">
 <li>Figure <code>u01_c06_act_mem.png</code>: bars for toy (residual,
   MLP, scores) and the real-scale GiB numbers. Source:
   original toy. Shell 2.</li>
 </ul>
-<figure><img alt="u01_c06_act_mem.png" src="../../assets/u01/u01_c06_act_mem.png"><figcaption>bars for toy (residual, MLP, scores) and the real-scale GiB numbers</figcaption></figure>
-<ul>
+<figure id="c06-activation-memory-fig01" data-kind="figure" data-reveal="fade"><img alt="u01_c06_act_mem.png" src="../../assets/u01/u01_c06_act_mem.png"><figcaption>bars for toy (residual, MLP, scores) and the real-scale GiB numbers</figcaption></figure>
+<ul id="c06-activation-memory-list04">
 <li>Audit: <code>u01c06</code> to <code>f06</code>. Before: one layer. After: <code>L</code>
   layers stored. One rule: backward needs history.</li>
-</ul>
+</ul><span id="c06-activation-memory-end" data-end></span>
 <hr />
 <h2 id="c07-autoregressive-workload">C07: autoregressive workload</h2>
 <h3 id="source-scope-objectives-dependencies_6">Source, scope, objectives, dependencies</h3>
-<p>Calendar anchor: Week 2, Oct 04, &ldquo;Reviewing Autoregressive
+<p id="c07-autoregressive-workload-p01" data-kind="prose" data-term="KV cache">Calendar anchor: Week 2, Oct 04, &ldquo;Reviewing Autoregressive
 Generation and KV Caching&rdquo;. Scope: the decode loop as a
 workload. Objective: describe one decode step with shapes
 and the KV cache. Depends on P14.</p>
 <h3 id="motivating-question-and-tiny-toy_6">Motivating question and tiny toy</h3>
-<p>Question: generation produces one token per step. What
+<p id="c07-autoregressive-workload-p02" data-kind="prose">Question: generation produces one token per step. What
 exactly is recomputed, and what is reused? Toy: prompt of
 3 tokens, generate 2 more. <code>n = 8</code>, <code>L = 1</code>, <code>h = 2</code>.</p>
 <h3 id="mental-model_6">Mental model</h3>
-<p>Writing with a perfect notebook. At each step you read the
+<p id="c07-autoregressive-workload-p03" data-kind="keyIdea" data-reveal="rise">Writing with a perfect notebook. At each step you read the
 whole notebook (the KV cache) once, write one new line,
 and append that line&rsquo;s notes to the notebook. You never
 re-read from scratch. The cost per step grows as the
 notebook thickens.</p>
 <h3 id="objects-shapes-assumptions_6">Objects, shapes, assumptions</h3>
-<ul>
+<ul id="c07-autoregressive-workload-list01" data-term="causal mask">
 <li>Step <code>t</code> input: one new token, shape <code>(B, 1, n)</code>.</li>
 <li>KV cache after <code>t</code> steps: <code>(B, h, t, d)</code> for keys and
   values, per layer.</li>
@@ -780,7 +780,7 @@ notebook thickens.</p>
   positions.</li>
 </ul>
 <h3 id="derivation_6">Derivation</h3>
-<p>Without a cache, step <code>t</code> recomputes keys and values for
+<p id="c07-autoregressive-workload-p04" data-kind="prose">Without a cache, step <code>t</code> recomputes keys and values for
 all <code>t</code> tokens: <code>O(t)</code> work per step, <code>O(T^2)</code> total.
 With the cache, step <code>t</code> computes one new key and value
 and reads <code>t</code> cached pairs: the read is <code>O(t)</code> memory
@@ -788,14 +788,14 @@ traffic, but no recompute. Total traffic over <code>T</code> steps
 is <code>O(T^2)</code> reads of small vectors, while compute per
 step stays <code>O(n^2)</code>.</p>
 <h3 id="computed-example_6">Computed example</h3>
-<p>Toy: prompt 3, generate 2, <code>n = 8</code>, <code>h = 2</code>, <code>d = 4</code>,
+<p id="c07-autoregressive-workload-p05" data-kind="example">Toy: prompt 3, generate 2, <code>n = 8</code>, <code>h = 2</code>, <code>d = 4</code>,
 fp16. Cache after 5 tokens per layer: keys
 <code>2 x 5 x 4 = 40</code> numbers, values 40 numbers, 80 numbers,
 160 bytes. Real scale per step at <code>T = 2048</code>: cache read
 per layer <code>2 x 2048 x 4096 x 2</code> bytes = 33.5 MB, times 32
 layers is about 1.07 GB of traffic per generated token.</p>
 <h3 id="implementation-and-checks_6">Implementation and checks</h3>
-<pre><code class="language-python">def kv_cache_bytes(T, L, n, bytes_per=2):
+<pre id="c07-autoregressive-workload-code01"><code class="language-python">def kv_cache_bytes(T, L, n, bytes_per=2):
     # keys + values, all layers
     return 2 * T * L * n * bytes_per
 
@@ -803,33 +803,33 @@ assert kv_cache_bytes(5, 1, 8) == 160
 gb = kv_cache_bytes(2048, 32, 4096) / 2**30
 assert 1.0 &lt; gb &lt; 1.1
 </code></pre>
-<p>Check: cache grows linearly in <code>T</code>. Append one token and
+<p id="c07-autoregressive-workload-p06" data-kind="prose">Check: cache grows linearly in <code>T</code>. Append one token and
 confirm the delta equals <code>2 L n</code> numbers.</p>
 <h3 id="complexity-and-costs_6">Complexity and costs</h3>
-<p>Per decode step: <code>O(P)</code> FLOPs (the weights are read once)
+<p id="c07-autoregressive-workload-p07" data-kind="summary" data-reveal="fade" data-term="memory bandwidth bound">Per decode step: <code>O(P)</code> FLOPs (the weights are read once)
 and <code>O(T)</code> KV traffic per layer. Decode is memory
 bandwidth bound at batch 1: the arithmetic intensity is
 low because each weight is used once per token.</p>
 <h3 id="nearest-alternative-and-selection-boundary_6">Nearest alternative and selection boundary</h3>
-<p>Nearest alternative: recompute keys and values every step
+<p id="c07-autoregressive-workload-p08" data-kind="prose">Nearest alternative: recompute keys and values every step
 (no cache). Selection boundary: cache when memory holds
 <code>2 T L n</code> bytes. Recompute only when the cache does not
 fit, which is rare at inference.</p>
 <h3 id="failure-case-and-counterexample_6">Failure case and counterexample</h3>
-<p>Broken assumption: &ldquo;the cache always helps.&rdquo; With a huge
+<p id="c07-autoregressive-workload-p09" data-kind="prose">Broken assumption: &ldquo;the cache always helps.&rdquo; With a huge
 batch, the cache itself becomes the memory bottleneck and
 limits batch size. Counterexample: batch 256 at
 <code>T = 8192</code> needs <code>2 x 256 x 8192 x 32 x 4096 x 2</code> bytes,
 about 1.1 TB. The cache caps the batch. Paged attention
 (U08, second builder) manages this.</p>
 <h3 id="research-reading-and-falsifiable-extension_6">Research reading and falsifiable extension</h3>
-<p>Reading: the Oct 04 session on KV caching efficiency.
+<p id="c07-autoregressive-workload-p10" data-kind="prose">Reading: the Oct 04 session on KV caching efficiency.
 Falsifiable extension: time per token versus <code>T</code> at
 batch 1. Hypothesis: linear growth with slope set by
 memory bandwidth, since traffic per step is <code>O(T)</code>.
 Measure the slope and compare to the bandwidth spec.</p>
 <h3 id="exercises_6">Exercises</h3>
-<ul>
+<ul id="c07-autoregressive-workload-list02" data-kind="exercise">
 <li>E31 (recall): write the cache shape after <code>t</code> steps.</li>
 <li>E32 (numerical): <code>T = 4096</code>, <code>L = 32</code>, <code>n = 4096</code>,
   fp16. Cache GiB.</li>
@@ -841,35 +841,35 @@ Measure the slope and compare to the bandwidth spec.</p>
   bandwidth comparison.</li>
 </ul>
 <h3 id="visual-units_6">Visual units</h3>
-<ul>
+<ul id="c07-autoregressive-workload-list03">
 <li>Figure <code>u01_c07_decode_loop.png</code>: three panels showing
   cache growth at steps 1, 2, 3 (hatched future slots,
   solid cached slots). Source: original toy. Shell 1.</li>
 </ul>
-<figure><img alt="u01_c07_decode_loop.png" src="../../assets/u01/u01_c07_decode_loop.png"><figcaption>three panels showing cache growth at steps 1, 2, 3 (hatched future slots, solid cached slots)</figcaption></figure>
-<ul>
+<figure id="c07-autoregressive-workload-fig01" data-kind="figure" data-reveal="fade"><img alt="u01_c07_decode_loop.png" src="../../assets/u01/u01_c07_decode_loop.png"><figcaption>three panels showing cache growth at steps 1, 2, 3 (hatched future slots, solid cached slots)</figcaption></figure>
+<ul id="c07-autoregressive-workload-list04">
 <li>Audit: <code>u01c07</code> to <code>f07</code>. Before: cache of size <code>t</code>.
   After: size <code>t + 1</code>. One rule: append new K/V.</li>
-</ul>
+</ul><span id="c07-autoregressive-workload-end" data-end></span>
 <hr />
 <h2 id="c08-traininginference-contrast">C08: training/inference contrast</h2>
 <h3 id="source-scope-objectives-dependencies_7">Source, scope, objectives, dependencies</h3>
-<p>Calendar anchor: Week 2, Oct 04, &ldquo;Measuring the FLOPs of
+<p id="c08-traininginference-contrast-p01" data-kind="prose">Calendar anchor: Week 2, Oct 04, &ldquo;Measuring the FLOPs of
 MLP and Transformer Training and Inference&rdquo;. Scope: the
 two regimes side by side. Objective: name five contrasts
 with numbers. Depends on P11, P15.</p>
 <h3 id="motivating-question-and-tiny-toy_7">Motivating question and tiny toy</h3>
-<p>Question: the same weights serve training and chat. Why
+<p id="c08-traininginference-contrast-p02" data-kind="prose">Question: the same weights serve training and chat. Why
 do engineers treat them as different systems? Toy: <code>P</code>
 params, <code>T = 4</code> prompt, generate 4 tokens, batch 1.</p>
 <h3 id="mental-model_7">Mental model</h3>
-<p>Training is a factory run: full shifts, every machine at
+<p id="c08-traininginference-contrast-p03" data-kind="keyIdea" data-reveal="rise">Training is a factory run: full shifts, every machine at
 once, maximum throughput, cost counted in total FLOPs.
 Inference is a taxi service: one passenger at a time,
 latency matters, the meter runs on memory bandwidth. Same
 car, different business.</p>
 <h3 id="objects-shapes-assumptions_7">Objects, shapes, assumptions</h3>
-<table>
+<table id="c08-traininginference-contrast-table01">
 <thead>
 <tr>
 <th>Aspect</th>
@@ -905,54 +905,54 @@ car, different business.</p>
 </tr>
 </tbody>
 </table>
-<p>Assumption: batch 1 for the inference column. Batching
+<p id="c08-traininginference-contrast-p04" data-kind="prose">Assumption: batch 1 for the inference column. Batching
 changes the row (U03 C06).</p>
 <h3 id="derivation_7">Derivation</h3>
-<p>Training processes <code>B x T</code> tokens in parallel, so each
+<p id="c08-traininginference-contrast-p05" data-kind="prose" data-term="arithmetic intensity">Training processes <code>B x T</code> tokens in parallel, so each
 weight is reused <code>B x T</code> times: high arithmetic intensity,
 compute-bound. Decode touches each weight once per token:
 intensity near <code>1</code> FLOP/byte for fp16 matvec, far below
 the ridge point, so bandwidth-bound.</p>
 <h3 id="computed-example_7">Computed example</h3>
-<p>Real scale: <code>P = 7B</code>, fp16, one A100-class device with
+<p id="c08-traininginference-contrast-p06" data-kind="example">Real scale: <code>P = 7B</code>, fp16, one A100-class device with
 2 TB/s bandwidth (labeled toy spec, Not in source as a
 vendor claim). Decode weight traffic per token: 14 GB.
 Time floor: <code>14 / 2000 = 0.007</code> s, about 143 tokens/s max.
 Training at <code>B = 1024</code>, <code>T = 2048</code>: <code>2M</code> tokens per step,
 <code>6 x 7e9 x 2e6 = 8.4e16</code> FLOPs per step.</p>
 <h3 id="implementation-and-checks_7">Implementation and checks</h3>
-<pre><code class="language-python">def decode_time_floor(P, bytes_per, bandwidth_Bps):
+<pre id="c08-traininginference-contrast-code01"><code class="language-python">def decode_time_floor(P, bytes_per, bandwidth_Bps):
     return P * bytes_per / bandwidth_Bps
 
 t = decode_time_floor(7e9, 2, 2e12)
 assert abs(t - 0.007) &lt; 1e-9
 </code></pre>
-<p>Check: doubling bandwidth halves the floor. The lab
+<p id="c08-traininginference-contrast-p07" data-kind="prose">Check: doubling bandwidth halves the floor. The lab
 verifies the table rows against toy runs.</p>
 <h3 id="complexity-and-costs_7">Complexity and costs</h3>
-<p>Training cost is set by FLOPs. Inference cost at small
+<p id="c08-traininginference-contrast-p08" data-kind="summary" data-reveal="fade">Training cost is set by FLOPs. Inference cost at small
 batch is set by bytes moved. This split drives every
 serving decision in U08 (second builder).</p>
 <h3 id="nearest-alternative-and-selection-boundary_7">Nearest alternative and selection boundary</h3>
-<p>Nearest alternative: treat inference as small-batch
+<p id="c08-traininginference-contrast-p09" data-kind="prose">Nearest alternative: treat inference as small-batch
 training (recompute everything). Selection boundary: the
 KV cache and weight-reuse analysis above decides. Never
 run decode as training without a cache unless memory
 forces it.</p>
 <h3 id="failure-case-and-counterexample_7">Failure case and counterexample</h3>
-<p>Broken assumption: &ldquo;bigger batch always helps training.&rdquo;
+<p id="c08-traininginference-contrast-p10" data-kind="prose" data-term="critical batch size">Broken assumption: &ldquo;bigger batch always helps training.&rdquo;
 Beyond the critical batch size, extra batch adds little
 statistical value per FLOP. Counterexample: doubling <code>B</code>
 past the noise-dominated point doubles cost per step with
 flat loss progress. Measure gradient noise scale first.</p>
 <h3 id="research-reading-and-falsifiable-extension_7">Research reading and falsifiable extension</h3>
-<p>Reading: the Oct 04 FLOP measurement session.
+<p id="c08-traininginference-contrast-p11" data-kind="prose">Reading: the Oct 04 FLOP measurement session.
 Falsifiable extension: sweep batch size at fixed tokens
 and plot tokens/s versus batch for decode. Hypothesis: a
 knee where the regime flips from bandwidth-bound to
 compute-bound. Report the knee batch.</p>
 <h3 id="exercises_7">Exercises</h3>
-<ul>
+<ul id="c08-traininginference-contrast-list01" data-kind="exercise">
 <li>E36 (recall): fill the five-row table from memory.</li>
 <li>E37 (numerical): <code>P = 13B</code>, fp16, 3 TB/s. Decode
   time floor per token.</li>
@@ -964,33 +964,33 @@ compute-bound. Report the knee batch.</p>
   measurement.</li>
 </ul>
 <h3 id="visual-units_7">Visual units</h3>
-<ul>
+<ul id="c08-traininginference-contrast-list02">
 <li>Figure <code>u01_c08_regimes.png</code>: two bars. Training:
   compute-bound block. Decode: bandwidth-bound block with
   the 7 ms floor marked. Source: original toy. Shell 3.</li>
 </ul>
-<figure><img alt="u01_c08_regimes.png" src="../../assets/u01/u01_c08_regimes.png"><figcaption>two bars. Training: compute-bound block. Decode: bandwidth-bound block with the 7 ms floor marked</figcaption></figure>
-<ul>
+<figure id="c08-traininginference-contrast-fig01" data-kind="figure" data-reveal="fade"><img alt="u01_c08_regimes.png" src="../../assets/u01/u01_c08_regimes.png"><figcaption>two bars. Training: compute-bound block. Decode: bandwidth-bound block with the 7 ms floor marked</figcaption></figure>
+<ul id="c08-traininginference-contrast-list03">
 <li>Audit: <code>u01c08</code> to <code>f08</code>. Before: one system view.
   After: two regimes. One rule: intensity decides.</li>
-</ul>
+</ul><span id="c08-traininginference-contrast-end" data-end></span>
 <hr />
 <h2 id="c09-mlp-versus-attention-cost">C09: MLP versus attention cost</h2>
 <h3 id="source-scope-objectives-dependencies_8">Source, scope, objectives, dependencies</h3>
-<p>Calendar anchor: Week 2, Oct 04, &ldquo;Measuring the FLOPs of
+<p id="c09-mlp-versus-attention-cost-p01" data-kind="prose" data-term="crossover">Calendar anchor: Week 2, Oct 04, &ldquo;Measuring the FLOPs of
 MLP and Transformer Training and Inference&rdquo;. Scope: split
 the per-layer FLOPs between MLP and attention. Objective:
 find the crossover sequence length. Depends on C04, C05.</p>
 <h3 id="motivating-question-and-tiny-toy_8">Motivating question and tiny toy</h3>
-<p>Question: at what sequence length does attention cost more
+<p id="c09-mlp-versus-attention-cost-p02" data-kind="prose" data-term="MLP">Question: at what sequence length does attention cost more
 than the MLP? Toy: <code>n = 8</code>, <code>d_ff = 32</code>, <code>L = 1</code>.</p>
 <h3 id="mental-model_8">Mental model</h3>
-<p>The MLP is a toll booth per car: fixed price per token.
+<p id="c09-mlp-versus-attention-cost-p03" data-kind="keyIdea" data-reveal="rise">The MLP is a toll booth per car: fixed price per token.
 Attention is a town hall: every token talks to every
 token, so the price grows with the square of attendance.
 Short meetings are cheap. Long meetings dominate.</p>
 <h3 id="objects-shapes-assumptions_8">Objects, shapes, assumptions</h3>
-<ul>
+<ul id="c09-mlp-versus-attention-cost-list01">
 <li>Per layer per token, forward: MLP <code>16n^2</code> FLOPs
   (two matmuls, <code>d_ff = 4n</code>), attention projections
   <code>8n^2</code>, attention scores <code>4Tn</code>.</li>
@@ -998,14 +998,14 @@ Short meetings are cheap. Long meetings dominate.</p>
 <li>Assumption: <code>d_ff = 4n</code>, dense, no sparsity.</li>
 </ul>
 <h3 id="derivation_8">Derivation</h3>
-<p>MLP: <code>W_1</code> is <code>(n, 4n)</code>, <code>W_2</code> is <code>(4n, n)</code>. Per token:
+<p id="c09-mlp-versus-attention-cost-p04" data-kind="prose" data-term="T = 6n">MLP: <code>W_1</code> is <code>(n, 4n)</code>, <code>W_2</code> is <code>(4n, n)</code>. Per token:
 <code>2 x (2n x 4n) = 16n^2</code> FLOPs. Attention QKVO: 4
 projections, <code>4 x 2n^2 = 8n^2</code>. Scores: <code>QK^T</code>
 <code>2T^2n</code> per sequence, <code>2Tn</code> per token. AV: same again.
 Total scores per token: <code>4Tn</code>. Crossover when
 <code>4Tn = 16n^2 + 8n^2</code>, so <code>T = 6n</code>.</p>
 <h3 id="computed-example_8">Computed example</h3>
-<p>Toy: <code>n = 8</code>. Equality at <code>T = 48</code>, scores strictly win
+<p id="c09-mlp-versus-attention-cost-p05" data-kind="example">Toy: <code>n = 8</code>. Equality at <code>T = 48</code>, scores strictly win
 from <code>T = 49</code>. At <code>T = 4</code>: MLP 1024,
 projections 512, scores 128. MLP wins. Real scale:
 <code>n = 4096</code>. Crossover <code>T = 24576</code>. At <code>T = 2048</code>: MLP
@@ -1013,7 +1013,7 @@ per token <code>16 x 4096^2 = 2.68e8</code>, scores
 <code>4 x 2048 x 4096 = 3.36e7</code>. MLP dominates 8 to 1.
 Attention dominates only past 24K tokens.</p>
 <h3 id="implementation-and-checks_8">Implementation and checks</h3>
-<pre><code class="language-python">def layer_flops_per_token(n, T, d_ff=None):
+<pre id="c09-mlp-versus-attention-cost-code01"><code class="language-python">def layer_flops_per_token(n, T, d_ff=None):
     d_ff = d_ff or 4 * n
     mlp = 4 * n * d_ff          # 2 matmuls x 2 flops
     proj = 8 * n * n
@@ -1024,32 +1024,32 @@ mlp, proj, scores = layer_flops_per_token(8, 4)
 assert (mlp, proj, scores) == (1024, 512, 128)
 assert mlp + proj + scores == 24 * 64 + 4 * 4 * 8
 </code></pre>
-<p>Check: sum equals <code>24n^2 + 4Tn</code>. Lab-01 verifies the
+<p id="c09-mlp-versus-attention-cost-p06" data-kind="prose">Check: sum equals <code>24n^2 + 4Tn</code>. Lab-01 verifies the
 crossover by sweep.</p>
 <h3 id="complexity-and-costs_8">Complexity and costs</h3>
-<p>Below <code>6n</code> tokens, the model is an MLP cost problem.
+<p id="c09-mlp-versus-attention-cost-p07" data-kind="summary" data-reveal="fade">Below <code>6n</code> tokens, the model is an MLP cost problem.
 Above, it is an attention cost problem. This decides
 where optimization effort goes (U04 targets the
 above-crossover regime).</p>
 <h3 id="nearest-alternative-and-selection-boundary_8">Nearest alternative and selection boundary</h3>
-<p>Nearest alternative: shrink the MLP (<code>d_ff = 2n</code>) to move
+<p id="c09-mlp-versus-attention-cost-p08" data-kind="prose">Nearest alternative: shrink the MLP (<code>d_ff = 2n</code>) to move
 the crossover down. Selection boundary: keep <code>d_ff = 4n</code>
 when quality needs it, the crossover is a measurement,
 not a law. Change the architecture and recompute.</p>
 <h3 id="failure-case-and-counterexample_8">Failure case and counterexample</h3>
-<p>Broken assumption: &ldquo;attention is always the bottleneck.&rdquo;
+<p id="c09-mlp-versus-attention-cost-p09" data-kind="prose">Broken assumption: &ldquo;attention is always the bottleneck.&rdquo;
 At <code>T = 2048</code>, <code>n = 4096</code>, the MLP is 8x the attention
 scores. Counterexample: a profiler that only optimizes
 attention leaves 89 percent of FLOPs untouched. Profile
 first, then optimize the tall bar.</p>
 <h3 id="research-reading-and-falsifiable-extension_8">Research reading and falsifiable extension</h3>
-<p>Reading: the Oct 04 measurement session. Falsifiable
+<p id="c09-mlp-versus-attention-cost-p10" data-kind="prose">Reading: the Oct 04 measurement session. Falsifiable
 extension: profile per-layer time versus <code>T</code> on a real
 GPU. Hypothesis: the measured crossover sits near <code>6n</code>
 in FLOP terms but shifts under memory effects. Report
 both.</p>
 <h3 id="exercises_8">Exercises</h3>
-<ul>
+<ul id="c09-mlp-versus-attention-cost-list02" data-kind="exercise">
 <li>E41 (recall): derive the <code>T = 6n</code> crossover in three
   lines.</li>
 <li>E42 (numerical): <code>n = 2048</code>. Crossover <code>T</code>. At
@@ -1061,54 +1061,54 @@ both.</p>
   hypothesis with both numbers.</li>
 </ul>
 <h3 id="visual-units_8">Visual units</h3>
-<ul>
+<ul id="c09-mlp-versus-attention-cost-list03">
 <li>Figure <code>u01_c09_crossover.png</code>: two curves (MLP flat,
   attention rising) versus <code>T</code>, crossing at <code>6n</code>, toy
   numbers. Source: original toy. Shell 6 (change one
   factor: <code>T</code>).</li>
 </ul>
-<figure><img alt="u01_c09_crossover.png" src="../../assets/u01/u01_c09_crossover.png"><figcaption>two curves (MLP flat, attention rising) versus T, crossing at 6n, toy numbers. (change one factor: T)</figcaption></figure>
-<ul>
+<figure id="c09-mlp-versus-attention-cost-fig01" data-kind="figure" data-reveal="fade"><img alt="u01_c09_crossover.png" src="../../assets/u01/u01_c09_crossover.png"><figcaption>two curves (MLP flat, attention rising) versus T, crossing at 6n, toy numbers. (change one factor: T)</figcaption></figure>
+<ul id="c09-mlp-versus-attention-cost-list04">
 <li>Audit: <code>u01c09</code> to <code>f09</code>. Before: short <code>T</code>. After:
   long <code>T</code>. One rule: quadratic overtakes linear.</li>
-</ul>
+</ul><span id="c09-mlp-versus-attention-cost-end" data-end></span>
 <hr />
 <h2 id="c10-sequence-scaling">C10: sequence scaling</h2>
 <h3 id="source-scope-objectives-dependencies_9">Source, scope, objectives, dependencies</h3>
-<p>Calendar anchor: Week 3, Oct 07, &ldquo;Understanding the Scaling
+<p id="c10-sequence-scaling-p01" data-kind="prose" data-term="scaling bottlenecks">Calendar anchor: Week 3, Oct 07, &ldquo;Understanding the Scaling
 Bottlenecks of Standard Attention&rdquo;. Scope: how cost grows
 with <code>T</code>. Objective: write the scaling of FLOPs, memory,
 and KV cache in <code>T</code>. Depends on C09.</p>
 <h3 id="motivating-question-and-tiny-toy_9">Motivating question and tiny toy</h3>
-<p>Question: the context window doubles from 4K to 8K. What
+<p id="c10-sequence-scaling-p02" data-kind="prose">Question: the context window doubles from 4K to 8K. What
 exactly doubles, and what quadruples? Toy: <code>n = 8</code>,
 <code>T</code> in {4, 8}.</p>
 <h3 id="mental-model_9">Mental model</h3>
-<p>A dinner party. Doubling guests doubles the food (linear:
+<p id="c10-sequence-scaling-p03" data-kind="keyIdea" data-reveal="rise">A dinner party. Doubling guests doubles the food (linear:
 MLP, KV cache) but quadruples the handshakes (quadratic:
 attention scores). The handshake term decides whether the
 room still fits.</p>
 <h3 id="objects-shapes-assumptions_9">Objects, shapes, assumptions</h3>
-<ul>
+<ul id="c10-sequence-scaling-list01" data-term="T^2">
 <li>Per sequence per layer: <code>24 T n^2 + 4 T^2 n</code> FLOPs.</li>
 <li>Scores memory: <code>2 B h T^2</code> bytes (fp16, naive).</li>
 <li>KV cache: <code>4 B T L n</code> bytes (fp16, keys plus values).</li>
 <li>Assumption: naive attention materializes scores.</li>
 </ul>
 <h3 id="derivation_9">Derivation</h3>
-<p>Scores are <code>T x T</code> per head: <code>T^2</code> entries, each from a
+<p id="c10-sequence-scaling-p04" data-kind="prose">Scores are <code>T x T</code> per head: <code>T^2</code> entries, each from a
 dot product of length <code>d</code>. FLOPs <code>2 T^2 d</code> per head per
 matmul, two matmuls, <code>h</code> heads: <code>4 T^2 n</code>. Memory:
 <code>T^2</code> numbers per head. KV cache stores <code>T</code> vectors of
 size <code>n</code> per layer: linear in <code>T</code>.</p>
 <h3 id="computed-example_9">Computed example</h3>
-<p>Toy: <code>n = 8</code>, <code>h = 2</code>, <code>B = 1</code>, <code>L = 1</code>, fp16. <code>T = 4</code>:
+<p id="c10-sequence-scaling-p05" data-kind="example">Toy: <code>n = 8</code>, <code>h = 2</code>, <code>B = 1</code>, <code>L = 1</code>, fp16. <code>T = 4</code>:
 scores <code>2 x 16 x 2 = 64</code> bytes. <code>T = 8</code>: scores
 <code>2 x 64 x 2 = 256</code> bytes, 4x. KV cache: <code>T = 4</code> gives
 <code>4 x 1 x 4 x 1 x 8 = 128</code> bytes. <code>T = 8</code> gives 256
 bytes, 2x. Lab-01 checks the 4x/2x split.</p>
 <h3 id="implementation-and-checks_9">Implementation and checks</h3>
-<pre><code class="language-python">def scaling(T, B=1, h=2, n=8, L=1):
+<pre id="c10-sequence-scaling-code01"><code class="language-python">def scaling(T, B=1, h=2, n=8, L=1):
     scores = 2 * B * h * T * T
     kvcache = 4 * B * T * L * n
     return scores, kvcache
@@ -1118,30 +1118,30 @@ s8, k8 = scaling(8)
 assert s8 == 4 * s4
 assert k8 == 2 * k4
 </code></pre>
-<p>Check: the ratio test is the invariant. Any attention
+<p id="c10-sequence-scaling-p06" data-kind="prose">Check: the ratio test is the invariant. Any attention
 variant must report its own ratios.</p>
 <h3 id="complexity-and-costs_9">Complexity and costs</h3>
-<p><code>T^2</code> memory is the hard wall for naive attention. <code>T^2</code>
+<p id="c10-sequence-scaling-p07" data-kind="summary" data-reveal="fade"><code>T^2</code> memory is the hard wall for naive attention. <code>T^2</code>
 FLOPs is a soft wall (compute can be bought). The cache
 is linear but has a large constant (<code>4BLn</code>).</p>
 <h3 id="nearest-alternative-and-selection-boundary_9">Nearest alternative and selection boundary</h3>
-<p>Nearest alternative: FlashAttention (U04) removes the
+<p id="c10-sequence-scaling-p08" data-kind="prose" data-term="FlashAttention">Nearest alternative: FlashAttention (U04) removes the
 <code>T^2</code> memory term. Selection boundary: naive attention
 is fine below the memory wall. Past it, use tiled or
 linear attention. Compute the wall before choosing.</p>
 <h3 id="failure-case-and-counterexample_9">Failure case and counterexample</h3>
-<p>Broken assumption: &ldquo;longer context is free at
+<p id="c10-sequence-scaling-p09" data-kind="prose">Broken assumption: &ldquo;longer context is free at
 inference.&rdquo; The KV cache grows linearly and the per-step
 read grows with it. Counterexample: doubling context at
 fixed batch doubles cache bytes and slows every decode
 step. Budget the cache, not just the weights.</p>
 <h3 id="research-reading-and-falsifiable-extension_9">Research reading and falsifiable extension</h3>
-<p>Reading: the Oct 07 bottleneck session. Falsifiable
+<p id="c10-sequence-scaling-p10" data-kind="prose">Reading: the Oct 07 bottleneck session. Falsifiable
 extension: measure max batch versus <code>T</code> on one GPU.
 Hypothesis: max batch falls as <code>1/T</code> in the cache-bound
 regime. Fit the curve and report the constant.</p>
 <h3 id="exercises_9">Exercises</h3>
-<ul>
+<ul id="c10-sequence-scaling-list02" data-kind="exercise">
 <li>E46 (recall): name the term that is quadratic and the
   two that are linear.</li>
 <li>E47 (numerical): <code>B = 1</code>, <code>h = 32</code>, <code>T = 32768</code>,
@@ -1154,51 +1154,51 @@ regime. Fit the curve and report the constant.</p>
   the fit.</li>
 </ul>
 <h3 id="visual-units_9">Visual units</h3>
-<ul>
+<ul id="c10-sequence-scaling-list03">
 <li>Figure <code>u01_c10_scaling.png</code>: log-log plot of scores
   (slope 2) and cache (slope 1) versus <code>T</code>, toy numbers.
   Source: original toy. Shell 6.</li>
 </ul>
-<figure><img alt="u01_c10_scaling.png" src="../../assets/u01/u01_c10_scaling.png"><figcaption>log-log plot of scores (slope 2) and cache (slope 1) versus T, toy numbers</figcaption></figure>
-<ul>
+<figure id="c10-sequence-scaling-fig01" data-kind="figure" data-reveal="fade"><img alt="u01_c10_scaling.png" src="../../assets/u01/u01_c10_scaling.png"><figcaption>log-log plot of scores (slope 2) and cache (slope 1) versus T, toy numbers</figcaption></figure>
+<ul id="c10-sequence-scaling-list04">
 <li>Audit: <code>u01c10</code> to <code>f10</code>. Before: <code>T</code>. After: <code>2T</code>.
   One rule: square the pairs, double the vectors.</li>
-</ul>
+</ul><span id="c10-sequence-scaling-end" data-end></span>
 <hr />
 <h2 id="c11-model-quality">C11: model quality</h2>
 <h3 id="source-scope-objectives-dependencies_10">Source, scope, objectives, dependencies</h3>
-<p>Calendar anchor: Week 1, Sep 27 (pretraining family).
+<p id="c11-model-quality-p01" data-kind="prose" data-term="perplexity">Calendar anchor: Week 1, Sep 27 (pretraining family).
 Scope: what &ldquo;quality&rdquo; means and how it is measured.
 Objective: define perplexity and name its limits.
 Depends on P10, P13.</p>
 <h3 id="motivating-question-and-tiny-toy_10">Motivating question and tiny toy</h3>
-<p>Question: loss fell from 3.0 to 2.5. Did the model get
+<p id="c11-model-quality-p02" data-kind="prose">Question: loss fell from 3.0 to 2.5. Did the model get
 better at the task you care about? Toy: vocab 16, a
 4-question downstream quiz.</p>
 <h3 id="mental-model_10">Mental model</h3>
-<p>Perplexity is a weigh-in. It says the model is lighter
+<p id="c11-model-quality-p03" data-kind="keyIdea" data-reveal="rise" data-term="downstream eval">Perplexity is a weigh-in. It says the model is lighter
 (more certain), not that it can fight (do the task).
 Downstream eval is the sparring session. Both matter.
 Neither replaces the other.</p>
 <h3 id="objects-shapes-assumptions_10">Objects, shapes, assumptions</h3>
-<ul>
+<ul id="c11-model-quality-list01">
 <li>Perplexity: <code>exp(mean negative log-likelihood)</code>.</li>
 <li>Downstream: accuracy on a fixed task set.</li>
 <li>Assumption: the eval set represents the deployment
   task. A mismatch voids the comparison.</li>
 </ul>
 <h3 id="derivation_10">Derivation</h3>
-<p>Mean NLL of 2.5 nats gives perplexity <code>e^2.5 = 12.2</code>.
+<p id="c11-model-quality-p04" data-kind="prose">Mean NLL of 2.5 nats gives perplexity <code>e^2.5 = 12.2</code>.
 Mean NLL of 3.0 gives <code>e^3.0 = 20.1</code>. The ratio of
 perplexities is <code>e^{0.5} = 1.65</code>. Loss differences are
 log-scale, small drops are large certainty gains.</p>
 <h3 id="computed-example_10">Computed example</h3>
-<p>Toy: 4 quiz questions. Model A: loss 2.5, quiz 3/4.
+<p id="c11-model-quality-p05" data-kind="example">Toy: 4 quiz questions. Model A: loss 2.5, quiz 3/4.
 Model B: loss 2.7, quiz 4/4. Lower loss did not win the
 quiz. Report both numbers. Lab-01 includes a toy where
 perplexity and accuracy disagree.</p>
 <h3 id="implementation-and-checks_10">Implementation and checks</h3>
-<pre><code class="language-python">import numpy as np
+<pre id="c11-model-quality-code01"><code class="language-python">import numpy as np
 
 def ppl(nll):
     return float(np.exp(nll))
@@ -1206,31 +1206,31 @@ def ppl(nll):
 assert ppl(2.5) &lt; ppl(3.0)
 assert abs(ppl(0.0) - 1.0) &lt; 1e-12  # perfect model
 </code></pre>
-<p>Check: perplexity 1.0 means zero uncertainty. Values
+<p id="c11-model-quality-p06" data-kind="prose">Check: perplexity 1.0 means zero uncertainty. Values
 below 1.0 are impossible, flag them as bugs.</p>
 <h3 id="complexity-and-costs_10">Complexity and costs</h3>
-<p>Eval cost is linear in eval tokens. Cheap evals get run
+<p id="c11-model-quality-p07" data-kind="summary" data-reveal="fade">Eval cost is linear in eval tokens. Cheap evals get run
 often and overfit the eval. Hold out a private set.</p>
 <h3 id="nearest-alternative-and-selection-boundary_10">Nearest alternative and selection boundary</h3>
-<p>Nearest alternative: human preference ratings.
+<p id="c11-model-quality-p08" data-kind="prose">Nearest alternative: human preference ratings.
 Selection boundary: use perplexity for training health,
 task accuracy for capability claims, human eval for
 deployment decisions. Never promote on perplexity alone.</p>
 <h3 id="failure-case-and-counterexample_10">Failure case and counterexample</h3>
-<p>Broken assumption: &ldquo;lower loss means a better product.&rdquo;
+<p id="c11-model-quality-p09" data-kind="prose" data-term="contamination">Broken assumption: &ldquo;lower loss means a better product.&rdquo;
 Counterexample: the toy above (B beats A on the quiz).
 Also: loss on a contaminated eval (test text in
 training) looks great and means nothing. Check for
 contamination before celebrating.</p>
 <h3 id="research-reading-and-falsifiable-extension_10">Research reading and falsifiable extension</h3>
-<p>Reading: standard eval practice, emergence caveats sit
+<p id="c11-model-quality-p10" data-kind="prose">Reading: standard eval practice, emergence caveats sit
 in U06. Falsifiable extension: correlate perplexity
 with task accuracy across 10 checkpoints. Hypothesis:
 the correlation breaks on tasks needing multi-step
 reasoning. Report per-task correlations, not one
 number.</p>
 <h3 id="exercises_10">Exercises</h3>
-<ul>
+<ul id="c11-model-quality-list02" data-kind="exercise">
 <li>E51 (recall): define perplexity in one sentence.</li>
 <li>E52 (numerical): losses 2.0 and 2.3. Perplexity
   ratio.</li>
@@ -1242,35 +1242,35 @@ number.</p>
   hypothesis with the task split.</li>
 </ul>
 <h3 id="visual-units_10">Visual units</h3>
-<ul>
+<ul id="c11-model-quality-list03">
 <li>Figure <code>u01_c11_quality.png</code>: scatter of toy
   (perplexity, accuracy) points with one disagreeing
   pair highlighted. Source: original toy. Shell 8
   (compare two measures).</li>
 </ul>
-<figure><img alt="u01_c11_quality.png" src="../../assets/u01/u01_c11_quality.png"><figcaption>scatter of toy (perplexity, accuracy) points with one disagreeing pair highlighted. (compare two measures)</figcaption></figure>
-<ul>
+<figure id="c11-model-quality-fig01" data-kind="figure" data-reveal="fade"><img alt="u01_c11_quality.png" src="../../assets/u01/u01_c11_quality.png"><figcaption>scatter of toy (perplexity, accuracy) points with one disagreeing pair highlighted. (compare two measures)</figcaption></figure>
+<ul id="c11-model-quality-list04">
 <li>Audit: <code>u01c11</code> to <code>f11</code>. Before: loss only. After:
   loss plus task. One rule: measure the task.</li>
-</ul>
+</ul><span id="c11-model-quality-end" data-end></span>
 <hr />
 <h2 id="c12-baseline">C12: baseline</h2>
 <h3 id="source-scope-objectives-dependencies_11">Source, scope, objectives, dependencies</h3>
-<p>Calendar anchor: Week 1 course framing (modeling choices
+<p id="c12-baseline-p01" data-kind="prose" data-term="baseline">Calendar anchor: Week 1 course framing (modeling choices
 need comparison). Scope: what a baseline is and why weak
 baselines lie. Objective: design a baseline for any claim
 in U01-U05. Depends on P10.</p>
 <h3 id="motivating-question-and-tiny-toy_11">Motivating question and tiny toy</h3>
-<p>Question: your new attention variant trains 2x faster.
+<p id="c12-baseline-p02" data-kind="prose">Question: your new attention variant trains 2x faster.
 Faster than what? Toy: variant X versus a naive
 attention baseline on <code>T = 64</code>, <code>n = 64</code>.</p>
 <h3 id="mental-model_11">Mental model</h3>
-<p>A baseline is the sparring partner. Beat a weak partner
+<p id="c12-baseline-p03" data-kind="keyIdea" data-reveal="rise">A baseline is the sparring partner. Beat a weak partner
 and you learn nothing. The partner must be the best
 simple thing: the standard implementation, tuned as well
 as your method, on the same task and budget.</p>
 <h3 id="objects-shapes-assumptions_11">Objects, shapes, assumptions</h3>
-<ul>
+<ul id="c12-baseline-list01" data-term="ablation">
 <li>Baseline: reference method run under identical
   conditions (data, budget, metric).</li>
 <li>Ablation: your method minus one part.</li>
@@ -1278,46 +1278,46 @@ as your method, on the same task and budget.</p>
   comparison is hype, not science.</li>
 </ul>
 <h3 id="derivation_11">Derivation</h3>
-<p>Speedup = time(baseline) / time(method) at equal
+<p id="c12-baseline-p04" data-kind="prose" data-term="speedup">Speedup = time(baseline) / time(method) at equal
 quality, or quality(method) - quality(baseline) at equal
 budget. Both need the same denominator. Report both
 directions when in doubt.</p>
 <h3 id="computed-example_11">Computed example</h3>
-<p>Toy: baseline naive attention, <code>T = 64</code>: 100 ms per
+<p id="c12-baseline-p05" data-kind="example">Toy: baseline naive attention, <code>T = 64</code>: 100 ms per
 step. Variant: 50 ms per step at equal loss. Speedup
 2x. But a tiled baseline (FlashAttention) runs 30 ms.
 True speedup versus the strong baseline: 0.6x, a
 slowdown. The baseline choice flips the conclusion.</p>
 <h3 id="implementation-and-checks_11">Implementation and checks</h3>
-<pre><code class="language-python">def speedup(t_base, t_new):
+<pre id="c12-baseline-code01"><code class="language-python">def speedup(t_base, t_new):
     return t_base / t_new
 
 assert abs(speedup(100.0, 50.0) - 2.0) &lt; 1e-9
 assert speedup(30.0, 50.0) &lt; 1.0  # strong baseline wins
 </code></pre>
-<p>Check: always compute against two baselines (naive and
+<p id="c12-baseline-p06" data-kind="prose">Check: always compute against two baselines (naive and
 strong) in the lab.</p>
 <h3 id="complexity-and-costs_11">Complexity and costs</h3>
-<p>Strong baselines cost effort but prevent false wins.
+<p id="c12-baseline-p07" data-kind="summary" data-reveal="fade">Strong baselines cost effort but prevent false wins.
 Budget 20 percent of experiment time for the baseline.</p>
 <h3 id="nearest-alternative-and-selection-boundary_11">Nearest alternative and selection boundary</h3>
-<p>Nearest alternative: published numbers as baseline.
+<p id="c12-baseline-p08" data-kind="prose">Nearest alternative: published numbers as baseline.
 Selection boundary: published numbers are fine for
 context, never for the headline claim. Re-run the
 baseline on your hardware for the claim.</p>
 <h3 id="failure-case-and-counterexample_11">Failure case and counterexample</h3>
-<p>Broken assumption: &ldquo;the baseline was fair.&rdquo; Common
+<p id="c12-baseline-p09" data-kind="prose">Broken assumption: &ldquo;the baseline was fair.&rdquo; Common
 cheats: untuned baseline hyperparameters, smaller
 baseline budget, easier baseline task. Counterexample:
 the toy above. Audit checklists catch these.</p>
 <h3 id="research-reading-and-falsifiable-extension_11">Research reading and falsifiable extension</h3>
-<p>Reading: experimental method (P22). Falsifiable
+<p id="c12-baseline-p10" data-kind="prose">Reading: experimental method (P22). Falsifiable
 extension: take one published speedup claim in
 efficient attention and re-run with a strong baseline.
 Hypothesis: at least half the claimed gain vanishes.
 Report the before/after numbers.</p>
 <h3 id="exercises_11">Exercises</h3>
-<ul>
+<ul id="c12-baseline-list02" data-kind="exercise">
 <li>E56 (recall): define baseline and ablation in one
   line each.</li>
 <li>E57 (numerical): baseline 120 ms, method 40 ms,
@@ -1330,19 +1330,19 @@ Report the before/after numbers.</p>
   audit list.</li>
 </ul>
 <h3 id="visual-units_11">Visual units</h3>
-<ul>
+<ul id="c12-baseline-list03">
 <li>Figure <code>u01_c12_baselines.png</code>: three bars (naive
   baseline, strong baseline, method) with two speedup
   arrows. Source: original toy. Shell 8.</li>
 </ul>
-<figure><img alt="u01_c12_baselines.png" src="../../assets/u01/u01_c12_baselines.png"><figcaption>three bars (naive baseline, strong baseline, method) with two speedup arrows</figcaption></figure>
-<ul>
+<figure id="c12-baseline-fig01" data-kind="figure" data-reveal="fade"><img alt="u01_c12_baselines.png" src="../../assets/u01/u01_c12_baselines.png"><figcaption>three bars (naive baseline, strong baseline, method) with two speedup arrows</figcaption></figure>
+<ul id="c12-baseline-list04">
 <li>Audit: <code>u01c12</code> to <code>f12</code>. Before: one baseline.
   After: two baselines. One rule: match the budget.</li>
-</ul>
+</ul><span id="c12-baseline-end" data-end></span>
 <hr />
 <h2 id="unit-chapter-plate">Unit chapter plate</h2>
-<p>Figure <code>u01_chapter.png</code>: left region shows naive cost
+<p id="unit-chapter-plate-p01" data-kind="prose" data-term="naive cost">Figure <code>u01_chapter.png</code>: left region shows naive cost
 (<code>T^2</code> scores materialized, full activations stored),
 center shows the stored objects (weights, KV cache,
 activations), right shows the managed cost (tiled
@@ -1350,9 +1350,9 @@ attention, checkpointing, cache reuse), bottom states
 the tradeoff in one line: &ldquo;Memory buys parallelism,
 bandwidth bills every token.&rdquo; Every number on the plate
 comes from the lesson toys above.</p>
-<figure><img alt="u01_chapter.png" src="../../assets/u01/u01_chapter.png"><figcaption>left region shows naive cost (T^2 scores materialized, full activations stored), center shows the stored objects (weights, KV cache, activations), right shows the managed cost (tiled attention, checkpointing, cache reuse), bottom states the tradeoff in one line: 'Memory buys parallelism, bandwidth bills every token.' Every number on the plate comes from the lesson toys above</figcaption></figure>
+<figure id="unit-chapter-plate-fig01" data-kind="figure" data-reveal="fade"><img alt="u01_chapter.png" src="../../assets/u01/u01_chapter.png"><figcaption>left region shows naive cost (T^2 scores materialized, full activations stored), center shows the stored objects (weights, KV cache, activations), right shows the managed cost (tiled attention, checkpointing, cache reuse), bottom states the tradeoff in one line: 'Memory buys parallelism, bandwidth bills every token.' Every number on the plate comes from the lesson toys above</figcaption></figure><span id="unit-chapter-plate-end" data-end></span>
 <h2 id="russian-doll-ladder-the-autoregressive-decode-step-major-mechanism">Russian-doll ladder: the autoregressive decode step (major mechanism)</h2>
-<ul>
+<ul id="russian-doll-ladder-the-autoregressive-decode-step-major-mechanism-list01" data-kind="steps">
 <li>Shell 0: question: what does one decode step cost, and
   what would change the answer? Observable: ms per token.</li>
 <li>Shell 1: toy: <code>n = 8</code>, prompt 3, generate 2 (C07).</li>
@@ -1371,9 +1371,9 @@ comes from the lesson toys above.</p>
   bandwidth).</li>
 <li>Shell 10: production: the per-token floor sets serving
   cost and the batch cap (U08, second builder).</li>
-</ul>
+</ul><span id="russian-doll-ladder-the-autoregressive-decode-step-major-mechanism-end" data-end></span>
 <h2 id="role-bridge">Role bridge</h2>
-<ul>
+<ul id="role-bridge-list01" data-term="6P rule">
 <li>Research engineer: the 6P rule and the crossover <code>T =
   6n</code> are the two numbers to carry into any profiling
   session.</li>
@@ -1381,7 +1381,7 @@ comes from the lesson toys above.</p>
   formula sizes every deployment.</li>
 <li>Research scientist: perplexity versus task accuracy is
   the honesty check on every quality claim.</li>
-</ul>
+</ul><span id="role-bridge-end" data-end></span>
       
       <nav class="pager"><a href="../../glossary.html"><span class="lbl">← Previous</span>glossary.md: cs229s terms</a><a href="../../lessons/u01/keys.html"><span class="lbl">Next →</span>Unit 01 · Keys</a></nav>
     </article>
