@@ -1,0 +1,170 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs336-lessons-u09_model_parallel",
+ "itemKind": "lesson",
+ "revision": "ff30a2ca906625cceb43a924a614836d90e0f9794e991b55f9ce9069a0456960",
+ "sections": [
+  {
+   "anchor": "u09_model_parallel-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "u09_model_parallel-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "prerequisites",
+     "definition": "The numbered prerequisite blocks this lesson builds on.",
+     "anchor": "u09_model_parallel-intro-p01"
+    },
+    {
+     "term": "claim class",
+     "definition": "The sourcing label that marks how verified each claim is.",
+     "anchor": "u09_model_parallel-intro-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "u09_model_parallel-intro-r1",
+     "question": "Which session does this lesson report, and what is its claim class?",
+     "answer": "A cross-cutting branch with distributed training reported across course sessions. Claim class REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION PENDING.",
+     "anchor": "u09_model_parallel-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "standing-note",
+   "title": "Standing note",
+   "minutes": 1,
+   "endAnchor": "standing-note-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "reference model",
+     "definition": "d=4096, L=32, 7B params, microbatch b=2 with T=2048, bf16. The fixed shape behind the arithmetic.",
+     "anchor": "standing-note-p01"
+    },
+    {
+     "term": "time models",
+     "definition": "Computed timing estimates from stated assumptions, not measurements.",
+     "anchor": "standing-note-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "standing-note-r1",
+     "question": "What fixed model do the parallelism numbers assume?",
+     "answer": "d=4096, L=32, 7B params, microbatch b=2 with T=2048, bf16.",
+     "anchor": "standing-note-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "local-remediation-the-three-axes",
+   "title": "Local remediation, the three axes",
+   "minutes": 18,
+   "endAnchor": "local-remediation-the-three-axes-end",
+   "blocks": [
+    {
+     "anchor": "local-remediation-the-three-axes-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "local-remediation-the-three-axes-fig02",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "local-remediation-the-three-axes-fig03",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "tensor parallelism",
+     "definition": "Splitting heads and MLP matrices across ranks. It needs one all-reduce per sublayer to sum partial outputs.",
+     "anchor": "local-remediation-the-three-axes-p01"
+    },
+    {
+     "term": "pipeline parallelism",
+     "definition": "Splitting layers across stages. Microbatches flow through with point-to-point activation and grad transfers.",
+     "anchor": "local-remediation-the-three-axes-p01"
+    },
+    {
+     "term": "pipeline bubble",
+     "definition": "(p-1)/(m+p-1). Idle time from fill and drain, shrunk by more microbatches or fewer stages.",
+     "anchor": "c03-the-pipeline-bubble"
+    },
+    {
+     "term": "1F1B",
+     "definition": "One forward, one backward. The schedule keeps the pipeline full and limits in-flight activations to about p microbatches.",
+     "anchor": "local-remediation-the-three-axes-p47"
+    },
+    {
+     "term": "hybrid DP/TP/PP",
+     "definition": "tp*pp*dp = N. TP innermost on fast links, PP next, DP outermost.",
+     "anchor": "c05-hybrid-dptppp"
+    },
+    {
+     "term": "activation checkpointing",
+     "definition": "Storing only layer inputs and recomputing the rest in backward. It multiplies the affordable microbatch count.",
+     "anchor": "c08-activation-checkpointing-interplay"
+    }
+   ],
+   "recall": [
+    {
+     "id": "local-remediation-the-three-axes-r1",
+     "question": "What are the three levers on the pipeline bubble?",
+     "answer": "More microbatches m, fewer stages p, and better schedules like 1F1B or interleaved.",
+     "anchor": "local-remediation-the-three-axes-p37"
+    },
+    {
+     "id": "local-remediation-the-three-axes-r2",
+     "question": "Why does TP belong innermost in a hybrid layout?",
+     "answer": "TP communicates per layer with many small all-reduces, so it needs the fastest links. PP uses point-to-point across nodes, DP all-reduces grads once per step and tolerates slower links.",
+     "anchor": "local-remediation-the-three-axes-p69"
+    },
+    {
+     "id": "local-remediation-the-three-axes-r3",
+     "question": "What five checks catch parallelism bugs on paper?",
+     "answer": "tp*pp*dp = N, tp within node size, per-GPU bytes under HBM, m much larger than p, and shard groups matching reduction groups.",
+     "anchor": "local-remediation-the-three-axes-p181"
+    }
+   ]
+  },
+  {
+   "anchor": "unit-russian-doll-ladder-u09",
+   "title": "Unit Russian-doll ladder (U09)",
+   "minutes": 1,
+   "endAnchor": "unit-russian-doll-ladder-u09-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "shell",
+     "definition": "One nested layer of the ladder, from the headline question at shell 0 to the final synthesis at shell 10.",
+     "anchor": "unit-russian-doll-ladder-u09-shells-1"
+    },
+    {
+     "term": "Russian-doll ladder",
+     "definition": "The unit's nested summary. Eleven shells restate the unit from the headline question to the final synthesis.",
+     "anchor": "unit-russian-doll-ladder-u09"
+    }
+   ],
+   "recall": [
+    {
+     "id": "unit-russian-doll-ladder-u09-r1",
+     "question": "What question does shell 0 ask?",
+     "answer": "How does the model itself split across GPUs?",
+     "anchor": "unit-russian-doll-ladder-u09-shells-1"
+    },
+    {
+     "id": "unit-russian-doll-ladder-u09-r2",
+     "question": "What does shell 10 conclude?",
+     "answer": "The parallelism plan is the production scale contract.",
+     "anchor": "unit-russian-doll-ladder-u09-shells-1"
+    }
+   ]
+  }
+ ]
+}

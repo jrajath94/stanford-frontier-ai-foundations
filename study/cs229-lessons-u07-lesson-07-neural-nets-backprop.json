@@ -1,0 +1,654 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229-lessons-u07-lesson-07-neural-nets-backprop",
+ "itemKind": "lesson",
+ "revision": "a76d549d592ee23a808576f8a514043f2ed284bb58ec6996af8970d16dd5602c",
+ "sections": [
+  {
+   "anchor": "lesson-07-neural-nets-backprop-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "lesson-07-neural-nets-backprop-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229-U07",
+     "definition": "The unit code for this lesson in the Stanford CS229 foundations course.",
+     "anchor": "lesson-07-neural-nets-backprop-intro-p02"
+    },
+    {
+     "term": "leaf concepts",
+     "definition": "The fine-grained concepts the lesson covers, labeled C01 to C12.",
+     "anchor": "lesson-07-neural-nets-backprop-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-07-neural-nets-backprop-intro-r1",
+     "question": "Who teaches this course?",
+     "answer": "Tengyu Ma and Andrew Ng.",
+     "anchor": "lesson-07-neural-nets-backprop-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "source-mapping",
+   "title": "Source mapping",
+   "minutes": 1,
+   "endAnchor": "source-mapping-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "ReLU",
+     "definition": "max(z, 0): the kink activation.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "backprop",
+     "definition": "Reverse-mode autodiff over the module graph.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "layer norm",
+     "definition": "z -> (z - mean)/std with learnable scale and shift.",
+     "anchor": "source-mapping-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "source-mapping-r1",
+     "question": "What do notes sections 7.1-7.4 give?",
+     "answer": "7.1: nonlinear models, losses, SGD. 7.2: single neuron, ReLU, stacking, two-layer nets, vectorization. 7.3: modules (linear, activation, layer norm with the scaling invariance proof, convolution). 7.4: backprop theorem, chain-rule perspective, backward functions.",
+     "anchor": "source-mapping-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "scope-and-objectives",
+   "title": "Scope and objectives",
+   "minutes": 1,
+   "endAnchor": "scope-and-objectives-end",
+   "blocks": [
+    {
+     "anchor": "scope-and-objectives-p01",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "two-layer net",
+     "definition": "z_j = w_j^{[1]T} x + b_j^{[1]}, a_j = ReLU(z_j), output = w^{[2]T} a + b^{[2]}.",
+     "anchor": "scope-and-objectives-p02"
+    },
+    {
+     "term": "initialization",
+     "definition": "Xavier or Kaiming variance scaling.",
+     "anchor": "scope-and-objectives-p02"
+    },
+    {
+     "term": "gradient check",
+     "definition": "Finite-difference check of hand-derived gradients.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "scope-and-objectives-r1",
+     "question": "What does the scope cover?",
+     "answer": "Nonlinear hypotheses built from stacked modules, and the gradient machinery that trains them.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "id": "scope-and-objectives-r2",
+     "question": "What does objective 4 ask the learner to do?",
+     "answer": "Derive a backward pass by hand.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "dependencies",
+   "title": "Dependencies",
+   "minutes": 1,
+   "endAnchor": "dependencies-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "prerequisites",
+     "definition": "The shared bridge units P05, P11, and P12 needed before this lesson.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "term": "nonlinearity",
+     "definition": "Why it matters, remediated in SL-01.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "backprop",
+     "definition": "Message passing, remediated in SL-04.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "gradient checking",
+     "definition": "Remediated in SL-06.",
+     "anchor": "dependencies-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "dependencies-r1",
+     "question": "Which prerequisites does this lesson list?",
+     "answer": "P05, P11, and P12, the shared bridges.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "id": "dependencies-r2",
+     "question": "What does the list say backprop is?",
+     "answer": "Message passing, remediated in SL-04.",
+     "anchor": "dependencies-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-01-nonlinear-hypotheses-and-multilayer-structure",
+   "title": "SL-01: Nonlinear hypotheses and multilayer structure",
+   "minutes": 2,
+   "endAnchor": "sl-01-nonlinear-hypotheses-and-multilayer-structure-end",
+   "blocks": [
+    {
+     "anchor": "sl-01-nonlinear-hypotheses-and-multilayer-structure-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-01-nonlinear-hypotheses-and-multilayer-structure-l01",
+     "kind": "definition",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-01-nonlinear-hypotheses-and-multilayer-structure-p05",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-01-nonlinear-hypotheses-and-multilayer-structure-p06",
+     "kind": "keyIdea",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "ReLU",
+     "definition": "max(z, 0): the kink activation.",
+     "anchor": "sl-01-nonlinear-hypotheses-and-multilayer-structure-p02"
+    },
+    {
+     "term": "neuron",
+     "definition": "ReLU(w^T x + b): one kink unit.",
+     "anchor": "sl-01-nonlinear-hypotheses-and-multilayer-structure-p04"
+    },
+    {
+     "term": "hidden unit",
+     "definition": "One derived feature in the hidden layer.",
+     "anchor": "sl-01-nonlinear-hypotheses-and-multilayer-structure-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-01-nonlinear-hypotheses-and-multilayer-structure-r1",
+     "question": "Why is the nonlinearity load-bearing?",
+     "answer": "Stack two linear layers: W^{[2]}(W^{[1]} x) = (W^{[2]} W^{[1]}) x: still linear. Without activation, depth adds nothing.",
+     "anchor": "sl-01-nonlinear-hypotheses-and-multilayer-structure-p06"
+    },
+    {
+     "id": "sl-01-nonlinear-hypotheses-and-multilayer-structure-r2",
+     "question": "In the kinked housing example, what does ReLU do?",
+     "answer": "x = 2000 sqft: score 200, ReLU 200. x = 1000: score -100, ReLU 0. The kink floors at zero.",
+     "anchor": "sl-01-nonlinear-hypotheses-and-multilayer-structure-p05"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-02-basic-modules",
+   "title": "SL-02: Basic modules",
+   "minutes": 2,
+   "endAnchor": "sl-02-basic-modules-end",
+   "blocks": [
+    {
+     "anchor": "sl-02-basic-modules-l01",
+     "kind": "definition",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-02-basic-modules-p03",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "LayerNorm",
+     "definition": "z -> (z - mean)/std, then scale/shift by gamma, beta.",
+     "anchor": "sl-02-basic-modules-p02"
+    },
+    {
+     "term": "ReLU",
+     "definition": "max(z, 0); backward passes the gradient where z > 0.",
+     "anchor": "sl-02-basic-modules-l01"
+    },
+    {
+     "term": "backward",
+     "definition": "The module's map from upstream gradient to input and parameter gradients.",
+     "anchor": "sl-02-basic-modules-l01"
+    },
+    {
+     "term": "RMSNorm",
+     "definition": "Like LayerNorm without mean subtraction.",
+     "anchor": "sl-02-basic-modules-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-02-basic-modules-r1",
+     "question": "What is the LayerNorm scaling invariance?",
+     "answer": "z = [1,2,3] normalizes to [-1.2247, 0, 1.2247]. Scaled by 5 first: [5,10,15] normalizes identically. The invariance.",
+     "anchor": "sl-02-basic-modules-p03"
+    },
+    {
+     "id": "sl-02-basic-modules-r2",
+     "question": "Why do language models prefer LayerNorm over BatchNorm?",
+     "answer": "Forgetting train vs eval mode for BatchNorm: test uses stale batch statistics and predictions shift. LayerNorm has no such mode split.",
+     "anchor": "sl-02-basic-modules-p05"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-03-initialization",
+   "title": "SL-03: Initialization",
+   "minutes": 1,
+   "endAnchor": "sl-03-initialization-end",
+   "blocks": [
+    {
+     "anchor": "sl-03-initialization-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-03-initialization-p04",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "zero init",
+     "definition": "All weights start at zero; symmetry never breaks.",
+     "anchor": "sl-03-initialization-p02"
+    },
+    {
+     "term": "Xavier",
+     "definition": "Var(W) = 1/fan_in.",
+     "anchor": "sl-03-initialization-p03"
+    },
+    {
+     "term": "Kaiming",
+     "definition": "Var(W) = 2/fan_in, for ReLU.",
+     "anchor": "sl-03-initialization-p03"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-03-initialization-r1",
+     "question": "Why does zero init fail?",
+     "answer": "Every hidden unit computes the same thing, gets the same gradient, and stays identical forever. Symmetry never breaks.",
+     "anchor": "sl-03-initialization-p03"
+    },
+    {
+     "id": "sl-03-initialization-r2",
+     "question": "What do Xavier and Kaiming set?",
+     "answer": "The variance so the signal keeps its scale: Var(W) = 1/fan_in (Xavier) or 2/fan_in (Kaiming for ReLU).",
+     "anchor": "sl-03-initialization-p03"
+    },
+    {
+     "id": "sl-03-initialization-r3",
+     "question": "In the 1000x1000 example, what goes wrong without scaling?",
+     "answer": "Var(z_i) = 1000: activations explode by sqrt(1000) ~ 31.6 per layer. Xavier scaling 1/sqrt(1000) preserves Var at 1.",
+     "anchor": "sl-03-initialization-p04"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-04-backpropagation",
+   "title": "SL-04: Backpropagation",
+   "minutes": 3,
+   "endAnchor": "sl-04-backpropagation-end",
+   "blocks": [
+    {
+     "anchor": "sl-04-backpropagation-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-04-backpropagation-p06",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-04-backpropagation-p07",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "backprop",
+     "definition": "Reverse-mode autodiff: one backward pass for all parameters.",
+     "anchor": "sl-04-backpropagation-p02"
+    },
+    {
+     "term": "backward pass",
+     "definition": "Start with dJ/dJ = 1 and walk backward through stored intermediates.",
+     "anchor": "sl-04-backpropagation-p04"
+    },
+    {
+     "term": "upstream gradient",
+     "definition": "dJ/du, the gradient flowing into a module.",
+     "anchor": "sl-04-backpropagation-p05"
+    },
+    {
+     "term": "dead neuron",
+     "definition": "A ReLU with z <= 0: dJ/dz = 0, nothing learns.",
+     "anchor": "sl-04-backpropagation-p06"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-04-backpropagation-r1",
+     "question": "What is the backward contract?",
+     "answer": "Each module answers: given dJ/d(output), what is dJ/d(input) and dJ/d(params)? The chain rule composes these answers.",
+     "anchor": "sl-04-backpropagation-p04"
+    },
+    {
+     "id": "sl-04-backpropagation-r2",
+     "question": "In the worked example, why does nothing learn?",
+     "answer": "z = 0, ReLU subgradient taken as 0, dJ/dz = 0, dJ/dw = [0,0]. The dead neuron (z <= 0) kills the gradient.",
+     "anchor": "sl-04-backpropagation-p06"
+    },
+    {
+     "id": "sl-04-backpropagation-r3",
+     "question": "What does the backprop theorem say about cost?",
+     "answer": "A circuit of size N has its gradient computable in O(N): one forward plus one backward.",
+     "anchor": "sl-04-backpropagation-p04"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-05-batch-vectorization",
+   "title": "SL-05: Batch vectorization",
+   "minutes": 1,
+   "endAnchor": "sl-05-batch-vectorization-end",
+   "blocks": [
+    {
+     "anchor": "sl-05-batch-vectorization-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-05-batch-vectorization-p05",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "vectorization",
+     "definition": "Doing B examples at once with matrix multiplies.",
+     "anchor": "sl-05-batch-vectorization-p02"
+    },
+    {
+     "term": "mini-batch SGD",
+     "definition": "Averaging B gradients per step (notes Algorithm 2).",
+     "anchor": "sl-05-batch-vectorization-p04"
+    },
+    {
+     "term": "broadcasting bug",
+     "definition": "X (B, d) times W (d, m) vs W (m, d): a silent wrong answer if B == m.",
+     "anchor": "sl-05-batch-vectorization-p07"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-05-batch-vectorization-r1",
+     "question": "How does batching feed the GPU?",
+     "answer": "Stack B examples into X of shape (B, d). Z = X W^T + b: one matrix multiply does B examples at once.",
+     "anchor": "sl-05-batch-vectorization-p04"
+    },
+    {
+     "id": "sl-05-batch-vectorization-r2",
+     "question": "In the B=32 example, what are the shapes?",
+     "answer": "X (32,10), W (20,10), Z = X @ W.T (32,20), dJ/dZ (32,20), dJ/dW = (dJ/dZ).T @ X (20,10). Shapes balance.",
+     "anchor": "sl-05-batch-vectorization-p05"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-06-gradient-checks",
+   "title": "SL-06: Gradient checks",
+   "minutes": 1,
+   "endAnchor": "sl-06-gradient-checks-end",
+   "blocks": [
+    {
+     "anchor": "sl-06-gradient-checks-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-06-gradient-checks-p04",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-06-gradient-checks-l01",
+     "kind": "steps",
+     "reveal": "stepwise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "finite differences",
+     "definition": "[J(theta + h e_i) - J(theta - h e_i)] / (2h): the independent arbiter.",
+     "anchor": "sl-06-gradient-checks-p03"
+    },
+    {
+     "term": "relative error",
+     "definition": "Below 1e-5 for smooth modules.",
+     "anchor": "sl-06-gradient-checks-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-06-gradient-checks-r1",
+     "question": "What is the gradient-check formula?",
+     "answer": "dJ/d theta_i ~= [J(theta + h e_i) - J(theta - h e_i)] / (2h).",
+     "anchor": "sl-06-gradient-checks-p03"
+    },
+    {
+     "id": "sl-06-gradient-checks-r2",
+     "question": "Why check only on a tiny net?",
+     "answer": "Finite differences need 2 forward passes per parameter: 2e6 passes for a 1e6-parameter net. Check small, scale with confidence.",
+     "anchor": "sl-06-gradient-checks-p06"
+    },
+    {
+     "id": "sl-06-gradient-checks-r3",
+     "question": "What is the protocol?",
+     "answer": "Check on a small net with random data; relative error below 1e-5 for smooth modules; skip ReLU at exactly 0.",
+     "anchor": "sl-06-gradient-checks-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-07-optimization-failures",
+   "title": "SL-07: Optimization failures",
+   "minutes": 1,
+   "endAnchor": "sl-07-optimization-failures-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "dead ReLUs",
+     "definition": "A large gradient pushes z below 0 for all data; the neuron never recovers.",
+     "anchor": "sl-07-optimization-failures-l01"
+    },
+    {
+     "term": "vanishing gradients",
+     "definition": "Sigmoid/tanh stacks shrink gradients geometrically.",
+     "anchor": "sl-07-optimization-failures-l01"
+    },
+    {
+     "term": "exploding gradients",
+     "definition": "Large weights compound; gradient norm spikes, loss goes NaN.",
+     "anchor": "sl-07-optimization-failures-l01"
+    },
+    {
+     "term": "saddle points",
+     "definition": "Gradient zero but not a minimum.",
+     "anchor": "sl-07-optimization-failures-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-07-optimization-failures-r1",
+     "question": "What are the five optimization failures?",
+     "answer": "Dead ReLUs, vanishing gradients, exploding gradients, bad conditioning, saddle points.",
+     "anchor": "sl-07-optimization-failures-l01"
+    },
+    {
+     "id": "sl-07-optimization-failures-r2",
+     "question": "In the 50-layer sigmoid example, how much do gradients shrink?",
+     "answer": "Each layer scales the gradient by ~0.25 max: 0.25^50 ~ 1e-30. First layers learn nothing.",
+     "anchor": "sl-07-optimization-failures-p03"
+    }
+   ]
+  },
+  {
+   "anchor": "assessment",
+   "title": "Assessment",
+   "minutes": 2,
+   "endAnchor": "assessment-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "two-layer forward equations",
+     "definition": "z_j = w_j^{[1]T} x + b_j^{[1]}, a_j = ReLU(z_j), output = w^{[2]T} a + b^{[2]}.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "backward contract",
+     "definition": "Given dJ/d(output), each module returns dJ/d(input) and dJ/d(params).",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "LayerNorm scaling invariance",
+     "definition": "Scaling z leaves the normalized output identical.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "gradient-check formula",
+     "definition": "[J(theta + h e_i) - J(theta - h e_i)] / (2h).",
+     "anchor": "assessment-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "assessment-r1",
+     "question": "What does E02 ask?",
+     "answer": "Why the activation is load-bearing.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "id": "assessment-r2",
+     "question": "What does E09 describe?",
+     "answer": "A 20-layer ReLU net trains to a poor loss. Activation logs show 90 percent of layer-15 units are always zero. Diagnose and give two fixes.",
+     "anchor": "assessment-p05"
+    },
+    {
+     "id": "assessment-r3",
+     "question": "What does E10 ask?",
+     "answer": "Team A hand-writes backprop for a new module. Team B uses finite differences for training. Who ships and why?",
+     "anchor": "assessment-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "visual-units",
+   "title": "Visual units",
+   "minutes": 1,
+   "endAnchor": "visual-units-end",
+   "blocks": [
+    {
+     "anchor": "visual-units-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "visual-units-fig02",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "message flow",
+     "definition": "The visual of forward/backward message flow on the one-neuron toy.",
+     "anchor": "visual-units-fig01"
+    },
+    {
+     "term": "activation histogram",
+     "definition": "The visual histogram of alive vs dead activations.",
+     "anchor": "visual-units-fig02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "visual-units-r1",
+     "question": "What does the first visual unit show?",
+     "answer": "Forward/backward message flow on the one-neuron toy.",
+     "anchor": "visual-units-l01"
+    },
+    {
+     "id": "visual-units-r2",
+     "question": "What does the second visual unit show?",
+     "answer": "Activation histogram alive vs dead.",
+     "anchor": "visual-units-l02"
+    }
+   ]
+  },
+  {
+   "anchor": "research-reading-and-extension",
+   "title": "Research reading and extension",
+   "minutes": 1,
+   "endAnchor": "research-reading-and-extension-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "falsifiable claim",
+     "definition": "A claim an experiment can disprove, here about gradient norms vs depth.",
+     "anchor": "research-reading-and-extension-p01"
+    },
+    {
+     "term": "gradient norm ratio",
+     "definition": "First-layer over last-layer gradient norm in the 50-layer net.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "research-reading-and-extension-r1",
+     "question": "What is the falsifiable claim?",
+     "answer": "Without normalization the 50-layer gradient norm ratio (first/last) exceeds 1e6. With LayerNorm it stays under 1e2.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,521 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229-lessons-u10-lesson-10-clustering-em",
+ "itemKind": "lesson",
+ "revision": "e13c688ef931ce9e26fe459f182f6b0fd36ba997cc96948dd7a1f533000a6baa",
+ "sections": [
+  {
+   "anchor": "lesson-10-clustering-em-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "lesson-10-clustering-em-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229-U10",
+     "definition": "The unit code for this lesson in the Stanford CS229 foundations course.",
+     "anchor": "lesson-10-clustering-em-intro-p02"
+    },
+    {
+     "term": "leaf concepts",
+     "definition": "The fine-grained concepts the lesson covers, labeled C01 to C12.",
+     "anchor": "lesson-10-clustering-em-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-10-clustering-em-intro-r1",
+     "question": "Who teaches this course?",
+     "answer": "Tengyu Ma and Andrew Ng.",
+     "anchor": "lesson-10-clustering-em-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "source-mapping",
+   "title": "Source mapping",
+   "minutes": 1,
+   "endAnchor": "source-mapping-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "k-means",
+     "definition": "Alternate nearest-centroid assignment and mean update.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "EM",
+     "definition": "Soft assignment plus likelihood ascent for mixtures.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "Jensen's inequality",
+     "definition": "E[f(X)] >= f(E[X]) for convex f.",
+     "anchor": "source-mapping-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "source-mapping-r1",
+     "question": "What do notes chapters 10-11 give?",
+     "answer": "Chapter 10: k-means algorithm, distortion function, coordinate descent, convergence discussion. 11.1: EM for mixture of Gaussians (E-step posterior, M-step updates, soft vs hard assignments). 11.2: Jensen's inequality. 11.3: general EM, ELBO, the monotone-likelihood proof.",
+     "anchor": "source-mapping-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "scope-and-objectives",
+   "title": "Scope and objectives",
+   "minutes": 1,
+   "endAnchor": "scope-and-objectives-end",
+   "blocks": [
+    {
+     "anchor": "scope-and-objectives-p01",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "k-means",
+     "definition": "Hard assignment plus coordinate descent on the distortion.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "coordinate descent",
+     "definition": "Alternating minimization, one coordinate block at a time.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "EM",
+     "definition": "Soft assignment plus likelihood ascent on latent variable models.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "latent variable",
+     "definition": "The missing label z^{(i)}.",
+     "anchor": "scope-and-objectives-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "scope-and-objectives-r1",
+     "question": "What does the scope cover?",
+     "answer": "The unsupervised half of the classical course: k-means as hard assignment plus coordinate descent, and EM as soft assignment plus likelihood ascent on latent variable models.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "id": "scope-and-objectives-r2",
+     "question": "What does objective 5 ask the learner to do?",
+     "answer": "Prove EM never decreases the likelihood.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "dependencies",
+   "title": "Dependencies",
+   "minutes": 1,
+   "endAnchor": "dependencies-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "prerequisites",
+     "definition": "The shared bridge units P06, P07, and P10, plus unit U04, needed before this lesson.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "term": "hard vs soft assignment",
+     "definition": "Remediated in SL-01 vs SL-03.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "local optima",
+     "definition": "Why EM converges to local optima only, remediated in SL-04.",
+     "anchor": "dependencies-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "dependencies-r1",
+     "question": "Which prerequisites does this lesson list?",
+     "answer": "P06, P07, P10, and unit U04 (Gaussian parameter estimation).",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "id": "dependencies-r2",
+     "question": "What does the list contrast?",
+     "answer": "Hard vs soft assignment, remediated in SL-01 vs SL-03.",
+     "anchor": "dependencies-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-01-k-means",
+   "title": "SL-01: k-means",
+   "minutes": 2,
+   "endAnchor": "sl-01-k-means-end",
+   "blocks": [
+    {
+     "anchor": "sl-01-k-means-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-01-k-means-l01",
+     "kind": "steps",
+     "reveal": "stepwise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "k-means",
+     "definition": "Alternate nearest-centroid assignment and mean update.",
+     "anchor": "sl-01-k-means-p02"
+    },
+    {
+     "term": "centroid",
+     "definition": "mu_j, where the cluster center sits.",
+     "anchor": "sl-01-k-means-p04"
+    },
+    {
+     "term": "assignment",
+     "definition": "c(i), who belongs where.",
+     "anchor": "sl-01-k-means-p04"
+    },
+    {
+     "term": "k-means++",
+     "definition": "Spread seeds by squared distance; comes with an approximation guarantee.",
+     "anchor": "sl-01-k-means-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-01-k-means-r1",
+     "question": "What are the two kinds of unknowns in k-means?",
+     "answer": "Who belongs where (assignments c(i)), and where the centers are (centroids mu_j). Fix one, the other is trivial.",
+     "anchor": "sl-01-k-means-p04"
+    },
+    {
+     "id": "sl-01-k-means-r2",
+     "question": "What is the k-means algorithm?",
+     "answer": "Initialize centroids. Repeat: assign each point to the nearest centroid; move each centroid to the mean of its assigned points.",
+     "anchor": "sl-01-k-means-l01"
+    },
+    {
+     "id": "sl-01-k-means-r3",
+     "question": "Why run several seeds?",
+     "answer": "Different seeds give different clusterings. A single run's answer is not the clustering. Keep the lowest distortion.",
+     "anchor": "sl-01-k-means-p07"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-02-distortion-convergence-choosing-k",
+   "title": "SL-02: Distortion, convergence, choosing k",
+   "minutes": 2,
+   "endAnchor": "sl-02-distortion-convergence-choosing-k-end",
+   "blocks": [
+    {
+     "anchor": "sl-02-distortion-convergence-choosing-k-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "distortion",
+     "definition": "J(c, mu) = sum_i ||x^{(i)} - mu_{c(i)}||^2.",
+     "anchor": "sl-02-distortion-convergence-choosing-k-p02"
+    },
+    {
+     "term": "coordinate descent",
+     "definition": "k-means minimizes J over c then mu, alternating.",
+     "anchor": "sl-02-distortion-convergence-choosing-k-p02"
+    },
+    {
+     "term": "elbow method",
+     "definition": "Plot J vs k and look for the kink.",
+     "anchor": "sl-02-distortion-convergence-choosing-k-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-02-distortion-convergence-choosing-k-r1",
+     "question": "In what sense does k-means converge?",
+     "answer": "J converges, not the parameters: each step can only decrease J, and J is bounded below by 0. It converges to a local minimum, not the global one.",
+     "anchor": "sl-02-distortion-convergence-choosing-k-p03"
+    },
+    {
+     "id": "sl-02-distortion-convergence-choosing-k-r2",
+     "question": "What belief does k-means bake in?",
+     "answer": "Clusters are convex blobs of similar size, separable by Euclidean distance. When wrong (rings, moons), the optimum of J is the wrong answer.",
+     "anchor": "sl-02-distortion-convergence-choosing-k-p04"
+    },
+    {
+     "id": "sl-02-distortion-convergence-choosing-k-r3",
+     "question": "Why does lower J not mean truer clusters?",
+     "answer": "J falls 7.96 to 0.98 in 4 iterations, monotone. With k = 3, J is lower but the third cluster splits a real one.",
+     "anchor": "sl-02-distortion-convergence-choosing-k-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-03-em-for-mixtures-of-gaussians",
+   "title": "SL-03: EM for mixtures of Gaussians",
+   "minutes": 2,
+   "endAnchor": "sl-03-em-for-mixtures-of-gaussians-end",
+   "blocks": [
+    {
+     "anchor": "sl-03-em-for-mixtures-of-gaussians-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-03-em-for-mixtures-of-gaussians-p07",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "latent variables",
+     "definition": "z^{(i)}, the missing labels.",
+     "anchor": "sl-03-em-for-mixtures-of-gaussians-p04"
+    },
+    {
+     "term": "responsibilities",
+     "definition": "w^{(i)}_j, the soft guesses.",
+     "anchor": "sl-03-em-for-mixtures-of-gaussians-p01"
+    },
+    {
+     "term": "E-step",
+     "definition": "Compute w^{(i)}_j = p(z^{(i)} = j | x^{(i)}) by Bayes' rule.",
+     "anchor": "sl-03-em-for-mixtures-of-gaussians-p04"
+    },
+    {
+     "term": "M-step",
+     "definition": "Pretend the soft guesses are labels and run the easy MLE.",
+     "anchor": "sl-03-em-for-mixtures-of-gaussians-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-03-em-for-mixtures-of-gaussians-r1",
+     "question": "What do the E-step and M-step do?",
+     "answer": "E-step: compute soft guesses w^{(i)}_j = p(z^{(i)} = j | x^{(i)}) by Bayes' rule. M-step: pretend the soft guesses are the labels and run the easy MLE.",
+     "anchor": "sl-03-em-for-mixtures-of-gaussians-p04"
+    },
+    {
+     "id": "sl-03-em-for-mixtures-of-gaussians-r2",
+     "question": "How is k-means a limit of EM?",
+     "answer": "Let all Sigma_j = sigma^2 I with sigma -> 0. Posteriors harden to 0/1. EM becomes k-means.",
+     "anchor": "sl-03-em-for-mixtures-of-gaussians-p06"
+    },
+    {
+     "id": "sl-03-em-for-mixtures-of-gaussians-r3",
+     "question": "What is singular collapse?",
+     "answer": "One Gaussian shrinks onto a single point and the likelihood explodes to infinity. Constrain or regularize covariances.",
+     "anchor": "sl-03-em-for-mixtures-of-gaussians-p09"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-04-the-general-em-view-and-convergence",
+   "title": "SL-04: The general EM view and convergence",
+   "minutes": 2,
+   "endAnchor": "sl-04-the-general-em-view-and-convergence-end",
+   "blocks": [
+    {
+     "anchor": "sl-04-the-general-em-view-and-convergence-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "Jensen's inequality",
+     "definition": "E[f(X)] >= f(E[X]) for convex f.",
+     "anchor": "sl-04-the-general-em-view-and-convergence-p02"
+    },
+    {
+     "term": "ELBO",
+     "definition": "The evidence lower bound: the touch-and-push bound.",
+     "anchor": "sl-04-the-general-em-view-and-convergence-p02"
+    },
+    {
+     "term": "tight",
+     "definition": "The E-step choice making the bound touch the likelihood.",
+     "anchor": "sl-04-the-general-em-view-and-convergence-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-04-the-general-em-view-and-convergence-r1",
+     "question": "Why does EM climb the likelihood?",
+     "answer": "Jensen builds a lower bound (the ELBO) that touches the true likelihood at the current parameters (E-step). Maximizing the bound (M-step) pushes the true likelihood up. Touch, push, repeat.",
+     "anchor": "sl-04-the-general-em-view-and-convergence-p04"
+    },
+    {
+     "id": "sl-04-the-general-em-view-and-convergence-r2",
+     "question": "What does the proof chain say?",
+     "answer": "l(theta^{(t+1)}) >= bound(theta^{(t+1)}) >= bound(theta^{(t)}) = l(theta^{(t)}). Monotone ascent.",
+     "anchor": "sl-04-the-general-em-view-and-convergence-p05"
+    },
+    {
+     "id": "sl-04-the-general-em-view-and-convergence-r3",
+     "question": "What does EM not prove?",
+     "answer": "Convergence to a local maximum, not the global one. EM inherits k-means' seed sensitivity.",
+     "anchor": "sl-04-the-general-em-view-and-convergence-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "assessment",
+   "title": "Assessment",
+   "minutes": 2,
+   "endAnchor": "assessment-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "k-means algorithm",
+     "definition": "Alternate nearest-centroid assignment and mean update.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "distortion function",
+     "definition": "J(c, mu) = sum_i ||x^{(i)} - mu_{c(i)}||^2.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "latent variable",
+     "definition": "The missing label z^{(i)}.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "E-step",
+     "definition": "w^{(i)}_j = p(z^{(i)} = j | x^{(i)}) by Bayes' rule.",
+     "anchor": "assessment-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "assessment-r1",
+     "question": "What does E03 ask?",
+     "answer": "Why k-means converges, and in what sense.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "id": "assessment-r2",
+     "question": "What does E09 describe?",
+     "answer": "EM log likelihood hits +infinity after 3 iterations. Diagnose.",
+     "anchor": "assessment-p05"
+    },
+    {
+     "id": "assessment-r3",
+     "question": "What does E10 ask?",
+     "answer": "Team A runs k-means once. Team B runs EM with 10 restarts and keeps the best likelihood. Whose clustering do you trust and why?",
+     "anchor": "assessment-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "visual-units",
+   "title": "Visual units",
+   "minutes": 1,
+   "endAnchor": "visual-units-end",
+   "blocks": [
+    {
+     "anchor": "visual-units-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "visual-units-fig02",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "k-means iterations",
+     "definition": "The visual of k-means iterations on two blobs.",
+     "anchor": "visual-units-fig01"
+    },
+    {
+     "term": "EM log likelihood",
+     "definition": "The visual of EM log likelihood vs iteration.",
+     "anchor": "visual-units-fig02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "visual-units-r1",
+     "question": "What does the first visual unit show?",
+     "answer": "k-means iterations on two blobs, computed.",
+     "anchor": "visual-units-l01"
+    },
+    {
+     "id": "visual-units-r2",
+     "question": "What does the second visual unit show?",
+     "answer": "EM log likelihood vs iteration, computed.",
+     "anchor": "visual-units-l02"
+    }
+   ]
+  },
+  {
+   "anchor": "research-reading-and-extension",
+   "title": "Research reading and extension",
+   "minutes": 1,
+   "endAnchor": "research-reading-and-extension-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "falsifiable claim",
+     "definition": "A claim an experiment can disprove, here about EM vs k-means with overlap.",
+     "anchor": "research-reading-and-extension-p01"
+    },
+    {
+     "term": "overlap",
+     "definition": "How much the mixture components overlap.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "research-reading-and-extension-r1",
+     "question": "What is the falsifiable claim?",
+     "answer": "EM's advantage over k-means grows with overlap.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "role-bridges",
+   "title": "Role bridges",
+   "minutes": 1,
+   "endAnchor": "role-bridges-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "k-means",
+     "definition": "The baseline segmentation tool, with restarts.",
+     "anchor": "role-bridges-l01"
+    },
+    {
+     "term": "ELBO",
+     "definition": "The foundation for VI, VAEs, and diffusion.",
+     "anchor": "role-bridges-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "role-bridges-r1",
+     "question": "What is the FDE bridge?",
+     "answer": "Clustering is often the first unsupervised pass over a client's unlabeled data. Report seed sensitivity honestly.",
+     "anchor": "role-bridges-l01"
+    }
+   ]
+  }
+ ]
+}

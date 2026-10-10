@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "itemId": "cs229s-interview-interview-u05-questions",
+  "itemKind": "lesson",
+  "revision": "4d35636a52310b10b97e29b952570fa8258c8ca439171351348c38d2728b28b3",
+  "sections": [
+    {
+      "anchor": "cs229s-interview-interview-u05-questions-intro",
+      "title": "Interview bank U05: Quantization, sparsity, structured operators",
+      "endAnchor": "cs229s-interview-interview-u05-questions-intro-end",
+      "blocks": [],
+      "keyTerms": [
+        {
+          "term": "provenance",
+          "definition": "Original practice, role-derived material. Not actual lab questions.",
+          "anchor": "cs229s-interview-interview-u05-questions-intro-p02"
+        },
+        {
+          "term": "interview bank",
+          "definition": "A set of breadth, ladder, analytical, debug, scenario, and critique questions per unit.",
+          "anchor": "cs229s-interview-interview-u05-questions-intro-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "cs229s-interview-interview-u05-questions-intro-r1",
+          "question": "What is the provenance of this interview bank?",
+          "answer": "Original practice, role-derived. The questions are not actual lab questions.",
+          "anchor": "cs229s-interview-interview-u05-questions-intro-p02"
+        }
+      ],
+      "minutes": 3
+    },
+    {
+      "anchor": "breadth-questions",
+      "title": "Breadth questions",
+      "endAnchor": "breadth-questions-end",
+      "blocks": [
+        {
+          "anchor": "breadth-questions-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "zero point",
+          "definition": "The integer level for 0.0: z = round(-min/s).",
+          "anchor": "breadth-questions-p01"
+        },
+        {
+          "term": "per-channel",
+          "definition": "One (s,z) per row; survives skewed channel ranges.",
+          "anchor": "breadth-questions-p03"
+        },
+        {
+          "term": "2:4 sparsity",
+          "definition": "Exactly 2 nonzeros per 4 consecutive elements.",
+          "anchor": "breadth-questions-p06"
+        },
+        {
+          "term": "magnitude pruning",
+          "definition": "Zero the smallest-|w| fraction; upgrades: sensitivity-guided, gradual + retrain.",
+          "anchor": "breadth-questions-p07"
+        }
+      ],
+      "recall": [
+        {
+          "id": "breadth-questions-r1",
+          "question": "Write the four linear quantization formulas (s, z, x_q, x_hat).",
+          "answer": "s=(max-min)/(2^b-1), z=round(-min/s), x_q=clamp(round(x/s)+z), x_hat=s*(x_q-z).",
+          "anchor": "breadth-questions-p01"
+        },
+        {
+          "id": "breadth-questions-r2",
+          "question": "Define per-tensor, per-channel, per-group quantization. When is per-tensor unsafe?",
+          "answer": "Per-tensor: one (s,z). Per-channel: one per row. Per-group: one per g elements. Per-tensor is unsafe when channels span very different ranges.",
+          "anchor": "breadth-questions-p03"
+        },
+        {
+          "id": "breadth-questions-r3",
+          "question": "Define 2:4 sparsity. Why does the pattern matter more than the sparsity count?",
+          "answer": "Exactly 2 nonzeros per 4 consecutive elements. The pattern matters because hardware skips only supported patterns; unstructured pays index overhead.",
+          "anchor": "breadth-questions-p06"
+        }
+      ],
+      "minutes": 3
+    },
+    {
+      "anchor": "deep-ladder-1-quantization-economics",
+      "title": "Deep ladder 1: quantization economics",
+      "endAnchor": "deep-ladder-1-quantization-economics-end",
+      "blocks": [
+        {
+          "anchor": "deep-ladder-1-quantization-economics-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "level spacing s",
+          "definition": "(max-min)/(2^b-1).",
+          "anchor": "deep-ladder-1-quantization-economics-p01"
+        },
+        {
+          "term": "error bound s/2",
+          "definition": "In-range error: nearest mark is at most half a spacing away.",
+          "anchor": "deep-ladder-1-quantization-economics-p01"
+        },
+        {
+          "term": "clip sweep",
+          "definition": "Sweep clip percentile; total MSE is U-shaped; the argmin is the pick.",
+          "anchor": "deep-ladder-1-quantization-economics-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "deep-ladder-1-quantization-economics-r1",
+          "question": "Deep ladder 1 works quantization on range [-1,1], 4 bits. What are s, z, and the round-trip of 0.5?",
+          "answer": "s=0.1333, z=8, x_q=12, x_hat=0.5333. In-range error bounded by s/2.",
+          "anchor": "deep-ladder-1-quantization-economics-p01"
+        }
+      ],
+      "minutes": 3
+    },
+    {
+      "anchor": "deep-ladder-2-sparsity-reality",
+      "title": "Deep ladder 2: sparsity reality",
+      "endAnchor": "deep-ladder-2-sparsity-reality-end",
+      "blocks": [
+        {
+          "anchor": "deep-ladder-2-sparsity-reality-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "realized time",
+          "definition": "Measured time; the FLOP ratio ignores index/gather overhead.",
+          "anchor": "deep-ladder-2-sparsity-reality-p01"
+        },
+        {
+          "term": "gather overhead",
+          "definition": "What eats the math saving: 45 us turns 2x math into ~1x.",
+          "anchor": "deep-ladder-2-sparsity-reality-p01"
+        },
+        {
+          "term": "hardware support",
+          "definition": "2:4 needs sparse tensor cores; without them it runs as dense.",
+          "anchor": "deep-ladder-2-sparsity-reality-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "deep-ladder-2-sparsity-reality-r1",
+          "question": "Deep ladder 2 asks when 50% unstructured sparsity gives ~1x despite halved FLOPs. When?",
+          "answer": "When gather overhead eats the math saving: 50 us math + 45 us gather = 95 us ~ 1x. Realized time is what matters, not the FLOP ratio.",
+          "anchor": "deep-ladder-2-sparsity-reality-p01"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "analytical-exercises",
+      "title": "Analytical exercises",
+      "endAnchor": "analytical-exercises-end",
+      "blocks": [
+        {
+          "anchor": "analytical-exercises-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "quiet channel",
+          "definition": "The [-1,1] channel crushed by the [-100,100] scale under per-tensor.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "term": "MSE ratio",
+          "definition": "~225x worse under per-tensor than per-channel on the toy.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "term": "error amplification",
+          "definition": "Early-layer error gets multiplied by later Lipschitz constants.",
+          "anchor": "analytical-exercises-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "analytical-exercises-r1",
+          "question": "W has rows in [-100,100] and [-1,1], 4-bit. Compare the quiet channel’s MSE under per-tensor vs per-channel.",
+          "answer": "Per-tensor s=13.33: quiet channel MSE ~0.333. Per-channel s=0.1333: MSE ~0.00148. Ratio ~225x.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "id": "analytical-exercises-r2",
+          "question": "Two layers, per-layer error 0.02, Lipschitz [1.0, 2.0] vs swapped. Which layer keeps more precision?",
+          "answer": "Order [1.0,2.0]: bound 0.06. Swapped: 0.04. Keep more precision early when later layers amplify.",
+          "anchor": "analytical-exercises-p02"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "implementation-debug-task",
+      "title": "Implementation / debug task",
+      "endAnchor": "implementation-debug-task-end",
+      "blocks": [
+        {
+          "anchor": "implementation-debug-task-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "hardcoded z",
+          "definition": "The bug: z = 0 hardcoded instead of round(-min/s).",
+          "anchor": "implementation-debug-task-p01"
+        },
+        {
+          "term": "zero invariant",
+          "definition": "dq(q(0.0)) == 0.0 exactly.",
+          "anchor": "implementation-debug-task-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "implementation-debug-task-r1",
+          "question": "D1. The quantizer looks right but quantize(0) does not decode to 0. What is the bug, the fix, and the invariant?",
+          "answer": "Bug: z = 0 hardcoded. With min != 0 the true zero point is round(-min/s) != 0. Fix: compute z from the range. Invariant: dq(q(0.0)) == 0.0 exactly.",
+          "anchor": "implementation-debug-task-p01"
+        }
+      ],
+      "minutes": 1
+    },
+    {
+      "anchor": "changed-constraint-scenarios",
+      "title": "Changed-constraint scenarios",
+      "endAnchor": "changed-constraint-scenarios-end",
+      "blocks": [
+        {
+          "anchor": "changed-constraint-scenarios-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "free scales",
+          "definition": "Optimal granularity would be per-element; metadata ratio is the limit.",
+          "anchor": "changed-constraint-scenarios-p01"
+        },
+        {
+          "term": "zero error budget",
+          "definition": "No approximate method meets it literally; int8 + proof, or reframe.",
+          "anchor": "changed-constraint-scenarios-p02"
+        },
+        {
+          "term": "per-group",
+          "definition": "Practical optimum with small g, bounded by scale overhead.",
+          "anchor": "changed-constraint-scenarios-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "changed-constraint-scenarios-r1",
+          "question": "Scales are free (zero storage, zero compute). What is the optimal quantization granularity now, and what limits it?",
+          "answer": "Per-element scales would be optimal (exact ranges), but scale storage then equals data storage. Practical optimum: per-group with small g.",
+          "anchor": "changed-constraint-scenarios-p01"
+        },
+        {
+          "id": "changed-constraint-scenarios-r2",
+          "question": "The error budget is zero but memory must halve. Compare int8, 2:4 sparsity, butterfly. Which do you pick?",
+          "answer": "int8 and 2:4 are approximate (fail the zero budget strictly); butterfly is exact only if representable (rare). Honest answer: no method meets both; nearest is int8 with task deltas zero within eval noise.",
+          "anchor": "changed-constraint-scenarios-p02"
+        }
+      ],
+      "minutes": 1
+    },
+    {
+      "anchor": "research-critique",
+      "title": "Research critique",
+      "endAnchor": "research-critique-end",
+      "blocks": [
+        {
+          "anchor": "research-critique-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "task audit",
+          "definition": "Which tasks? Perplexity-only invalidates.",
+          "anchor": "research-critique-p01"
+        },
+        {
+          "term": "seed audit",
+          "definition": "One run invalidates; demand seeds and error bars.",
+          "anchor": "research-critique-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "research-critique-r1",
+          "question": "A paper claims “4-bit weights with no quality loss on all tasks.” What five audit questions do you ask?",
+          "answer": "(1) Which tasks? (2) Baseline tuned? (3) Granularity and calibration reported? (4) Seeds and error bars? (5) Outlier-sensitive tasks included?",
+          "anchor": "research-critique-p01"
+        }
+      ],
+      "minutes": 1
+    }
+  ]
+}

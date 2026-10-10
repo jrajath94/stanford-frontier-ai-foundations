@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "itemId": "cs229s-interview-interview-u08-questions",
+  "itemKind": "lesson",
+  "revision": "7f5cc238c5cae952550b72a79b38d6194d3bb8984583bce9d4d0781d4da98051",
+  "sections": [
+    {
+      "anchor": "cs229s-interview-interview-u08-questions-intro",
+      "title": "Interview bank U08: Serving and sparse MoE",
+      "endAnchor": "cs229s-interview-interview-u08-questions-intro-end",
+      "blocks": [],
+      "keyTerms": [
+        {
+          "term": "provenance",
+          "definition": "Original practice, role-derived material. Not actual lab questions.",
+          "anchor": "cs229s-interview-interview-u08-questions-intro-p02"
+        },
+        {
+          "term": "interview bank",
+          "definition": "A set of breadth, ladder, analytical, debug, scenario, and critique questions per unit.",
+          "anchor": "cs229s-interview-interview-u08-questions-intro-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "cs229s-interview-interview-u08-questions-intro-r1",
+          "question": "What is the provenance of this interview bank?",
+          "answer": "Original practice, role-derived. The questions are not actual lab questions.",
+          "anchor": "cs229s-interview-interview-u08-questions-intro-p02"
+        }
+      ],
+      "minutes": 3
+    },
+    {
+      "anchor": "breadth-questions",
+      "title": "Breadth questions",
+      "endAnchor": "breadth-questions-end",
+      "blocks": [
+        {
+          "anchor": "breadth-questions-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "continuous batching",
+          "definition": "The batch re-forms every iteration; removes batch-formation waiting.",
+          "anchor": "breadth-questions-p01"
+        },
+        {
+          "term": "chunked prefill",
+          "definition": "Splits big prefills so decodes stop stalling.",
+          "anchor": "breadth-questions-p03"
+        },
+        {
+          "term": "expert capacity",
+          "definition": "(tokens*k/experts)*factor; overflow tokens drop.",
+          "anchor": "breadth-questions-p07"
+        },
+        {
+          "term": "all-to-all",
+          "definition": "~S each way per GPU for MoE dispatch.",
+          "anchor": "breadth-questions-p08"
+        }
+      ],
+      "recall": [
+        {
+          "id": "breadth-questions-r1",
+          "question": "Define continuous batching. What wait does it remove?",
+          "answer": "The batch re-forms every iteration, admitting arrivals at once. It removes batch-formation waiting.",
+          "anchor": "breadth-questions-p01"
+        },
+        {
+          "id": "breadth-questions-r2",
+          "question": "Define p99 and state Little’s law. Why do means lie?",
+          "answer": "p99: latency 99% beat. Little: concurrency = throughput * mean latency. Means hide the tail.",
+          "anchor": "breadth-questions-p05"
+        },
+        {
+          "id": "breadth-questions-r3",
+          "question": "Write the expert capacity formula. What happens past capacity?",
+          "answer": "Capacity = (tokens*k/experts)*factor. Past capacity, tokens drop (skip the expert).",
+          "anchor": "breadth-questions-p07"
+        }
+      ],
+      "minutes": 3
+    },
+    {
+      "anchor": "deep-ladder-1-serving-economics",
+      "title": "Deep ladder 1: serving economics",
+      "endAnchor": "deep-ladder-1-serving-economics-end",
+      "blocks": [
+        {
+          "anchor": "deep-ladder-1-serving-economics-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "formation wait",
+          "definition": "The 0.5 s gap: not speed, pure waiting for the batch to form.",
+          "anchor": "deep-ladder-1-serving-economics-p01"
+        },
+        {
+          "term": "chunked prefill",
+          "definition": "The missing mechanism when decodes stall on every new arrival.",
+          "anchor": "deep-ladder-1-serving-economics-p01"
+        },
+        {
+          "term": "burst replay",
+          "definition": "The design experiment: replay bursty traces through both schedulers.",
+          "anchor": "deep-ladder-1-serving-economics-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "deep-ladder-1-serving-economics-r1",
+          "question": "Deep ladder 1 compares continuous vs static batching on 4 requests at t=0,1,2,3. What is the result?",
+          "answer": "Continuous mean latency 1.0 s vs static 1.5 s. Last completion ties at 4.0 s at the same token rate: the 0.5 s gap is formation waiting, not speed.",
+          "anchor": "deep-ladder-1-serving-economics-p01"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "deep-ladder-2-moe-reality",
+      "title": "Deep ladder 2: MoE reality",
+      "endAnchor": "deep-ladder-2-moe-reality-end",
+      "blocks": [
+        {
+          "anchor": "deep-ladder-2-moe-reality-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "routing weights",
+          "definition": "Top-k renormalized gate outputs; the toy gives 0.646 and 0.354.",
+          "anchor": "deep-ladder-2-moe-reality-p01"
+        },
+        {
+          "term": "capacity drops",
+          "definition": "Expert 0 at 40 vs capacity 20: drops 20 (50% there).",
+          "anchor": "deep-ladder-2-moe-reality-p01"
+        },
+        {
+          "term": "gate collapse",
+          "definition": "7 of 8 experts starve: missing load-balance term.",
+          "anchor": "deep-ladder-2-moe-reality-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "deep-ladder-2-moe-reality-r1",
+          "question": "Deep ladder 2 routes a token through the 8-expert gate and derives capacity. What are the weights and the drop count?",
+          "answer": "Experts 0 and 2, weights 0.646 and 0.354. Capacity 20 at 64 tokens, top-2, factor 1.25; expert 0 getting 40 drops 20.",
+          "anchor": "deep-ladder-2-moe-reality-p01"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "analytical-exercises",
+      "title": "Analytical exercises",
+      "endAnchor": "analytical-exercises-end",
+      "blocks": [
+        {
+          "anchor": "analytical-exercises-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "tail math",
+          "definition": "Mean 1.2, p50 1.0, p99 3.0 on the 90/10 toy.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "term": "concurrency",
+          "definition": "60 by Little’s law; 50 with the tail fixed.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "term": "dispatch bytes",
+          "definition": "64 MiB per step over 32 MoE layers on the toy.",
+          "anchor": "analytical-exercises-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "analytical-exercises-r1",
+          "question": "Tail: 90 requests at 1.0 s, 10 at 3.0 s. Compute mean, p50, p99, and concurrency at 50 req/s.",
+          "answer": "Mean 1.2, p50 1.0, p99 3.0. Concurrency 60. Tail fixed: mean 1.0, p50 1.0, p99 1.0, concurrency 50.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "id": "analytical-exercises-r2",
+          "question": "Dispatch: 64 tokens, top-2, d=4096, fp16, 32 MoE layers. What is the dispatch bandwidth per GPU at 50 steps/s?",
+          "answer": "One way 1 MiB, round trip 2 MiB, 32 layers 64 MiB per step. At 50 steps/s: 3.2 GB/s per GPU.",
+          "anchor": "analytical-exercises-p02"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "implementation-debug-task",
+      "title": "Implementation / debug task",
+      "endAnchor": "implementation-debug-task-end",
+      "blocks": [
+        {
+          "anchor": "implementation-debug-task-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "gate collapse",
+          "definition": "Bug class: no auxiliary balance loss.",
+          "anchor": "implementation-debug-task-p01"
+        },
+        {
+          "term": "token-share invariant",
+          "definition": "Every expert receives a nontrivial token share each epoch.",
+          "anchor": "implementation-debug-task-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "implementation-debug-task-r1",
+          "question": "D1. The router trains, but 7 of 8 experts never receive tokens after the first epoch. What is the bug class, the fix, and the invariant?",
+          "answer": "Bug class: missing load-balance term (gate collapse). Fix: add an auxiliary balance loss to the training objective. Invariant: every expert receives a nontrivial token share each epoch.",
+          "anchor": "implementation-debug-task-p01"
+        }
+      ],
+      "minutes": 1
+    },
+    {
+      "anchor": "changed-constraint-scenarios",
+      "title": "Changed-constraint scenarios",
+      "endAnchor": "changed-constraint-scenarios-end",
+      "blocks": [
+        {
+          "anchor": "changed-constraint-scenarios-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "infinite bandwidth",
+          "definition": "Dispatch free; MoE still pays gate, balance, drops, routing risk.",
+          "anchor": "changed-constraint-scenarios-p01"
+        },
+        {
+          "term": "hard SLO",
+          "definition": "Bounded queue, mandatory chunking, earliest-deadline-first eviction.",
+          "anchor": "changed-constraint-scenarios-p02"
+        },
+        {
+          "term": "fail fast",
+          "definition": "Shed load early: a fast reject beats an SLO miss.",
+          "anchor": "changed-constraint-scenarios-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "changed-constraint-scenarios-r1",
+          "question": "Interconnect bandwidth is infinite. Does MoE still beat dense?",
+          "answer": "Dispatch is free but MoE still pays: gate compute, balance loss, capacity drops, routing quality risk. Dense wins on simplicity; MoE wins only if the extra parameters buy quality per FLOP.",
+          "anchor": "changed-constraint-scenarios-p01"
+        },
+        {
+          "id": "changed-constraint-scenarios-r2",
+          "question": "Every request has a hard 10 s SLO and arrivals are adversarial. How do you redesign admission, scheduling, eviction?",
+          "answer": "Bounded queue with rejection past the wait budget, prefill chunking mandatory, priority to oldest-deadline, eviction by earliest-deadline-first instead of LRU, shed load early.",
+          "anchor": "changed-constraint-scenarios-p02"
+        }
+      ],
+      "minutes": 1
+    },
+    {
+      "anchor": "research-critique",
+      "title": "Research critique",
+      "endAnchor": "research-critique-end",
+      "blocks": [
+        {
+          "anchor": "research-critique-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "quality audit",
+          "definition": "Matched quality? A weaker dense baseline invalidates.",
+          "anchor": "research-critique-p01"
+        },
+        {
+          "term": "dispatch audit",
+          "definition": "Serving cost omitting the all-to-all invalidates.",
+          "anchor": "research-critique-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "research-critique-r1",
+          "question": "A paper claims “our MoE serves 8x cheaper than a dense model of equal quality.” What five audit questions do you ask?",
+          "answer": "(1) Matched quality? (2) Dispatch counted? (3) Utilization matched? (4) Tail SLOs? (5) Training cost counted?",
+          "anchor": "research-critique-p01"
+        }
+      ],
+      "minutes": 1
+    }
+  ]
+}

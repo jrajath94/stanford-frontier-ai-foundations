@@ -1,0 +1,619 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229-lessons-u09-lesson-09-regularization",
+ "itemKind": "lesson",
+ "revision": "14c4f80180105ee9b9e43e9730bd95273db855abf415d7cf721e1275c49ee805",
+ "sections": [
+  {
+   "anchor": "lesson-09-regularization-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "lesson-09-regularization-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229-U09",
+     "definition": "The unit code for this lesson in the Stanford CS229 foundations course.",
+     "anchor": "lesson-09-regularization-intro-p02"
+    },
+    {
+     "term": "leaf concepts",
+     "definition": "The fine-grained concepts the lesson covers, labeled C01 to C12.",
+     "anchor": "lesson-09-regularization-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-09-regularization-intro-r1",
+     "question": "Who teaches this course?",
+     "answer": "Tengyu Ma and Andrew Ng.",
+     "anchor": "lesson-09-regularization-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "source-mapping",
+   "title": "Source mapping",
+   "minutes": 1,
+   "endAnchor": "source-mapping-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "regularized loss",
+     "definition": "J_lambda = J + lambda R.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "LASSO",
+     "definition": "l1-penalized regression giving sparse solutions.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "MAP",
+     "definition": "The max-posterior estimate under a prior.",
+     "anchor": "source-mapping-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "source-mapping-r1",
+     "question": "What do notes sections 9.1-9.4 give?",
+     "answer": "9.1: the regularized loss, l2, weight decay, sparsity, l1/LASSO, kernel incompatibility of l1. 9.2: implicit regularization of optimizers. 9.3: model selection via cross validation and holdout. 9.4: Bayesian regularization, MAP, Gaussian prior.",
+     "anchor": "source-mapping-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "scope-and-objectives",
+   "title": "Scope and objectives",
+   "minutes": 1,
+   "endAnchor": "scope-and-objectives-end",
+   "blocks": [
+    {
+     "anchor": "scope-and-objectives-p01",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "ridge",
+     "definition": "l2 penalty shrinking weights smoothly toward zero.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "weight decay",
+     "definition": "Shrinking weights each GD step by (1 - eta lambda).",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "cross-validation",
+     "definition": "Rotating the validation role across folds.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "implicit regularization",
+     "definition": "The model-selection bias the optimizer supplies for free.",
+     "anchor": "scope-and-objectives-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "scope-and-objectives-r1",
+     "question": "What does the scope cover?",
+     "answer": "The explicit toolbox for controlling complexity (ridge, LASSO, weight decay, dropout) and the selection machinery (CV, holdout, leakage), plus the implicit regularization the optimizer supplies for free.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "id": "scope-and-objectives-r2",
+     "question": "What does objective 2 ask the learner to do?",
+     "answer": "Explain why l1 gives sparsity.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "dependencies",
+   "title": "Dependencies",
+   "minutes": 1,
+   "endAnchor": "dependencies-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "prerequisites",
+     "definition": "The shared bridge units P06, P07, and P10, plus unit U08, needed before this lesson.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "term": "constrained optimization",
+     "definition": "Regularization as constrained optimization.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "implicit bias",
+     "definition": "The implicit bias of optimizers.",
+     "anchor": "dependencies-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "dependencies-r1",
+     "question": "Which prerequisites does this lesson list?",
+     "answer": "P06, P07, P10, and unit U08 (generalization theory).",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "id": "dependencies-r2",
+     "question": "What does the list say l1 vs l2 is about?",
+     "answer": "Why l1 sparsifies and l2 does not, remediated in SL-02.",
+     "anchor": "dependencies-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-01-ridge-map-weight-decay",
+   "title": "SL-01: Ridge, MAP, weight decay",
+   "minutes": 3,
+   "endAnchor": "sl-01-ridge-map-weight-decay-end",
+   "blocks": [
+    {
+     "anchor": "sl-01-ridge-map-weight-decay-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-01-ridge-map-weight-decay-p06",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-01-ridge-map-weight-decay-bq01",
+     "kind": "quote",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "ridge",
+     "definition": "l2-penalized regression: J + lambda (1/2)||theta||^2.",
+     "anchor": "sl-01-ridge-map-weight-decay-p01"
+    },
+    {
+     "term": "MAP",
+     "definition": "theta_MAP = argmax prod_i p(y^{(i)}|x^{(i)}, theta) p(theta).",
+     "anchor": "sl-01-ridge-map-weight-decay-p02"
+    },
+    {
+     "term": "weight decay",
+     "definition": "GD on J_lambda shrinks theta by (1 - eta lambda) each step.",
+     "anchor": "sl-01-ridge-map-weight-decay-p02"
+    },
+    {
+     "term": "Gaussian prior",
+     "definition": "theta ~ N(0, tau^2 I): large weights a priori unlikely.",
+     "anchor": "sl-01-ridge-map-weight-decay-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-01-ridge-map-weight-decay-r1",
+     "question": "Why is MAP with a Gaussian prior equal to ridge?",
+     "answer": "log p(theta) = -||theta||^2/(2 tau^2) + const, so the log MAP objective is log likelihood minus ||theta||^2/(2 tau^2): exactly ridge with lambda = 1/tau^2.",
+     "anchor": "sl-01-ridge-map-weight-decay-p05"
+    },
+    {
+     "id": "sl-01-ridge-map-weight-decay-r2",
+     "question": "In the degree-8 example, what does lambda do?",
+     "answer": "Unregularized test MSE 2.41. Ridge lambda = 1.0: 0.31. lambda = 100: 0.62 (too much shrinkage). The U-shape in lambda is the claim.",
+     "anchor": "sl-01-ridge-map-weight-decay-p06"
+    },
+    {
+     "id": "sl-01-ridge-map-weight-decay-r3",
+     "question": "Why exclude the intercept from regularization?",
+     "answer": "Shrinking theta_0 toward zero biases every prediction. Standard practice excludes the intercept.",
+     "anchor": "sl-01-ridge-map-weight-decay-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-02-lasso-and-sparsity",
+   "title": "SL-02: LASSO and sparsity",
+   "minutes": 1,
+   "endAnchor": "sl-02-lasso-and-sparsity-end",
+   "blocks": [
+    {
+     "anchor": "sl-02-lasso-and-sparsity-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-02-lasso-and-sparsity-p05",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "LASSO",
+     "definition": "l1-penalized regression giving sparse solutions.",
+     "anchor": "sl-02-lasso-and-sparsity-p01"
+    },
+    {
+     "term": "l1",
+     "definition": "The continuous surrogate for the honest l0 sparsity measure.",
+     "anchor": "sl-02-lasso-and-sparsity-p02"
+    },
+    {
+     "term": "sparsity",
+     "definition": "Actual zeros in the solution.",
+     "anchor": "sl-02-lasso-and-sparsity-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-02-lasso-and-sparsity-r1",
+     "question": "Why does l1 give sparsity but l2 does not?",
+     "answer": "The l1 ball is a diamond with corners on the axes. Loss contours touch it at corners, which sit on axes, which means zeros. The l2 ball is smooth; contact happens almost never exactly on an axis.",
+     "anchor": "sl-02-lasso-and-sparsity-p04"
+    },
+    {
+     "id": "sl-02-lasso-and-sparsity-r2",
+     "question": "What goes wrong with LASSO on identical features?",
+     "answer": "It picks one arbitrarily. The choice is unstable across data perturbations.",
+     "anchor": "sl-02-lasso-and-sparsity-p07"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-03-dropout",
+   "title": "SL-03: Dropout",
+   "minutes": 1,
+   "endAnchor": "sl-03-dropout-end",
+   "blocks": [
+    {
+     "anchor": "sl-03-dropout-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "dropout",
+     "definition": "Randomly zeroing a fraction p of activations each forward pass during training.",
+     "anchor": "sl-03-dropout-p02"
+    },
+    {
+     "term": "inverted dropout",
+     "definition": "Scaling during training instead of at test time.",
+     "anchor": "sl-03-dropout-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-03-dropout-r1",
+     "question": "What is the dropout mechanism?",
+     "answer": "During training, randomly zero a fraction p of activations each forward pass. At test time use all units with scaled weights. The network learns redundant representations.",
+     "anchor": "sl-03-dropout-p03"
+    },
+    {
+     "id": "sl-03-dropout-r2",
+     "question": "What is the honest boundary on dropout?",
+     "answer": "The notes list dropout without analysis. The mechanism is standard material outside these notes, taught as background, not as a claim from SRC-01.",
+     "anchor": "sl-03-dropout-p04"
+    },
+    {
+     "id": "sl-03-dropout-r3",
+     "question": "What breaks if you forget test-time scaling?",
+     "answer": "Train and test see different activation magnitudes and performance collapses.",
+     "anchor": "sl-03-dropout-p05"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-04-model-selection-cv-holdout-leakage",
+   "title": "SL-04: Model selection, CV, holdout, leakage",
+   "minutes": 2,
+   "endAnchor": "sl-04-model-selection-cv-holdout-leakage-end",
+   "blocks": [
+    {
+     "anchor": "sl-04-model-selection-cv-holdout-leakage-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-04-model-selection-cv-holdout-leakage-l01",
+     "kind": "steps",
+     "reveal": "stepwise"
+    },
+    {
+     "anchor": "sl-04-model-selection-cv-holdout-leakage-p06",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "validation set",
+     "definition": "A rehearsal for deployment: data the model never trained on.",
+     "anchor": "sl-04-model-selection-cv-holdout-leakage-p04"
+    },
+    {
+     "term": "k-fold CV",
+     "definition": "Rotating the rehearsal role across k folds and averaging.",
+     "anchor": "sl-04-model-selection-cv-holdout-leakage-p04"
+    },
+    {
+     "term": "leakage",
+     "definition": "Validation/test information entering training.",
+     "anchor": "sl-04-model-selection-cv-holdout-leakage-p05"
+    },
+    {
+     "term": "selection bias",
+     "definition": "The winner's validation score is optimistic because you selected for it.",
+     "anchor": "sl-04-model-selection-cv-holdout-leakage-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-04-model-selection-cv-holdout-leakage-r1",
+     "question": "What is the CV procedure?",
+     "answer": "Split into train and validation (or k folds). Train each candidate on train only. Score each on validation only. Pick the winner, optionally refit on all of S. Report final performance on a test set that touched nothing above.",
+     "anchor": "sl-04-model-selection-cv-holdout-leakage-l01"
+    },
+    {
+     "id": "sl-04-model-selection-cv-holdout-leakage-r2",
+     "question": "Why is the winner's validation score optimistic?",
+     "answer": "You selected for it, and every extra round of search deepens the optimism. Fix: a final untouched test set.",
+     "anchor": "sl-04-model-selection-cv-holdout-leakage-p05"
+    },
+    {
+     "id": "sl-04-model-selection-cv-holdout-leakage-r3",
+     "question": "What is leakage?",
+     "answer": "Any information from validation/test entering training: preprocessing fit on all data, feature selection on all data, tuning on the test set. Fix: every data-dependent step inside the CV loop.",
+     "anchor": "sl-04-model-selection-cv-holdout-leakage-p05"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-05-implicit-regularization",
+   "title": "SL-05: Implicit regularization",
+   "minutes": 1,
+   "endAnchor": "sl-05-implicit-regularization-end",
+   "blocks": [
+    {
+     "anchor": "sl-05-implicit-regularization-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "implicit regularization",
+     "definition": "The model-selection bias the optimizer supplies for free.",
+     "anchor": "sl-05-implicit-regularization-p02"
+    },
+    {
+     "term": "implicit bias",
+     "definition": "GD from small initialization drifts toward small-norm solutions.",
+     "anchor": "sl-05-implicit-regularization-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-05-implicit-regularization-r1",
+     "question": "What is implicit regularization?",
+     "answer": "The optimizer is a second regularizer. Among all fits explaining the training data, GD from small initialization drifts toward small-norm solutions. The algorithm's path selects the model.",
+     "anchor": "sl-05-implicit-regularization-p04"
+    },
+    {
+     "id": "sl-05-implicit-regularization-r2",
+     "question": "What do the notes establish and not establish?",
+     "answer": "They state the phenomenon and show figures of different minima. They do not prove which bias GD has: active research.",
+     "anchor": "sl-05-implicit-regularization-p05"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-06-early-stopping-learning-curves-model-complexity-deployment-shift",
+   "title": "SL-06: Early stopping, learning curves, model complexity, deployment shift",
+   "minutes": 2,
+   "endAnchor": "sl-06-early-stopping-learning-curves-model-complexity-deployment-shift-end",
+   "blocks": [
+    {
+     "anchor": "sl-06-early-stopping-learning-curves-model-complexity-deployment-shift-p02",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-06-early-stopping-learning-curves-model-complexity-deployment-shift-p06",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "early stopping",
+     "definition": "Stop when validation error starts rising; step count is the complexity knob.",
+     "anchor": "sl-06-early-stopping-learning-curves-model-complexity-deployment-shift-p02"
+    },
+    {
+     "term": "learning curves",
+     "definition": "Training and validation error vs training-set size n.",
+     "anchor": "sl-06-early-stopping-learning-curves-model-complexity-deployment-shift-p03"
+    },
+    {
+     "term": "patience",
+     "definition": "A fixed number of non-improving epochs before stopping.",
+     "anchor": "sl-06-early-stopping-learning-curves-model-complexity-deployment-shift-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-06-early-stopping-learning-curves-model-complexity-deployment-shift-r1",
+     "question": "What is early stopping?",
+     "answer": "Stop training when validation error starts rising. Step count becomes the complexity knob: implicit l2 with steps as lambda.",
+     "anchor": "sl-06-early-stopping-learning-curves-model-complexity-deployment-shift-p02"
+    },
+    {
+     "id": "sl-06-early-stopping-learning-curves-model-complexity-deployment-shift-r2",
+     "question": "What do learning-curve signatures say?",
+     "answer": "Both errors high and close: bias (more data will not help). A gap between them: variance (more data helps).",
+     "anchor": "sl-06-early-stopping-learning-curves-model-complexity-deployment-shift-p03"
+    },
+    {
+     "id": "sl-06-early-stopping-learning-curves-model-complexity-deployment-shift-r3",
+     "question": "What breaks when validation does not match deployment?",
+     "answer": "The selected lambda, degree, and stopping point are tuned for the wrong world. Re-run selection when the world changes.",
+     "anchor": "sl-06-early-stopping-learning-curves-model-complexity-deployment-shift-p05"
+    }
+   ]
+  },
+  {
+   "anchor": "assessment",
+   "title": "Assessment",
+   "minutes": 2,
+   "endAnchor": "assessment-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "regularized loss",
+     "definition": "J_lambda = J + lambda R.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "MAP estimate",
+     "definition": "theta_MAP = argmax prod_i p(y^{(i)}|x^{(i)}, theta) p(theta).",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "Gaussian prior",
+     "definition": "theta ~ N(0, tau^2 I), giving ridge with lambda = 1/tau^2.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "k-fold CV",
+     "definition": "Rotate the validation role across k folds and average; costs k training runs.",
+     "anchor": "assessment-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "assessment-r1",
+     "question": "What does E04 ask?",
+     "answer": "Why l1 gives sparsity.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "id": "assessment-r2",
+     "question": "What does E11 describe?",
+     "answer": "A team standardizes features using the full dataset, then runs CV. Validation error 0.05, test error 0.20. Diagnose.",
+     "anchor": "assessment-p05"
+    },
+    {
+     "id": "assessment-r3",
+     "question": "What does E12 ask?",
+     "answer": "Team A tunes lambda on the test set. Team B uses nested CV. Compare the trustworthiness of their reported numbers.",
+     "anchor": "assessment-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "visual-units",
+   "title": "Visual units",
+   "minutes": 1,
+   "endAnchor": "visual-units-end",
+   "blocks": [
+    {
+     "anchor": "visual-units-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "visual-units-fig02",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "ridge path",
+     "definition": "The visual of test error vs lambda (U-shaped).",
+     "anchor": "visual-units-fig01"
+    },
+    {
+     "term": "CV curves",
+     "definition": "The visual of training vs validation error vs degree.",
+     "anchor": "visual-units-fig02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "visual-units-r1",
+     "question": "What does the first visual unit show?",
+     "answer": "Test error vs lambda (U-shaped), computed.",
+     "anchor": "visual-units-l01"
+    },
+    {
+     "id": "visual-units-r2",
+     "question": "What does the second visual unit show?",
+     "answer": "Training vs validation error vs degree, computed.",
+     "anchor": "visual-units-l02"
+    }
+   ]
+  },
+  {
+   "anchor": "research-reading-and-extension",
+   "title": "Research reading and extension",
+   "minutes": 1,
+   "endAnchor": "research-reading-and-extension-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "falsifiable claim",
+     "definition": "A claim an experiment can disprove, here about LASSO vs ridge on correlated features.",
+     "anchor": "research-reading-and-extension-p01"
+    },
+    {
+     "term": "correlated features",
+     "definition": "The data setting for the extension experiment.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "research-reading-and-extension-r1",
+     "question": "What is the falsifiable claim?",
+     "answer": "LASSO zeroes one of a correlated pair while ridge shares weight.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "role-bridges",
+   "title": "Role bridges",
+   "minutes": 1,
+   "endAnchor": "role-bridges-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "ridge",
+     "definition": "Ridge plus CV-selected lambda.",
+     "anchor": "role-bridges-l01"
+    },
+    {
+     "term": "leakage auditing",
+     "definition": "A deployment skill for ML engineers.",
+     "anchor": "role-bridges-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "role-bridges-r1",
+     "question": "What is the ML engineer bridge?",
+     "answer": "Ridge plus CV-selected lambda is the default fix for overfitting linear models. Leakage auditing is a deployment skill.",
+     "anchor": "role-bridges-l01"
+    }
+   ]
+  }
+ ]
+}

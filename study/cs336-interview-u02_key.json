@@ -1,0 +1,295 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs336-interview-u02_key",
+ "itemKind": "lesson",
+ "revision": "7104140aeef9254cf5675f976953a2955fb471231515fe35891c4fc1a0977b5b",
+ "sections": [
+  {
+   "anchor": "b1-b6",
+   "title": "B1-B6",
+   "minutes": 1,
+   "endAnchor": "b1-b6-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "shape contract",
+     "definition": "Read right to left: the last two axes multiply, leading axes batch and broadcast.",
+     "anchor": "b1-b6-p01"
+    },
+    {
+     "term": "view",
+     "definition": "Shares storage with new metadata only; a transpose swaps strides and shares.",
+     "anchor": "b1-b6-p01"
+    },
+    {
+     "term": "copy",
+     "definition": "Owns new storage; has standard strides and no sharing.",
+     "anchor": "b1-b6-p01"
+    },
+    {
+     "term": "2MNK rule",
+     "definition": "2MNK per matmul: MNK mults plus MNK adds.",
+     "anchor": "b1-b6-p01"
+    },
+    {
+     "term": "arithmetic intensity",
+     "definition": "FLOPs per byte; 1.0 FLOP/byte is deeply memory-bound.",
+     "anchor": "b1-b6-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "b1-b6-r1",
+     "question": "Why does training memory exceed parameter memory?",
+     "answer": "Gradients, optimizer state (16 bytes/param for Adam), and activations (B,T,L scaling) add to the parameters.",
+     "anchor": "b1-b6-p01"
+    },
+    {
+     "id": "b1-b6-r2",
+     "question": "What is the toy layer's forward FLOP breakdown?",
+     "answer": "8.858 GFLOP forward: qkv 1.611, scores 0.268, out 0.537, ffn 6.443.",
+     "anchor": "b1-b6-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "l1",
+   "title": "L1",
+   "minutes": 1,
+   "endAnchor": "l1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "resource ledger",
+     "definition": "Five rows: parameters, gradients, optimizer state, activations, workspace/input batch.",
+     "anchor": "l1-p01"
+    },
+    {
+     "term": "verdict rule",
+     "definition": "Fits if total x 1.15 is below device memory.",
+     "anchor": "l1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "l1-r1",
+     "question": "Why do mixed precision totals match fp32 Adam bytes?",
+     "answer": "Mixed keeps the fp32 master and moments (4+4+4) and only shrinks compute tensors (2+2); savings land in activations and compute, not optimizer state.",
+     "anchor": "l1-p01"
+    },
+    {
+     "id": "l1-r2",
+     "question": "What did the ledger miss in the 8-GPU OOM debug?",
+     "answer": "NCCL buffers and loader workers; the single-device ledger undercounts them.",
+     "anchor": "l1-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "l2",
+   "title": "L2",
+   "minutes": 1,
+   "endAnchor": "l2-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "MFU",
+     "definition": "Achieved model FLOP/s over peak FLOP/s, with the honest model count as denominator.",
+     "anchor": "l2-p01"
+    },
+    {
+     "term": "roofline cap",
+     "definition": "min(peak, intensity x bandwidth).",
+     "anchor": "l2-p01"
+    },
+    {
+     "term": "machine balance",
+     "definition": "Peak over bandwidth; 100 FLOP/byte here.",
+     "anchor": "l2-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "l2-r1",
+     "question": "Intensity 50 on a 100 TFLOP/s, 1 TB/s device: what rate does the roofline allow?",
+     "answer": "min(100, 50x1) = 50 TFLOP/s, memory-bound.",
+     "anchor": "l2-p01"
+    },
+    {
+     "id": "l2-r2",
+     "question": "What does MFU 1 indict?",
+     "answer": "The FLOP count is inflated (recompute double-counted).",
+     "anchor": "l2-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "e1",
+   "title": "E1",
+   "minutes": 1,
+   "endAnchor": "e1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "parameter count",
+     "definition": "About 334.8M: 12d^2 per layer x24 plus 32000x1024 embeddings.",
+     "anchor": "e1-p01"
+    },
+    {
+     "term": "weight memory",
+     "definition": "16 bytes/param x 334.76M = 5.36 GB.",
+     "anchor": "e1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "e1-r1",
+     "question": "Give E1's three computed answers.",
+     "answer": "(a) About 334.8M params. (b) 5.36 GB optimizer+param bytes. (c) About 128.85 GFLOP per-layer forward at B=8, T=512.",
+     "anchor": "e1-p01"
+    },
+    {
+     "id": "e1-r2",
+     "question": "What is E1's red flag?",
+     "answer": "Counting 2 FFN maps instead of 3.",
+     "anchor": "e1-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "e2",
+   "title": "E2",
+   "minutes": 1,
+   "endAnchor": "e2-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "arithmetic intensity",
+     "definition": "About 1.0 FLOP/byte here: memory-bound.",
+     "anchor": "e2-p01"
+    },
+    {
+     "term": "memory-bound",
+     "definition": "About 1.0 FLOP/byte here: shrink weight traffic or raise batch size.",
+     "anchor": "e2-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "e2-r1",
+     "question": "What is the intensity of the decode QKV projection, and the first lever?",
+     "answer": "About 1.0 FLOP/byte: memory-bound. First lever: shrink weight traffic (quantization) or raise batch size.",
+     "anchor": "e2-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "d1",
+   "title": "D1",
+   "minutes": 1,
+   "endAnchor": "d1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "SwiGLU FFN",
+     "definition": "Three linear maps: gate, up, down; the counter used two.",
+     "anchor": "d1-p01"
+    },
+    {
+     "term": "three maps",
+     "definition": "Gate, up, down: the counter used two.",
+     "anchor": "d1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "d1-r1",
+     "question": "What is the FLOP counter bug, and which claim changes?",
+     "answer": "SwiGLU FFN has three linear maps, not two; the line must read 3 x 2 x B x T x d x dff. Per-layer forward becomes 8.858 GFLOP with 72.7 percent FFN share (not 6.711/64 percent).",
+     "anchor": "d1-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "s1",
+   "title": "S1",
+   "minutes": 1,
+   "endAnchor": "s1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "ZeRO sharding",
+     "definition": "Shards optimizer state; cost is communication.",
+     "anchor": "s1-p01"
+    },
+    {
+     "term": "checkpointing",
+     "definition": "Trades about 33 percent throughput to cut activations.",
+     "anchor": "s1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "s1-r1",
+     "question": "Memory halves: name the three rows to attack, techniques, and order.",
+     "answer": "(1) Optimizer state: ZeRO sharding, cost communication. (2) Activations: checkpointing, cost about 33 percent throughput. (3) Batch: smaller microbatch, cost throughput. Order: shard, then checkpoint, then shrink.",
+     "anchor": "s1-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "s2",
+   "title": "S2",
+   "minutes": 1,
+   "endAnchor": "s2-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "crossover",
+     "definition": "Near T = 3xdff the score term crosses the FFN term.",
+     "anchor": "s2-p01"
+    },
+    {
+     "term": "activation checkpointing",
+     "definition": "First mitigation for the exploding activations row.",
+     "anchor": "s2-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "s2-r1",
+     "question": "T grows 8x: which row explodes and what are the mitigations in order?",
+     "answer": "Activations row explodes (T^2 attention term, 64x). Mitigations: (1) activation checkpointing for the attention block, (2) a subquadratic attention variant (U04) or sequence parallelism (U09).",
+     "anchor": "s2-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "r1",
+   "title": "R1",
+   "minutes": 1,
+   "endAnchor": "r1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "FLOP count",
+     "definition": "The stated op count the blog must publish.",
+     "anchor": "r1-p01"
+    },
+    {
+     "term": "roofline plot",
+     "definition": "The intensity and position evidence the second gap needs.",
+     "anchor": "r1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "r1-r1",
+     "question": "Name the three gaps in the 95-percent-of-peak claim and their closes.",
+     "answer": "(1) No stated FLOP count: publish the counted ops. (2) No intensity or roofline position: the roofline plot. (3) No baseline: the unfused baseline on the same hardware.",
+     "anchor": "r1-p01"
+    }
+   ]
+  }
+ ]
+}

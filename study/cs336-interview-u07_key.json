@@ -1,0 +1,291 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs336-interview-u07_key",
+ "itemKind": "lesson",
+ "revision": "9dbb9e118f3fee610259260403d823f740e875efe052c9d57c4eab4164bf1b6c",
+ "sections": [
+  {
+   "anchor": "b1-b6",
+   "title": "B1-B6",
+   "minutes": 1,
+   "endAnchor": "b1-b6-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "tile",
+     "definition": "An SRAM-sized work block; the SRAM budget equation sets its size.",
+     "anchor": "b1-b6-p01"
+    },
+    {
+     "term": "online softmax",
+     "definition": "Rescales running statistics when a new block raises the max: alpha = exp(m - m_new).",
+     "anchor": "b1-b6-p01"
+    },
+    {
+     "term": "FlashAttention backward",
+     "definition": "Stores only m and l per row (O(T)); scores are recomputed.",
+     "anchor": "b1-b6-p01"
+    },
+    {
+     "term": "kernel fusion",
+     "definition": "Merging elementwise passes into one kernel; legal while the working set fits SRAM and ops stay elementwise.",
+     "anchor": "b1-b6-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "b1-b6-r1",
+     "question": "What does FlashAttention store for the backward pass?",
+     "answer": "Only m and l per row (O(T)); scores are recomputed.",
+     "anchor": "b1-b6-p01"
+    },
+    {
+     "id": "b1-b6-r2",
+     "question": "Name the four kernel testing invariants for attention.",
+     "answer": "Rows sum to 1, outputs in the convex hull of V, causality, block-size independence.",
+     "anchor": "b1-b6-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "l1",
+   "title": "L1",
+   "minutes": 1,
+   "endAnchor": "l1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "HBM traffic",
+     "definition": "Naive attention: B·h·T·T bytes for the scores.",
+     "anchor": "l1-p01"
+    },
+    {
+     "term": "online update",
+     "definition": "acc = acc·alpha + exp(S-m)·V, l = l·alpha + sum(exp(S-m)).",
+     "anchor": "l1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "l1-r1",
+     "question": "What is the L1.2 toy traffic comparison?",
+     "answer": "537 MB vs 25.2 MB = 21.3x.",
+     "anchor": "l1-p01"
+    },
+    {
+     "id": "l1-r2",
+     "question": "Tiled versus linear attention?",
+     "answer": "Linear attention is approximate O(T); tiled is exact.",
+     "anchor": "l1-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "l2",
+   "title": "L2",
+   "minutes": 1,
+   "endAnchor": "l2-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "recomputation",
+     "definition": "Store m, l; recompute S, P tiles.",
+     "anchor": "l2-p01"
+    },
+    {
+     "term": "dS",
+     "definition": "dS = P·(dP - rowsum(dP·P)).",
+     "anchor": "l2-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "l2-r1",
+     "question": "Write the dV line.",
+     "answer": "dV = P^T·dO.",
+     "anchor": "l2-p01"
+    },
+    {
+     "id": "l2-r2",
+     "question": "Why not store the scores?",
+     "answer": "Storing scores costs O(T^2) HBM.",
+     "anchor": "l2-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "e1",
+   "title": "E1",
+   "minutes": 1,
+   "endAnchor": "e1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "Bc",
+     "definition": "80 at 100 KB SRAM; 160 when SRAM doubles; 103 versus 52 blocks.",
+     "anchor": "e1-p01"
+    },
+    {
+     "term": "statistics tile",
+     "definition": "The red flag: forgetting it in the Bc math.",
+     "anchor": "e1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "e1-r1",
+     "question": "Give E1's answers.",
+     "answer": "(a) Bc = 80. (b) 103 blocks. (c) Bc = 160, 52 blocks; the algorithm, exactness, and O(T) statistics are unchanged.",
+     "anchor": "e1-p01"
+    },
+    {
+     "id": "e1-r2",
+     "question": "E1's red flag?",
+     "answer": "Forgetting the statistics tile.",
+     "anchor": "e1-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "e2",
+   "title": "E2",
+   "minutes": 1,
+   "endAnchor": "e2-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "fused traffic",
+     "definition": "Separate 50.3 MB, fused 16.8 MB per pass.",
+     "anchor": "e2-p01"
+    },
+    {
+     "term": "reduction",
+     "definition": "Needs the whole row: the tile-at-a-time pattern breaks.",
+     "anchor": "e2-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "e2-r1",
+     "question": "What breaks when a reduction joins the fused chain, and the fix?",
+     "answer": "The reduction needs the whole row: the tile-at-a-time pattern breaks. Fix: a separate reduction pass or the online form.",
+     "anchor": "e2-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "d1",
+   "title": "D1",
+   "minutes": 1,
+   "endAnchor": "d1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "rescale bug",
+     "definition": "Old l and acc not rescaled when the max increases.",
+     "anchor": "d1-p01"
+    },
+    {
+     "term": "decreasing-max order",
+     "definition": "The hiding condition: bug invisible when blocks arrive so.",
+     "anchor": "d1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "d1-r1",
+     "question": "What is the tiled softmax bug and the fix?",
+     "answer": "The old l and acc are not rescaled when the max increases; l = l + ... and acc = acc + ... are only correct if m_new == m. Fix: alpha = exp(m - m_new), l = l·alpha + exp(block-m_new).sum(), acc = acc·alpha + exp(block-m_new)@Vb.",
+     "anchor": "d1-p01"
+    },
+    {
+     "id": "d1-r2",
+     "question": "When does the bug hide?",
+     "answer": "When blocks are processed in decreasing-max order.",
+     "anchor": "d1-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "s1",
+   "title": "S1",
+   "minutes": 1,
+   "endAnchor": "s1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "1M breakage",
+     "definition": "Inner-loop passes go quadratic; fp16 statistics underflow.",
+     "anchor": "s1-p01"
+    },
+    {
+     "term": "fp32 statistics",
+     "definition": "Fix for fp16 underflow over 1M elements.",
+     "anchor": "s1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "s1-r1",
+     "question": "At T=1M, what breaks and what fixes it?",
+     "answer": "(1) The inner loop does T/Bc passes per query block: quadratic work returns in the pass count; fix with block-sparse skipping. (2) fp16 statistics underflow over 1M elements; fix with fp32 statistics.",
+     "anchor": "s1-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "s2",
+   "title": "S2",
+   "minutes": 1,
+   "endAnchor": "s2-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "data-dependent mask",
+     "definition": "Cannot be precomputed: pay per-forward cost or fall back to dense tiled.",
+     "anchor": "s2-p01"
+    },
+    {
+     "term": "skip fraction",
+     "definition": "Must be measured, not assumed.",
+     "anchor": "s2-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "s2-r1",
+     "question": "What are the two options for the data-dependent mask?",
+     "answer": "Compute the block mask per forward (paying the cost), or fall back to dense tiled. The skip fraction must be measured, not assumed.",
+     "anchor": "s2-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "r1",
+   "title": "R1",
+   "minutes": 1,
+   "endAnchor": "r1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "baseline",
+     "definition": "The named reference the 4x ratio needs.",
+     "anchor": "r1-p01"
+    },
+    {
+     "term": "traffic analysis",
+     "definition": "Report both memory and compute: the third gap's close.",
+     "anchor": "r1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "r1-r1",
+     "question": "Name the three gaps in the fused-kernel claim and their closes.",
+     "answer": "(1) No baseline: the ratio is undefined, name it. (2) No shapes: traffic math impossible, give them. (3) No traffic analysis: cannot tell memory from compute win, report both.",
+     "anchor": "r1-p01"
+    }
+   ]
+  }
+ ]
+}

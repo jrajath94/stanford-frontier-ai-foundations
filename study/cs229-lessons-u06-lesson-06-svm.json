@@ -1,0 +1,631 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229-lessons-u06-lesson-06-svm",
+ "itemKind": "lesson",
+ "revision": "39d7bed308ff88ab37a1999f337d1003dd134002236cfc47b075e43215d68c52",
+ "sections": [
+  {
+   "anchor": "lesson-06-svm-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "lesson-06-svm-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229-U06",
+     "definition": "The unit code for this lesson in the Stanford CS229 foundations course.",
+     "anchor": "lesson-06-svm-intro-p02"
+    },
+    {
+     "term": "leaf concepts",
+     "definition": "The fine-grained concepts the lesson covers, labeled C01 to C12.",
+     "anchor": "lesson-06-svm-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-06-svm-intro-r1",
+     "question": "Who teaches this course?",
+     "answer": "Tengyu Ma and Andrew Ng.",
+     "anchor": "lesson-06-svm-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "source-mapping",
+   "title": "Source mapping",
+   "minutes": 1,
+   "endAnchor": "source-mapping-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "margin",
+     "definition": "The confidence of a prediction: points A, B, C in the notes figure.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "Lagrange duality",
+     "definition": "Rewriting the primal in per-example prices alpha_i.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "functional and geometric margins",
+     "definition": "y(w^T x + b) and that divided by ||w||.",
+     "anchor": "source-mapping-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "source-mapping-r1",
+     "question": "What do notes sections 6.1-6.6 give?",
+     "answer": "6.1: the margin intuition (points A, B, C). 6.2: y in {-1, 1} and (w, b) notation. 6.3: functional and geometric margins with scale invariance. 6.4: the hard-margin primal. 6.5: Lagrange duality. 6.6: the dual derivation with W(alpha).",
+     "anchor": "source-mapping-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "scope-and-objectives",
+   "title": "Scope and objectives",
+   "minutes": 1,
+   "endAnchor": "scope-and-objectives-end",
+   "blocks": [
+    {
+     "anchor": "scope-and-objectives-p01",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "max-margin classifier",
+     "definition": "The classifier maximizing the gap between classes.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "dual",
+     "definition": "The alpha-formulation depending only on inner products.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "KKT conditions",
+     "definition": "Stationarity, feasibility, and complementary slackness at the optimum.",
+     "anchor": "scope-and-objectives-p02"
+    },
+    {
+     "term": "support vectors",
+     "definition": "Examples with alpha_i > 0, sitting on the margin.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "scope-and-objectives-r1",
+     "question": "What does the scope cover?",
+     "answer": "The max-margin classifier, its dual, and the algorithm that solves it.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "id": "scope-and-objectives-r2",
+     "question": "What does objective 6 ask the learner to do?",
+     "answer": "Sketch SMO.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "dependencies",
+   "title": "Dependencies",
+   "minutes": 1,
+   "endAnchor": "dependencies-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "prerequisites",
+     "definition": "The shared bridge units P03, P05, and P09 needed before this lesson.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "term": "margins",
+     "definition": "Confidence, remediated in SL-01.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "duality",
+     "definition": "Remediated in SL-03.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "support vectors",
+     "definition": "Remediated in SL-04.",
+     "anchor": "dependencies-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "dependencies-r1",
+     "question": "Which prerequisites does this lesson list?",
+     "answer": "P03, P05, and P09, the shared bridges.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "id": "dependencies-r2",
+     "question": "What does the list say margins are?",
+     "answer": "Confidence, remediated in SL-01.",
+     "anchor": "dependencies-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-01-functional-and-geometric-margins",
+   "title": "SL-01: Functional and geometric margins",
+   "minutes": 2,
+   "endAnchor": "sl-01-functional-and-geometric-margins-end",
+   "blocks": [
+    {
+     "anchor": "sl-01-functional-and-geometric-margins-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-01-functional-and-geometric-margins-p05",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "functional margin",
+     "definition": "y^{(i)}(w^T x^{(i)} + b), the signed score.",
+     "anchor": "sl-01-functional-and-geometric-margins-p02"
+    },
+    {
+     "term": "geometric margin",
+     "definition": "The functional margin divided by ||w||: the Euclidean distance to the boundary.",
+     "anchor": "sl-01-functional-and-geometric-margins-p02"
+    },
+    {
+     "term": "scale invariance",
+     "definition": "Rescaling (w, b) leaves geometric margins fixed.",
+     "anchor": "sl-01-functional-and-geometric-margins-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-01-functional-and-geometric-margins-r1",
+     "question": "What is the difference between functional and geometric margin?",
+     "answer": "Functional: the signed score y(w^T x + b); scaling (w, b) doubles it without changing predictions. Geometric: functional divided by ||w||, the actual Euclidean distance, immune to scale.",
+     "anchor": "sl-01-functional-and-geometric-margins-p04"
+    },
+    {
+     "id": "sl-01-functional-and-geometric-margins-r2",
+     "question": "In the computed example, what are the two margins?",
+     "answer": "w = [3,4], b = -25, x = (4,3), y = 1: score -1, functional margin -1, ||w|| = 5, geometric margin -0.2. Scaled by 2: functional -2, geometric still -0.2.",
+     "anchor": "sl-01-functional-and-geometric-margins-p05"
+    },
+    {
+     "id": "sl-01-functional-and-geometric-margins-r3",
+     "question": "Why not maximize the functional margin directly?",
+     "answer": "The optimizer scales (w, b) to infinity instead of moving the boundary.",
+     "anchor": "sl-01-functional-and-geometric-margins-p07"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-02-the-hard-margin-primal",
+   "title": "SL-02: The hard-margin primal",
+   "minutes": 2,
+   "endAnchor": "sl-02-the-hard-margin-primal-end",
+   "blocks": [
+    {
+     "anchor": "sl-02-the-hard-margin-primal-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-02-the-hard-margin-primal-p07",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "primal",
+     "definition": "The (w, b) optimization: min (1/2)||w||^2 with margin constraints.",
+     "anchor": "sl-02-the-hard-margin-primal-p01"
+    },
+    {
+     "term": "hard margin",
+     "definition": "Strict separation with a maximized gap.",
+     "anchor": "sl-02-the-hard-margin-primal-p01"
+    },
+    {
+     "term": "scale-invariant",
+     "definition": "The problem is unchanged by rescaling (w, b).",
+     "anchor": "sl-02-the-hard-margin-primal-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-02-the-hard-margin-primal-r1",
+     "question": "What is the hard-margin primal?",
+     "answer": "min_{w,b} (1/2)||w||^2 subject to y^{(i)}(w^T x^{(i)} + b) >= 1 for all i.",
+     "anchor": "sl-02-the-hard-margin-primal-p05"
+    },
+    {
+     "id": "sl-02-the-hard-margin-primal-r2",
+     "question": "Why fix the functional margin to 1?",
+     "answer": "The problem is scale-invariant. With ||w|| = 1 non-convex, rescaling fixes the functional margin to 1, so gamma = 1/||w|| and maximizing gamma equals minimizing (1/2)||w||^2.",
+     "anchor": "sl-02-the-hard-margin-primal-p04"
+    },
+    {
+     "id": "sl-02-the-hard-margin-primal-r3",
+     "question": "What happens on non-separable data?",
+     "answer": "No (w, b) satisfies all constraints. The primal is infeasible.",
+     "anchor": "sl-02-the-hard-margin-primal-p09"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-03-lagrange-duality-and-kkt",
+   "title": "SL-03: Lagrange duality and KKT",
+   "minutes": 2,
+   "endAnchor": "sl-03-lagrange-duality-and-kkt-end",
+   "blocks": [
+    {
+     "anchor": "sl-03-lagrange-duality-and-kkt-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-03-lagrange-duality-and-kkt-p08",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "Lagrangian",
+     "definition": "L = (1/2)||w||^2 - sum_i alpha_i [y^{(i)}(w^T x^{(i)} + b) - 1].",
+     "anchor": "sl-03-lagrange-duality-and-kkt-p04"
+    },
+    {
+     "term": "dual",
+     "definition": "W(alpha) depending only on inner products, with alpha_i >= 0.",
+     "anchor": "sl-03-lagrange-duality-and-kkt-p05"
+    },
+    {
+     "term": "KKT conditions",
+     "definition": "Stationarity, primal and dual feasibility, complementary slackness.",
+     "anchor": "sl-03-lagrange-duality-and-kkt-p06"
+    },
+    {
+     "term": "complementary slackness",
+     "definition": "alpha_i [y^{(i)}(w^T x^{(i)} + b) - 1] = 0.",
+     "anchor": "sl-03-lagrange-duality-and-kkt-p06"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-03-lagrange-duality-and-kkt-r1",
+     "question": "What are the KKT conditions?",
+     "answer": "Stationarity, primal feasibility, dual feasibility, complementary slackness: alpha_i [y^{(i)}(w^T x^{(i)} + b) - 1] = 0.",
+     "anchor": "sl-03-lagrange-duality-and-kkt-p06"
+    },
+    {
+     "id": "sl-03-lagrange-duality-and-kkt-r2",
+     "question": "Why does the dual matter?",
+     "answer": "Two wins: the data enters only through inner products, so kernels slot in; the solution is sparse, most alpha_i = 0.",
+     "anchor": "sl-03-lagrange-duality-and-kkt-p07"
+    },
+    {
+     "id": "sl-03-lagrange-duality-and-kkt-r3",
+     "question": "Why does SMO update pairs, not single alphas?",
+     "answer": "The sum alpha_i y^{(i)} = 0 constraint pins a single alpha given the rest, so one-at-a-time ascent cannot move.",
+     "anchor": "sl-03-lagrange-duality-and-kkt-p10"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-04-support-vectors-and-kernels",
+   "title": "SL-04: Support vectors and kernels",
+   "minutes": 2,
+   "endAnchor": "sl-04-support-vectors-and-kernels-end",
+   "blocks": [
+    {
+     "anchor": "sl-04-support-vectors-and-kernels-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-04-support-vectors-and-kernels-p06",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "support vector",
+     "definition": "An example with alpha_i > 0, sitting on the margin.",
+     "anchor": "sl-04-support-vectors-and-kernels-p02"
+    },
+    {
+     "term": "alpha_i",
+     "definition": "The per-example constraint price; nonzero only on support vectors.",
+     "anchor": "sl-04-support-vectors-and-kernels-p03"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-04-support-vectors-and-kernels-r1",
+     "question": "What is a support vector?",
+     "answer": "An example with alpha_i > 0, sitting exactly on the margin (or violating it, soft case). All other examples have alpha_i = 0 and do not affect w or predictions.",
+     "anchor": "sl-04-support-vectors-and-kernels-p03"
+    },
+    {
+     "id": "sl-04-support-vectors-and-kernels-r2",
+     "question": "Are support vectors the misclassified points?",
+     "answer": "No: they are the margin points. A separable dataset has zero errors and still has support vectors.",
+     "anchor": "sl-04-support-vectors-and-kernels-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-05-soft-margins-and-the-c-parameter",
+   "title": "SL-05: Soft margins and the C parameter",
+   "minutes": 2,
+   "endAnchor": "sl-05-soft-margins-and-the-c-parameter-end",
+   "blocks": [
+    {
+     "anchor": "sl-05-soft-margins-and-the-c-parameter-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-05-soft-margins-and-the-c-parameter-p06",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "slack",
+     "definition": "xi_i, the margin violation in functional units, priced at C per unit.",
+     "anchor": "sl-05-soft-margins-and-the-c-parameter-p04"
+    },
+    {
+     "term": "soft margin",
+     "definition": "Margin with violations allowed at a price.",
+     "anchor": "sl-05-soft-margins-and-the-c-parameter-p01"
+    },
+    {
+     "term": "box",
+     "definition": "0 <= alpha_i <= C: the only dual change for the soft margin.",
+     "anchor": "sl-05-soft-margins-and-the-c-parameter-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-05-soft-margins-and-the-c-parameter-r1",
+     "question": "What does large versus small C do?",
+     "answer": "Large C: violations are expensive, the boundary bends to outliers (hard-margin behavior). Small C: violations are cheap, the margin stays wide and some examples fall inside or across.",
+     "anchor": "sl-05-soft-margins-and-the-c-parameter-p04"
+    },
+    {
+     "id": "sl-05-soft-margins-and-the-c-parameter-r2",
+     "question": "What changes in the dual for the soft margin?",
+     "answer": "Only the box changes: 0 <= alpha_i <= C. Everything else is the same W(alpha).",
+     "anchor": "sl-05-soft-margins-and-the-c-parameter-p05"
+    },
+    {
+     "id": "sl-05-soft-margins-and-the-c-parameter-r3",
+     "question": "Why pick C by cross-validation, not test accuracy?",
+     "answer": "C picked by test accuracy spends the test set. Pick C by cross-validation.",
+     "anchor": "sl-05-soft-margins-and-the-c-parameter-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-06-coordinate-ascent-and-smo",
+   "title": "SL-06: Coordinate ascent and SMO",
+   "minutes": 2,
+   "endAnchor": "sl-06-coordinate-ascent-and-smo-end",
+   "blocks": [
+    {
+     "anchor": "sl-06-coordinate-ascent-and-smo-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "coordinate ascent",
+     "definition": "Optimizing one alpha at a time; blocked by the sum constraint.",
+     "anchor": "sl-06-coordinate-ascent-and-smo-p02"
+    },
+    {
+     "term": "SMO",
+     "definition": "Sequential minimal optimization: analytic pair updates clipped to [L, H].",
+     "anchor": "sl-06-coordinate-ascent-and-smo-p02"
+    },
+    {
+     "term": "clipping",
+     "definition": "Clipping the pair update to the box segment [L, H].",
+     "anchor": "sl-06-coordinate-ascent-and-smo-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-06-coordinate-ascent-and-smo-r1",
+     "question": "Why must SMO update pairs?",
+     "answer": "The sum alpha_i y^{(i)} = 0 constraint pins a single alpha given the rest. Two at a time: the constraint becomes a line, the box clips to [L, H], the 1-D quadratic has a closed-form max.",
+     "anchor": "sl-06-coordinate-ascent-and-smo-p04"
+    },
+    {
+     "id": "sl-06-coordinate-ascent-and-smo-r2",
+     "question": "What does each pair update cost?",
+     "answer": "O(1) given cached errors. A full pass is O(n^2) kernel evals naive, O(n) with caching.",
+     "anchor": "sl-06-coordinate-ascent-and-smo-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-07-separability-assumptions",
+   "title": "SL-07: Separability assumptions",
+   "minutes": 1,
+   "endAnchor": "sl-07-separability-assumptions-end",
+   "blocks": [
+    {
+     "anchor": "sl-07-separability-assumptions-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "separability",
+     "definition": "Whether the features admit a separating boundary.",
+     "anchor": "sl-07-separability-assumptions-p04"
+    },
+    {
+     "term": "IID assumption",
+     "definition": "Test data follows the same geometry as training.",
+     "anchor": "sl-07-separability-assumptions-p03"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-07-separability-assumptions-r1",
+     "question": "What does an infeasible hard-margin fit diagnose?",
+     "answer": "The data is not separable in the current features. Options: add slack (C), change the kernel, add features.",
+     "anchor": "sl-07-separability-assumptions-p04"
+    },
+    {
+     "id": "sl-07-separability-assumptions-r2",
+     "question": "Why is separability not sufficient?",
+     "answer": "A kernel that separates training perfectly with tiny sigma destroys generalization. Separability is necessary, not sufficient.",
+     "anchor": "sl-07-separability-assumptions-p05"
+    }
+   ]
+  },
+  {
+   "anchor": "assessment",
+   "title": "Assessment",
+   "minutes": 2,
+   "endAnchor": "assessment-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "functional margin",
+     "definition": "y^{(i)}(w^T x^{(i)} + b), the signed score.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "geometric margin",
+     "definition": "The functional margin divided by ||w||, the Euclidean distance to the boundary.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "hard-margin primal",
+     "definition": "min (1/2)||w||^2 s.t. y^{(i)}(w^T x^{(i)} + b) >= 1.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "complementary slackness",
+     "definition": "alpha_i [y^{(i)}(w^T x^{(i)} + b) - 1] = 0.",
+     "anchor": "assessment-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "assessment-r1",
+     "question": "What does E02 ask?",
+     "answer": "Why the functional margin is a bad objective.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "id": "assessment-r2",
+     "question": "What does E09 describe?",
+     "answer": "SMO's W(alpha) decreases on some steps. Name two causes.",
+     "anchor": "assessment-p05"
+    },
+    {
+     "id": "assessment-r3",
+     "question": "What does E12 ask for?",
+     "answer": "Implement SMO-lite for 20 points (pair updates with clipping) and verify KKT within 0.01.",
+     "anchor": "assessment-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "visual-units",
+   "title": "Visual units",
+   "minutes": 1,
+   "endAnchor": "visual-units-end",
+   "blocks": [
+    {
+     "anchor": "visual-units-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "visual-units-fig02",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "margin bands",
+     "definition": "The visual of points A/B/C with the boundary and margin bands.",
+     "anchor": "visual-units-fig01"
+    },
+    {
+     "term": "C trade-off",
+     "definition": "The visual of the outlier effect and the C trade-off.",
+     "anchor": "visual-units-fig02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "visual-units-r1",
+     "question": "What does the first visual unit show?",
+     "answer": "Points A/B/C with the boundary and margin bands.",
+     "anchor": "visual-units-l01"
+    },
+    {
+     "id": "visual-units-r2",
+     "question": "What does the second visual unit show?",
+     "answer": "The outlier effect and the C trade-off.",
+     "anchor": "visual-units-l02"
+    }
+   ]
+  },
+  {
+   "anchor": "research-reading-and-extension",
+   "title": "Research reading and extension",
+   "minutes": 1,
+   "endAnchor": "research-reading-and-extension-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "falsifiable claim",
+     "definition": "A claim an experiment can disprove, here about SMO convergence.",
+     "anchor": "research-reading-and-extension-p01"
+    },
+    {
+     "term": "SMO-lite",
+     "definition": "The pair-update solver built in the extension.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "research-reading-and-extension-r1",
+     "question": "What is the falsifiable claim?",
+     "answer": "Violations fall geometrically and the support set stabilizes before full convergence.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ]
+  }
+ ]
+}

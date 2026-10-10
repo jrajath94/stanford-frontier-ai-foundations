@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "itemId": "cs229s-interview-interview-u02-questions",
+  "itemKind": "lesson",
+  "revision": "5d3cf77ceea854a35acbca4cb14481bdc5cb990443120c5ffb71961f6abb270b",
+  "sections": [
+    {
+      "anchor": "cs229s-interview-interview-u02-questions-intro",
+      "title": "Interview bank U02: Hardware-aware design and compilers",
+      "endAnchor": "cs229s-interview-interview-u02-questions-intro-end",
+      "blocks": [],
+      "keyTerms": [
+        {
+          "term": "provenance",
+          "definition": "Original practice, role-derived material. Not actual lab questions.",
+          "anchor": "cs229s-interview-interview-u02-questions-intro-p02"
+        },
+        {
+          "term": "interview bank",
+          "definition": "A set of breadth, ladder, analytical, debug, scenario, and critique questions per unit.",
+          "anchor": "cs229s-interview-interview-u02-questions-intro-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "cs229s-interview-interview-u02-questions-intro-r1",
+          "question": "What is the provenance of this interview bank?",
+          "answer": "Original practice, role-derived. The questions are not actual lab questions.",
+          "anchor": "cs229s-interview-interview-u02-questions-intro-p02"
+        }
+      ],
+      "minutes": 4
+    },
+    {
+      "anchor": "breadth-questions",
+      "title": "Breadth questions",
+      "endAnchor": "breadth-questions-end",
+      "blocks": [
+        {
+          "anchor": "breadth-questions-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "memory levels",
+          "definition": "Registers, shared/L1, L2, HBM: fastest to slowest.",
+          "anchor": "breadth-questions-p01"
+        },
+        {
+          "term": "arithmetic intensity",
+          "definition": "FLOPs per byte moved, in FLOP/byte.",
+          "anchor": "breadth-questions-p04"
+        },
+        {
+          "term": "roofline",
+          "definition": "Attainable = min(pi, beta*I); ridge = pi/beta.",
+          "anchor": "breadth-questions-p05"
+        },
+        {
+          "term": "kernel fusion",
+          "definition": "Merges kernels so intermediates stay on chip; saves bytes, not FLOPs.",
+          "anchor": "breadth-questions-p03"
+        }
+      ],
+      "recall": [
+        {
+          "id": "breadth-questions-r1",
+          "question": "Name the four GPU memory levels from fastest to slowest, with one size order each.",
+          "answer": "Registers, shared/L1, L2, HBM: ~256 KB/SM, ~100-200 KB/SM, tens of MB, tens of GB.",
+          "anchor": "breadth-questions-p01"
+        },
+        {
+          "id": "breadth-questions-r2",
+          "question": "State the roofline formula. Define the ridge point and compute it for pi = 3e14 FLOP/s, beta = 2e12 B/s.",
+          "answer": "Attainable = min(pi, beta*I). Ridge = pi/beta = 150 FLOP/byte.",
+          "anchor": "breadth-questions-p05"
+        },
+        {
+          "id": "breadth-questions-r3",
+          "question": "State the fp16 vs bf16 tradeoff in one line each.",
+          "answer": "fp16: fine precision, short range (65504 max). bf16: fp32 range, coarse precision.",
+          "anchor": "breadth-questions-p08"
+        }
+      ],
+      "minutes": 4
+    },
+    {
+      "anchor": "deep-ladder-1-roofline-triage",
+      "title": "Deep ladder 1: roofline triage",
+      "endAnchor": "deep-ladder-1-roofline-triage-end",
+      "blocks": [
+        {
+          "anchor": "deep-ladder-1-roofline-triage-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "intensity I",
+          "definition": "FLOPs divided by bytes moved.",
+          "anchor": "deep-ladder-1-roofline-triage-p01"
+        },
+        {
+          "term": "attainable performance",
+          "definition": "min(pi, beta*I): the roof the kernel lives under.",
+          "anchor": "deep-ladder-1-roofline-triage-p01"
+        },
+        {
+          "term": "occupancy",
+          "definition": "Active over max warps; low occupancy fakes a compute-bound read.",
+          "anchor": "deep-ladder-1-roofline-triage-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "deep-ladder-1-roofline-triage-r1",
+          "question": "Deep ladder 1 triages a 64x64 fp16 matmul on the roofline. What are the numbers and the bound?",
+          "answer": "FLOPs 524288, bytes 24576, I = 21.3 FLOP/byte. Attainable = min(pi, beta*I).",
+          "anchor": "deep-ladder-1-roofline-triage-p01"
+        }
+      ],
+      "minutes": 3
+    },
+    {
+      "anchor": "deep-ladder-2-fusion-economics",
+      "title": "Deep ladder 2: fusion economics",
+      "endAnchor": "deep-ladder-2-fusion-economics-end",
+      "blocks": [
+        {
+          "anchor": "deep-ladder-2-fusion-economics-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "fused traffic",
+          "definition": "Bytes when intermediates stay on chip: 2048 on the toy.",
+          "anchor": "deep-ladder-2-fusion-economics-p01"
+        },
+        {
+          "term": "unfused traffic",
+          "definition": "Bytes when each op round-trips HBM: 5120 on the toy.",
+          "anchor": "deep-ladder-2-fusion-economics-p01"
+        },
+        {
+          "term": "graph breaks",
+          "definition": "Data-dependent control flow that blocks fusion.",
+          "anchor": "deep-ladder-2-fusion-economics-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "deep-ladder-2-fusion-economics-r1",
+          "question": "Deep ladder 2 compares fused vs unfused traffic for y = relu(x@W+b). What is the ratio, and when is fusion pointless?",
+          "answer": "Unfused 5120 bytes vs fused 2048: 2.5x. Pointless at 2 KB, where the saving is noise next to launch overhead.",
+          "anchor": "deep-ladder-2-fusion-economics-p01"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "analytical-exercises",
+      "title": "Analytical exercises",
+      "endAnchor": "analytical-exercises-end",
+      "blocks": [
+        {
+          "anchor": "analytical-exercises-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "overhead share",
+          "definition": "Launch overhead over total step time.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "term": "latency share",
+          "definition": "Fixed latency over total copy time.",
+          "anchor": "analytical-exercises-p02"
+        },
+        {
+          "term": "small-kernel rule",
+          "definition": "Small kernels are latency-bound: fuse them.",
+          "anchor": "analytical-exercises-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "analytical-exercises-r1",
+          "question": "A layer launches 50 kernels per step at 5 us overhead each, plus 2 ms of real work. What is the overhead share, and after fusion to 4 kernels?",
+          "answer": "50 kernels: 250 us overhead vs 2000 us work: 11.1%. 4 kernels: ~1%.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "id": "analytical-exercises-r2",
+          "question": "Copy 1 GB at 2 TB/s with 0.5 us latency, then 1 KB. What are the latency shares?",
+          "answer": "1 GB: 500.5 us, latency 0.1%. 1 KB: 0.5005 us, latency ~100%. Small kernels are latency-bound: fuse them.",
+          "anchor": "analytical-exercises-p02"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "implementation-debug-task",
+      "title": "Implementation / debug task",
+      "endAnchor": "implementation-debug-task-end",
+      "blocks": [
+        {
+          "anchor": "implementation-debug-task-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "ceil division",
+          "definition": "Blocks must cover n: ceil(n/block), never floor.",
+          "anchor": "implementation-debug-task-p01"
+        },
+        {
+          "term": "tail guard",
+          "definition": "Idle threads need a bounds check.",
+          "anchor": "implementation-debug-task-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "implementation-debug-task-r1",
+          "question": "D1. The launch plan should cover N = 1000 elements with 256 threads per block. The tail is wrong. What is the bug, the fix, and the invariant?",
+          "answer": "Bug: n // block floors: 1000//256 = 3 blocks = 768 threads, 232 elements uncovered. Fix: math.ceil(n/block) = 4 blocks. Invariant: blocks*block >= n, with a bounds guard for idle threads.",
+          "anchor": "implementation-debug-task-p01"
+        }
+      ],
+      "minutes": 1
+    },
+    {
+      "anchor": "changed-constraint-scenarios",
+      "title": "Changed-constraint scenarios",
+      "endAnchor": "changed-constraint-scenarios-end",
+      "blocks": [
+        {
+          "anchor": "changed-constraint-scenarios-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "no shared memory",
+          "definition": "Tiling and fusion break first without on-chip staging.",
+          "anchor": "changed-constraint-scenarios-p01"
+        },
+        {
+          "term": "register blocking",
+          "definition": "The replacement: tiny tiles in the register file.",
+          "anchor": "changed-constraint-scenarios-p01"
+        },
+        {
+          "term": "fixed SMs",
+          "definition": "With zero launch overhead and infinite bandwidth, parallelism limits small kernels.",
+          "anchor": "changed-constraint-scenarios-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "changed-constraint-scenarios-r1",
+          "question": "Shared memory is removed from the architecture. Which two U02 techniques break first, and what replaces tiling?",
+          "answer": "Tiling and fusion break first (no on-chip staging for intermediates). Replacement: register blocking, deeper software pipelining from L2, smaller kernels.",
+          "anchor": "changed-constraint-scenarios-p01"
+        },
+        {
+          "id": "changed-constraint-scenarios-r2",
+          "question": "Launch overhead is zero and HBM bandwidth is infinite, but SM count is fixed. What limits a 64x64 matmul and 7B decode now?",
+          "answer": "64x64: parallelism and occupancy. 7B decode: compute latency per token (launches, sequential dependency): optimize with graphs and speculative decoding.",
+          "anchor": "changed-constraint-scenarios-p02"
+        }
+      ],
+      "minutes": 1
+    },
+    {
+      "anchor": "research-critique",
+      "title": "Research critique",
+      "endAnchor": "research-critique-end",
+      "blocks": [
+        {
+          "anchor": "research-critique-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "shape audit",
+          "definition": "Which shapes were measured? Only friendly ones invalidates.",
+          "anchor": "research-critique-p01"
+        },
+        {
+          "term": "roof audit",
+          "definition": "Sustained or nameplate roof? Nameplate never achieved invalidates.",
+          "anchor": "research-critique-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "research-critique-r1",
+          "question": "A vendor slide claims “our kernel achieves 95 percent of roofline on all shapes.” What five audit questions do you ask?",
+          "answer": "(1) Which shapes? (2) Sustained or nameplate roof? (3) Measured how, which counters? (4) Which batch sizes? (5) Independent reproduction?",
+          "anchor": "research-critique-p01"
+        }
+      ],
+      "minutes": 1
+    }
+  ]
+}

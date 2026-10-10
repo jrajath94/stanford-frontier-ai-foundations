@@ -1,0 +1,526 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229-lessons-u11-lesson-11-vi-pca-ica",
+ "itemKind": "lesson",
+ "revision": "3c0cbd6eceb384422a35f38f49555c4efdcab5db447f822126e620a72bfc2bc2",
+ "sections": [
+  {
+   "anchor": "lesson-11-vi-pca-ica-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "lesson-11-vi-pca-ica-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229-U11",
+     "definition": "The unit code for this lesson in the Stanford CS229 foundations course.",
+     "anchor": "lesson-11-vi-pca-ica-intro-p02"
+    },
+    {
+     "term": "leaf concepts",
+     "definition": "The fine-grained concepts the lesson covers, labeled C01 to C12.",
+     "anchor": "lesson-11-vi-pca-ica-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-11-vi-pca-ica-intro-r1",
+     "question": "Who teaches this course?",
+     "answer": "Tengyu Ma and Andrew Ng.",
+     "anchor": "lesson-11-vi-pca-ica-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "source-mapping",
+   "title": "Source mapping",
+   "minutes": 1,
+   "endAnchor": "source-mapping-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "VI",
+     "definition": "ELBO optimization over a restricted Q family.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "VAE",
+     "definition": "The neural ELBO model with encoder and decoder.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "reparameterization trick",
+     "definition": "z = mu + sigma * xi for differentiable sampling.",
+     "anchor": "source-mapping-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "source-mapping-r1",
+     "question": "What do notes sections 11.5 and chapters 12-13 give?",
+     "answer": "11.5: VI as ELBO optimization over a restricted Q family, the VAE neural parameterization with encoder/decoder, the reparameterization trick. Chapter 12: PCA preprocessing and variance maximization. Chapter 13: the ICA cocktail-party model with permutation/scale ambiguities.",
+     "anchor": "source-mapping-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "scope-and-objectives",
+   "title": "Scope and objectives",
+   "minutes": 1,
+   "endAnchor": "scope-and-objectives-end",
+   "blocks": [
+    {
+     "anchor": "scope-and-objectives-p01",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "VI",
+     "definition": "ELBO optimization over a tractable Q family.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "PCA",
+     "definition": "The max-variance subspace finder.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "ICA",
+     "definition": "The independent-source unmixer.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "term": "reparameterization trick",
+     "definition": "z = mu + sigma * xi for differentiable sampling.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "scope-and-objectives-r1",
+     "question": "What are the three answers to 'the posterior is intractable'?",
+     "answer": "Approximate it (VI/VAE), find the max-variance subspace (PCA), or unmix independent sources (ICA).",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "id": "scope-and-objectives-r2",
+     "question": "What does objective 3 ask the learner to do?",
+     "answer": "Run PCA and explain it as variance maximization.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "dependencies",
+   "title": "Dependencies",
+   "minutes": 1,
+   "endAnchor": "dependencies-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "prerequisites",
+     "definition": "The shared bridge units P06, P07, and P10, plus unit U10, needed before this lesson.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "term": "intractable",
+     "definition": "Why the exact posterior is intractable in deep models.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "PCA vs ICA",
+     "definition": "Remediated in SL-03 vs SL-04.",
+     "anchor": "dependencies-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "dependencies-r1",
+     "question": "Which prerequisites does this lesson list?",
+     "answer": "P06, P07, P10, and unit U10 (EM, ELBO).",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "id": "dependencies-r2",
+     "question": "What does the list contrast?",
+     "answer": "PCA vs ICA goals, remediated in SL-03 vs SL-04.",
+     "anchor": "dependencies-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-01-variational-inference",
+   "title": "SL-01: Variational inference",
+   "minutes": 2,
+   "endAnchor": "sl-01-variational-inference-end",
+   "blocks": [
+    {
+     "anchor": "sl-01-variational-inference-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "VI",
+     "definition": "ELBO optimization over a tractable Q family.",
+     "anchor": "sl-01-variational-inference-p04"
+    },
+    {
+     "term": "ELBO",
+     "definition": "The lower bound, tight at the true posterior.",
+     "anchor": "sl-01-variational-inference-p02"
+    },
+    {
+     "term": "mean field",
+     "definition": "Q(z) = Q_1(z_1) ... Q_k(z_k): independent coordinates.",
+     "anchor": "sl-01-variational-inference-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-01-variational-inference-r1",
+     "question": "What is the VI relaxation of EM's E-step?",
+     "answer": "EM's E-step is 'set Q to the true posterior.' VI relaxes it: 'set Q to the best posterior-shaped object inside a tractable family.'",
+     "anchor": "sl-01-variational-inference-p04"
+    },
+    {
+     "id": "sl-01-variational-inference-r2",
+     "question": "What is the gap between the ELBO and the true likelihood?",
+     "answer": "Exactly KL(Q || p(z|x)): VI is posterior approximation by KL minimization.",
+     "anchor": "sl-01-variational-inference-p04"
+    },
+    {
+     "id": "sl-01-variational-inference-r3",
+     "question": "When does the Q family fail?",
+     "answer": "Too rigid (diagonal Gaussian on a strongly correlated posterior): the bound stays loose and the model underfits.",
+     "anchor": "sl-01-variational-inference-p07"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-02-the-vae-and-the-reparameterization-trick",
+   "title": "SL-02: The VAE and the reparameterization trick",
+   "minutes": 3,
+   "endAnchor": "sl-02-the-vae-and-the-reparameterization-trick-end",
+   "blocks": [
+    {
+     "anchor": "sl-02-the-vae-and-the-reparameterization-trick-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-02-the-vae-and-the-reparameterization-trick-p06",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "reparameterization trick",
+     "definition": "z = q(x, phi) + v(x, psi) * xi, xi ~ N(0, I).",
+     "anchor": "sl-02-the-vae-and-the-reparameterization-trick-p02"
+    },
+    {
+     "term": "encoder",
+     "definition": "The neural nets q, v mapping x to the latent distribution.",
+     "anchor": "sl-02-the-vae-and-the-reparameterization-trick-p02"
+    },
+    {
+     "term": "decoder",
+     "definition": "The neural net g mapping z back to x.",
+     "anchor": "sl-02-the-vae-and-the-reparameterization-trick-p02"
+    },
+    {
+     "term": "KL collapse",
+     "definition": "A powerful decoder models p(x) directly; the latent carries nothing.",
+     "anchor": "sl-02-the-vae-and-the-reparameterization-trick-p08"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-02-the-vae-and-the-reparameterization-trick-r1",
+     "question": "What is the reparameterization trick?",
+     "answer": "A Gaussian sample z ~ N(mu, sigma^2) is mu + sigma * xi with xi ~ N(0,1). The expectation is over xi, which does not depend on phi or psi, and the gradient flows through the deterministic path.",
+     "anchor": "sl-02-the-vae-and-the-reparameterization-trick-p04"
+    },
+    {
+     "id": "sl-02-the-vae-and-the-reparameterization-trick-r2",
+     "question": "What does the VAE ELBO split into?",
+     "answer": "Reconstruction E[log p(x|z)] minus KL(Q || prior): decode well, stay near the prior.",
+     "anchor": "sl-02-the-vae-and-the-reparameterization-trick-p05"
+    },
+    {
+     "id": "sl-02-the-vae-and-the-reparameterization-trick-r3",
+     "question": "What is KL collapse?",
+     "answer": "A powerful decoder models p(x) directly and the latent carries nothing. Diagnose via KL -> 0; mitigate by KL annealing or a weaker decoder.",
+     "anchor": "sl-02-the-vae-and-the-reparameterization-trick-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-03-pca",
+   "title": "SL-03: PCA",
+   "minutes": 2,
+   "endAnchor": "sl-03-pca-end",
+   "blocks": [
+    {
+     "anchor": "sl-03-pca-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-03-pca-l01",
+     "kind": "steps",
+     "reveal": "stepwise"
+    },
+    {
+     "anchor": "sl-03-pca-p07",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "PCA",
+     "definition": "The max-variance subspace finder.",
+     "anchor": "sl-03-pca-p02"
+    },
+    {
+     "term": "eigenvectors",
+     "definition": "The variance-ordered directions of the data.",
+     "anchor": "sl-03-pca-p04"
+    },
+    {
+     "term": "whitening",
+     "definition": "z = Lambda^{-1/2} U^T x: identity covariance.",
+     "anchor": "sl-03-pca-p05"
+    },
+    {
+     "term": "eigenfaces",
+     "definition": "PCA on face images: data near a low-dimensional subspace.",
+     "anchor": "sl-03-pca-p06"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-03-pca-r1",
+     "question": "What does PCA maximize?",
+     "answer": "The variance of the projected data: the maximizing unit vector u is an eigenvector of the covariance matrix.",
+     "anchor": "sl-03-pca-p04"
+    },
+    {
+     "id": "sl-03-pca-r2",
+     "question": "What are the PCA procedure steps?",
+     "answer": "Standardize; compute Sigma = (1/n) X^T X; eigendecompose, keep top k; project z = U_k^T x.",
+     "anchor": "sl-03-pca-l01"
+    },
+    {
+     "id": "sl-03-pca-r3",
+     "question": "Why standardize before PCA?",
+     "answer": "On unstandardized features with mismatched scales, the largest-scale feature dominates the first component regardless of information.",
+     "anchor": "sl-03-pca-p09"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-04-ica",
+   "title": "SL-04: ICA",
+   "minutes": 2,
+   "endAnchor": "sl-04-ica-end",
+   "blocks": [
+    {
+     "anchor": "sl-04-ica-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "ICA",
+     "definition": "Unmixing independent sources from linear mixtures.",
+     "anchor": "sl-04-ica-p01"
+    },
+    {
+     "term": "cocktail party",
+     "definition": "x = A s: microphones recording mixed speakers.",
+     "anchor": "sl-04-ica-p02"
+    },
+    {
+     "term": "permutation",
+     "definition": "The unrecoverable order of the sources.",
+     "anchor": "sl-04-ica-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-04-ica-r1",
+     "question": "How does ICA go beyond PCA?",
+     "answer": "PCA gives uncorrelated mixtures; the voices stay mixed. ICA finds the linear unmixing making outputs as independent as possible, using non-Gaussianity as the signal.",
+     "anchor": "sl-04-ica-p04"
+    },
+    {
+     "id": "sl-04-ica-r2",
+     "question": "What are the two ICA ambiguities?",
+     "answer": "Permutation (order of sources) and scaling (volumes): both leave the observations identical.",
+     "anchor": "sl-04-ica-p05"
+    },
+    {
+     "id": "sl-04-ica-r3",
+     "question": "Why can't ICA separate Gaussian sources?",
+     "answer": "A rotation of independent Gaussians is still independent Gaussians. The non-Gaussianity assumption is load-bearing.",
+     "anchor": "sl-04-ica-p07"
+    }
+   ]
+  },
+  {
+   "anchor": "assessment",
+   "title": "Assessment",
+   "minutes": 2,
+   "endAnchor": "assessment-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "ELBO-VI objective",
+     "definition": "max_{Q in Q} max_theta ELBO(Q, theta).",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "reparameterization trick",
+     "definition": "z = mu + sigma * xi, xi ~ N(0,1): sample differentiably.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "PCA",
+     "definition": "The unit vector maximizing projected variance.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "ICA model",
+     "definition": "x = A s with s independent sources; find W = A^{-1}.",
+     "anchor": "assessment-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "assessment-r1",
+     "question": "What does E01 ask?",
+     "answer": "What makes the VAE posterior intractable.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "id": "assessment-r2",
+     "question": "What does E09 describe?",
+     "answer": "A VAE's samples are sharp but its latent interpolations jump discontinuously. Diagnose.",
+     "anchor": "assessment-p05"
+    },
+    {
+     "id": "assessment-r3",
+     "question": "What does E10 ask?",
+     "answer": "Team A uses PCA features for a classifier. Team B uses ICA features. On what kind of data does each win?",
+     "anchor": "assessment-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "visual-units",
+   "title": "Visual units",
+   "minutes": 1,
+   "endAnchor": "visual-units-end",
+   "blocks": [
+    {
+     "anchor": "visual-units-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "visual-units-fig02",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "eigenvalue plot",
+     "definition": "The visual of eigenvalues and cumulative variance.",
+     "anchor": "visual-units-fig01"
+    },
+    {
+     "term": "unmixed signals",
+     "definition": "The visual of mixed vs unmixed signals.",
+     "anchor": "visual-units-fig02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "visual-units-r1",
+     "question": "What does the first visual unit show?",
+     "answer": "Eigenvalues and cumulative variance, computed.",
+     "anchor": "visual-units-l01"
+    },
+    {
+     "id": "visual-units-r2",
+     "question": "What does the second visual unit show?",
+     "answer": "Mixed vs unmixed signals, computed.",
+     "anchor": "visual-units-l02"
+    }
+   ]
+  },
+  {
+   "anchor": "research-reading-and-extension",
+   "title": "Research reading and extension",
+   "minutes": 1,
+   "endAnchor": "research-reading-and-extension-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "falsifiable claim",
+     "definition": "A claim an experiment can disprove, here about ICA source recovery.",
+     "anchor": "research-reading-and-extension-p01"
+    },
+    {
+     "term": "permutation",
+     "definition": "The source-order ambiguity ICA can never resolve.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "research-reading-and-extension-r1",
+     "question": "What is the falsifiable claim?",
+     "answer": "The correlation of each recovered source with some true source exceeds 0.95 after best permutation.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "role-bridges",
+   "title": "Role bridges",
+   "minutes": 1,
+   "endAnchor": "role-bridges-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "PCA",
+     "definition": "The default dimensionality reduction and denoising step.",
+     "anchor": "role-bridges-l01"
+    },
+    {
+     "term": "reparameterization trick",
+     "definition": "The pattern behind all differentiable sampling in generative models.",
+     "anchor": "role-bridges-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "role-bridges-r1",
+     "question": "What is the research engineer bridge?",
+     "answer": "The reparameterization trick gives the pattern behind all differentiable sampling in modern generative models.",
+     "anchor": "role-bridges-l01"
+    }
+   ]
+  }
+ ]
+}

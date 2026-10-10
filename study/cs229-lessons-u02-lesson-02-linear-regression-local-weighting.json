@@ -1,0 +1,713 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229-lessons-u02-lesson-02-linear-regression-local-weighting",
+ "itemKind": "lesson",
+ "revision": "987bc3ced3cf6ab27ecd149e18a98c36e70d7268cd9540219666b55b14bb50a2",
+ "sections": [
+  {
+   "anchor": "lesson-02-linear-regression-local-weighting-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "lesson-02-linear-regression-local-weighting-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229-U02",
+     "definition": "The unit code for this lesson in the Stanford CS229 foundations course.",
+     "anchor": "lesson-02-linear-regression-local-weighting-intro-p02"
+    },
+    {
+     "term": "leaf concepts",
+     "definition": "The fine-grained concepts the lesson covers, labeled C01 to C12.",
+     "anchor": "lesson-02-linear-regression-local-weighting-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-02-linear-regression-local-weighting-intro-r1",
+     "question": "Who teaches this course?",
+     "answer": "Tengyu Ma and Andrew Ng.",
+     "anchor": "lesson-02-linear-regression-local-weighting-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "source-mapping",
+   "title": "Source mapping",
+   "minutes": 1,
+   "endAnchor": "source-mapping-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "LMS",
+     "definition": "Least mean squares: gradient descent on the squared error.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "normal equations",
+     "definition": "X^T X theta = X^T y, derived via matrix derivatives.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "locally weighted linear regression",
+     "definition": "Weighted least squares fit per query point.",
+     "anchor": "source-mapping-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "source-mapping-r1",
+     "question": "Which four topics do notes sections 1.1-1.4 give?",
+     "answer": "LMS with batch and stochastic gradient descent, the normal equations via matrix derivatives, the Gaussian-noise probabilistic interpretation, and locally weighted linear regression with the over/underfit figures.",
+     "anchor": "source-mapping-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "scope-and-objectives",
+   "title": "Scope and objectives",
+   "minutes": 1,
+   "endAnchor": "scope-and-objectives-end",
+   "blocks": [
+    {
+     "anchor": "scope-and-objectives-p01",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "LMS update",
+     "definition": "theta_j := theta_j + alpha * (y^{(i)} - h_theta(x^{(i)})) * x_j^{(i)}.",
+     "anchor": "scope-and-objectives-p02"
+    },
+    {
+     "term": "normal equations",
+     "definition": "X^T X theta = X^T y.",
+     "anchor": "scope-and-objectives-p02"
+    },
+    {
+     "term": "projection",
+     "definition": "Reading least squares as X theta shadowing y onto the column space.",
+     "anchor": "scope-and-objectives-p02"
+    },
+    {
+     "term": "maximum likelihood",
+     "definition": "Choosing theta to maximize the probability of the data.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "scope-and-objectives-r1",
+     "question": "What three things does the scope cover?",
+     "answer": "Fitting a line and a weighted line to data, three ways to compute the fit, and the probabilistic story that justifies the squared error.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "id": "scope-and-objectives-r2",
+     "question": "What does objective 4 ask the learner to do?",
+     "answer": "Diagnose rank deficiency and pick a stable solve.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "dependencies",
+   "title": "Dependencies",
+   "minutes": 1,
+   "endAnchor": "dependencies-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "prerequisites",
+     "definition": "The shared bridge units P04, P05, P07, and P09 needed before this lesson.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "term": "gradient descent",
+     "definition": "Hill-climbing in reverse.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "matrix calculus",
+     "definition": "Derivatives of matrix expressions, used for the normal equations.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "maximum likelihood",
+     "definition": "Choosing parameters to maximize the data's probability.",
+     "anchor": "dependencies-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "dependencies-r1",
+     "question": "Which prerequisites does this lesson list?",
+     "answer": "P04, P05, P07, and P09, the shared bridges.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "id": "dependencies-r2",
+     "question": "What does the list say gradient descent is?",
+     "answer": "Hill-climbing in reverse, remediated in SL-01.",
+     "anchor": "dependencies-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-01-lms-batch-gradients-stochastic-gradients",
+   "title": "SL-01: LMS, batch gradients, stochastic gradients",
+   "minutes": 4,
+   "endAnchor": "sl-01-lms-batch-gradients-stochastic-gradients-end",
+   "blocks": [
+    {
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p04",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p05",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-l01",
+     "kind": "definition",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p11",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p12",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p13",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p14",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "LMS",
+     "definition": "Least mean squares: gradient descent on the squared error.",
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p02"
+    },
+    {
+     "term": "gradient descent",
+     "definition": "Steps downhill on the cost's slope.",
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p02"
+    },
+    {
+     "term": "batch mode",
+     "definition": "Averages the slope over all examples before stepping.",
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p05"
+    },
+    {
+     "term": "stochastic mode",
+     "definition": "Steps on one example at a time.",
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p05"
+    },
+    {
+     "term": "learning rate",
+     "definition": "Alpha, the step size; too large overshoots.",
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p04"
+    },
+    {
+     "term": "convex",
+     "definition": "The cost J is convex, so one minimum exists.",
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-01-lms-batch-gradients-stochastic-gradients-r1",
+     "question": "What is the LMS update for one example?",
+     "answer": "theta_j := theta_j + alpha * (y^{(i)} - h_theta(x^{(i)})) * x_j^{(i)}. The step scales with the error and the feature value.",
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p09"
+    },
+    {
+     "id": "sl-01-lms-batch-gradients-stochastic-gradients-r2",
+     "question": "How do batch and stochastic differ in cost per step?",
+     "answer": "Batch costs O(mn) per step with one step per pass. Stochastic costs O(n) per step with m steps per pass.",
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p15"
+    },
+    {
+     "id": "sl-01-lms-batch-gradients-stochastic-gradients-r3",
+     "question": "Why does stochastic gradient descent never fully settle?",
+     "answer": "It oscillates around the minimum. Shrinking alpha to zero over time fixes the oscillation.",
+     "anchor": "sl-01-lms-batch-gradients-stochastic-gradients-p15"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-02-normal-equations-and-the-projection-reading",
+   "title": "SL-02: Normal equations and the projection reading",
+   "minutes": 2,
+   "endAnchor": "sl-02-normal-equations-and-the-projection-reading-end",
+   "blocks": [
+    {
+     "anchor": "sl-02-normal-equations-and-the-projection-reading-p04",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-02-normal-equations-and-the-projection-reading-p05",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-02-normal-equations-and-the-projection-reading-p11",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-02-normal-equations-and-the-projection-reading-p12",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-02-normal-equations-and-the-projection-reading-p13",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-02-normal-equations-and-the-projection-reading-p14",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "normal equations",
+     "definition": "X^T X theta = X^T y, the closed-form least-squares solution.",
+     "anchor": "sl-02-normal-equations-and-the-projection-reading-p02"
+    },
+    {
+     "term": "projection",
+     "definition": "X theta is the shadow y casts onto the column space of X.",
+     "anchor": "sl-02-normal-equations-and-the-projection-reading-p05"
+    },
+    {
+     "term": "residuals",
+     "definition": "y - X theta, orthogonal to every feature at the optimum.",
+     "anchor": "sl-02-normal-equations-and-the-projection-reading-p14"
+    },
+    {
+     "term": "Gram matrix",
+     "definition": "X^T X, symmetric by construction.",
+     "anchor": "sl-02-normal-equations-and-the-projection-reading-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-02-normal-equations-and-the-projection-reading-r1",
+     "question": "What is the projection reading of least squares?",
+     "answer": "The prediction X theta is the shadow the target y casts onto the column space of X: the closest point, so the residuals stick straight out of the space.",
+     "anchor": "sl-02-normal-equations-and-the-projection-reading-p05"
+    },
+    {
+     "id": "sl-02-normal-equations-and-the-projection-reading-r2",
+     "question": "What is the strongest correctness check?",
+     "answer": "Residual orthogonality: X^T (y - X theta) must be near zero.",
+     "anchor": "sl-02-normal-equations-and-the-projection-reading-l01"
+    },
+    {
+     "id": "sl-02-normal-equations-and-the-projection-reading-r3",
+     "question": "When do the normal equations win over gradient descent?",
+     "answer": "When n is small, below a few thousand, and m is large: forming X^T X costs O(m n^2) and solving costs O(n^3).",
+     "anchor": "sl-02-normal-equations-and-the-projection-reading-p15"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves",
+   "title": "SL-03: Rank deficiency, pseudoinverse, conditioning, stable solves",
+   "minutes": 2,
+   "endAnchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-end",
+   "blocks": [
+    {
+     "anchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-l01",
+     "kind": "definition",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-p05",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-p06",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-l02",
+     "kind": "steps",
+     "reveal": "stepwise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "rank deficiency",
+     "definition": "Some dial does nothing new; infinite settings give the same predictions.",
+     "anchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-p04"
+    },
+    {
+     "term": "pseudoinverse",
+     "definition": "The Moore-Penrose inverse picking the minimum-norm least-squares solution.",
+     "anchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-l01"
+    },
+    {
+     "term": "condition number",
+     "definition": "kappa = lambda_max / lambda_min; scales noise amplification.",
+     "anchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-l01"
+    },
+    {
+     "term": "QR solve",
+     "definition": "theta = lstsq(X, y), never forming X^T X.",
+     "anchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-l02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-r1",
+     "question": "What breaks when two features are identical?",
+     "answer": "X^T X is singular, the inverse does not exist, and the normal-equation formula breaks.",
+     "anchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-p05"
+    },
+    {
+     "id": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-r2",
+     "question": "What is the preferred order of stable solves?",
+     "answer": "Standardize features then use the normal equations; QR via lstsq; SVD/pseudoinverse; ridge.",
+     "anchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-l02"
+    },
+    {
+     "id": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-r3",
+     "question": "Why never ship inv(X.T @ X) @ X.T @ y?",
+     "answer": "On a kappa = 1e12 matrix theta comes out as garbage with huge entries: correct math, bad numerics.",
+     "anchor": "sl-03-rank-deficiency-pseudoinverse-conditioning-stable-solves-p07"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-04-the-gaussian-noise-likelihood-story",
+   "title": "SL-04: The Gaussian-noise likelihood story",
+   "minutes": 2,
+   "endAnchor": "sl-04-the-gaussian-noise-likelihood-story-end",
+   "blocks": [
+    {
+     "anchor": "sl-04-the-gaussian-noise-likelihood-story-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-04-the-gaussian-noise-likelihood-story-p10",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "maximum likelihood",
+     "definition": "Choosing theta to maximize the probability of the observed data.",
+     "anchor": "sl-04-the-gaussian-noise-likelihood-story-p04"
+    },
+    {
+     "term": "Gaussian noise",
+     "definition": "The belief that errors follow N(0, sigma^2).",
+     "anchor": "sl-04-the-gaussian-noise-likelihood-story-p02"
+    },
+    {
+     "term": "log likelihood",
+     "definition": "The log of the likelihood; maximizing it recovers least squares.",
+     "anchor": "sl-04-the-gaussian-noise-likelihood-story-p07"
+    },
+    {
+     "term": "Laplace noise",
+     "definition": "The noise belief giving the absolute-error objective.",
+     "anchor": "sl-04-the-gaussian-noise-likelihood-story-p11"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-04-the-gaussian-noise-likelihood-story-r1",
+     "question": "Why squared error?",
+     "answer": "It is the consequence of one specific belief: the errors are Gaussian noise. Maximum likelihood then hands you least squares.",
+     "anchor": "sl-04-the-gaussian-noise-likelihood-story-p04"
+    },
+    {
+     "id": "sl-04-the-gaussian-noise-likelihood-story-r2",
+     "question": "Does sigma^2 affect the chosen theta?",
+     "answer": "No. Sigma^2 never enters the choice of theta.",
+     "anchor": "sl-04-the-gaussian-noise-likelihood-story-p09"
+    },
+    {
+     "id": "sl-04-the-gaussian-noise-likelihood-story-r3",
+     "question": "What noise belief gives absolute error?",
+     "answer": "Laplace noise, p(eps) ~ exp(-|eps|/b). It resists outliers but has no closed form.",
+     "anchor": "sl-04-the-gaussian-noise-likelihood-story-p11"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-05-locally-weighted-regression",
+   "title": "SL-05: Locally weighted regression",
+   "minutes": 2,
+   "endAnchor": "sl-05-locally-weighted-regression-end",
+   "blocks": [
+    {
+     "anchor": "sl-05-locally-weighted-regression-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-05-locally-weighted-regression-l01",
+     "kind": "definition",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-05-locally-weighted-regression-p05",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-05-locally-weighted-regression-p06",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-05-locally-weighted-regression-p07",
+     "kind": "keyIdea",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "kernel",
+     "definition": "A bump centered at x with width tau, weighting nearby points more.",
+     "anchor": "sl-05-locally-weighted-regression-p04"
+    },
+    {
+     "term": "bandwidth",
+     "definition": "Tau, the one knob controlling neighborhood width.",
+     "anchor": "sl-05-locally-weighted-regression-p04"
+    },
+    {
+     "term": "nonparametric",
+     "definition": "Dial count grows with the data; the training set is kept at prediction time.",
+     "anchor": "sl-05-locally-weighted-regression-p04"
+    },
+    {
+     "term": "parametric",
+     "definition": "Fixed dial count chosen before seeing data; theta is the whole model.",
+     "anchor": "sl-05-locally-weighted-regression-p07"
+    },
+    {
+     "term": "weighted normal equations",
+     "definition": "theta = (X^T W X)^{-1} X^T W y with W = diag(w).",
+     "anchor": "sl-05-locally-weighted-regression-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-05-locally-weighted-regression-r1",
+     "question": "What happens at small versus large tau?",
+     "answer": "Small tau: only close neighbors matter, the fit wiggles. Large tau: all points count nearly equally, the fit is the global line.",
+     "anchor": "sl-05-locally-weighted-regression-p04"
+    },
+    {
+     "id": "sl-05-locally-weighted-regression-r2",
+     "question": "What goes wrong when querying far from all data?",
+     "answer": "Every weight is near zero, X^T W X is near-singular, and the prediction is garbage with high confidence. Check the weight sum.",
+     "anchor": "sl-05-locally-weighted-regression-p09"
+    },
+    {
+     "id": "sl-05-locally-weighted-regression-r3",
+     "question": "How do parametric and nonparametric models differ after fitting?",
+     "answer": "Parametric: fixed dial count, theta is the whole model, data can be thrown away. Nonparametric: dial count grows with data, training set kept at prediction time.",
+     "anchor": "sl-05-locally-weighted-regression-p07"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-06-overfitting-and-underfitting",
+   "title": "SL-06: Overfitting and underfitting",
+   "minutes": 1,
+   "endAnchor": "sl-06-overfitting-and-underfitting-end",
+   "blocks": [
+    {
+     "anchor": "sl-06-overfitting-and-underfitting-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-06-overfitting-and-underfitting-p04",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "underfit",
+     "definition": "The class cannot bend enough; both train and test error are high.",
+     "anchor": "sl-06-overfitting-and-underfitting-p02"
+    },
+    {
+     "term": "overfit",
+     "definition": "The class bends to the noise; train error low, test error high.",
+     "anchor": "sl-06-overfitting-and-underfitting-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-06-overfitting-and-underfitting-r1",
+     "question": "What are typical numbers for the degree-5 fit on six noisy points?",
+     "answer": "Train MSE 0.00, test MSE 2.4. The train score is a lie about the future.",
+     "anchor": "sl-06-overfitting-and-underfitting-p04"
+    },
+    {
+     "id": "sl-06-overfitting-and-underfitting-r2",
+     "question": "What is the central trap of the whole unit?",
+     "answer": "Judging by train error alone always picks the most complex model.",
+     "anchor": "sl-06-overfitting-and-underfitting-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "assessment",
+   "title": "Assessment",
+   "minutes": 2,
+   "endAnchor": "assessment-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "LMS update",
+     "definition": "theta_j := theta_j + alpha * (y^{(i)} - h_theta(x^{(i)})) * x_j^{(i)}.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "normal equations",
+     "definition": "X^T X theta = X^T y, requiring X^T X to be invertible.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "rank deficiency",
+     "definition": "Fewer independent examples than features, or dependent features.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "LWLR weight",
+     "definition": "w^{(i)} = exp(-(x^{(i)} - x)^2 / (2 tau^2)); tau sets the neighborhood width.",
+     "anchor": "assessment-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "assessment-r1",
+     "question": "What does E03 ask?",
+     "answer": "What X^T (y - X theta) = 0 says in words.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "id": "assessment-r2",
+     "question": "What does E09 describe?",
+     "answer": "After adding a feature in meters alongside feet, theta entries blow up to 1e7 and -1e7. Diagnose and fix.",
+     "anchor": "assessment-p05"
+    },
+    {
+     "id": "assessment-r3",
+     "question": "What does E12 ask for?",
+     "answer": "Write lwlr_predict for vector x and verify the tau -> infinity limit equals lstsq on the same data.",
+     "anchor": "assessment-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "visual-units",
+   "title": "Visual units",
+   "minutes": 1,
+   "endAnchor": "visual-units-end",
+   "blocks": [
+    {
+     "anchor": "visual-units-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "visual-units-fig02",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "gradient descent trajectory",
+     "definition": "The visual of gradient descent steps on a quadratic bowl.",
+     "anchor": "visual-units-fig01"
+    },
+    {
+     "term": "bandwidth fits",
+     "definition": "The visual of LWLR fits for three tau values on curved data.",
+     "anchor": "visual-units-fig02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "visual-units-r1",
+     "question": "What does the first visual unit show?",
+     "answer": "Gradient descent steps on a quadratic bowl.",
+     "anchor": "visual-units-l01"
+    },
+    {
+     "id": "visual-units-r2",
+     "question": "What does the second visual unit show?",
+     "answer": "LWLR fits for three tau values on curved data.",
+     "anchor": "visual-units-l02"
+    }
+   ]
+  },
+  {
+   "anchor": "research-reading-and-extension",
+   "title": "Research reading and extension",
+   "minutes": 1,
+   "endAnchor": "research-reading-and-extension-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "falsifiable claim",
+     "definition": "A claim an experiment can disprove, here about test error versus tau.",
+     "anchor": "research-reading-and-extension-p01"
+    },
+    {
+     "term": "U-shaped",
+     "definition": "Falling then rising, with the minimum at an interior point.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "research-reading-and-extension-r1",
+     "question": "What is the falsifiable claim?",
+     "answer": "Test error is U-shaped in tau, minimized at an interior point, and the minimizer moves right as noise grows.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ]
+  }
+ ]
+}

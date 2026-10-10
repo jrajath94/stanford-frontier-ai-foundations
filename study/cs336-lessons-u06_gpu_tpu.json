@@ -1,0 +1,170 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs336-lessons-u06_gpu_tpu",
+ "itemKind": "lesson",
+ "revision": "ca64b41c9cd93110ee8c7007775b09a307f8e3cf7ff014e9a732bf001a14e6b2",
+ "sections": [
+  {
+   "anchor": "u06_gpu_tpu-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "u06_gpu_tpu-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "prerequisites",
+     "definition": "The numbered prerequisite blocks this lesson builds on.",
+     "anchor": "u06_gpu_tpu-intro-p01"
+    },
+    {
+     "term": "claim class",
+     "definition": "The sourcing label that marks how verified each claim is.",
+     "anchor": "u06_gpu_tpu-intro-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "u06_gpu_tpu-intro-r1",
+     "question": "Which session does this lesson report, and what is its claim class?",
+     "answer": "A cross-cutting branch reported as profiling in the course sessions. Claim class REQUESTED-BRANCH. All leaves PLANNED / SOURCE ATTRIBUTION PENDING.",
+     "anchor": "u06_gpu_tpu-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "standing-assumptions-stated-not-sourced",
+   "title": "Standing assumptions (stated, not sourced)",
+   "minutes": 1,
+   "endAnchor": "standing-assumptions-stated-not-sourced-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "reference device",
+     "definition": "The single assumed device behind the toy arithmetic: 312 TFLOP/s bf16 dense, 2.0 TB/s HBM, 80 GB, 108 SMs.",
+     "anchor": "standing-assumptions-stated-not-sourced-p01"
+    },
+    {
+     "term": "lesson assumptions",
+     "definition": "Stated numbers for toy arithmetic, not measured benchmarks.",
+     "anchor": "standing-assumptions-stated-not-sourced-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "standing-assumptions-stated-not-sourced-r1",
+     "question": "What is the reference device, and what is it not?",
+     "answer": "Peak bf16 dense 312 TFLOP/s, HBM bandwidth 2.0 TB/s, 80 GB HBM, 108 SMs. These are lesson assumptions for toy arithmetic, not measured benchmarks.",
+     "anchor": "standing-assumptions-stated-not-sourced-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "local-remediation-latency-bandwidth-throughput",
+   "title": "Local remediation, latency, bandwidth, throughput",
+   "minutes": 21,
+   "endAnchor": "local-remediation-latency-bandwidth-throughput-end",
+   "blocks": [
+    {
+     "anchor": "local-remediation-latency-bandwidth-throughput-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "local-remediation-latency-bandwidth-throughput-fig02",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "local-remediation-latency-bandwidth-throughput-fig03",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "occupancy",
+     "definition": "The fraction of an SM's thread capacity that is active. Latency hiding needs enough warps to cover memory stalls.",
+     "anchor": "local-remediation-latency-bandwidth-throughput-p04"
+    },
+    {
+     "term": "roofline",
+     "definition": "Attainable equals min(peak FLOP/s, intensity times bandwidth). Below the knee only bandwidth matters, above it only math.",
+     "anchor": "local-remediation-latency-bandwidth-throughput-p01"
+    },
+    {
+     "term": "MFU",
+     "definition": "Achieved model FLOPs over peak device FLOPs. 8 percent is poor, 40-60 percent is a well-tuned large run.",
+     "anchor": "local-remediation-latency-bandwidth-throughput-p100"
+    },
+    {
+     "term": "warp",
+     "definition": "32 threads executing in lockstep. Blocks split into warps on each SM.",
+     "anchor": "local-remediation-latency-bandwidth-throughput-p06"
+    },
+    {
+     "term": "all-reduce",
+     "definition": "The collective that sums gradients across ranks. Ring is bandwidth-optimal, tree is latency-optimal.",
+     "anchor": "local-remediation-latency-bandwidth-throughput-p116"
+    },
+    {
+     "term": "thermal throttling",
+     "definition": "Clock reduction under power or temperature caps. Timings drift and comparisons lie.",
+     "anchor": "c11-power-and-thermal-throttling"
+    }
+   ],
+   "recall": [
+    {
+     "id": "local-remediation-latency-bandwidth-throughput-r1",
+     "question": "Where is the roofline knee on the reference device, and what does each side mean?",
+     "answer": "156 FLOP/byte. Below the knee only bandwidth matters, above it only math.",
+     "anchor": "local-remediation-latency-bandwidth-throughput-p38"
+    },
+    {
+     "id": "local-remediation-latency-bandwidth-throughput-r2",
+     "question": "Why must GPU timing use device sync, warmup, and medians?",
+     "answer": "GPUs execute asynchronously. Warmup settles caches and clocks, then the median of many runs is reported with the full setup.",
+     "anchor": "local-remediation-latency-bandwidth-throughput-p70"
+    },
+    {
+     "id": "local-remediation-latency-bandwidth-throughput-r3",
+     "question": "What three invariants must a profile satisfy?",
+     "answer": "Throughput at or under the roofline, FLOP/byte counts matching the analytic model within ~2x, and timings reproducing within 10 percent.",
+     "anchor": "local-remediation-latency-bandwidth-throughput-p182"
+    }
+   ]
+  },
+  {
+   "anchor": "unit-russian-doll-ladder-u06",
+   "title": "Unit Russian-doll ladder (U06)",
+   "minutes": 1,
+   "endAnchor": "unit-russian-doll-ladder-u06-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "shell",
+     "definition": "One nested layer of the ladder, from the headline question at shell 0 to the final synthesis at shell 10.",
+     "anchor": "unit-russian-doll-ladder-u06-shells-1"
+    },
+    {
+     "term": "Russian-doll ladder",
+     "definition": "The unit's nested summary. Eleven shells restate the unit from the headline question to the final synthesis.",
+     "anchor": "unit-russian-doll-ladder-u06"
+    }
+   ],
+   "recall": [
+    {
+     "id": "unit-russian-doll-ladder-u06-r1",
+     "question": "What question does shell 0 ask?",
+     "answer": "Where does the time go: math, memory, or links?",
+     "anchor": "unit-russian-doll-ladder-u06-shells-1"
+    },
+    {
+     "id": "unit-russian-doll-ladder-u06-r2",
+     "question": "What does shell 10 conclude?",
+     "answer": "The profile is the production performance contract.",
+     "anchor": "unit-russian-doll-ladder-u06-shells-1"
+    }
+   ]
+  }
+ ]
+}

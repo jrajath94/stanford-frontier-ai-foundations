@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "itemId": "cs229s-interview-interview-u04-questions",
+  "itemKind": "lesson",
+  "revision": "79905c174034035ce608d364baed0122163af7b993a558352dab24f6e5fce343",
+  "sections": [
+    {
+      "anchor": "cs229s-interview-interview-u04-questions-intro",
+      "title": "Interview bank U04: CUDA and efficient attention",
+      "endAnchor": "cs229s-interview-interview-u04-questions-intro-end",
+      "blocks": [],
+      "keyTerms": [
+        {
+          "term": "provenance",
+          "definition": "Original practice, role-derived material. Not actual lab questions.",
+          "anchor": "cs229s-interview-interview-u04-questions-intro-p02"
+        },
+        {
+          "term": "interview bank",
+          "definition": "A set of breadth, ladder, analytical, debug, scenario, and critique questions per unit.",
+          "anchor": "cs229s-interview-interview-u04-questions-intro-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "cs229s-interview-interview-u04-questions-intro-r1",
+          "question": "What is the provenance of this interview bank?",
+          "answer": "Original practice, role-derived. The questions are not actual lab questions.",
+          "anchor": "cs229s-interview-interview-u04-questions-intro-p02"
+        }
+      ],
+      "minutes": 3
+    },
+    {
+      "anchor": "breadth-questions",
+      "title": "Breadth questions",
+      "endAnchor": "breadth-questions-end",
+      "blocks": [
+        {
+          "anchor": "breadth-questions-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "tiling",
+          "definition": "Blocking the working set for on-chip reuse; tiled reads beat naive 1024 to 16.",
+          "anchor": "breadth-questions-p03"
+        },
+        {
+          "term": "online softmax",
+          "definition": "Running (m, l) statistics; merge with the rescale formula.",
+          "anchor": "breadth-questions-p06"
+        },
+        {
+          "term": "FlashAttention",
+          "definition": "Tiled exact attention: outer streams K/V, inner streams Q.",
+          "anchor": "breadth-questions-p07"
+        },
+        {
+          "term": "occupancy",
+          "definition": "Active over max warps; shared memory often the limiter.",
+          "anchor": "breadth-questions-p05"
+        }
+      ],
+      "recall": [
+        {
+          "id": "breadth-questions-r1",
+          "question": "Define tiling. For a (1024,1024,1024) matmul with 64-wide tiles, how many times is each A element read from HBM vs naive?",
+          "answer": "Tiling blocks the working set for on-chip reuse. Naive: 1024 reads per A element. Tiled 64-wide: 16.",
+          "anchor": "breadth-questions-p03"
+        },
+        {
+          "id": "breadth-questions-r2",
+          "question": "Write the online softmax (m, l) update for a new block.",
+          "answer": "m' = max(m, m_b), l' = l exp(m-m') + l_b exp(m_b-m').",
+          "anchor": "breadth-questions-p06"
+        },
+        {
+          "id": "breadth-questions-r3",
+          "question": "Name the two FlashAttention loops and what each streams.",
+          "answer": "Outer streams K/V blocks, inner streams Q blocks.",
+          "anchor": "breadth-questions-p07"
+        }
+      ],
+      "minutes": 3
+    },
+    {
+      "anchor": "deep-ladder-1-online-softmax",
+      "title": "Deep ladder 1: online softmax",
+      "endAnchor": "deep-ladder-1-online-softmax-end",
+      "blocks": [
+        {
+          "anchor": "deep-ladder-1-online-softmax-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "running max m",
+          "definition": "Max of the row seen so far.",
+          "anchor": "deep-ladder-1-online-softmax-p01"
+        },
+        {
+          "term": "normalizer l",
+          "definition": "Running sum of exp(x - m).",
+          "anchor": "deep-ladder-1-online-softmax-p01"
+        },
+        {
+          "term": "merge identity",
+          "definition": "l' = l exp(m-m') + l_b exp(m_b-m') gives the true normalizer.",
+          "anchor": "deep-ladder-1-online-softmax-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "deep-ladder-1-online-softmax-r1",
+          "question": "Deep ladder 1 derives the online softmax merge. What are m and l, and what is the merge formula?",
+          "answer": "m: running row max. l: running sum of exp(x-m). Merge: m'=max(m,m_b), l' = l exp(m-m') + l_b exp(m_b-m'). After blocks [1,2] then [3,100]: m=100, l~1.0.",
+          "anchor": "deep-ladder-1-online-softmax-p01"
+        }
+      ],
+      "minutes": 3
+    },
+    {
+      "anchor": "deep-ladder-2-flashattention",
+      "title": "Deep ladder 2: FlashAttention",
+      "endAnchor": "deep-ladder-2-flashattention-end",
+      "blocks": [
+        {
+          "anchor": "deep-ladder-2-flashattention-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "block pairs",
+          "definition": "(T/Br)(T/Bc) tiled steps; 4 on the T=4 toy.",
+          "anchor": "deep-ladder-2-flashattention-p01"
+        },
+        {
+          "term": "forward storage",
+          "definition": "Only (m, l): O(T); scores recomputed in backward.",
+          "anchor": "deep-ladder-2-flashattention-p01"
+        },
+        {
+          "term": "tail masking",
+          "definition": "The suspect when outputs match at T=64 but not T=65.",
+          "anchor": "deep-ladder-2-flashattention-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "deep-ladder-2-flashattention-r1",
+          "question": "Deep ladder 2 traces FlashAttention on T=4, Br=Bc=2, d=2. How many block pairs run, and what changes vs standard attention?",
+          "answer": "4 block pairs. FLOPs O(T^2 d) unchanged; HBM traffic drops from O(T^2) to tiled. Forward stores only (m,l), O(T).",
+          "anchor": "deep-ladder-2-flashattention-p01"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "analytical-exercises",
+      "title": "Analytical exercises",
+      "endAnchor": "analytical-exercises-end",
+      "blocks": [
+        {
+          "anchor": "analytical-exercises-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "score traffic",
+          "definition": "4 passes over the score matrix per layer on the toy.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "term": "limiter",
+          "definition": "The resource (threads, shared, registers) giving fewest blocks per SM.",
+          "anchor": "analytical-exercises-p02"
+        },
+        {
+          "term": "occupancy",
+          "definition": "Blocks per SM over the max; 25% on the toy.",
+          "anchor": "analytical-exercises-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "analytical-exercises-r1",
+          "question": "Standard attention, T=8192, h=32, fp16, 4 HBM passes over scores. Compute score traffic per layer and the ratio vs Q/K/V/O traffic at n=4096.",
+          "answer": "Scores: 16.0 GiB. Q/K/V/O: 0.25 GiB. Ratio: 64x.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "id": "analytical-exercises-r2",
+          "question": "256-thread blocks, 32 regs/thread, 48 KB shared/block. SM limits: 2048 threads, 100 KB shared, 65536 regs, 64 warps. What limits occupancy?",
+          "answer": "By threads: 8 blocks. By shared: 2. By regs: 8. Shared limits: 2 blocks, occupancy 25%.",
+          "anchor": "analytical-exercises-p02"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "implementation-debug-task",
+      "title": "Implementation / debug task",
+      "endAnchor": "implementation-debug-task-end",
+      "blocks": [
+        {
+          "anchor": "implementation-debug-task-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "rescale drop",
+          "definition": "The bug: l = l + lb drops the exp rescale of old sums.",
+          "anchor": "implementation-debug-task-p01"
+        },
+        {
+          "term": "two-pass reference",
+          "definition": "The test: compare against the reference on blocks with different maxima.",
+          "anchor": "implementation-debug-task-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "implementation-debug-task-r1",
+          "question": "D1. The tiled softmax below is wrong. What is the bug, the fix, and the test that catches it?",
+          "answer": "Bug: l = l + lb drops the rescale: old sums were normalized to the old max. Fix: track m_new first, then l = l exp(m-m_new) + lb exp(mb-m_new). Test: two-pass reference on blocks like [1,2],[3,100].",
+          "anchor": "implementation-debug-task-p01"
+        }
+      ],
+      "minutes": 1
+    },
+    {
+      "anchor": "changed-constraint-scenarios",
+      "title": "Changed-constraint scenarios",
+      "endAnchor": "changed-constraint-scenarios-end",
+      "blocks": [
+        {
+          "anchor": "changed-constraint-scenarios-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "infinite SRAM",
+          "definition": "One block covers the matrix; loops collapse to a single pass.",
+          "anchor": "changed-constraint-scenarios-p01"
+        },
+        {
+          "term": "distance-stratified eval",
+          "definition": "The gate for sparse attention: accuracy at max distance within budget.",
+          "anchor": "changed-constraint-scenarios-p02"
+        },
+        {
+          "term": "exactness first",
+          "definition": "Start exact (FlashAttention), then test approximate options.",
+          "anchor": "changed-constraint-scenarios-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "changed-constraint-scenarios-r1",
+          "question": "SRAM is infinite. How do you redesign attention, and is there any reason to keep tiling?",
+          "answer": "One block covers the whole matrix: loops collapse, traffic drops to one read of Q,K,V and one write of O. Keep tiling only for parallelism across SMs, not memory.",
+          "anchor": "changed-constraint-scenarios-p01"
+        },
+        {
+          "id": "changed-constraint-scenarios-r2",
+          "question": "The error budget allows 1% relative error on a long-range retrieval task. Which of sparse w=256, low-rank r=256, FlashAttention do you pick, and what gates it?",
+          "answer": "Start with FlashAttention (no risk), then test sparse gated on a distance-stratified retrieval eval: sparse ships only if accuracy at max distance stays within budget.",
+          "anchor": "changed-constraint-scenarios-p02"
+        }
+      ],
+      "minutes": 1
+    },
+    {
+      "anchor": "research-critique",
+      "title": "Research critique",
+      "endAnchor": "research-critique-end",
+      "blocks": [
+        {
+          "anchor": "research-critique-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "baseline audit",
+          "definition": "Is the baseline FlashAttention-2 at its best config?",
+          "anchor": "research-critique-p01"
+        },
+        {
+          "term": "regime audit",
+          "definition": "Which T regime? Short-T-only invalidates the claim.",
+          "anchor": "research-critique-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "research-critique-r1",
+          "question": "A paper claims a new attention variant is “2x faster than FlashAttention-2 with identical outputs.” What five audit questions do you ask?",
+          "answer": "(1) Same shapes/dtype/hardware and synced timing? (2) Baseline at best config? (3) Identical outputs measured how? (4) Which T regime? (5) Independent reproduction script?",
+          "anchor": "research-critique-p01"
+        }
+      ],
+      "minutes": 1
+    }
+  ]
+}

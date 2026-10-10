@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "itemId": "cs229s-interview-interview-u09-questions",
+  "itemKind": "lesson",
+  "revision": "3240aa33de2542867d4fffc4feff667af81232d6dcb86d68aae4d79ed60edfa0",
+  "sections": [
+    {
+      "anchor": "cs229s-interview-interview-u09-questions-intro",
+      "title": "Interview bank U09: Parallelism, clusters, scheduling",
+      "endAnchor": "cs229s-interview-interview-u09-questions-intro-end",
+      "blocks": [],
+      "keyTerms": [
+        {
+          "term": "provenance",
+          "definition": "Original practice, role-derived material. Not actual lab questions.",
+          "anchor": "cs229s-interview-interview-u09-questions-intro-p02"
+        },
+        {
+          "term": "interview bank",
+          "definition": "A set of breadth, ladder, analytical, debug, scenario, and critique questions per unit.",
+          "anchor": "cs229s-interview-interview-u09-questions-intro-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "cs229s-interview-interview-u09-questions-intro-r1",
+          "question": "What is the provenance of this interview bank?",
+          "answer": "Original practice, role-derived. The questions are not actual lab questions.",
+          "anchor": "cs229s-interview-interview-u09-questions-intro-p02"
+        }
+      ],
+      "minutes": 3
+    },
+    {
+      "anchor": "breadth-questions",
+      "title": "Breadth questions",
+      "endAnchor": "breadth-questions-end",
+      "blocks": [
+        {
+          "anchor": "breadth-questions-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "ring all-reduce",
+          "definition": "2*(n-1)/n * S/BW: reduce-scatter then all-gather.",
+          "anchor": "breadth-questions-p02"
+        },
+        {
+          "term": "pipeline bubble",
+          "definition": "(p-1)/(m+p-1): idle stage time.",
+          "anchor": "breadth-questions-p05"
+        },
+        {
+          "term": "ZeRO stages",
+          "definition": "1: optimizer states. 2: +gradients. 3: +parameters.",
+          "anchor": "breadth-questions-p06"
+        },
+        {
+          "term": "straggler tax",
+          "definition": "(max - median)/median on the synchronous step.",
+          "anchor": "breadth-questions-p04"
+        }
+      ],
+      "recall": [
+        {
+          "id": "breadth-questions-r1",
+          "question": "Write the ring all-reduce formula. Name the two passes.",
+          "answer": "T = 2*(n-1)/n * S/BW. Reduce-scatter then all-gather.",
+          "anchor": "breadth-questions-p02"
+        },
+        {
+          "id": "breadth-questions-r2",
+          "question": "Write the pipeline bubble formula.",
+          "answer": "Bubble = (p-1)/(m+p-1).",
+          "anchor": "breadth-questions-p05"
+        },
+        {
+          "id": "breadth-questions-r3",
+          "question": "Write the cluster MTBF formula.",
+          "answer": "Cluster MTBF = per-GPU MTBF / GPU count.",
+          "anchor": "breadth-questions-p08"
+        }
+      ],
+      "minutes": 3
+    },
+    {
+      "anchor": "deep-ladder-1-the-dp-tax",
+      "title": "Deep ladder 1: the DP tax",
+      "endAnchor": "deep-ladder-1-the-dp-tax-end",
+      "blocks": [
+        {
+          "anchor": "deep-ladder-1-the-dp-tax-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "DP tax",
+          "definition": "0.35 s per sync on the toy: bytes flat in n, latency not.",
+          "anchor": "deep-ladder-1-the-dp-tax-p01"
+        },
+        {
+          "term": "ring vs tree",
+          "definition": "Ring for big S (bandwidth-optimal); tree for small S (latency-optimal).",
+          "anchor": "deep-ladder-1-the-dp-tax-p01"
+        },
+        {
+          "term": "incast",
+          "definition": "All GPUs blasting one peer: the no-congestion assumption breaks.",
+          "anchor": "deep-ladder-1-the-dp-tax-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "deep-ladder-1-the-dp-tax-r1",
+          "question": "Deep ladder 1 prices the data-parallel tax: S=20 GB, n=8, BW=100 GB/s. What is the ring all-reduce time and its scaling?",
+          "answer": "2*7/8 * 20/100 = 0.35 s. Bytes: 2(n-1)/n -> 2 as n grows (nearly flat). Latency: 2(n-1) hops grow with n.",
+          "anchor": "deep-ladder-1-the-dp-tax-p01"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "deep-ladder-2-pipeline-reality",
+      "title": "Deep ladder 2: pipeline reality",
+      "endAnchor": "deep-ladder-2-pipeline-reality-end",
+      "blocks": [
+        {
+          "anchor": "deep-ladder-2-pipeline-reality-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "m+p-1",
+          "definition": "Total steps: fill p-1, useful m, drain p-1.",
+          "anchor": "deep-ladder-2-pipeline-reality-p01"
+        },
+        {
+          "term": "1F1B",
+          "definition": "Same bubble with less activation memory.",
+          "anchor": "deep-ladder-2-pipeline-reality-p01"
+        },
+        {
+          "term": "heavy stage",
+          "definition": "Uneven stages (e.g. embeddings at 2x) break the formula.",
+          "anchor": "deep-ladder-2-pipeline-reality-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "deep-ladder-2-pipeline-reality-r1",
+          "question": "Deep ladder 2 computes the pipeline bubble at p=4, m=8. What is it, and where does the formula come from?",
+          "answer": "3/11 = 27.3%. Fill takes p-1 steps, drain p-1: total m+p-1, useful m.",
+          "anchor": "deep-ladder-2-pipeline-reality-p01"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "analytical-exercises",
+      "title": "Analytical exercises",
+      "endAnchor": "analytical-exercises-end",
+      "blocks": [
+        {
+          "anchor": "analytical-exercises-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "placement rule",
+          "definition": "Keep TP groups inside the node.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "term": "split penalty",
+          "definition": "12x slower across the thin link on the toy.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "term": "failure math",
+          "definition": "4096 GPUs: 6.4 h MTBF, ~112 failures per 30 days.",
+          "anchor": "analytical-exercises-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "analytical-exercises-r1",
+          "question": "All-reduce 20 GB at n=8: intra-node 600 GB/s vs split 50 GB/s. A TP-8 job is split across the nodes: verdict?",
+          "answer": "Intra-node 0.058 s, split 0.70 s: 12x. Each TP sync costs 0.70 s: the job is dead. Move TP inside the node.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "id": "analytical-exercises-r2",
+          "question": "Per-GPU MTBF 3 years: 256 vs 4096 GPUs. What does the 4096 number imply for checkpoint design?",
+          "answer": "256 GPUs: 4.28 days MTBF, ~7 failures per 30 days. 4096: 6.4 h, ~112 failures. Checkpoint/restart must be fast, frequent, automatic: it dominates system design.",
+          "anchor": "analytical-exercises-p02"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "implementation-debug-task",
+      "title": "Implementation / debug task",
+      "endAnchor": "implementation-debug-task-end",
+      "blocks": [
+        {
+          "anchor": "implementation-debug-task-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "shard math",
+          "definition": "The bug: forgot to divide by n (shards, not copies).",
+          "anchor": "implementation-debug-task-p01"
+        },
+        {
+          "term": "1/n invariant",
+          "definition": "Per-GPU bytes fall as 1/n under ZeRO-3.",
+          "anchor": "implementation-debug-task-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "implementation-debug-task-r1",
+          "question": "D1. The sharding helper is meant to be ZeRO-3 but a 10B run still OOMs on 40 GB GPUs. What is the bug, the fix, and the invariant?",
+          "answer": "Bug: forgot to divide by n (shards, not copies). Fix: per_gpu = 16 * P / n. Invariant: per-GPU bytes fall as 1/n under ZeRO-3.",
+          "anchor": "implementation-debug-task-p01"
+        }
+      ],
+      "minutes": 1
+    },
+    {
+      "anchor": "changed-constraint-scenarios",
+      "title": "Changed-constraint scenarios",
+      "endAnchor": "changed-constraint-scenarios-end",
+      "blocks": [
+        {
+          "anchor": "changed-constraint-scenarios-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "infinite bandwidth",
+          "definition": "Collective tax vanishes; bubbles, stragglers, memory caps remain.",
+          "anchor": "changed-constraint-scenarios-p01"
+        },
+        {
+          "term": "no failures",
+          "definition": "Checkpointing becomes optional; spot always wins.",
+          "anchor": "changed-constraint-scenarios-p02"
+        },
+        {
+          "term": "TP everywhere",
+          "definition": "Best split with no comm tax, plus PP for memory.",
+          "anchor": "changed-constraint-scenarios-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "changed-constraint-scenarios-r1",
+          "question": "Interconnect bandwidth is infinite and free. Which parallelism taxes vanish, which remain, and what is the best split?",
+          "answer": "The collective tax vanishes (TP all-reduce, DP sync, MoE dispatch). Bubbles, stragglers, memory caps remain. Best split: TP everywhere plus PP for memory.",
+          "anchor": "changed-constraint-scenarios-p01"
+        },
+        {
+          "id": "changed-constraint-scenarios-r2",
+          "question": "GPUs never fail and preemption is impossible. What changes?",
+          "answer": "Checkpointing becomes optional (final save only). Scheduling drops preemption handling. Spot vs on-demand: spot always wins (discount with zero rework).",
+          "anchor": "changed-constraint-scenarios-p02"
+        }
+      ],
+      "minutes": 1
+    },
+    {
+      "anchor": "research-critique",
+      "title": "Research critique",
+      "endAnchor": "research-critique-end",
+      "blocks": [
+        {
+          "anchor": "research-critique-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "MFU audit",
+          "definition": "MFU definition? Counting recompute as useful FLOPs invalidates.",
+          "anchor": "research-critique-p01"
+        },
+        {
+          "term": "sustained audit",
+          "definition": "A 10-minute burst is not a run.",
+          "anchor": "research-critique-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "research-critique-r1",
+          "question": "A paper claims “our scheduler achieves 95% MFU on 4096 GPUs.” What five audit questions do you ask?",
+          "answer": "(1) MFU definition? (2) Sustained? (3) All ranks? (4) Matched baseline? (5) Failures in the window?",
+          "anchor": "research-critique-p01"
+        }
+      ],
+      "minutes": 1
+    }
+  ]
+}

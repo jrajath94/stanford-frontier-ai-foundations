@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "itemId": "cs229s-interview-interview-u01-questions",
+  "itemKind": "lesson",
+  "revision": "73316def9cedfb03830649fa3fbe835b23a1f7135b08b8da93a9d4a319f01e19",
+  "sections": [
+    {
+      "anchor": "cs229s-interview-interview-u01-questions-intro",
+      "title": "Interview bank U01: Sequence models and transformer workload",
+      "endAnchor": "cs229s-interview-interview-u01-questions-intro-end",
+      "blocks": [],
+      "keyTerms": [
+        {
+          "term": "provenance",
+          "definition": "Original practice, role-derived material. Not actual lab questions.",
+          "anchor": "cs229s-interview-interview-u01-questions-intro-p02"
+        },
+        {
+          "term": "interview bank",
+          "definition": "A set of breadth, ladder, analytical, debug, scenario, and critique questions per unit.",
+          "anchor": "cs229s-interview-interview-u01-questions-intro-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "cs229s-interview-interview-u01-questions-intro-r1",
+          "question": "What is the provenance of this interview bank?",
+          "answer": "Original practice, role-derived. The questions are not actual lab questions.",
+          "anchor": "cs229s-interview-interview-u01-questions-intro-p02"
+        }
+      ],
+      "minutes": 4
+    },
+    {
+      "anchor": "breadth-questions",
+      "title": "Breadth questions",
+      "endAnchor": "breadth-questions-end",
+      "blocks": [
+        {
+          "anchor": "breadth-questions-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "path length",
+          "definition": "The longest sequential dependency chain; measures parallelism, not work.",
+          "anchor": "breadth-questions-p01"
+        },
+        {
+          "term": "6P rule",
+          "definition": "Training costs 6P FLOPs per token: 2P forward, 4P backward.",
+          "anchor": "breadth-questions-p04"
+        },
+        {
+          "term": "KV cache",
+          "definition": "Stored keys and values per layer; makes decode linear in T.",
+          "anchor": "breadth-questions-p06"
+        },
+        {
+          "term": "score matrix",
+          "definition": "The T x T term that makes naive attention quadratic in T.",
+          "anchor": "breadth-questions-p07"
+        }
+      ],
+      "recall": [
+        {
+          "id": "breadth-questions-r1",
+          "question": "Define path length. Give the RNN and one-layer attention values for T = 64.",
+          "answer": "Path length is the longest sequential dependency chain. RNN: 64. Attention: 1 per layer. It measures parallelism, not total work.",
+          "anchor": "breadth-questions-p01"
+        },
+        {
+          "id": "breadth-questions-r2",
+          "question": "State the 6P training FLOP rule and its two parts.",
+          "answer": "6P per token: 2P forward, 4P backward (2P activation grads, 2P weight grads).",
+          "anchor": "breadth-questions-p04"
+        },
+        {
+          "id": "breadth-questions-r3",
+          "question": "Write the fp16 KV-cache byte formula in terms of T, L, n. Evaluate it for T = 2048, L = 32, n = 4096.",
+          "answer": "bytes = 2 * T * L * n * 2 (keys+values, fp16). The toy: 1,073,741,824 bytes = 1.0 GiB.",
+          "anchor": "breadth-questions-p06"
+        }
+      ],
+      "minutes": 4
+    },
+    {
+      "anchor": "deep-ladder-1-the-decode-bottleneck",
+      "title": "Deep ladder 1: the decode bottleneck",
+      "endAnchor": "deep-ladder-1-the-decode-bottleneck-end",
+      "blocks": [
+        {
+          "anchor": "deep-ladder-1-the-decode-bottleneck-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "decode step",
+          "definition": "One token: read the cache, compute one K/V, attend, emit logits.",
+          "anchor": "deep-ladder-1-the-decode-bottleneck-p01"
+        },
+        {
+          "term": "cache traffic",
+          "definition": "Per-step bytes read; grows O(T) as the cache lengthens.",
+          "anchor": "deep-ladder-1-the-decode-bottleneck-p01"
+        },
+        {
+          "term": "bandwidth-bound",
+          "definition": "Decode at batch 1: time tracks bytes, not FLOPs.",
+          "anchor": "deep-ladder-1-the-decode-bottleneck-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "deep-ladder-1-the-decode-bottleneck-r1",
+          "question": "Deep ladder 1 drills one autoregressive decode step: shapes, KV bytes for n=8/L=1 after 2 generated tokens, and the O(T) traffic derivation. What is the minimum sufficient answer?",
+          "answer": "One step: input (B,1,n), read cache (B,h,t,d) x2 per layer, attend over t+1 positions, emit one token. After 5 tokens: 80 numbers, 160 bytes fp16. Step t reads t cached pairs: traffic linear in t.",
+          "anchor": "deep-ladder-1-the-decode-bottleneck-p01"
+        }
+      ],
+      "minutes": 3
+    },
+    {
+      "anchor": "deep-ladder-2-the-mlpattention-crossover",
+      "title": "Deep ladder 2: the MLP/attention crossover",
+      "endAnchor": "deep-ladder-2-the-mlpattention-crossover-end",
+      "blocks": [
+        {
+          "anchor": "deep-ladder-2-the-mlpattention-crossover-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "MLP FLOPs",
+          "definition": "16n^2 per token per layer.",
+          "anchor": "deep-ladder-2-the-mlpattention-crossover-p01"
+        },
+        {
+          "term": "score FLOPs",
+          "definition": "4Tn per token per layer; O(T^2) per sequence.",
+          "anchor": "deep-ladder-2-the-mlpattention-crossover-p01"
+        },
+        {
+          "term": "crossover T",
+          "definition": "Where scores equal MLP plus projections: T = 6n.",
+          "anchor": "deep-ladder-2-the-mlpattention-crossover-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "deep-ladder-2-the-mlpattention-crossover-r1",
+          "question": "Deep ladder 2 splits per-layer per-token FLOPs and solves for the crossover T. What are the parts and the crossover?",
+          "answer": "MLP 16n^2, projections 8n^2, scores 4Tn per token per layer. 4Tn = 24n^2 gives T = 6n.",
+          "anchor": "deep-ladder-2-the-mlpattention-crossover-p01"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "analytical-exercises",
+      "title": "Analytical exercises",
+      "endAnchor": "analytical-exercises-end",
+      "blocks": [
+        {
+          "anchor": "analytical-exercises-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "6PD",
+          "definition": "The dense training term: 6 * params * tokens.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "term": "residual stream",
+          "definition": "Activation bytes: 2*B*T*n*L in fp16.",
+          "anchor": "analytical-exercises-p02"
+        },
+        {
+          "term": "score bytes",
+          "definition": "Naive score matrix bytes; compare against activations.",
+          "anchor": "analytical-exercises-p02"
+        }
+      ],
+      "recall": [
+        {
+          "id": "analytical-exercises-r1",
+          "question": "P = 1.3B, D = 300B tokens. Compute training FLOPs via the 6P rule, in days on 512 devices at 1.5e14 FLOP/s each.",
+          "answer": "6 * 1.3e9 * 3e11 = 2.34e21 FLOPs. Aggregate 7.68e16 FLOP/s: 30,469 s = 0.35 days.",
+          "anchor": "analytical-exercises-p01"
+        },
+        {
+          "id": "analytical-exercises-r2",
+          "question": "B=4, T=4096, n=4096, L=32, fp16, h=32. Which is larger: residual-stream bytes or naive score bytes?",
+          "answer": "Residual: 4.0 GiB. Scores: 4.0 GiB. Equal at these settings; the ratio flips with B, h, and T.",
+          "anchor": "analytical-exercises-p02"
+        }
+      ],
+      "minutes": 2
+    },
+    {
+      "anchor": "implementation-debug-task",
+      "title": "Implementation / debug task",
+      "endAnchor": "implementation-debug-task-end",
+      "blocks": [
+        {
+          "anchor": "implementation-debug-task-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "causal mask",
+          "definition": "Scores for positions after t must be -inf before softmax.",
+          "anchor": "implementation-debug-task-p01"
+        },
+        {
+          "term": "invariant",
+          "definition": "Attention weights on positions after t are exactly 0.",
+          "anchor": "implementation-debug-task-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "implementation-debug-task-r1",
+          "question": "D1. The snippet should compute one causal attention step at position t, but outputs are wrong. What is the bug, the fix, and the invariant?",
+          "answer": "Bug: no causal mask; the query attends to future keys. Fix: mask scores for positions > t to -inf before softmax, or slice K[:t+1], V[:t+1]. Invariant: attention weights on positions after t are exactly 0.",
+          "anchor": "implementation-debug-task-p01"
+        }
+      ],
+      "minutes": 1
+    },
+    {
+      "anchor": "changed-constraint-scenarios",
+      "title": "Changed-constraint scenarios",
+      "endAnchor": "changed-constraint-scenarios-end",
+      "blocks": [
+        {
+          "anchor": "changed-constraint-scenarios-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "no-cache decode",
+          "definition": "Each step reprocesses the whole prefix: total 2P * 6050 for the toy.",
+          "anchor": "changed-constraint-scenarios-p01"
+        },
+        {
+          "term": "launch overhead",
+          "definition": "What limits decode latency when bandwidth is infinite.",
+          "anchor": "changed-constraint-scenarios-p02"
+        },
+        {
+          "term": "quadratic scaling",
+          "definition": "No-cache generation scales quadratically in output length.",
+          "anchor": "changed-constraint-scenarios-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "changed-constraint-scenarios-r1",
+          "question": "The KV cache may not be stored. Derive total FLOPs to generate 100 tokens from a 10-token prompt with P parameters and no cache.",
+          "answer": "Step i processes 10+i tokens at 2P FLOPs each: total 2P * 6050. Scales quadratically in output length (triangular sum).",
+          "anchor": "changed-constraint-scenarios-p01"
+        },
+        {
+          "id": "changed-constraint-scenarios-r2",
+          "question": "Infinite memory bandwidth, today’s compute. What limits decode latency and training throughput now?",
+          "answer": "Decode: kernel launch overhead and the sequential token dependency (fix: CUDA graphs, speculative decoding). Training: the compute roof (fix: larger batch to the statistical knee).",
+          "anchor": "changed-constraint-scenarios-p02"
+        }
+      ],
+      "minutes": 1
+    },
+    {
+      "anchor": "research-critique",
+      "title": "Research critique",
+      "endAnchor": "research-critique-end",
+      "blocks": [
+        {
+          "anchor": "research-critique-p01",
+          "kind": "keyIdea",
+          "reveal": "rise"
+        }
+      ],
+      "keyTerms": [
+        {
+          "term": "baseline audit",
+          "definition": "Is the baseline the strongest simple method?",
+          "anchor": "research-critique-p01"
+        },
+        {
+          "term": "budget matching",
+          "definition": "FLOPs, data, and tuning must match across methods.",
+          "anchor": "research-critique-p01"
+        }
+      ],
+      "recall": [
+        {
+          "id": "research-critique-r1",
+          "question": "A paper claims a new attention variant trains 2x faster than “the transformer baseline” at T=512, n=1024. What five audit questions do you ask?",
+          "answer": "(1) Strongest simple baseline? (2) Budgets matched? (3) Quality equal? (4) What T regime: does the T=512 claim generalize? (5) Seeds and variance?",
+          "anchor": "research-critique-p01"
+        }
+      ],
+      "minutes": 1
+    }
+  ]
+}

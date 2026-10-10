@@ -1,0 +1,291 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs336-interview-u09_key",
+ "itemKind": "lesson",
+ "revision": "2f5627d25e27592abaf5e2cbb9673376eadee8963d7a9286c91984cec1b00e95",
+ "sections": [
+  {
+   "anchor": "b1-b6",
+   "title": "B1-B6",
+   "minutes": 1,
+   "endAnchor": "b1-b6-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "TP split",
+     "definition": "Column-split the first matmul, row-split the second; one all-reduce sums partial outputs.",
+     "anchor": "b1-b6-p01"
+    },
+    {
+     "term": "pipeline bubble",
+     "definition": "Idle fill/drain time: (p-1)/(m+p-1).",
+     "anchor": "b1-b6-p01"
+    },
+    {
+     "term": "1F1B",
+     "definition": "One-forward-one-backward: steady-state overlap with about p microbatches in flight.",
+     "anchor": "b1-b6-p01"
+    },
+    {
+     "term": "hybrid ordering",
+     "definition": "TP innermost (fast links), PP middle, DP outermost.",
+     "anchor": "b1-b6-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "b1-b6-r1",
+     "question": "Why does inference prefer TP over PP?",
+     "answer": "Decode is latency-bound: TP splits weight reads per token, PP adds stage hops per token.",
+     "anchor": "b1-b6-p01"
+    },
+    {
+     "id": "b1-b6-r2",
+     "question": "Name the five parallelism planning invariants.",
+     "answer": "Product = N, tp = node, HBM fit, m >= p, shard group matches reduction group.",
+     "anchor": "b1-b6-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "l1",
+   "title": "L1",
+   "minutes": 1,
+   "endAnchor": "l1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "column split",
+     "definition": "Needs no comm; the following row split needs the summed input.",
+     "anchor": "l1-p01"
+    },
+    {
+     "term": "TP all-reduces",
+     "definition": "Two per layer: attention-out and MLP-down.",
+     "anchor": "l1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "l1-r1",
+     "question": "Why are two all-reduces per layer needed?",
+     "answer": "Attention-out and MLP-down each sum partial products: 2 per layer.",
+     "anchor": "l1-p01"
+    },
+    {
+     "id": "l1-r2",
+     "question": "ZeRO-3 versus tensor parallelism?",
+     "answer": "ZeRO-3 shards without per-layer comm but cannot split a layer.",
+     "anchor": "l1-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "l2",
+   "title": "L2",
+   "minutes": 1,
+   "endAnchor": "l2-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "bubble formula",
+     "definition": "(p-1)/(m+p-1); ideal m stage-times, actual m+p-1.",
+     "anchor": "l2-p01"
+    },
+    {
+     "term": "1F1B",
+     "definition": "Bounds memory at ~p microbatches in flight.",
+     "anchor": "l2-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "l2-r1",
+     "question": "Compute the L2.2 toy bubble.",
+     "answer": "(4-1)/(4+4-1) = 42.9 percent.",
+     "anchor": "l2-p01"
+    },
+    {
+     "id": "l2-r2",
+     "question": "GPipe versus 1F1B?",
+     "answer": "1F1B bounds memory at about p in flight.",
+     "anchor": "l2-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "e1",
+   "title": "E1",
+   "minutes": 1,
+   "endAnchor": "e1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "parallelism triple",
+     "definition": "tp=8, pp=2, dp=2 for 32 GPUs; tp fills the node.",
+     "anchor": "e1-p01"
+    },
+    {
+     "term": "node fill",
+     "definition": "tp=8 fills the node; tp=32 across nodes is the red flag.",
+     "anchor": "e1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "e1-r1",
+     "question": "Give E1's answers.",
+     "answer": "(a) tp=8, pp=2, dp=2 (8·2·2=32, tp fills the node). (b) 140/16 = 8.75 GB/GPU. (c) 10.7 GB/step.",
+     "anchor": "e1-p01"
+    },
+    {
+     "id": "e1-r2",
+     "question": "E1's red flag?",
+     "answer": "tp=32 across nodes.",
+     "anchor": "e1-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "e2",
+   "title": "E2",
+   "minutes": 1,
+   "endAnchor": "e2-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "slowest stage",
+     "definition": "Sets throughput; the formula assumes uniform stages.",
+     "anchor": "e2-p01"
+    },
+    {
+     "term": "rebalance",
+     "definition": "By measured cost; or reduce p.",
+     "anchor": "e2-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "e2-r1",
+     "question": "Why is the real bubble worse than 8 percent?",
+     "answer": "The formula assumes uniform stages; the 2x stage stretches every microbatch.",
+     "anchor": "e2-p01"
+    },
+    {
+     "id": "e2-r2",
+     "question": "Name the two fixes.",
+     "answer": "Rebalance by measured cost, reduce p (fewer, larger stages).",
+     "anchor": "e2-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "d1",
+   "title": "D1",
+   "minutes": 1,
+   "endAnchor": "d1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "TP node rule",
+     "definition": "tp must not exceed the node size; the product check is not sufficient.",
+     "anchor": "d1-p01"
+    },
+    {
+     "term": "inter-node links",
+     "definition": "tp=16 spans slow links for per-layer all-reduces.",
+     "anchor": "d1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "d1-r1",
+     "question": "What is the hybrid plan bug and the fix?",
+     "answer": "tp=16 exceeds the node size 8: the per-layer all-reduces would span slow inter-node links. The product check is necessary but not sufficient. Fix: tp=8, pp=4, dp=2 (or tp=8, pp=2, dp=4).",
+     "anchor": "d1-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "s1",
+   "title": "S1",
+   "minutes": 1,
+   "endAnchor": "s1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "TP latency",
+     "definition": "Per-token latency falls with tp: 2.5 vs 16.0 ms in the toy.",
+     "anchor": "s1-p01"
+    },
+    {
+     "term": "p99 SLO",
+     "definition": "PP=8 misses it: 8 stage hops plus p2p latency per token.",
+     "anchor": "s1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "s1-r1",
+     "question": "TP=8 or PP=8 for the p99 latency SLO?",
+     "answer": "Choose TP=8: per-token latency falls with tp. PP=8 loses: each token pays 8 stage hops plus p2p latency, p99 misses the SLO. Risk of TP: per-layer comm at batch 1 needs fast links.",
+     "anchor": "s1-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "s2",
+   "title": "S2",
+   "minutes": 1,
+   "endAnchor": "s2-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "GPipe fallback",
+     "definition": "m=2 GPipe: bigger bubble, fits memory.",
+     "anchor": "s2-p01"
+    },
+    {
+     "term": "activation checkpointing",
+     "definition": "Frees memory for ~4 in flight at +33% compute.",
+     "anchor": "s2-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "s2-r1",
+     "question": "Memory allows only 2 in-flight microbatches with p=4. Options?",
+     "answer": "(1) GPipe schedule with m=2: bigger bubble, fits memory. (2) Activation checkpointing: frees memory for about 4 in flight at +33 percent compute. (3) Fewer stages (p=2): less bubble pressure.",
+     "anchor": "s2-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "r1",
+   "title": "R1",
+   "minutes": 1,
+   "endAnchor": "r1-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "per-axis breakdown",
+     "definition": "Comm/compute per axis; the third gap's close.",
+     "anchor": "r1-p01"
+    },
+    {
+     "term": "link tiers",
+     "definition": "Missing: placement unknown without them.",
+     "anchor": "r1-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "r1-r1",
+     "question": "Name the three gaps in the hybrid-scaling paper and their closes.",
+     "answer": "(1) No triple: the result is not reproducible, give it. (2) No link tiers: placement unknown, give them. (3) No per-axis breakdown: cannot tell which axis helped, report comm/compute per axis.",
+     "anchor": "r1-p01"
+    }
+   ]
+  }
+ ]
+}

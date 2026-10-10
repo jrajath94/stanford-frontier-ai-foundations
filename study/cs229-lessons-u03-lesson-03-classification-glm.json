@@ -1,0 +1,771 @@
+{
+ "schemaVersion": 1,
+ "itemId": "cs229-lessons-u03-lesson-03-classification-glm",
+ "itemKind": "lesson",
+ "revision": "a46475badba539d11b733abf18a240aa6744d21d6540ed6194c62efb2e51005b",
+ "sections": [
+  {
+   "anchor": "lesson-03-classification-glm-intro",
+   "title": "Introduction",
+   "minutes": 1,
+   "endAnchor": "lesson-03-classification-glm-intro-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "cs229-U03",
+     "definition": "The unit code for this lesson in the Stanford CS229 foundations course.",
+     "anchor": "lesson-03-classification-glm-intro-p02"
+    },
+    {
+     "term": "leaf concepts",
+     "definition": "The fine-grained concepts the lesson covers, labeled C01 to C12.",
+     "anchor": "lesson-03-classification-glm-intro-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "lesson-03-classification-glm-intro-r1",
+     "question": "Who teaches this course?",
+     "answer": "Tengyu Ma and Andrew Ng.",
+     "anchor": "lesson-03-classification-glm-intro-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "source-mapping",
+   "title": "Source mapping",
+   "minutes": 1,
+   "endAnchor": "source-mapping-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "sigmoid",
+     "definition": "g(z) = 1/(1 + e^{-z}), mapping a score to (0, 1).",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "Bernoulli likelihood",
+     "definition": "The product of h^y (1-h)^{1-y} over examples.",
+     "anchor": "source-mapping-p01"
+    },
+    {
+     "term": "exponential family",
+     "definition": "One algebraic shape shared by Bernoulli, Gaussian, and more.",
+     "anchor": "source-mapping-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "source-mapping-r1",
+     "question": "What do chapters 2 and 3 of the notes give?",
+     "answer": "Chapter 2: the sigmoid, Bernoulli likelihood, LMS-like gradient ascent update, perceptron digression, multiclass softmax with cross-entropy gradient, Newton updates. Chapter 3: the exponential family form, Bernoulli and Gaussian worked examples, the three-step GLM construction recipe.",
+     "anchor": "source-mapping-p01"
+    }
+   ]
+  },
+  {
+   "anchor": "scope-and-objectives",
+   "title": "Scope and objectives",
+   "minutes": 1,
+   "endAnchor": "scope-and-objectives-end",
+   "blocks": [
+    {
+     "anchor": "scope-and-objectives-p01",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "logistic gradient update",
+     "definition": "theta_j := theta_j + alpha (y - h) x_j with h = g(theta^T x).",
+     "anchor": "scope-and-objectives-p02"
+    },
+    {
+     "term": "softmax cross-entropy gradient",
+     "definition": "d l_ce / d t = phi - e_y.",
+     "anchor": "scope-and-objectives-p02"
+    },
+    {
+     "term": "GLM recipe",
+     "definition": "Pick family, set prediction to the mean, tie eta to theta^T x.",
+     "anchor": "scope-and-objectives-p02"
+    },
+    {
+     "term": "separation",
+     "definition": "Perfectly classifiable data that makes MLE weights diverge.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "scope-and-objectives-r1",
+     "question": "What does the scope span?",
+     "answer": "From binary classification to the general recipe that produces linear regression, logistic regression, and softmax from one template.",
+     "anchor": "scope-and-objectives-p01"
+    },
+    {
+     "id": "scope-and-objectives-r2",
+     "question": "What does objective 8 ask the learner to do?",
+     "answer": "Diagnose separation.",
+     "anchor": "scope-and-objectives-p02"
+    }
+   ]
+  },
+  {
+   "anchor": "dependencies",
+   "title": "Dependencies",
+   "minutes": 1,
+   "endAnchor": "dependencies-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "prerequisites",
+     "definition": "The shared bridge units P05, P06, P07, and P09 needed before this lesson.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "term": "sigmoid",
+     "definition": "A probability, remediated in SL-01.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "exponential family",
+     "definition": "The template from SL-06.",
+     "anchor": "dependencies-l01"
+    },
+    {
+     "term": "link functions",
+     "definition": "From SL-07.",
+     "anchor": "dependencies-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "dependencies-r1",
+     "question": "Which prerequisites does this lesson list?",
+     "answer": "P05, P06, P07, and P09, the shared bridges.",
+     "anchor": "dependencies-p01"
+    },
+    {
+     "id": "dependencies-r2",
+     "question": "What does the list say the sigmoid is?",
+     "answer": "A probability, remediated in SL-01.",
+     "anchor": "dependencies-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-01-sigmoid-logit-bernoulli-likelihood",
+   "title": "SL-01: Sigmoid, logit, Bernoulli likelihood",
+   "minutes": 2,
+   "endAnchor": "sl-01-sigmoid-logit-bernoulli-likelihood-end",
+   "blocks": [
+    {
+     "anchor": "sl-01-sigmoid-logit-bernoulli-likelihood-p04",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-01-sigmoid-logit-bernoulli-likelihood-p05",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-01-sigmoid-logit-bernoulli-likelihood-l01",
+     "kind": "definition",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-01-sigmoid-logit-bernoulli-likelihood-p10",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "sigmoid",
+     "definition": "g(z) = 1/(1 + e^{-z}), mapping a score to (0, 1).",
+     "anchor": "sl-01-sigmoid-logit-bernoulli-likelihood-p02"
+    },
+    {
+     "term": "logit",
+     "definition": "t = theta^T x, the raw real-valued score.",
+     "anchor": "sl-01-sigmoid-logit-bernoulli-likelihood-p04"
+    },
+    {
+     "term": "Bernoulli likelihood",
+     "definition": "The product of h^y (1-h)^{1-y} over examples.",
+     "anchor": "sl-01-sigmoid-logit-bernoulli-likelihood-p02"
+    },
+    {
+     "term": "log odds",
+     "definition": "log(p/(1-p)), the natural scale for the update math.",
+     "anchor": "sl-01-sigmoid-logit-bernoulli-likelihood-p05"
+    },
+    {
+     "term": "gradient ascent",
+     "definition": "theta_j := theta_j + alpha (y - h) x_j, ascending the likelihood.",
+     "anchor": "sl-01-sigmoid-logit-bernoulli-likelihood-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-01-sigmoid-logit-bernoulli-likelihood-r1",
+     "question": "What is the logistic gradient update?",
+     "answer": "theta_j := theta_j + alpha (y^{(i)} - h_theta(x^{(i)})) x^{(i)}_j. It looks like LMS, but h is nonlinear in theta.",
+     "anchor": "sl-01-sigmoid-logit-bernoulli-likelihood-p09"
+    },
+    {
+     "id": "sl-01-sigmoid-logit-bernoulli-likelihood-r2",
+     "question": "Why not fit linear regression to 0/1 labels?",
+     "answer": "Predictions leave [0, 1] and the squared error punishes confident correct answers.",
+     "anchor": "sl-01-sigmoid-logit-bernoulli-likelihood-p12"
+    },
+    {
+     "id": "sl-01-sigmoid-logit-bernoulli-likelihood-r3",
+     "question": "In the email toy, what does the model say?",
+     "answer": "Features [1, 3], theta [-4, 1], logit -1, sigmoid 0.2689: the model says 27 percent spam.",
+     "anchor": "sl-01-sigmoid-logit-bernoulli-likelihood-p04"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-02-the-stable-logistic-loss",
+   "title": "SL-02: The stable logistic loss",
+   "minutes": 2,
+   "endAnchor": "sl-02-the-stable-logistic-loss-end",
+   "blocks": [
+    {
+     "anchor": "sl-02-the-stable-logistic-loss-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-02-the-stable-logistic-loss-p06",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-02-the-stable-logistic-loss-p07",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "logistic loss",
+     "definition": "l_logistic(t, y) = y log(1 + e^{-t}) + (1-y) log(1 + e^{t}).",
+     "anchor": "sl-02-the-stable-logistic-loss-p02"
+    },
+    {
+     "term": "softplus",
+     "definition": "log(1 + e^t), computed as max(t,0) + log(1 + e^{-|t|}).",
+     "anchor": "sl-02-the-stable-logistic-loss-p05"
+    },
+    {
+     "term": "stable form",
+     "definition": "The loss form that never forms the probability, avoiding overflow.",
+     "anchor": "sl-02-the-stable-logistic-loss-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-02-the-stable-logistic-loss-r1",
+     "question": "What goes wrong with log(sigmoid(1000))?",
+     "answer": "sigmoid(1000) rounds to exactly 1.0 in float64. 1 - sigmoid(1000) = 0 and log(0) = -inf. The naive formula dies at the extremes.",
+     "anchor": "sl-02-the-stable-logistic-loss-p04"
+    },
+    {
+     "id": "sl-02-the-stable-logistic-loss-r2",
+     "question": "What is the most common logistic regression bug?",
+     "answer": "Using the naive formula inside a training loop: the first confident example produces -inf, the gradient becomes nan, and every parameter turns to nan within one step.",
+     "anchor": "sl-02-the-stable-logistic-loss-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-03-softmax-and-the-cross-entropy-gradient",
+   "title": "SL-03: Softmax and the cross-entropy gradient",
+   "minutes": 2,
+   "endAnchor": "sl-03-softmax-and-the-cross-entropy-gradient-end",
+   "blocks": [
+    {
+     "anchor": "sl-03-softmax-and-the-cross-entropy-gradient-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-03-softmax-and-the-cross-entropy-gradient-l01",
+     "kind": "definition",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-03-softmax-and-the-cross-entropy-gradient-p06",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-03-softmax-and-the-cross-entropy-gradient-p07",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-03-softmax-and-the-cross-entropy-gradient-p08",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "softmax",
+     "definition": "phi_i = e^{t_i} / sum_j e^{t_j}, a probability vector.",
+     "anchor": "sl-03-softmax-and-the-cross-entropy-gradient-p02"
+    },
+    {
+     "term": "cross-entropy",
+     "definition": "l_ce = -log phi_y, asking how much probability the true class got.",
+     "anchor": "sl-03-softmax-and-the-cross-entropy-gradient-p02"
+    },
+    {
+     "term": "logits",
+     "definition": "t in R^k, the per-class scores.",
+     "anchor": "sl-03-softmax-and-the-cross-entropy-gradient-l01"
+    },
+    {
+     "term": "one-hot truth",
+     "definition": "e_y, the truth vector subtracted from the prediction.",
+     "anchor": "sl-03-softmax-and-the-cross-entropy-gradient-l01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-03-softmax-and-the-cross-entropy-gradient-r1",
+     "question": "What is the cross-entropy gradient?",
+     "answer": "Predicted minus true: d l_ce / d t = phi - e_y, and d l / d theta_i = (phi_i - 1{y=i}) x.",
+     "anchor": "sl-03-softmax-and-the-cross-entropy-gradient-p05"
+    },
+    {
+     "id": "sl-03-softmax-and-the-cross-entropy-gradient-r2",
+     "question": "Why is max-subtraction not optional?",
+     "answer": "Naive exp on t = [1000, 1001] overflows to inf and phi = nan.",
+     "anchor": "sl-03-softmax-and-the-cross-entropy-gradient-p10"
+    },
+    {
+     "id": "sl-03-softmax-and-the-cross-entropy-gradient-r3",
+     "question": "What does adding a constant to all logits do?",
+     "answer": "It leaves phi unchanged.",
+     "anchor": "sl-03-softmax-and-the-cross-entropy-gradient-l02"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-04-the-perceptron",
+   "title": "SL-04: The perceptron",
+   "minutes": 2,
+   "endAnchor": "sl-04-the-perceptron-end",
+   "blocks": [
+    {
+     "anchor": "sl-04-the-perceptron-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-04-the-perceptron-p05",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "perceptron",
+     "definition": "The threshold rule kept from the 1960s that starts the learning-theory analysis.",
+     "anchor": "sl-04-the-perceptron-p02"
+    },
+    {
+     "term": "mistake-driven",
+     "definition": "Updates happen only on mistakes, with no probabilities or likelihood.",
+     "anchor": "sl-04-the-perceptron-p04"
+    },
+    {
+     "term": "hard threshold",
+     "definition": "A hard step: 1 if the score is non-negative, else 0.",
+     "anchor": "sl-04-the-perceptron-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-04-the-perceptron-r1",
+     "question": "When does the perceptron update?",
+     "answer": "Only on mistakes: theta := theta + alpha (y - h) x with h in {0, 1}.",
+     "anchor": "sl-04-the-perceptron-p04"
+    },
+    {
+     "id": "sl-04-the-perceptron-r2",
+     "question": "What happens on non-separable data?",
+     "answer": "It cycles forever, never settling.",
+     "anchor": "sl-04-the-perceptron-p07"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-05-newton-updates",
+   "title": "SL-05: Newton updates",
+   "minutes": 2,
+   "endAnchor": "sl-05-newton-updates-end",
+   "blocks": [
+    {
+     "anchor": "sl-05-newton-updates-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-05-newton-updates-p06",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "Newton's method",
+     "definition": "Fitting a quadratic bowl at the current point and jumping to its top.",
+     "anchor": "sl-05-newton-updates-p02"
+    },
+    {
+     "term": "Hessian",
+     "definition": "The matrix of second derivatives; O(n^3) per step to invert.",
+     "anchor": "sl-05-newton-updates-p04"
+    },
+    {
+     "term": "iteratively reweighted least squares",
+     "definition": "The Newton update for logistic regression, a weighted Gram matrix solve.",
+     "anchor": "sl-05-newton-updates-p05"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-05-newton-updates-r1",
+     "question": "What does one Newton step do on a true quadratic?",
+     "answer": "It is exact: Newton fits a quadratic bowl at the current point and jumps to its top.",
+     "anchor": "sl-05-newton-updates-p04"
+    },
+    {
+     "id": "sl-05-newton-updates-r2",
+     "question": "Why is Newton wrong for n = 100,000 features?",
+     "answer": "The Hessian is 1e10 entries and never fits in memory.",
+     "anchor": "sl-05-newton-updates-p09"
+    },
+    {
+     "id": "sl-05-newton-updates-r3",
+     "question": "In the 1-D toy, how far does Newton jump versus gradient ascent?",
+     "answer": "Newton jumps from 0 to 2.0 in one step. Gradient ascent with alpha = 1 moves to 0.5.",
+     "anchor": "sl-05-newton-updates-p06"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-06-the-exponential-family",
+   "title": "SL-06: The exponential family",
+   "minutes": 2,
+   "endAnchor": "sl-06-the-exponential-family-end",
+   "blocks": [
+    {
+     "anchor": "sl-06-the-exponential-family-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-06-the-exponential-family-p05",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-06-the-exponential-family-p06",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-06-the-exponential-family-p07",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "exponential family",
+     "definition": "p(y, eta) = b(y) exp(eta^T T(y) - a(eta)), one algebraic shape for many distributions.",
+     "anchor": "sl-06-the-exponential-family-p02"
+    },
+    {
+     "term": "natural parameter",
+     "definition": "Eta, the dial of the family.",
+     "anchor": "sl-06-the-exponential-family-p04"
+    },
+    {
+     "term": "sufficient statistic",
+     "definition": "T(y), all the data the dial cares about.",
+     "anchor": "sl-06-the-exponential-family-p04"
+    },
+    {
+     "term": "log partition",
+     "definition": "a(eta), keeping the distribution normalized; its derivative gives the mean.",
+     "anchor": "sl-06-the-exponential-family-p04"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-06-the-exponential-family-r1",
+     "question": "Where does the sigmoid come from in the Bernoulli case?",
+     "answer": "By algebra, not by choice: eta = log(phi/(1-phi)) inverts to phi = 1/(1 + e^{-eta}).",
+     "anchor": "sl-06-the-exponential-family-p05"
+    },
+    {
+     "id": "sl-06-the-exponential-family-r2",
+     "question": "What falls out of the log partition?",
+     "answer": "The mean: d a / d eta = E[T(y)].",
+     "anchor": "sl-06-the-exponential-family-l01"
+    },
+    {
+     "id": "sl-06-the-exponential-family-r3",
+     "question": "What goes wrong forgetting the dispersion?",
+     "answer": "With general sigma^2 the Gaussian needs a two-dimensional eta or a dispersion parameter. Using eta = mu alone is incomplete.",
+     "anchor": "sl-06-the-exponential-family-p09"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-07-link-function-and-the-glm-recipe",
+   "title": "SL-07: Link function and the GLM recipe",
+   "minutes": 2,
+   "endAnchor": "sl-07-link-function-and-the-glm-recipe-end",
+   "blocks": [
+    {
+     "anchor": "sl-07-link-function-and-the-glm-recipe-p04",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-07-link-function-and-the-glm-recipe-l01",
+     "kind": "definition",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-07-link-function-and-the-glm-recipe-p05",
+     "kind": "example",
+     "reveal": null
+    },
+    {
+     "anchor": "sl-07-link-function-and-the-glm-recipe-p06",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "link function",
+     "definition": "The bridge from the mean to the linear score: eta = g_link(mu).",
+     "anchor": "sl-07-link-function-and-the-glm-recipe-p04"
+    },
+    {
+     "term": "canonical link",
+     "definition": "eta = theta^T x directly.",
+     "anchor": "sl-07-link-function-and-the-glm-recipe-l01"
+    },
+    {
+     "term": "Poisson",
+     "definition": "The count distribution; pairs with the log link.",
+     "anchor": "sl-07-link-function-and-the-glm-recipe-p05"
+    },
+    {
+     "term": "GLM",
+     "definition": "Pick family, set prediction to the mean, tie eta to theta^T x.",
+     "anchor": "sl-07-link-function-and-the-glm-recipe-p02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-07-link-function-and-the-glm-recipe-r1",
+     "question": "What are the three GLM steps?",
+     "answer": "(1) Pick the exponential family matching the target. (2) Set the prediction to the family mean. (3) Tie the natural parameter to the features linearly: eta = theta^T x.",
+     "anchor": "sl-07-link-function-and-the-glm-recipe-p04"
+    },
+    {
+     "id": "sl-07-link-function-and-the-glm-recipe-r2",
+     "question": "In the Poisson counts example, what is the predicted mean?",
+     "answer": "theta = [0.5, 0.2], x = [1, 3], eta = 1.1, predicted mean e^{1.1} = 3.004 customers/hour.",
+     "anchor": "sl-07-link-function-and-the-glm-recipe-p06"
+    },
+    {
+     "id": "sl-07-link-function-and-the-glm-recipe-r3",
+     "question": "What breaks with an identity link on counts?",
+     "answer": "theta^T x goes negative and the model predicts -2 customers.",
+     "anchor": "sl-07-link-function-and-the-glm-recipe-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "sl-08-separation-and-pathologies",
+   "title": "SL-08: Separation and pathologies",
+   "minutes": 1,
+   "endAnchor": "sl-08-separation-and-pathologies-end",
+   "blocks": [
+    {
+     "anchor": "sl-08-separation-and-pathologies-p03",
+     "kind": "keyIdea",
+     "reveal": "rise"
+    },
+    {
+     "anchor": "sl-08-separation-and-pathologies-p04",
+     "kind": "example",
+     "reveal": null
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "separation",
+     "definition": "Perfectly classifiable data that makes MLE weights diverge.",
+     "anchor": "sl-08-separation-and-pathologies-p02"
+    },
+    {
+     "term": "saturate",
+     "definition": "The sigmoid flattening toward 0/1 as weights grow.",
+     "anchor": "sl-08-separation-and-pathologies-p03"
+    }
+   ],
+   "recall": [
+    {
+     "id": "sl-08-separation-and-pathologies-r1",
+     "question": "Why do the weights blow up on separable data?",
+     "answer": "Pushing weights toward infinity keeps improving the likelihood: the sigmoid saturates toward 0/1 and the loss keeps falling. No finite maximum exists.",
+     "anchor": "sl-08-separation-and-pathologies-p03"
+    },
+    {
+     "id": "sl-08-separation-and-pathologies-r2",
+     "question": "How do you diagnose and fix separation?",
+     "answer": "Diagnose: weights grow steadily, loss keeps falling, predictions saturate at 0/1. Fix: add a penalty (ridge) or a Bayesian prior.",
+     "anchor": "sl-08-separation-and-pathologies-l01"
+    }
+   ]
+  },
+  {
+   "anchor": "assessment",
+   "title": "Assessment",
+   "minutes": 2,
+   "endAnchor": "assessment-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "sigmoid",
+     "definition": "g(z) = 1/(1 + e^{-z}), with derivative g(z)(1 - g(z)).",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "Bernoulli log likelihood",
+     "definition": "Sum over n examples of y log h + (1-y) log(1-h).",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "softmax gradient",
+     "definition": "d l_ce / d t = phi - e_y: predicted minus one-hot truth.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "term": "natural parameter",
+     "definition": "Eta, the dial of the exponential family.",
+     "anchor": "assessment-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "assessment-r1",
+     "question": "What does E03 ask?",
+     "answer": "Why the LMS-like update does not make logistic regression the same algorithm as LMS.",
+     "anchor": "assessment-p01"
+    },
+    {
+     "id": "assessment-r2",
+     "question": "What does E09 describe?",
+     "answer": "Training loss hits -inf on the first batch. The code uses log(sigmoid(t)). Diagnose and give the fixed line.",
+     "anchor": "assessment-p05"
+    },
+    {
+     "id": "assessment-r3",
+     "question": "What does E12 ask for?",
+     "answer": "Implement stable multiclass cross-entropy with the max-subtraction trick and verify shift invariance and the gradient against finite differences.",
+     "anchor": "assessment-p08"
+    }
+   ]
+  },
+  {
+   "anchor": "visual-units",
+   "title": "Visual units",
+   "minutes": 1,
+   "endAnchor": "visual-units-end",
+   "blocks": [
+    {
+     "anchor": "visual-units-fig01",
+     "kind": "figure",
+     "reveal": "fade"
+    },
+    {
+     "anchor": "visual-units-fig02",
+     "kind": "figure",
+     "reveal": "fade"
+    }
+   ],
+   "keyTerms": [
+    {
+     "term": "sigmoid curve",
+     "definition": "The visual of the sigmoid curve and its derivative.",
+     "anchor": "visual-units-fig01"
+    },
+    {
+     "term": "probability simplex",
+     "definition": "The visual of the probability simplex for 3 classes as one logit varies.",
+     "anchor": "visual-units-fig02"
+    }
+   ],
+   "recall": [
+    {
+     "id": "visual-units-r1",
+     "question": "What does the first visual unit show?",
+     "answer": "The sigmoid and its derivative.",
+     "anchor": "visual-units-l01"
+    },
+    {
+     "id": "visual-units-r2",
+     "question": "What does the second visual unit show?",
+     "answer": "The probability simplex for 3 classes as one logit varies.",
+     "anchor": "visual-units-l02"
+    }
+   ]
+  },
+  {
+   "anchor": "research-reading-and-extension",
+   "title": "Research reading and extension",
+   "minutes": 1,
+   "endAnchor": "research-reading-and-extension-end",
+   "blocks": [],
+   "keyTerms": [
+    {
+     "term": "falsifiable claim",
+     "definition": "A claim an experiment can disprove, here about weight norms on separable data.",
+     "anchor": "research-reading-and-extension-p01"
+    },
+    {
+     "term": "separable data",
+     "definition": "Data a line can split perfectly.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ],
+   "recall": [
+    {
+     "id": "research-reading-and-extension-r1",
+     "question": "What is the falsifiable claim?",
+     "answer": "On separable data the gradient-ascent weight norm grows without bound while the loss tends to zero. Newton diverges faster.",
+     "anchor": "research-reading-and-extension-p01"
+    }
+   ]
+  }
+ ]
+}
